@@ -92,13 +92,20 @@ body { display: grid; grid-template-rows: 60px auto 1fr; }
 <!-- ===== NAVBAR ===== -->
 <header class="flex items-center gap-3 px-4 lg:px-6 bg-white border-b border-gray-200 z-50">
   <a class="text-lg lg:text-xl font-extrabold text-brand-500 tracking-tight shrink-0" href="/">ZameenRentals</a>
-  <div class="flex-1 max-w-xl mx-auto">
+  <div class="flex-1 max-w-xl mx-auto relative">
     <div class="flex items-center border border-gray-200 rounded-full bg-white px-4 pr-1 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
       <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      <input id="nlInput" type="text" class="flex-1 py-2.5 px-3 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Search... e.g. 2 bed flat DHA under 50k" autocomplete="off">
+      <input id="nlInput" type="text" class="flex-1 py-2.5 px-3 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Try: 2 bed flat DHA under 50k" autocomplete="off">
       <button id="nlSearchBtn" class="w-8 h-8 rounded-full bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shrink-0 transition-colors disabled:opacity-50">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
       </button>
+    </div>
+    <div id="nlSuggestions" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-2">
+      <div class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Try searching</div>
+      <div class="nl-ex px-3 py-2 text-sm text-gray-600 hover:bg-brand-50 hover:text-brand-500 cursor-pointer transition-colors">2 bed flat in DHA under 50k</div>
+      <div class="nl-ex px-3 py-2 text-sm text-gray-600 hover:bg-brand-50 hover:text-brand-500 cursor-pointer transition-colors">gulshan mein sasta ghar</div>
+      <div class="nl-ex px-3 py-2 text-sm text-gray-600 hover:bg-brand-50 hover:text-brand-500 cursor-pointer transition-colors">furnished apartment Bahria</div>
+      <div class="nl-ex px-3 py-2 text-sm text-gray-600 hover:bg-brand-50 hover:text-brand-500 cursor-pointer transition-colors">3 bedroom house Gulistan-e-Jauhar</div>
     </div>
   </div>
   <button id="clearAllBtn" class="hidden text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 rounded-full px-3 py-1.5 transition-colors shrink-0">Clear All</button>
@@ -112,11 +119,6 @@ body { display: grid; grid-template-rows: 60px auto 1fr; }
   <button class="chip-filter shrink-0" data-filter="beds" id="bedsChip">Beds <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
   <button class="chip-filter shrink-0" data-filter="price" id="priceChip">Price <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
   <button class="chip-filter shrink-0" data-filter="more" id="moreChip">More <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
-  <div class="hidden lg:flex gap-1.5 ml-2 shrink-0" id="nlExamples">
-    <span class="nl-ex text-[11px] text-gray-400 bg-gray-100 hover:bg-brand-100 hover:text-brand-500 rounded-full px-2.5 py-1 cursor-pointer transition-colors whitespace-nowrap">2 bed flat in DHA under 50k</span>
-    <span class="nl-ex text-[11px] text-gray-400 bg-gray-100 hover:bg-brand-100 hover:text-brand-500 rounded-full px-2.5 py-1 cursor-pointer transition-colors whitespace-nowrap">gulshan mein sasta ghar</span>
-    <span class="nl-ex text-[11px] text-gray-400 bg-gray-100 hover:bg-brand-100 hover:text-brand-500 rounded-full px-2.5 py-1 cursor-pointer transition-colors whitespace-nowrap">furnished apartment Bahria</span>
-  </div>
   <div id="nlParsed" class="hidden items-center text-xs text-gray-600 bg-brand-50 rounded-lg px-3 py-1.5 ml-2 whitespace-nowrap"></div>
 </div>
 
@@ -523,7 +525,7 @@ async function doNlSearch() {
   if(!q||isLoading) return;
   $('#nlSearchBtn').disabled=true;
   const parsed=$('#nlParsed');
-  parsed.classList.remove('hidden'); parsed.classList.add('flex'); parsed.innerHTML='<em class="text-gray-400">Understanding...</em>';
+  parsed.classList.remove('hidden'); parsed.classList.add('flex'); parsed.innerHTML='<span class="inline-flex items-center gap-1.5 text-gray-400"><svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Parsing filters...</span>';
   try {
     const r=await fetch('/api/parse-query?q='+encodeURIComponent(q));
     if(!r.ok) throw 0;
@@ -549,11 +551,14 @@ async function doNlSearch() {
   finally { $('#nlSearchBtn').disabled=false; }
 }
 $('#nlSearchBtn').addEventListener('click', doNlSearch);
-$('#nlInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doNlSearch(); });
-$('#nlExamples').addEventListener('click', e=>{
+$('#nlInput').addEventListener('keydown', e=>{ if(e.key==='Enter') { $('#nlSuggestions').classList.add('hidden'); doNlSearch(); } });
+$('#nlInput').addEventListener('focus', ()=>{ if(!$('#nlInput').value.trim()) $('#nlSuggestions').classList.remove('hidden'); });
+$('#nlInput').addEventListener('input', ()=>{ $('#nlSuggestions').classList.toggle('hidden', !!$('#nlInput').value.trim()); });
+$('#nlSuggestions').addEventListener('click', e=>{
   const ex=e.target.closest('.nl-ex');
-  if(ex) { $('#nlInput').value=ex.textContent; doNlSearch(); }
+  if(ex) { $('#nlInput').value=ex.textContent; $('#nlSuggestions').classList.add('hidden'); doNlSearch(); }
 });
+document.addEventListener('click', e=>{ if(!e.target.closest('#nlSuggestions')&&!e.target.closest('#nlInput')) $('#nlSuggestions').classList.add('hidden'); });
 
 // ===== SEARCH ENGINE =====
 function getParams(pg) {
@@ -667,7 +672,7 @@ async function doSearch(page) {
 
     if(!append) {
       currentResults=d.results||[];
-      if(!currentResults.length) { $('#listingsGrid').innerHTML='<div class="col-span-full text-center py-12"><div class="text-5xl mb-3">&#x1f3e0;</div><h3 class="text-base font-semibold text-gray-600">No rentals found</h3><p class="text-sm text-gray-400">Try adjusting your filters</p></div>'; return; }
+      if(!currentResults.length) { $('#listingsGrid').innerHTML='<div class="col-span-full text-center py-12"><div class="text-5xl mb-3">&#x1f3e0;</div><h3 class="text-base font-semibold text-gray-600">No rentals found</h3><p class="text-sm text-gray-400">Try adjusting your filters</p></div>'; updateMapMarkers(); return; }
       $('#listingsGrid').innerHTML=currentResults.map((it,i)=>renderCard(it,i)).join('');
     } else {
       const nr=d.results||[], si=currentResults.length;
@@ -693,6 +698,8 @@ async function doSearch(page) {
     if(!append) $('#listingsPanel').scrollTo({top:0,behavior:'smooth'});
   } catch(e) {
     hideLoading();
+    currentResults=[];
+    updateMapMarkers();
     $('#listingsFooter').innerHTML=`<div class="text-center py-6 bg-red-50 rounded-lg mt-4"><p class="text-sm text-red-600">${esc(e.message)}</p></div>`;
   } finally { isLoading=false; mapDriven=false; }
 }
