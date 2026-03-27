@@ -1,9 +1,15 @@
 """
 One-time utility to discover Karachi area slugs/IDs from Zameen.com.
-Run: python discover_areas.py
-Not deployed — outputs a dict literal you can paste into main.py.
+Run: python tools/discover_areas.py
+Not deployed — outputs a dict literal you can paste into app/data.py.
 """
 import re
+import sys
+from pathlib import Path
+
+# Allow imports from project root when run from any directory
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import httpx
 from bs4 import BeautifulSoup
 
@@ -69,16 +75,16 @@ def main():
         print(f'    "{name}": ("{slug}", {area_id}, 0.0, 0.0),  # TODO: add lat/lng')
     print("}")
 
-    # Also output just the new ones (not in current main.py)
-    from main import KARACHI_AREAS as current
+    # Also output just the new ones (not in app/data.py)
+    from app.data import KARACHI_AREAS as current
     current_slugs = {v[0] for v in current.values()}
     new = {n: v for n, v in areas.items() if v[0] not in current_slugs}
     if new:
-        print(f"\n--- {len(new)} NEW areas not in main.py ---\n")
+        print(f"\n--- {len(new)} NEW areas not in app/data.py ---\n")
         for name, (slug, area_id) in sorted(new.items()):
             print(f'    "{name}": ("{slug}", {area_id}, 0.0, 0.0),')
     else:
-        print("\nNo new areas found beyond what's already in main.py.")
+        print("\nNo new areas found beyond what's already in app/data.py.")
 
 
 if __name__ == "__main__":

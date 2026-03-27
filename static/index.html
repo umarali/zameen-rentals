@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZameenRentals — Find Rentals in Karachi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        brand: { 50:'#f1f8f3', 100:'#e8f5e9', 200:'#c8e6c9', 400:'#66bb6a', 500:'#0a8f3c', 600:'#067a2f', 700:'#044d1f' },
+      },
+      fontFamily: { sans: ['Inter','system-ui','-apple-system','sans-serif'] },
+    }
+  }
+}
+</script>
+<style>
+/* Leaflet overrides & custom styles Tailwind can't do */
+html, body { height: 100%; overflow: hidden; }
+body { display: grid; grid-template-rows: 60px auto 1fr; }
+
+/* Isolate Leaflet z-indices so they don't overlap fixed overlays like drawers */
+#mapContainer, #mapContainerMobile { isolation: isolate; }
+
+/* Custom area markers on map */
+.area-marker { font-family: 'Inter',system-ui,sans-serif; cursor: pointer; }
+.area-label {
+  display: inline-block; padding: 0.25rem 0.625rem; border-radius: 9999px;
+  border: 1px solid #d1d5db; background: #fff; color: #374151;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05); transition: all .15s ease;
+}
+.area-label:hover { background: #1f2937; color: #fff; border-color: #1f2937; transform: translate(-50%,-50%) scale(1.05); }
+.area-label:hover .area-badge { background: #fff; color: #1f2937; }
+.area-label-active { background: #0a8f3c; color: #fff; border-color: #067a2f; box-shadow: 0 4px 6px -1px rgba(10,143,60,.3); transform: translate(-50%,-50%) scale(1.1); }
+.area-label-active:hover { background: #0a8f3c; color: #fff; border-color: #067a2f; }
+.area-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 9px; background: #0a8f3c; color: #fff;
+  font-size: 10px; font-weight: 700; margin-left: 4px; line-height: 1;
+}
+.area-label-active .area-badge { background: #fff; color: #0a8f3c; }
+
+/* Smooth scrollbar */
+.scroll-thin { scrollbar-width: thin; scrollbar-color: #dee2e6 transparent; }
+.scroll-thin::-webkit-scrollbar { width: 6px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: #dee2e6; border-radius: 3px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+/* Dropdown animation */
+.filter-dd { transform: translateY(-8px); opacity: 0; pointer-events: none; transition: transform .2s ease, opacity .2s ease; }
+.filter-dd.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+
+/* Image carousel dots */
+.carousel-dot { transition: all .2s; }
+.carousel-dot.active { background: white; transform: scale(1.3); }
+
+/* Card hover image zoom */
+.card-wrap:hover .card-img-zoom { transform: scale(1.05); }
+.card-img-zoom { transition: transform .4s ease; }
+
+/* Card map hover highlight */
+.card-map-active { border-color: #0a8f3c !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1) !important; }
+
+/* Toggle switch */
+.toggle-track { transition: background .2s; }
+.toggle-knob { transition: transform .2s; }
+.toggle-on { background-color: #0a8f3c !important; }
+
+/* Drawer open/close — explicit CSS so Tailwind CDN doesn't need to generate dynamic classes */
+#drawer.drawer-open { transform: translateX(0) !important; }
+#drawerOverlay.overlay-open { opacity: 1 !important; pointer-events: auto !important; }
+
+@media (max-width: 768px) {
+  body { grid-template-rows: 56px auto 1fr; overflow: auto; }
+  html, body { overflow: auto; }
+  #drawer.drawer-open { transform: translateY(0) !important; }
+}
+</style>
+</head>
+<body class="font-sans bg-gray-50 text-gray-800 antialiased">
+
+<!-- ===== NAVBAR ===== -->
+<header class="flex items-center gap-3 px-4 lg:px-6 bg-white border-b border-gray-200 z-50">
+  <a class="text-lg lg:text-xl font-extrabold text-brand-500 tracking-tight shrink-0" href="/">ZameenRentals</a>
+  <div class="flex-1 max-w-xl mx-auto">
+    <div class="flex items-center border border-gray-200 rounded-full bg-white px-4 pr-1 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
+      <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input id="nlInput" type="text" class="flex-1 py-2.5 px-3 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Search... e.g. 2 bed flat DHA under 50k" autocomplete="off">
+      <button id="nlSearchBtn" class="w-8 h-8 rounded-full bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shrink-0 transition-colors disabled:opacity-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+      </button>
+    </div>
+  </div>
+  <button id="clearAllBtn" class="hidden text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 rounded-full px-3 py-1.5 transition-colors shrink-0">Clear All</button>
+</header>
+
+<!-- ===== FILTER BAR ===== -->
+<div class="relative bg-white border-b border-gray-200 z-40">
+<div class="flex items-center gap-2 px-4 lg:px-6 py-2 overflow-x-auto scroll-thin" id="filterBar" style="scrollbar-width:none">
+  <button class="chip-filter shrink-0" data-filter="area" id="areaChip">Area <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="type" id="typeChip">Type <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="beds" id="bedsChip">Beds <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="price" id="priceChip">Price <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="more" id="moreChip">More <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <div class="hidden lg:flex gap-1.5 ml-2 shrink-0" id="nlExamples">
+    <span class="nl-ex text-[11px] text-gray-400 bg-gray-100 hover:bg-brand-100 hover:text-brand-500 rounded-full px-2.5 py-1 cursor-pointer transition-colors whitespace-nowrap">2 bed flat in DHA under 50k</span>
+    <span class="nl-ex text-[11px] text-gray-400 bg-gray-100 hover:bg-brand-100 hover:text-brand-500 rounded-full px-2.5 py-1 cursor-pointer transition-colors whitespace-nowrap">gulshan mein sasta ghar</span>
+    <span class="nl-ex text-[11px] text-gray-400 bg-gray-100 hover:bg-brand-100 hover:text-brand-500 rounded-full px-2.5 py-1 cursor-pointer transition-colors whitespace-nowrap">furnished apartment Bahria</span>
+  </div>
+  <div id="nlParsed" class="hidden items-center text-xs text-gray-600 bg-brand-50 rounded-lg px-3 py-1.5 ml-2 whitespace-nowrap"></div>
+</div>
+
+  <!-- Dropdowns (outside scrollable area so they aren't clipped) -->
+  <div id="dd-area" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
+    <div class="text-sm font-semibold text-gray-700 mb-3">Select Area</div>
+    <div class="flex items-center border border-gray-200 rounded-lg px-3 focus-within:border-brand-500 transition-colors">
+      <input id="areaInput" type="text" class="flex-1 py-2.5 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Type area name..." autocomplete="off">
+      <button id="areaClear" class="hidden text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+    </div>
+    <div id="areaList" class="mt-2 max-h-52 overflow-y-auto scroll-thin"></div>
+  </div>
+  <div id="dd-type" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
+    <div class="text-sm font-semibold text-gray-700 mb-3">Property Type</div>
+    <div class="flex flex-wrap gap-2" id="typeGrid">
+      <span class="chip" data-type="house">House</span>
+      <span class="chip" data-type="apartment">Apartment</span>
+      <span class="chip" data-type="upper_portion">Upper Portion</span>
+      <span class="chip" data-type="lower_portion">Lower Portion</span>
+      <span class="chip" data-type="room">Room</span>
+      <span class="chip" data-type="penthouse">Penthouse</span>
+      <span class="chip" data-type="farm_house">Farm House</span>
+    </div>
+  </div>
+  <div id="dd-beds" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
+    <div class="text-sm font-semibold text-gray-700 mb-3">Bedrooms</div>
+    <div class="flex gap-2" id="bedRow">
+      <span class="chip active" data-beds="">Any</span>
+      <span class="chip" data-beds="1">1</span>
+      <span class="chip" data-beds="2">2</span>
+      <span class="chip" data-beds="3">3</span>
+      <span class="chip" data-beds="4">4</span>
+      <span class="chip" data-beds="5">5+</span>
+    </div>
+  </div>
+  <div id="dd-price" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
+    <div class="text-sm font-semibold text-gray-700 mb-3">Price Range</div>
+    <div class="flex flex-wrap gap-2" id="priceGrid">
+      <span class="chip" data-pmin="0" data-pmax="30000">Under 30K</span>
+      <span class="chip" data-pmin="30000" data-pmax="60000">30-60K</span>
+      <span class="chip" data-pmin="60000" data-pmax="100000">60-100K</span>
+      <span class="chip" data-pmin="100000" data-pmax="200000">100-200K</span>
+      <span class="chip" data-pmin="200000" data-pmax="">200K+</span>
+      <span class="chip" data-custom="1">Custom</span>
+    </div>
+    <div id="customPrice" class="hidden grid grid-cols-2 gap-2 mt-3">
+      <input id="priceMin" type="number" class="px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors" placeholder="Min (PKR)" min="0">
+      <input id="priceMax" type="number" class="px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors" placeholder="Max (PKR)" min="0">
+    </div>
+  </div>
+  <div id="dd-more" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
+    <div class="text-sm font-semibold text-gray-700 mb-2">More Filters</div>
+    <div class="flex items-center justify-between py-2">
+      <span class="text-sm text-gray-600">Furnished Only</span>
+      <div id="furnishedToggle" class="w-11 h-6 rounded-full bg-gray-300 relative cursor-pointer toggle-track">
+        <div class="toggle-knob absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow"></div>
+      </div>
+    </div>
+    <hr class="my-2 border-gray-200">
+    <div class="text-sm font-semibold text-gray-700 mb-2">Sort By</div>
+    <select id="sortSelect" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors">
+      <option value="">Relevance</option>
+      <option value="price_low">Price: Low to High</option>
+      <option value="price_high">Price: High to Low</option>
+      <option value="newest">Newest First</option>
+    </select>
+    <hr class="my-2 border-gray-200">
+    <div class="text-sm font-semibold text-gray-700 mb-2">Quick Presets</div>
+    <div class="flex flex-wrap gap-2" id="presetRow">
+      <span class="chip" data-type="apartment" data-beds="1" data-pmin="0" data-pmax="40000">Budget 1BR</span>
+      <span class="chip" data-type="house" data-beds="3" data-pmin="50000" data-pmax="150000">Family Home</span>
+      <span class="chip" data-type="apartment" data-beds="3" data-pmin="150000" data-pmax="">Luxury Flat</span>
+      <span class="chip" data-type="room" data-beds="1" data-pmin="0" data-pmax="30000">Studio/Room</span>
+    </div>
+  </div>
+</div><!-- /outer filter wrapper -->
+
+<!-- Mobile dropdown backdrop -->
+<div id="ddBackdrop" class="fixed inset-0 bg-black/30 z-40 hidden"></div>
+
+<!-- ===== MAIN CONTENT (split screen) ===== -->
+<main class="grid grid-cols-1 lg:grid-cols-[55fr_45fr] overflow-hidden">
+  <!-- Listings Panel -->
+  <section id="listingsPanel" class="overflow-y-auto overscroll-contain p-4 lg:p-6 scroll-thin">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="listingsTitle" class="text-base font-bold text-gray-700">Rentals in Karachi</h2>
+      <span id="resultsCount" class="text-xs text-gray-400"></span>
+    </div>
+    <div id="listingsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-5"></div>
+    <div id="listingsFooter"></div>
+    <div class="text-center py-6 text-xs text-gray-400">Powered by Zameen.com data</div>
+  </section>
+
+  <!-- Map Panel (desktop) -->
+  <section id="mapPanel" class="relative border-l border-gray-200 hidden lg:block z-0">
+    <div id="mapContainer" class="absolute inset-0"></div>
+  </section>
+</main>
+
+<!-- Mobile map FAB -->
+<button id="mapFab" class="fixed bottom-6 left-1/2 -translate-x-1/2 lg:hidden flex items-center gap-2 px-5 py-3 rounded-full bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold shadow-lg z-30 transition-colors">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+  Map
+</button>
+
+<!-- Mobile map overlay -->
+<div id="mapOverlay" class="fixed inset-0 bg-white z-[60] hidden">
+  <div class="absolute top-3 left-3 z-[61]">
+    <button id="mapOverlayClose" class="flex items-center gap-1 px-4 py-2 rounded-full bg-white border border-gray-200 text-sm font-semibold text-gray-700 shadow-md hover:bg-gray-50 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+      List
+    </button>
+  </div>
+  <div id="mapContainerMobile" class="absolute inset-0"></div>
+  <div id="mapCarousel" class="absolute bottom-0 left-0 right-0 hidden gap-3 p-3 overflow-x-auto z-[61]" style="scroll-snap-type:x mandatory;scrollbar-width:none"></div>
+</div>
+
+<!-- ===== DRAWER ===== -->
+<div id="drawerOverlay" class="fixed inset-0 bg-black/40 z-[200] opacity-0 pointer-events-none transition-opacity duration-300"></div>
+<div id="drawer" class="fixed z-[201] bg-white overflow-y-auto overscroll-contain transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)] top-0 right-0 bottom-0 w-[420px] max-w-[90vw] translate-x-full shadow-2xl max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:w-full max-md:max-h-[90vh] max-md:rounded-t-2xl max-md:translate-x-0 max-md:translate-y-full">
+  <button id="drawerClose" class="sticky top-0 float-right m-3 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 text-xl z-10 transition-colors">&times;</button>
+  <div id="drawerImgArea"></div>
+  <div id="drawerContent" class="px-5 pb-6"></div>
+</div>
+
+<!-- ===== INLINE STYLES FOR CHIPS (plain CSS — @apply doesn't work with Tailwind CDN) ===== -->
+<style>
+.chip-filter {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.375rem 0.875rem; border-radius: 9999px;
+  border: 1px solid #e5e7eb; background: #fff;
+  font-size: 0.75rem; font-weight: 500; color: #4b5563;
+  cursor: pointer; transition: all .15s ease;
+}
+.chip-filter:hover { border-color: #0a8f3c; color: #0a8f3c; background: #f1f8f3; }
+.chip-filter.has-value {
+  background: #1f2937; border-color: #1f2937; color: #fff;
+}
+.chip-filter.has-value:hover { background: #374151; border-color: #374151; color: #fff; }
+.chip-filter.has-value svg { display: none; }
+.chip-filter.has-value::after { content: '\00D7'; margin-left: 0.25rem; font-size: 0.875rem; }
+
+.chip {
+  display: inline-flex; align-items: center;
+  padding: 0.5rem 0.875rem; border-radius: 9999px;
+  border: 1px solid #e5e7eb; background: #fff;
+  font-size: 0.75rem; font-weight: 500; color: #4b5563;
+  cursor: pointer; transition: all .15s ease;
+  white-space: nowrap; user-select: none;
+}
+.chip:hover { border-color: #0a8f3c; color: #0a8f3c; background: #f1f8f3; }
+.chip.active { background: #0a8f3c; border-color: #0a8f3c; color: #fff; }
+.chip.active:hover { background: #067a2f; border-color: #067a2f; color: #fff; }
+
+.area-opt {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 0.75rem; font-size: 0.875rem; color: #374151;
+  border-radius: 0.5rem; cursor: pointer; transition: background .15s ease;
+}
+.area-opt:hover { background: #f1f8f3; }
+.area-opt.hl { background: #f1f8f3; }
+
+/* Mobile dropdown overrides */
+@media (max-width: 768px) {
+  .filter-dd {
+    @apply fixed top-auto bottom-0 left-0 right-0 mt-0 ml-0 mr-0 rounded-t-2xl max-h-[60vh] overflow-y-auto;
+    width: 100% !important;
+  }
+}
+</style>
+
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+// ===== STATE =====
+const S = { area:'', type:'', beds:'', priceMin:'', priceMax:'', furnished:false, sort:'' };
+let currentPage=1, isLoading=false, currentResults=[], allAreas=[];
+let map=null, mobileMap=null, markers={}, miniMap=null;
+let mapDriven=false, mapTimer=null, activeDD=null;
+
+// ===== UTILS =====
+const esc = s => { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; };
+const escA = s => s.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const TYPE_L = { house:'House', apartment:'Apartment', upper_portion:'Upper Portion', lower_portion:'Lower Portion', room:'Room', penthouse:'Penthouse', farm_house:'Farm House' };
+
+function fmtPrice(p,t) {
+  if(t) return t;
+  if(!p) return 'Price on request';
+  if(p>=1e7) return 'Rs '+(p/1e7).toFixed(1)+' Crore';
+  if(p>=1e5) return 'Rs '+(p/1e5).toFixed(1)+' Lakh';
+  if(p>=1e3) return 'Rs '+(p/1e3).toFixed(0)+'K';
+  return 'Rs '+p.toLocaleString();
+}
+
+// ===== CHIP LABELS =====
+function updateChips() {
+  const a=$('#areaChip'), t=$('#typeChip'), b=$('#bedsChip'), p=$('#priceChip'), m=$('#moreChip');
+
+  setChipVal(a, S.area, 'Area');
+  setChipVal(t, S.type ? TYPE_L[S.type]||S.type : '', 'Type');
+  setChipVal(b, S.beds ? S.beds+(S.beds==='5'?'+':'')+' Bed' : '', 'Beds');
+
+  let pl = '';
+  if(S.priceMin||S.priceMax) {
+    const mn=S.priceMin?(S.priceMin/1e3|0)+'K':'', mx=S.priceMax?(S.priceMax/1e3|0)+'K':'';
+    pl = mn&&mx ? mn+'-'+mx : mx ? '<'+mx : mn+'+';
+  }
+  setChipVal(p, pl, 'Price');
+
+  const mc = (S.furnished?1:0)+(S.sort?1:0);
+  setChipVal(m, mc ? 'More ('+mc+')' : '', 'More');
+
+  $('#clearAllBtn').classList.toggle('hidden', countFilters()===0);
+}
+
+function setChipVal(el, val, def) {
+  if(val) {
+    el.innerHTML = esc(val);
+    el.classList.add('has-value');
+  } else {
+    el.innerHTML = def+' <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>';
+    el.classList.remove('has-value');
+  }
+}
+
+function countFilters() {
+  let n=0;
+  if(S.area)n++; if(S.type)n++; if(S.beds)n++;
+  if(S.priceMin||S.priceMax)n++; if(S.furnished)n++; if(S.sort)n++;
+  return n;
+}
+
+// ===== DROPDOWNS =====
+const ddMap = { area:'dd-area', type:'dd-type', beds:'dd-beds', price:'dd-price', more:'dd-more' };
+
+function openDD(name) {
+  if(activeDD===name) { closeDD(); return; }
+  closeDD();
+  const el = $('#'+ddMap[name]);
+  el.classList.add('open');
+  activeDD = name;
+  if(window.innerWidth<=768) $('#ddBackdrop').classList.remove('hidden');
+  if(name==='area') { $('#areaInput').focus(); renderAreaList(filterAreas($('#areaInput').value.trim())); }
+}
+
+function closeDD() {
+  Object.values(ddMap).forEach(id => $('#'+id).classList.remove('open'));
+  activeDD=null;
+  $('#ddBackdrop').classList.add('hidden');
+}
+
+$$('[data-filter]').forEach(el => el.addEventListener('click', e => {
+  const f = el.dataset.filter;
+  if(el.classList.contains('has-value')) { e.stopPropagation(); clearFilter(f); return; }
+  openDD(f);
+}));
+
+document.addEventListener('click', e => {
+  if(!e.target.closest('.filter-dd') && !e.target.closest('[data-filter]')) closeDD();
+});
+$('#ddBackdrop').addEventListener('click', closeDD);
+
+function clearFilter(f) {
+  if(f==='area') { S.area=''; $('#areaInput').value=''; $('#areaClear').classList.add('hidden'); resetMapView(); }
+  if(f==='type') { S.type=''; $$('#typeGrid .chip').forEach(c=>c.classList.remove('active')); }
+  if(f==='beds') { S.beds=''; $$('#bedRow .chip').forEach(c=>c.classList.toggle('active',c.dataset.beds==='')); }
+  if(f==='price') { S.priceMin=''; S.priceMax=''; $$('#priceGrid .chip').forEach(c=>c.classList.remove('active')); $('#customPrice').classList.add('hidden'); $('#priceMin').value=''; $('#priceMax').value=''; }
+  if(f==='more') { S.furnished=false; S.sort=''; setToggle(false); $('#sortSelect').value=''; }
+  updateChips(); doSearch();
+}
+
+$('#clearAllBtn').addEventListener('click', () => {
+  S.area=''; S.type=''; S.beds=''; S.priceMin=''; S.priceMax=''; S.furnished=false; S.sort='';
+  $('#areaInput').value=''; $('#areaClear').classList.add('hidden');
+  $$('#typeGrid .chip').forEach(c=>c.classList.remove('active'));
+  $$('#bedRow .chip').forEach(c=>c.classList.toggle('active',c.dataset.beds===''));
+  $$('#priceGrid .chip').forEach(c=>c.classList.remove('active'));
+  $('#customPrice').classList.add('hidden'); $('#priceMin').value=''; $('#priceMax').value='';
+  setToggle(false); $('#sortSelect').value='';
+  $$('#presetRow .chip').forEach(c=>c.classList.remove('active'));
+  updateChips(); resetMapView(); doSearch();
+});
+
+// ===== AREA AUTOCOMPLETE =====
+const areaInput=$('#areaInput'), areaList=$('#areaList'), areaClear=$('#areaClear');
+let hlIdx=-1;
+
+function filterAreas(q) {
+  if(!q) return allAreas.slice(0,20);
+  const lq=q.toLowerCase();
+  return allAreas.filter(a=>a.name.toLowerCase().includes(lq)||(a.name_ur&&a.name_ur.includes(q))).slice(0,15);
+}
+
+function renderAreaList(items) {
+  if(!items.length) { areaList.innerHTML='<div class="p-3 text-sm text-gray-400">No areas found</div>'; return; }
+  hlIdx=-1;
+  areaList.innerHTML=items.map((a,i)=>`<div class="area-opt" data-i="${i}" data-name="${a.name}"><span>${esc(a.name)}</span>${a.name_ur?`<span class="text-xs text-gray-400" dir="rtl">${a.name_ur}</span>`:''}</div>`).join('');
+}
+
+areaInput.addEventListener('input', ()=>{
+  const q=areaInput.value.trim();
+  areaClear.classList.toggle('hidden',!q);
+  if(!q) { S.area=''; updateChips(); }
+  renderAreaList(filterAreas(q));
+});
+areaInput.addEventListener('focus', ()=> renderAreaList(filterAreas(areaInput.value.trim())));
+areaInput.addEventListener('keydown', e=>{
+  const opts=areaList.querySelectorAll('.area-opt');
+  if(e.key==='ArrowDown') { e.preventDefault(); hlIdx=Math.min(hlIdx+1,opts.length-1); opts.forEach((o,i)=>o.classList.toggle('hl',i===hlIdx)); }
+  else if(e.key==='ArrowUp') { e.preventDefault(); hlIdx=Math.max(hlIdx-1,0); opts.forEach((o,i)=>o.classList.toggle('hl',i===hlIdx)); }
+  else if(e.key==='Enter') { e.preventDefault(); if(hlIdx>=0&&opts[hlIdx]) selectArea(opts[hlIdx].dataset.name); else doSearch(); }
+  else if(e.key==='Escape') closeDD();
+});
+areaList.addEventListener('click', e=>{
+  const o=e.target.closest('.area-opt');
+  if(o) selectArea(o.dataset.name);
+});
+areaClear.addEventListener('click', ()=>{
+  S.area=''; areaInput.value=''; areaClear.classList.add('hidden');
+  resetMapView(); updateChips(); renderAreaList(allAreas.slice(0,20));
+});
+
+function selectArea(name, fromMap) {
+  S.area=name;
+  areaInput.value=name;
+  areaClear.classList.remove('hidden');
+  closeDD();
+  updateChips();
+  // Sync map: only fly if user picked from filter, not from map
+  if(!fromMap && map) highlightMarker(name, true);
+  doSearch();
+}
+
+// ===== TYPE =====
+$('#typeGrid').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  if(c.classList.contains('active')) { c.classList.remove('active'); S.type=''; }
+  else { $$('#typeGrid .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active'); S.type=c.dataset.type; }
+  updateChips(); closeDD(); doSearch();
+});
+
+// ===== BEDS =====
+$('#bedRow').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  $$('#bedRow .chip').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active'); S.beds=c.dataset.beds;
+  updateChips(); closeDD(); doSearch();
+});
+
+// ===== PRICE =====
+$('#priceGrid').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  if(c.dataset.custom) { $$('#priceGrid .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active'); $('#customPrice').classList.remove('hidden'); S.priceMin=$('#priceMin').value; S.priceMax=$('#priceMax').value; updateChips(); return; }
+  $('#customPrice').classList.add('hidden');
+  if(c.classList.contains('active')) { c.classList.remove('active'); S.priceMin=''; S.priceMax=''; }
+  else { $$('#priceGrid .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active'); S.priceMin=c.dataset.pmin; S.priceMax=c.dataset.pmax; }
+  updateChips(); closeDD(); doSearch();
+});
+$('#priceMin').addEventListener('input', ()=>{ S.priceMin=$('#priceMin').value; updateChips(); });
+$('#priceMax').addEventListener('input', ()=>{ S.priceMax=$('#priceMax').value; updateChips(); });
+$$('#customPrice input').forEach(el=>el.addEventListener('keydown',e=>{ if(e.key==='Enter'){closeDD();doSearch();} }));
+
+// ===== FURNISHED =====
+function setToggle(on) {
+  const t=$('#furnishedToggle');
+  t.classList.toggle('toggle-on',on);
+  t.querySelector('.toggle-knob').style.transform=on?'translateX(20px)':'translateX(0)';
+  S.furnished=on;
+}
+$('#furnishedToggle').addEventListener('click', ()=>{ setToggle(!S.furnished); updateChips(); });
+
+// ===== SORT =====
+$('#sortSelect').addEventListener('change', ()=>{ S.sort=$('#sortSelect').value; updateChips(); });
+
+// ===== PRESETS =====
+$('#presetRow').addEventListener('click', e=>{
+  const c=e.target.closest('.chip'); if(!c) return;
+  $$('#presetRow .chip').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active');
+  S.type=c.dataset.type||''; S.beds=c.dataset.beds||''; S.priceMin=c.dataset.pmin||''; S.priceMax=c.dataset.pmax||'';
+  $$('#typeGrid .chip').forEach(x=>x.classList.toggle('active',x.dataset.type===S.type));
+  $$('#bedRow .chip').forEach(x=>x.classList.toggle('active',x.dataset.beds===S.beds));
+  syncPriceChips();
+  updateChips(); closeDD(); doSearch();
+});
+
+function syncPriceChips() {
+  let matched=false;
+  $$('#priceGrid .chip').forEach(c=>{
+    if(c.dataset.custom) return;
+    const m=c.dataset.pmin===S.priceMin&&c.dataset.pmax===S.priceMax;
+    c.classList.toggle('active',m); if(m) matched=true;
+  });
+  const cc=$('[data-custom="1"]');
+  if(!matched&&(S.priceMin||S.priceMax)) { cc.classList.add('active'); $('#customPrice').classList.remove('hidden'); $('#priceMin').value=S.priceMin; $('#priceMax').value=S.priceMax; }
+  else { cc.classList.remove('active'); if(!matched) $('#customPrice').classList.add('hidden'); }
+}
+
+// ===== NL SEARCH =====
+async function doNlSearch() {
+  const q=$('#nlInput').value.trim();
+  if(!q||isLoading) return;
+  $('#nlSearchBtn').disabled=true;
+  const parsed=$('#nlParsed');
+  parsed.classList.remove('hidden'); parsed.classList.add('flex'); parsed.innerHTML='<em class="text-gray-400">Understanding...</em>';
+  try {
+    const r=await fetch('/api/parse-query?q='+encodeURIComponent(q));
+    if(!r.ok) throw 0;
+    const d=await r.json(), f=d.filters||{};
+    if(!Object.keys(f).length) { parsed.innerHTML='Could not understand. Try "2 bed flat in DHA under 50k"'; return; }
+    const parts=[];
+    if(f.area) parts.push('<b class="text-brand-500">'+esc(f.area)+'</b>');
+    if(f.property_type) parts.push('<b class="text-brand-500">'+(TYPE_L[f.property_type]||f.property_type)+'</b>');
+    if(f.bedrooms) parts.push('<b class="text-brand-500">'+f.bedrooms+' bed</b>');
+    if(f.price_min||f.price_max) { const mn=f.price_min?(f.price_min/1e3|0)+'K':'', mx=f.price_max?(f.price_max/1e3|0)+'K':''; parts.push('<b class="text-brand-500">'+(mn&&mx?mn+'-'+mx:mx?'<'+mx:mn+'+')+'</b>'); }
+    if(f.furnished) parts.push('<b class="text-brand-500">Furnished</b>');
+    parsed.innerHTML=parts.join(' &middot; ');
+    if(f.area) selectArea(f.area);
+    if(f.property_type) { S.type=f.property_type; $$('#typeGrid .chip').forEach(c=>c.classList.toggle('active',c.dataset.type===f.property_type)); }
+    if(f.bedrooms) { S.beds=String(f.bedrooms); $$('#bedRow .chip').forEach(c=>c.classList.toggle('active',c.dataset.beds===S.beds)); }
+    if(f.price_min) S.priceMin=String(f.price_min);
+    if(f.price_max) S.priceMax=String(f.price_max);
+    if(f.price_min||f.price_max) syncPriceChips();
+    if(f.furnished) setToggle(true);
+    if(f.sort) { S.sort=f.sort; $('#sortSelect').value=f.sort; }
+    updateChips(); doSearch();
+  } catch(e) { parsed.innerHTML='Something went wrong.'; }
+  finally { $('#nlSearchBtn').disabled=false; }
+}
+$('#nlSearchBtn').addEventListener('click', doNlSearch);
+$('#nlInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doNlSearch(); });
+$('#nlExamples').addEventListener('click', e=>{
+  const ex=e.target.closest('.nl-ex');
+  if(ex) { $('#nlInput').value=ex.textContent; doNlSearch(); }
+});
+
+// ===== SEARCH ENGINE =====
+function getParams(pg) {
+  const p=new URLSearchParams();
+  if(S.area) p.set('area',S.area); if(S.type) p.set('property_type',S.type);
+  if(S.beds) p.set('bedrooms',S.beds); if(S.priceMin) p.set('price_min',S.priceMin);
+  if(S.priceMax) p.set('price_max',S.priceMax); if(S.furnished) p.set('furnished','true');
+  if(S.sort) p.set('sort',S.sort); p.set('page',pg);
+  return p;
+}
+
+function saveSearch() { try{localStorage.setItem('rk_s',JSON.stringify(S))}catch(e){} }
+
+function loadSearch() {
+  try {
+    const d=JSON.parse(localStorage.getItem('rk_s'));
+    if(!d) return;
+    if(d.area) selectArea(d.area);
+    if(d.type){S.type=d.type; $$('#typeGrid .chip').forEach(c=>c.classList.toggle('active',c.dataset.type===d.type));}
+    if(d.beds){S.beds=d.beds; $$('#bedRow .chip').forEach(c=>c.classList.toggle('active',c.dataset.beds===d.beds));}
+    if(d.priceMin) S.priceMin=d.priceMin;
+    if(d.priceMax) S.priceMax=d.priceMax;
+    if(d.priceMin||d.priceMax) syncPriceChips();
+    if(d.furnished) setToggle(true);
+    if(d.sort){S.sort=d.sort; $('#sortSelect').value=d.sort;}
+    updateChips();
+  }catch(e){}
+}
+
+function getAreaForListing(item) {
+  if(!item.location) return null;
+  const loc=item.location.toLowerCase();
+  for(const a of allAreas) { if(loc.includes(a.name.toLowerCase())) return a; }
+  if(S.area) return allAreas.find(a=>a.name===S.area)||null;
+  return null;
+}
+
+function renderCard(item, idx) {
+  const area=getAreaForListing(item);
+  const areaAttr=area?`data-area="${escA(area.name)}"`:'';
+  const imgs=item.images||[];
+  const hasMulti=imgs.length>1;
+  const mainImg=item.image_url;
+
+  let imgHtml;
+  if(mainImg) {
+    if(hasMulti) {
+      // Image carousel
+      imgHtml=`<div class="relative aspect-[4/3] overflow-hidden bg-gray-100 group" data-carousel>
+        <div class="flex h-full transition-transform duration-300" data-slides>${imgs.slice(0,5).map(u=>`<img class="w-full h-full object-cover shrink-0 card-img-zoom" src="${escA(u)}" alt="" loading="lazy" onerror="this.src=''">`).join('')}</div>
+        <button data-prev class="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
+        <button data-next class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
+        <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">${imgs.slice(0,5).map((_,i)=>`<span class="carousel-dot w-1.5 h-1.5 rounded-full bg-white/60 ${i===0?'active':''}"></span>`).join('')}</div>
+      </div>`;
+    } else {
+      imgHtml=`<div class="relative aspect-[4/3] overflow-hidden bg-gray-100"><img class="w-full h-full object-cover card-img-zoom" src="${escA(mainImg)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'flex items-center justify-center h-full text-4xl text-gray-300\\'>&#x1f3e0;</div>'"></div>`;
+    }
+  } else {
+    imgHtml=`<div class="aspect-[4/3] bg-gray-100 flex items-center justify-center text-4xl text-gray-300">&#x1f3e0;</div>`;
+  }
+
+  // Details
+  const badges=[];
+  if(item.bedrooms) badges.push(`<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>${item.bedrooms} bed</span>`);
+  if(item.bathrooms) badges.push(`<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 0l-6 6a1 1 0 101.414 1.414l6-6a1 1 0 000-1.414zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" clip-rule="evenodd"/></svg>${item.bathrooms} bath</span>`);
+  if(item.area_size) badges.push(`<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>${esc(item.area_size)}</span>`);
+
+  const typeLabel = item.property_type ? `<span class="text-[10px] font-semibold uppercase tracking-wide text-brand-500 bg-brand-50 px-2 py-0.5 rounded-full">${esc(item.property_type)}</span>` : '';
+
+  return `<div class="card-wrap rounded-xl overflow-hidden bg-white border-2 border-transparent cursor-pointer transition-all hover:shadow-lg hover:border-gray-100" data-idx="${idx}" ${areaAttr}>
+    ${imgHtml}
+    <div class="p-3">
+      <div class="flex items-center justify-between gap-2 mb-1">
+        <div class="text-base font-bold text-gray-800">${esc(fmtPrice(item.price,item.price_text))}</div>
+        ${typeLabel}
+      </div>
+      <div class="text-sm text-gray-600 line-clamp-1 mb-1">${esc(item.title||'Rental Property')}</div>
+      ${item.location?`<div class="flex items-center gap-1 text-xs text-gray-400 mb-2"><svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${esc(item.location)}</div>`:''}
+      ${badges.length?`<div class="flex flex-wrap gap-3 text-xs text-gray-500">${badges.join('')}</div>`:''}
+      ${item.added?`<div class="text-[11px] text-gray-400 mt-2">${esc(item.added)}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function showLoading(append) {
+  if(!append) { $('#listingsGrid').innerHTML=''; $('#listingsFooter').innerHTML=''; }
+  const s=document.createElement('div');
+  s.id='spinner';
+  s.className='flex flex-col items-center gap-3 py-12';
+  s.innerHTML='<div class="w-8 h-8 border-3 border-gray-200 border-t-brand-500 rounded-full animate-spin"></div><p class="text-sm text-gray-400">Searching Zameen.com...</p>';
+  $('#listingsFooter').appendChild(s);
+}
+function hideLoading() { const s=$('#spinner'); if(s)s.remove(); }
+
+async function doSearch(page) {
+  if(isLoading) return;
+  const append=page&&page>1;
+  if(!append) { currentPage=1; currentResults=[]; }
+  else currentPage=page;
+
+  isLoading=true; showLoading(append); saveSearch();
+
+  try {
+    const r=await fetch('/api/search?'+getParams(currentPage).toString());
+    if(!r.ok) { const e=await r.json().catch(()=>({detail:'Search failed'})); throw new Error(e.detail||'Search failed'); }
+    const d=await r.json();
+    hideLoading();
+
+    $('#listingsTitle').textContent = S.area ? 'Rentals in '+S.area : 'Rentals in Karachi';
+    $('#resultsCount').textContent = (d.total||0)+' results';
+
+    if(!append) {
+      currentResults=d.results||[];
+      if(!currentResults.length) { $('#listingsGrid').innerHTML='<div class="col-span-full text-center py-12"><div class="text-5xl mb-3">&#x1f3e0;</div><h3 class="text-base font-semibold text-gray-600">No rentals found</h3><p class="text-sm text-gray-400">Try adjusting your filters</p></div>'; return; }
+      $('#listingsGrid').innerHTML=currentResults.map((it,i)=>renderCard(it,i)).join('');
+    } else {
+      const nr=d.results||[], si=currentResults.length;
+      currentResults=currentResults.concat(nr);
+      nr.forEach((it,i)=>$('#listingsGrid').insertAdjacentHTML('beforeend',renderCard(it,si+i)));
+    }
+
+    // Image carousels
+    initCarousels();
+    // Refresh map markers to reflect new result counts
+    updateMapMarkers();
+
+    // Load more
+    const ft=$('#listingsFooter'); ft.innerHTML='';
+    if((d.results||[]).length>=15) {
+      const b=document.createElement('button');
+      b.className='w-full py-3 mt-4 border-2 border-brand-500 rounded-lg text-brand-500 text-sm font-semibold hover:bg-brand-50 transition-colors';
+      b.textContent='Load More Results';
+      b.addEventListener('click',()=>doSearch(currentPage+1));
+      ft.appendChild(b);
+    }
+
+    if(!append) $('#listingsPanel').scrollTo({top:0,behavior:'smooth'});
+  } catch(e) {
+    hideLoading();
+    $('#listingsFooter').innerHTML=`<div class="text-center py-6 bg-red-50 rounded-lg mt-4"><p class="text-sm text-red-600">${esc(e.message)}</p></div>`;
+  } finally { isLoading=false; mapDriven=false; }
+}
+
+// ===== IMAGE CAROUSEL =====
+function initCarousels() {
+  $$('[data-carousel]').forEach(el=>{
+    let idx=0;
+    const slides=el.querySelector('[data-slides]');
+    const dots=el.querySelectorAll('.carousel-dot');
+    const n=slides.children.length;
+    if(n<=1) return;
+
+    function go(i) {
+      idx=Math.max(0,Math.min(i,n-1));
+      slides.style.transform=`translateX(-${idx*100}%)`;
+      dots.forEach((d,j)=>d.classList.toggle('active',j===idx));
+    }
+
+    el.querySelector('[data-prev]')?.addEventListener('click',e=>{e.stopPropagation();go(idx-1);});
+    el.querySelector('[data-next]')?.addEventListener('click',e=>{e.stopPropagation();go(idx+1);});
+  });
+}
+
+// ===== MAP =====
+let areaCounts = {}; // {areaName: count} computed from currentResults
+
+function getAreaCounts() {
+  const counts = {};
+  currentResults.forEach(r => {
+    const loc = r.location || '';
+    for (const name of Object.keys(markers)) {
+      if (loc.toLowerCase().includes(name.toLowerCase())) { counts[name] = (counts[name] || 0) + 1; break; }
+    }
+  });
+  return counts;
+}
+
+function createIcon(name, active, count) {
+  if(map&&map.getZoom()<10) {
+    return L.divIcon({ className:'area-marker', html:`<div class="w-2.5 h-2.5 rounded-full ${active?'bg-brand-500 ring-2 ring-white ring-offset-1 ring-offset-brand-500':'bg-brand-500 ring-2 ring-white'} shadow"></div>`, iconSize:[10,10], iconAnchor:[5,5] });
+  }
+  const cls = active ? 'area-label area-label-active' : 'area-label';
+  const badge = count ? `<span class="area-badge">${count}</span>` : '';
+  return L.divIcon({
+    className:'area-marker',
+    html:`<div class="${cls}" style="transform:translate(-50%,-50%)">${esc(name)}${badge}</div>`,
+    iconSize:[0,0], iconAnchor:[0,0]
+  });
+}
+
+function initMap() {
+  map=L.map('mapContainer',{zoomControl:true}).setView([24.86,67.01],11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:18}).addTo(map);
+  setTimeout(()=>map.invalidateSize(),100);
+  ensureMarkers();
+
+  map.on('moveend', onMapMove);
+  map.on('zoomend', updateMapMarkers);
+
+  if(window.ResizeObserver) new ResizeObserver(()=>{ if(map) map.invalidateSize(); }).observe($('#mapPanel'));
+}
+
+// Create marker objects once (hidden by default)
+function ensureMarkers() {
+  if(!map||!allAreas.length) return;
+  allAreas.forEach(a=>{
+    if(!a.lat||!a.lng||a.name==='Karachi'||markers[a.name]) return;
+    const m=L.marker([a.lat,a.lng],{icon:createIcon(a.name,false,0)});
+    m._areaName=a.name;
+    m.on('click',()=>{ mapDriven=true; selectArea(a.name, true); });
+    m.on('mouseover',()=>{
+      $$(`[data-area="${a.name}"]`).forEach(c=>c.classList.add('card-map-active'));
+      const first=$(`[data-area="${a.name}"]`);
+      if(first) first.scrollIntoView({behavior:'smooth',block:'nearest'});
+    });
+    m.on('mouseout',()=>{
+      $$(`[data-area="${a.name}"]`).forEach(c=>c.classList.remove('card-map-active'));
+    });
+    markers[a.name]=m;
+  });
+  updateMapMarkers();
+}
+
+const MAX_LABELS = 15; // max labels visible at once to avoid clutter
+
+function updateMapMarkers() {
+  if(!map) return;
+  areaCounts = getAreaCounts();
+  const zoom = map.getZoom();
+  const bounds = map.getBounds();
+  const active = S.area;
+
+  // Collect visible candidates: areas with results OR the active area
+  let candidates = [];
+  Object.entries(markers).forEach(([name, m]) => {
+    const hasResults = areaCounts[name] > 0;
+    const isActive = name === active;
+    const inView = bounds.contains(m.getLatLng());
+
+    if (isActive) {
+      // Always show active area
+      m.setIcon(createIcon(name, true, areaCounts[name] || 0));
+      if (!map.hasLayer(m)) m.addTo(map);
+    } else if (hasResults && inView && zoom >= 11) {
+      candidates.push({ name, m, count: areaCounts[name] });
+    } else {
+      // Hide markers with no results or out of view
+      if (map.hasLayer(m)) map.removeLayer(m);
+    }
+  });
+
+  // Sort by count desc, limit to MAX_LABELS
+  candidates.sort((a, b) => b.count - a.count);
+  candidates.forEach((c, i) => {
+    if (i < MAX_LABELS) {
+      c.m.setIcon(createIcon(c.name, false, c.count));
+      if (!map.hasLayer(c.m)) c.m.addTo(map);
+    } else {
+      if (map.hasLayer(c.m)) map.removeLayer(c.m);
+    }
+  });
+}
+
+function highlightMarker(name, flyTo) {
+  if(!map) return;
+  updateMapMarkers();
+  if(name&&markers[name]) {
+    if(flyTo) map.flyTo(markers[name].getLatLng(),14,{duration:0.8});
+  }
+}
+
+function resetMapView() {
+  if(!map) return;
+  updateMapMarkers();
+  map.setView([24.86,67.01],11,{animate:true});
+}
+
+function onMapMove() {
+  clearTimeout(mapTimer);
+  mapTimer=setTimeout(()=>{
+    if(!map||map.getZoom()<12) return;
+    const bounds=map.getBounds(), center=map.getCenter();
+    let closest=null, minDist=Infinity;
+    Object.entries(markers).forEach(([name,m])=>{
+      if(bounds.contains(m.getLatLng())) {
+        const d=center.distanceTo(m.getLatLng());
+        if(d<minDist) { minDist=d; closest=name; }
+      }
+    });
+    if(closest&&closest!==S.area) {
+      mapDriven=true;
+      selectArea(closest, true);
+    }
+  },500);
+}
+
+// ===== HOVER SYNC: Cards -> Map (card highlight class only, marker hover is CSS) =====
+const grid=$('#listingsGrid');
+
+// Card click -> drawer
+grid.addEventListener('click',e=>{
+  if(e.target.closest('[data-prev]')||e.target.closest('[data-next]')) return;
+  const c=e.target.closest('.card-wrap');
+  if(!c) return;
+  const idx=parseInt(c.dataset.idx,10);
+  if(!isNaN(idx)&&currentResults[idx]) openDrawer(currentResults[idx]);
+});
+
+// ===== DRAWER =====
+function getNearby(name,n) {
+  const t=allAreas.find(a=>a.name===name);
+  if(!t||!t.lat) return [];
+  return allAreas.filter(a=>a.name!==name&&a.name!=='Karachi'&&a.lat&&a.lng)
+    .map(a=>({name:a.name,d:Math.hypot(a.lat-t.lat,a.lng-t.lng)}))
+    .sort((a,b)=>a.d-b.d).slice(0,n);
+}
+
+function openDrawer(item) {
+  const di=$('#drawerImgArea');
+  if(item.image_url) {
+    const imgs=item.images||[item.image_url];
+    if(imgs.length>1) {
+      di.innerHTML=`<div class="relative" data-carousel><div class="flex transition-transform duration-300" data-slides>${imgs.slice(0,6).map(u=>`<img class="w-full h-60 object-cover shrink-0" src="${escA(u)}" alt="" onerror="this.src=''">`).join('')}</div>
+        <button data-prev class="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center shadow"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
+        <button data-next class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center shadow"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
+        <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">${imgs.slice(0,6).map((_,i)=>`<span class="carousel-dot w-1.5 h-1.5 rounded-full bg-white/50 ${i===0?'active':''}"></span>`).join('')}</div>
+      </div>`;
+      initCarousels();
+    } else {
+      di.innerHTML=`<img class="w-full h-60 object-cover" src="${escA(item.image_url)}" alt="" onerror="this.outerHTML='<div class=\\'h-60 bg-gray-100 flex items-center justify-center text-5xl text-gray-300\\'>&#x1f3e0;</div>'">`;
+    }
+  } else {
+    di.innerHTML=`<div class="h-60 bg-gray-100 flex items-center justify-center text-5xl text-gray-300">&#x1f3e0;</div>`;
+  }
+
+  const badges=[];
+  if(item.bedrooms) badges.push(`<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-100 text-sm text-gray-600">${item.bedrooms} Bed${item.bedrooms>1?'s':''}</span>`);
+  if(item.bathrooms) badges.push(`<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-100 text-sm text-gray-600">${item.bathrooms} Bath${item.bathrooms>1?'s':''}</span>`);
+  if(item.area_size) badges.push(`<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-100 text-sm text-gray-600">${esc(item.area_size)}</span>`);
+  if(item.property_type) badges.push(`<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-50 text-sm text-brand-600 font-medium">${esc(item.property_type)}</span>`);
+
+  const area=getAreaForListing(item);
+  let nearbyHtml='';
+  if(area) {
+    const nb=getNearby(area.name,5);
+    if(nb.length) nearbyHtml=`<div class="mb-4"><div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Nearby Areas</div><div class="flex flex-wrap gap-2">${nb.map(n=>`<span class="chip" data-nearby="${escA(n.name)}">${esc(n.name)}</span>`).join('')}</div></div>`;
+  }
+
+  $('#drawerContent').innerHTML=`
+    <div class="text-lg font-bold text-gray-800 leading-snug mt-4 mb-2">${esc(item.title||'Rental Property')}</div>
+    <div class="text-2xl font-extrabold text-brand-500 mb-3">${esc(fmtPrice(item.price,item.price_text))}</div>
+    ${item.location?`<div class="flex items-center gap-1.5 text-sm text-gray-500 mb-3"><svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${esc(item.location)}</div>`:''}
+    ${badges.length?`<div class="flex flex-wrap gap-2 mb-4">${badges.join('')}</div>`:''}
+    ${item.added?`<div class="text-xs text-gray-400 mb-4">${esc(item.added)}</div>`:''}
+    ${area&&area.lat?`<div id="drawerMiniMap" class="w-full h-40 rounded-lg mb-4"></div>`:''}
+    ${nearbyHtml}
+    ${item.url?`<a class="block w-full py-3.5 rounded-lg bg-gradient-to-r from-brand-500 to-brand-600 text-white text-center text-sm font-bold hover:shadow-lg hover:shadow-brand-500/30 transition-all" href="${escA(item.url)}" target="_blank" rel="noopener">View on Zameen.com &rarr;</a>`:''}
+  `;
+
+  // Mini map
+  if(area&&area.lat) {
+    setTimeout(()=>{
+      const el=document.getElementById('drawerMiniMap');
+      if(!el) return;
+      if(miniMap){miniMap.remove();miniMap=null;}
+      miniMap=L.map(el,{zoomControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,touchZoom:false,attributionControl:false}).setView([area.lat,area.lng],14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(miniMap);
+      L.marker([area.lat,area.lng]).addTo(miniMap);
+    },150);
+  }
+
+  // Show drawer
+  $('#drawer').classList.add('drawer-open');
+  $('#drawerOverlay').classList.add('overlay-open');
+  document.body.style.overflow='hidden';
+}
+
+function closeDrawer() {
+  $('#drawer').classList.remove('drawer-open');
+  $('#drawerOverlay').classList.remove('overlay-open');
+  document.body.style.overflow='';
+  if(miniMap){miniMap.remove();miniMap=null;}
+}
+
+$('#drawerClose').addEventListener('click',closeDrawer);
+$('#drawerOverlay').addEventListener('click',closeDrawer);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();closeDD();}});
+
+$('#drawerContent').addEventListener('click',e=>{
+  const c=e.target.closest('[data-nearby]');
+  if(c) { closeDrawer(); selectArea(c.dataset.nearby); }
+});
+
+// ===== MOBILE MAP =====
+$('#mapFab').addEventListener('click',()=>{
+  $('#mapOverlay').classList.remove('hidden');
+  if(!mobileMap) {
+    mobileMap=L.map('mapContainerMobile',{zoomControl:true}).setView([24.86,67.01],11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:18}).addTo(mobileMap);
+    areaCounts = getAreaCounts();
+    allAreas.forEach(a=>{
+      if(!a.lat||!a.lng||a.name==='Karachi') return;
+      const count = areaCounts[a.name] || 0;
+      if(!count && a.name !== S.area) return; // only show areas with results
+      const icon=createIcon(a.name, a.name===S.area, count);
+      L.marker([a.lat,a.lng],{icon}).addTo(mobileMap).on('click',()=>{
+        mapDriven=true; selectArea(a.name,true);
+      });
+    });
+  }
+  setTimeout(()=>mobileMap.invalidateSize(),100);
+  if(S.area&&markers[S.area]) mobileMap.setView(markers[S.area].getLatLng(),14);
+});
+$('#mapOverlayClose').addEventListener('click',()=>$('#mapOverlay').classList.add('hidden'));
+
+// ===== INIT =====
+async function init() {
+  try { const r=await fetch('/api/areas'); allAreas=await r.json(); } catch(e) { console.error(e); }
+  loadSearch();
+  if(window.innerWidth>768) initMap();
+  doSearch();
+}
+init();
+})();
+</script>
+</body>
+</html>
