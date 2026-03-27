@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--green:#0a8f3c;--green-dark:#067a2f;--green-light:#e8f5e9;--green-50:#f1f8f3;--gray-50:#f8f9fa;--gray-100:#f1f3f5;--gray-200:#e9ecef;--gray-300:#dee2e6;--gray-400:#adb5bd;--gray-500:#868e96;--gray-600:#495057;--gray-700:#343a40;--gray-800:#212529;--radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.04);--shadow-md:0 4px 16px rgba(0,0,0,.1),0 8px 32px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.12),0 16px 48px rgba(0,0,0,.08)}
@@ -17,29 +19,77 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
 .header p{font-size:13px;opacity:.85;font-weight:400;position:relative}
 .container{max-width:600px;margin:0 auto;padding:0 12px}
 .search-panel{background:#fff;border-radius:0 0 var(--radius) var(--radius);margin:-8px 12px 16px;padding:16px;box-shadow:var(--shadow-md);position:relative;z-index:2}
-.quick-chips{display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;scrollbar-width:none;-ms-overflow-style:none}
-.quick-chips::-webkit-scrollbar{display:none}
-.chip{flex-shrink:0;padding:7px 14px;border-radius:20px;border:1.5px solid var(--gray-200);background:#fff;font-size:13px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:all .2s;white-space:nowrap}
-.chip:hover,.chip.active{background:var(--green-light);border-color:var(--green);color:var(--green)}
+.section-label{font-size:11px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;margin-top:4px}
+.divider{height:1px;background:var(--gray-200);margin:12px 0}
+
+/* Preset chips */
+.preset-chips{display:flex;gap:8px;overflow-x:auto;padding:0 0 4px;scrollbar-width:none;-ms-overflow-style:none}
+.preset-chips::-webkit-scrollbar{display:none}
+.preset-chip{flex-shrink:0;padding:7px 14px;border-radius:20px;border:1.5px solid var(--gray-200);background:#fff;font-size:13px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:all .2s;white-space:nowrap}
+.preset-chip:hover{background:var(--green-light);border-color:var(--green);color:var(--green)}
+.preset-chip.active{background:var(--green);border-color:var(--green);color:#fff}
+
+/* Area autocomplete */
+.area-autocomplete{position:relative}
+.area-input-wrap{display:flex;align-items:center;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:0 12px;transition:border-color .2s;background:#fff}
+.area-input-wrap:focus-within{border-color:var(--green)}
+.area-input-wrap input{flex:1;padding:10px 0;border:none;outline:none;font-size:14px;font-family:inherit;color:var(--gray-700);background:transparent;min-width:0}
+.area-input-wrap input::placeholder{color:var(--gray-400)}
+.area-clear{display:none;background:none;border:none;cursor:pointer;font-size:16px;color:var(--gray-400);padding:4px;line-height:1}
+.area-clear.show{display:block}
+.area-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:16px;background:var(--green-light);color:var(--green);font-size:13px;font-weight:500;margin-right:6px;flex-shrink:0}
+.area-chip button{background:none;border:none;cursor:pointer;color:var(--green);font-size:14px;line-height:1;padding:0}
+.area-dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);margin-top:4px;max-height:220px;overflow-y:auto;box-shadow:var(--shadow-md);z-index:10;display:none}
+.area-dropdown.open{display:block}
+.area-option{padding:10px 14px;cursor:pointer;font-size:14px;color:var(--gray-700);transition:background .15s;display:flex;justify-content:space-between;align-items:center}
+.area-option:hover,.area-option.highlighted{background:var(--green-50)}
+.area-option .ur{font-size:13px;color:var(--gray-400);direction:rtl}
+
+/* Type chips */
+.type-chips{display:flex;gap:6px;flex-wrap:wrap}
+.type-chip{padding:8px 14px;border-radius:20px;border:1.5px solid var(--gray-200);background:#fff;font-size:13px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:all .2s;white-space:nowrap}
+.type-chip:hover{background:var(--green-light);border-color:var(--green);color:var(--green)}
+.type-chip.active{background:var(--green);border-color:var(--green);color:#fff}
+
+/* Bed pills */
+.bed-pills{display:flex;gap:6px;flex-wrap:wrap}
+.bed-pill{padding:8px 14px;border-radius:20px;border:1.5px solid var(--gray-200);background:#fff;font-size:13px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:all .2s}
+.bed-pill:hover,.bed-pill.active{background:var(--green);border-color:var(--green);color:#fff}
+
+/* Price chips */
+.price-chips{display:flex;gap:6px;flex-wrap:wrap}
+.price-chip{padding:8px 14px;border-radius:20px;border:1.5px solid var(--gray-200);background:#fff;font-size:13px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:all .2s;white-space:nowrap}
+.price-chip:hover{background:var(--green-light);border-color:var(--green);color:var(--green)}
+.price-chip.active{background:var(--green);border-color:var(--green);color:#fff}
+.custom-price{display:none;gap:10px;margin-top:8px}
+.custom-price.show{display:grid;grid-template-columns:1fr 1fr}
+.custom-price input{padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;color:var(--gray-700);background:#fff;transition:border-color .2s;outline:none;width:100%}
+.custom-price input:focus{border-color:var(--green)}
+
+/* Toggle & sort row */
 .form-row{display:grid;gap:10px;margin-bottom:12px}
 .form-row.two{grid-template-columns:1fr 1fr}
 .form-group{display:flex;flex-direction:column;gap:4px}
 .form-group label{font-size:11px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px}
-.form-group select,.form-group input{padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;color:var(--gray-700);background:#fff;transition:border-color .2s;outline:none;width:100%}
-.form-group select:focus,.form-group input:focus{border-color:var(--green)}
-.bed-pills{display:flex;gap:6px;flex-wrap:wrap}
-.bed-pill{padding:8px 14px;border-radius:20px;border:1.5px solid var(--gray-200);background:#fff;font-size:13px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:all .2s}
-.bed-pill:hover,.bed-pill.active{background:var(--green);border-color:var(--green);color:#fff}
+.form-group select{padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;color:var(--gray-700);background:#fff;transition:border-color .2s;outline:none;width:100%}
+.form-group select:focus{border-color:var(--green)}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
 .toggle-row span{font-size:13px;font-weight:500;color:var(--gray-600)}
 .toggle{width:44px;height:24px;border-radius:12px;background:var(--gray-300);position:relative;cursor:pointer;transition:background .2s}
 .toggle.on{background:var(--green)}
 .toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s}
 .toggle.on::after{transform:translateX(20px)}
-.search-btn{width:100%;padding:14px;border:none;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--green),var(--green-dark));color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:transform .15s,box-shadow .15s;margin-top:4px}
+
+/* Search button & clear */
+.search-actions{display:flex;gap:8px;align-items:center;margin-top:8px}
+.search-btn{flex:1;padding:14px;border:none;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--green),var(--green-dark));color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:transform .15s,box-shadow .15s}
 .search-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(10,143,60,.35)}
 .search-btn:active{transform:translateY(0)}
 .search-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.clear-all{background:none;border:none;color:var(--gray-500);font-size:13px;font-weight:500;cursor:pointer;padding:8px 12px;white-space:nowrap;transition:color .2s}
+.clear-all:hover{color:var(--gray-700)}
+
+/* Results */
 .results-header{padding:16px 0 8px;display:flex;justify-content:space-between;align-items:center}
 .results-header h2{font-size:16px;font-weight:700;color:var(--gray-700)}
 .results-header span{font-size:13px;color:var(--gray-500)}
@@ -68,8 +118,75 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
 .load-more:hover{background:var(--green-light)}
 .footer{text-align:center;padding:24px 16px 32px;font-size:12px;color:var(--gray-400)}
 .footer a{color:var(--gray-500);text-decoration:none}
-.section-label{font-size:11px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;margin-top:4px}
-.divider{height:1px;background:var(--gray-200);margin:12px 0}
+
+/* Natural language search */
+.nl-search{margin-bottom:12px}
+.nl-input-wrap{display:flex;gap:0;border:2px solid var(--green);border-radius:var(--radius);overflow:hidden;background:#fff;transition:box-shadow .2s}
+.nl-input-wrap:focus-within{box-shadow:0 0 0 3px rgba(10,143,60,.15)}
+.nl-input-wrap input{flex:1;padding:14px 16px;border:none;outline:none;font-size:15px;font-family:inherit;color:var(--gray-800);background:transparent;min-width:0}
+.nl-input-wrap input::placeholder{color:var(--gray-400)}
+.nl-search-btn{padding:0 20px;border:none;background:var(--green);color:#fff;font-size:20px;cursor:pointer;transition:background .2s;display:flex;align-items:center}
+.nl-search-btn:hover{background:var(--green-dark)}
+.nl-search-btn:disabled{opacity:.6;cursor:not-allowed}
+.nl-examples{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.nl-example{padding:4px 10px;border-radius:14px;background:var(--gray-100);font-size:11px;color:var(--gray-500);cursor:pointer;transition:all .2s;white-space:nowrap}
+.nl-example:hover{background:var(--green-light);color:var(--green)}
+.nl-parsed{display:none;margin-top:8px;padding:10px 14px;background:var(--green-50);border-radius:var(--radius-sm);font-size:13px;color:var(--gray-600);line-height:1.6}
+.nl-parsed.show{display:block}
+.nl-parsed strong{color:var(--green);font-weight:600}
+.nl-toggle{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;margin-top:4px;border:none;background:none;color:var(--gray-400);font-size:12px;font-weight:500;cursor:pointer;width:100%;transition:color .2s}
+.nl-toggle:hover{color:var(--gray-600)}
+.filters-collapsible{overflow:hidden;transition:max-height .3s ease,opacity .3s ease;max-height:0;opacity:0}
+.filters-collapsible.open{max-height:2000px;opacity:1}
+
+/* Map toggle */
+.map-toggle{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:#fff;color:var(--gray-600);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s;margin-bottom:8px}
+.map-toggle:hover{border-color:var(--green);color:var(--green);background:var(--green-50)}
+.map-toggle.open{border-color:var(--green);color:var(--green);background:var(--green-50)}
+.map-wrap{overflow:hidden;transition:max-height .35s ease,opacity .3s ease;max-height:0;opacity:0;margin-bottom:8px}
+.map-wrap.open{max-height:320px;opacity:1}
+#mapContainer{width:100%;height:280px;border-radius:var(--radius-sm);z-index:1}
+
+/* Card images */
+.card-img{width:100%;height:180px;object-fit:cover;display:block}
+.card-img-placeholder{width:100%;height:180px;background:linear-gradient(135deg,var(--green-light) 0%,var(--gray-100) 50%,var(--green-50) 100%);display:flex;align-items:center;justify-content:center;font-size:48px;opacity:.4}
+.card{cursor:pointer}
+.card:active{transform:scale(.98);box-shadow:var(--shadow)}
+
+/* Drawer */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;opacity:0;pointer-events:none;transition:opacity .3s}
+.drawer-overlay.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;z-index:101;background:#fff;overflow-y:auto;transition:transform .35s cubic-bezier(.32,.72,0,1);overscroll-behavior:contain}
+.drawer .drawer-close{position:sticky;top:0;float:right;margin:12px;width:36px;height:36px;border-radius:50%;border:none;background:var(--gray-100);font-size:22px;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center;color:var(--gray-600);transition:background .2s}
+.drawer .drawer-close:hover{background:var(--gray-200)}
+.drawer-content{padding:0 20px 24px}
+.drawer-img{width:100%;height:220px;object-fit:cover;display:block}
+.drawer-img-placeholder{width:100%;height:220px;background:linear-gradient(135deg,var(--green-light) 0%,var(--gray-100) 50%,var(--green-50) 100%);display:flex;align-items:center;justify-content:center;font-size:64px;opacity:.4}
+.drawer-title{font-size:18px;font-weight:700;color:var(--gray-800);line-height:1.4;margin:16px 0 8px}
+.drawer-price{font-size:28px;font-weight:800;color:var(--green);margin-bottom:10px}
+.drawer-location{font-size:14px;color:var(--gray-500);margin-bottom:12px}
+.drawer-badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.drawer-badges .badge{padding:6px 12px;font-size:13px}
+.drawer-added{font-size:13px;color:var(--gray-400);margin-bottom:16px}
+.drawer-minimap{width:100%;height:160px;border-radius:var(--radius-sm);margin-bottom:16px}
+.drawer-nearby{margin-bottom:16px}
+.drawer-nearby h4{font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.drawer-nearby-chips{display:flex;gap:6px;flex-wrap:wrap}
+.nearby-chip{padding:6px 12px;border-radius:16px;border:1.5px solid var(--gray-200);background:#fff;font-size:12px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:all .2s}
+.nearby-chip:hover{border-color:var(--green);color:var(--green);background:var(--green-50)}
+.drawer-cta{display:block;width:100%;padding:14px;border:none;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--green),var(--green-dark));color:#fff;font-size:15px;font-weight:700;font-family:inherit;text-align:center;text-decoration:none;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.drawer-cta:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(10,143,60,.35)}
+
+/* Drawer desktop: right panel */
+@media(min-width:641px){
+  .drawer{top:0;right:0;bottom:0;width:420px;max-width:90vw;transform:translateX(100%);box-shadow:-4px 0 24px rgba(0,0,0,.12)}
+  .drawer.open{transform:translateX(0)}
+}
+/* Drawer mobile: bottom sheet */
+@media(max-width:640px){
+  .drawer{left:0;right:0;bottom:0;max-height:85vh;border-radius:16px 16px 0 0;transform:translateY(100%);box-shadow:0 -4px 24px rgba(0,0,0,.12)}
+  .drawer.open{transform:translateY(0)}
+}
 </style>
 </head>
 <body>
@@ -81,28 +198,71 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
 
 <div class="container">
   <div class="search-panel">
-    <div class="quick-chips" id="quickChips">
-      <div class="chip" data-area="DHA Phase 5">DHA Ph 5</div>
-      <div class="chip" data-area="Clifton">Clifton</div>
-      <div class="chip" data-area="Gulshan-e-Iqbal">Gulshan</div>
-      <div class="chip" data-area="PECHS">PECHS</div>
-      <div class="chip" data-area="Bahria Town Karachi">Bahria Town</div>
-      <div class="chip" data-area="DHA Phase 6">DHA Ph 6</div>
-      <div class="chip" data-area="North Nazimabad">N. Nazimabad</div>
-      <div class="chip" data-area="Nazimabad">Nazimabad</div>
+
+    <!-- Natural Language Search -->
+    <div class="nl-search">
+      <div class="nl-input-wrap">
+        <input type="text" id="nlInput" placeholder="Describe what you're looking for..." autocomplete="off">
+        <button class="nl-search-btn" id="nlSearchBtn">&#x2192;</button>
+      </div>
+      <div class="nl-examples" id="nlExamples">
+        <span class="nl-example">2 bed flat in DHA under 50k</span>
+        <span class="nl-example">gulshan mein sasta ghar</span>
+        <span class="nl-example">&#x6a9;&#x644;&#x641;&#x679;&#x646; &#x645;&#x6cc;&#x6ba; &#x641;&#x644;&#x6cc;&#x679;</span>
+        <span class="nl-example">furnished apartment Bahria</span>
+      </div>
+      <div class="nl-parsed" id="nlParsed"></div>
     </div>
 
-    <div class="form-row two">
-      <div class="form-group">
-        <label>Area</label>
-        <select id="areaSelect"><option value="">All Karachi</option></select>
-      </div>
-      <div class="form-group">
-        <label>Property Type</label>
-        <select id="typeSelect"><option value="">Any Type</option></select>
-      </div>
+    <button class="nl-toggle" id="filtersToggle">&#x25BC; Manual Filters</button>
+
+    <div class="filters-collapsible" id="filtersCollapsible">
+
+    <!-- Presets -->
+    <div class="section-label">Quick Search</div>
+    <div class="preset-chips" id="presetChips">
+      <div class="preset-chip" data-type="apartment" data-beds="1" data-pmin="0" data-pmax="40000">Budget 1BR</div>
+      <div class="preset-chip" data-type="house" data-beds="3" data-pmin="50000" data-pmax="150000">Family Home</div>
+      <div class="preset-chip" data-type="apartment" data-beds="3" data-pmin="150000" data-pmax="">Luxury Flat</div>
+      <div class="preset-chip" data-type="room" data-beds="1" data-pmin="0" data-pmax="30000">Studio/Room</div>
+      <div class="preset-chip" data-type="upper_portion" data-beds="2" data-pmin="30000" data-pmax="80000">Portion</div>
     </div>
 
+    <div class="divider"></div>
+
+    <!-- Area Search -->
+    <div class="section-label">Area</div>
+    <div class="area-autocomplete" id="areaAutocomplete">
+      <div class="area-input-wrap" id="areaInputWrap">
+        <input type="text" id="areaInput" placeholder="Type area name (English or Urdu)" autocomplete="off">
+        <button class="area-clear" id="areaClear">&times;</button>
+      </div>
+      <div class="area-dropdown" id="areaDropdown"></div>
+    </div>
+
+    <!-- Map -->
+    <button class="map-toggle" id="mapToggle">&#x1f5fa;&#xfe0f; Show Map</button>
+    <div class="map-wrap" id="mapWrap">
+      <div id="mapContainer"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Property Type -->
+    <div class="section-label">Property Type</div>
+    <div class="type-chips" id="typeChips">
+      <div class="type-chip" data-type="house">&#x1f3e0; House</div>
+      <div class="type-chip" data-type="apartment">&#x1f3e2; Apartment</div>
+      <div class="type-chip" data-type="upper_portion">&#x2b06;&#xfe0f; Upper</div>
+      <div class="type-chip" data-type="lower_portion">&#x2b07;&#xfe0f; Lower</div>
+      <div class="type-chip" data-type="room">&#x1f6aa; Room</div>
+      <div class="type-chip" data-type="penthouse">&#x1f3d9;&#xfe0f; Penthouse</div>
+      <div class="type-chip" data-type="farm_house">&#x1f333; Farm House</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Bedrooms -->
     <div class="section-label">Bedrooms</div>
     <div class="bed-pills" id="bedPills">
       <div class="bed-pill active" data-beds="">Any</div>
@@ -115,17 +275,24 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
 
     <div class="divider"></div>
 
-    <div class="form-row two">
-      <div class="form-group">
-        <label>Min Price (PKR)</label>
-        <input type="number" id="priceMin" placeholder="e.g. 20000" min="0">
-      </div>
-      <div class="form-group">
-        <label>Max Price (PKR)</label>
-        <input type="number" id="priceMax" placeholder="e.g. 100000" min="0">
-      </div>
+    <!-- Price -->
+    <div class="section-label">Price Range</div>
+    <div class="price-chips" id="priceChips">
+      <div class="price-chip" data-pmin="0" data-pmax="30000">Under 30K</div>
+      <div class="price-chip" data-pmin="30000" data-pmax="60000">30-60K</div>
+      <div class="price-chip" data-pmin="60000" data-pmax="100000">60-100K</div>
+      <div class="price-chip" data-pmin="100000" data-pmax="200000">100-200K</div>
+      <div class="price-chip" data-pmin="200000" data-pmax="">200K+</div>
+      <div class="price-chip" data-custom="1">Custom</div>
+    </div>
+    <div class="custom-price" id="customPrice">
+      <input type="number" id="priceMin" placeholder="Min (PKR)" min="0">
+      <input type="number" id="priceMax" placeholder="Max (PKR)" min="0">
     </div>
 
+    <div class="divider"></div>
+
+    <!-- Furnished + Sort -->
     <div class="form-row two">
       <div class="toggle-row">
         <span>Furnished Only</span>
@@ -142,10 +309,24 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
       </div>
     </div>
 
-    <button class="search-btn" id="searchBtn">Search Rentals</button>
+    <!-- Search + Clear -->
+    <div class="search-actions">
+      <button class="search-btn" id="searchBtn">Search Rentals</button>
+      <button class="clear-all" id="clearAll">Clear All</button>
+    </div>
+
+    </div><!-- /filters-collapsible -->
   </div>
 
   <div id="resultsArea"></div>
+</div>
+
+<!-- Detail Drawer -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <button class="drawer-close" id="drawerClose">&times;</button>
+  <div id="drawerImgArea"></div>
+  <div class="drawer-content" id="drawerContent"></div>
 </div>
 
 <div class="footer">
@@ -161,76 +342,419 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
   let isLoading = false;
   let currentResults = [];
   let selectedBeds = '';
+  let selectedType = '';
+  let selectedArea = '';
+  let selectedPriceMin = '';
+  let selectedPriceMax = '';
   let furnished = false;
+  let allAreas = [];
 
-  // Load areas & types
-  async function loadFilters() {
-    try {
-      const [areas, types] = await Promise.all([
-        fetch('/api/areas').then(r => r.json()),
-        fetch('/api/property-types').then(r => r.json())
-      ]);
-      const areaSelect = $('#areaSelect');
-      areas.forEach(a => {
-        const opt = document.createElement('option');
-        opt.value = a.name;
-        opt.textContent = a.name;
-        areaSelect.appendChild(opt);
-      });
-      const typeSelect = $('#typeSelect');
-      types.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.key;
-        opt.textContent = t.label;
-        typeSelect.appendChild(opt);
-      });
-    } catch(e) { console.error('Failed to load filters:', e); }
+  // --- Filters Toggle ---
+  const filtersCollapsible = $('#filtersCollapsible');
+  const filtersToggle = $('#filtersToggle');
+  let filtersOpen = false;
+
+  filtersToggle.addEventListener('click', () => {
+    filtersOpen = !filtersOpen;
+    filtersCollapsible.classList.toggle('open', filtersOpen);
+    filtersToggle.innerHTML = filtersOpen ? '&#x25B2; Hide Filters' : '&#x25BC; Manual Filters';
+  });
+
+  // --- Natural Language Search ---
+  const nlInput = $('#nlInput');
+  const nlSearchBtn = $('#nlSearchBtn');
+  const nlParsed = $('#nlParsed');
+
+  const TYPE_LABELS = {
+    house: 'House', apartment: 'Apartment', upper_portion: 'Upper Portion',
+    lower_portion: 'Lower Portion', room: 'Room', penthouse: 'Penthouse', farm_house: 'Farm House'
+  };
+  const SORT_LABELS = { price_low: 'Price: Low to High', price_high: 'Price: High to Low', newest: 'Newest First' };
+
+  function formatParsedFilters(filters) {
+    const parts = [];
+    if (filters.area) parts.push(`<strong>Area:</strong> ${escHtml(filters.area)}`);
+    if (filters.property_type) parts.push(`<strong>Type:</strong> ${TYPE_LABELS[filters.property_type] || filters.property_type}`);
+    if (filters.bedrooms) parts.push(`<strong>Bedrooms:</strong> ${filters.bedrooms}`);
+    if (filters.price_min || filters.price_max) {
+      const min = filters.price_min ? `Rs ${(filters.price_min/1000).toFixed(0)}K` : '';
+      const max = filters.price_max ? `Rs ${(filters.price_max/1000).toFixed(0)}K` : '';
+      if (min && max) parts.push(`<strong>Price:</strong> ${min} - ${max}`);
+      else if (max) parts.push(`<strong>Price:</strong> Under ${max}`);
+      else parts.push(`<strong>Price:</strong> Above ${min}`);
+    }
+    if (filters.furnished) parts.push(`<strong>Furnished:</strong> Yes`);
+    if (filters.sort) parts.push(`<strong>Sort:</strong> ${SORT_LABELS[filters.sort] || filters.sort}`);
+    return parts.join(' &nbsp;&middot;&nbsp; ');
   }
 
-  // Quick chips
-  $('#quickChips').addEventListener('click', e => {
-    const chip = e.target.closest('.chip');
+  function applyParsedFilters(filters) {
+    clearAllFilters();
+    if (filters.area) selectArea(filters.area);
+    if (filters.property_type) {
+      selectedType = filters.property_type;
+      $$('.type-chip').forEach(c => c.classList.toggle('active', c.dataset.type === filters.property_type));
+    }
+    if (filters.bedrooms) {
+      selectedBeds = String(filters.bedrooms);
+      $$('.bed-pill').forEach(p => p.classList.toggle('active', p.dataset.beds === selectedBeds));
+    }
+    if (filters.price_min) selectedPriceMin = String(filters.price_min);
+    if (filters.price_max) selectedPriceMax = String(filters.price_max);
+    if (filters.price_min || filters.price_max) syncPriceChips();
+    if (filters.furnished) {
+      furnished = true;
+      $('#furnishedToggle').classList.add('on');
+    }
+    if (filters.sort) $('#sortSelect').value = filters.sort;
+    updateBtnBadge();
+  }
+
+  async function doNlSearch() {
+    const query = nlInput.value.trim();
+    if (!query || isLoading) return;
+
+    nlSearchBtn.disabled = true;
+    nlParsed.classList.remove('show');
+    nlParsed.innerHTML = '<em>Understanding your search...</em>';
+    nlParsed.classList.add('show');
+
+    try {
+      const resp = await fetch('/api/parse-query?q=' + encodeURIComponent(query));
+      if (!resp.ok) throw new Error('Parse failed');
+      const data = await resp.json();
+      const filters = data.filters || {};
+
+      if (Object.keys(filters).length === 0) {
+        nlParsed.innerHTML = 'Could not understand the query. Try something like "2 bed flat in DHA under 50k"';
+        return;
+      }
+
+      nlParsed.innerHTML = formatParsedFilters(filters);
+      applyParsedFilters(filters);
+
+      // Open filters so user can see what was set
+      if (!filtersOpen) {
+        filtersOpen = true;
+        filtersCollapsible.classList.add('open');
+        filtersToggle.innerHTML = '&#x25B2; Hide Filters';
+      }
+
+      doSearch();
+    } catch(e) {
+      nlParsed.innerHTML = 'Something went wrong. Please try again.';
+    } finally {
+      nlSearchBtn.disabled = false;
+    }
+  }
+
+  nlSearchBtn.addEventListener('click', doNlSearch);
+  nlInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doNlSearch();
+  });
+
+  // Example chips fill the NL input and trigger search
+  $('#nlExamples').addEventListener('click', e => {
+    const ex = e.target.closest('.nl-example');
+    if (!ex) return;
+    nlInput.value = ex.textContent;
+    doNlSearch();
+  });
+
+  // --- Area Autocomplete ---
+  async function loadAreas() {
+    try {
+      const resp = await fetch('/api/areas');
+      allAreas = await resp.json();
+    } catch(e) { console.error('Failed to load areas:', e); }
+  }
+
+  const areaInput = $('#areaInput');
+  const areaDropdown = $('#areaDropdown');
+  const areaClear = $('#areaClear');
+  const areaWrap = $('#areaInputWrap');
+  let highlightIdx = -1;
+
+  function filterAreas(query) {
+    if (!query) return allAreas.slice(0, 15);
+    const q = query.toLowerCase();
+    return allAreas.filter(a =>
+      a.name.toLowerCase().includes(q) ||
+      (a.name_ur && a.name_ur.includes(query))
+    ).slice(0, 12);
+  }
+
+  function renderDropdown(items) {
+    if (items.length === 0) {
+      areaDropdown.classList.remove('open');
+      return;
+    }
+    highlightIdx = -1;
+    areaDropdown.innerHTML = items.map((a, i) =>
+      `<div class="area-option" data-idx="${i}" data-name="${a.name}">
+        <span>${escHtml(a.name)}</span>
+        ${a.name_ur ? `<span class="ur">${a.name_ur}</span>` : ''}
+      </div>`
+    ).join('');
+    areaDropdown.classList.add('open');
+  }
+
+  areaInput.addEventListener('input', () => {
+    const q = areaInput.value.trim();
+    areaClear.classList.toggle('show', q.length > 0);
+    if (q.length === 0) {
+      selectedArea = '';
+      renderDropdown(allAreas.slice(0, 15));
+      updateBtnBadge();
+      return;
+    }
+    const matches = filterAreas(q);
+    renderDropdown(matches);
+  });
+
+  areaInput.addEventListener('focus', () => {
+    const q = areaInput.value.trim();
+    const matches = q ? filterAreas(q) : allAreas.slice(0, 15);
+    renderDropdown(matches);
+  });
+
+  areaInput.addEventListener('keydown', e => {
+    const options = areaDropdown.querySelectorAll('.area-option');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      highlightIdx = Math.min(highlightIdx + 1, options.length - 1);
+      options.forEach((o, i) => o.classList.toggle('highlighted', i === highlightIdx));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      highlightIdx = Math.max(highlightIdx - 1, 0);
+      options.forEach((o, i) => o.classList.toggle('highlighted', i === highlightIdx));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (highlightIdx >= 0 && options[highlightIdx]) {
+        selectArea(options[highlightIdx].dataset.name);
+      } else {
+        doSearch();
+      }
+    } else if (e.key === 'Escape') {
+      areaDropdown.classList.remove('open');
+    }
+  });
+
+  areaDropdown.addEventListener('click', e => {
+    const opt = e.target.closest('.area-option');
+    if (opt) selectArea(opt.dataset.name);
+  });
+
+  function selectArea(name) {
+    selectedArea = name;
+    areaInput.value = name;
+    areaClear.classList.add('show');
+    areaDropdown.classList.remove('open');
+    highlightMarker(name);
+    updateBtnBadge();
+  }
+
+  areaClear.addEventListener('click', () => {
+    selectedArea = '';
+    areaInput.value = '';
+    areaClear.classList.remove('show');
+    resetMapView();
+    updateBtnBadge();
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#areaAutocomplete')) {
+      areaDropdown.classList.remove('open');
+    }
+  });
+
+  // --- Preset Chips ---
+  $('#presetChips').addEventListener('click', e => {
+    const chip = e.target.closest('.preset-chip');
     if (!chip) return;
-    $$('.chip').forEach(c => c.classList.remove('active'));
+    // Toggle off if already active
+    if (chip.classList.contains('active')) {
+      chip.classList.remove('active');
+      clearAllFilters();
+      return;
+    }
+    $$('.preset-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
-    $('#areaSelect').value = chip.dataset.area;
+    // Apply preset
+    selectedType = chip.dataset.type || '';
+    selectedBeds = chip.dataset.beds || '';
+    selectedPriceMin = chip.dataset.pmin || '';
+    selectedPriceMax = chip.dataset.pmax || '';
+    // Update type chips
+    $$('.type-chip').forEach(c => c.classList.toggle('active', c.dataset.type === selectedType));
+    // Update bed pills
+    $$('.bed-pill').forEach(p => p.classList.toggle('active', p.dataset.beds === selectedBeds));
+    // Update price chips
+    syncPriceChips();
+    updateBtnBadge();
     doSearch();
   });
 
-  // Bed pills
+  // --- Property Type Chips ---
+  $('#typeChips').addEventListener('click', e => {
+    const chip = e.target.closest('.type-chip');
+    if (!chip) return;
+    if (chip.classList.contains('active')) {
+      chip.classList.remove('active');
+      selectedType = '';
+    } else {
+      $$('.type-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      selectedType = chip.dataset.type;
+    }
+    $$('.preset-chip').forEach(c => c.classList.remove('active'));
+    updateBtnBadge();
+  });
+
+  // --- Bed Pills ---
   $('#bedPills').addEventListener('click', e => {
     const pill = e.target.closest('.bed-pill');
     if (!pill) return;
     $$('.bed-pill').forEach(p => p.classList.remove('active'));
     pill.classList.add('active');
     selectedBeds = pill.dataset.beds;
+    $$('.preset-chip').forEach(c => c.classList.remove('active'));
+    updateBtnBadge();
   });
 
-  // Furnished toggle
+  // --- Price Chips ---
+  $('#priceChips').addEventListener('click', e => {
+    const chip = e.target.closest('.price-chip');
+    if (!chip) return;
+    if (chip.dataset.custom) {
+      // Toggle custom price inputs
+      $$('.price-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      $('#customPrice').classList.add('show');
+      selectedPriceMin = $('#priceMin').value;
+      selectedPriceMax = $('#priceMax').value;
+      $$('.preset-chip').forEach(c => c.classList.remove('active'));
+      updateBtnBadge();
+      return;
+    }
+    $('#customPrice').classList.remove('show');
+    if (chip.classList.contains('active')) {
+      chip.classList.remove('active');
+      selectedPriceMin = '';
+      selectedPriceMax = '';
+    } else {
+      $$('.price-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      selectedPriceMin = chip.dataset.pmin;
+      selectedPriceMax = chip.dataset.pmax;
+    }
+    $('#priceMin').value = '';
+    $('#priceMax').value = '';
+    $$('.preset-chip').forEach(c => c.classList.remove('active'));
+    updateBtnBadge();
+  });
+
+  // Custom price inputs update selectedPriceMin/Max
+  $('#priceMin').addEventListener('input', () => {
+    selectedPriceMin = $('#priceMin').value;
+    updateBtnBadge();
+  });
+  $('#priceMax').addEventListener('input', () => {
+    selectedPriceMax = $('#priceMax').value;
+    updateBtnBadge();
+  });
+
+  function syncPriceChips() {
+    const chips = $$('.price-chip');
+    let matched = false;
+    chips.forEach(c => {
+      if (c.dataset.custom) return;
+      const isMatch = c.dataset.pmin === selectedPriceMin && c.dataset.pmax === selectedPriceMax;
+      c.classList.toggle('active', isMatch);
+      if (isMatch) matched = true;
+    });
+    const customChip = $('[data-custom="1"]');
+    if (!matched && (selectedPriceMin || selectedPriceMax)) {
+      customChip.classList.add('active');
+      $('#customPrice').classList.add('show');
+      $('#priceMin').value = selectedPriceMin;
+      $('#priceMax').value = selectedPriceMax;
+    } else if (!matched) {
+      customChip.classList.remove('active');
+      $('#customPrice').classList.remove('show');
+    } else {
+      customChip.classList.remove('active');
+      $('#customPrice').classList.remove('show');
+    }
+  }
+
+  // --- Furnished Toggle ---
   $('#furnishedToggle').addEventListener('click', function() {
     furnished = !furnished;
     this.classList.toggle('on', furnished);
+    updateBtnBadge();
   });
 
-  // Search button
-  $('#searchBtn').addEventListener('click', () => doSearch());
+  // --- Search Button Badge ---
+  function countFilters() {
+    let n = 0;
+    if (selectedArea) n++;
+    if (selectedType) n++;
+    if (selectedBeds) n++;
+    if (selectedPriceMin || selectedPriceMax) n++;
+    if (furnished) n++;
+    if ($('#sortSelect').value) n++;
+    return n;
+  }
 
-  // Enter key on inputs
-  $$('input').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); }));
+  function updateBtnBadge() {
+    const n = countFilters();
+    $('#searchBtn').textContent = n > 0 ? `Search Rentals (${n} filter${n > 1 ? 's' : ''})` : 'Search Rentals';
+  }
+
+  // --- Clear All ---
+  $('#clearAll').addEventListener('click', () => {
+    clearAllFilters();
+  });
+
+  function clearAllFilters() {
+    selectedArea = '';
+    selectedType = '';
+    selectedBeds = '';
+    selectedPriceMin = '';
+    selectedPriceMax = '';
+    furnished = false;
+    areaInput.value = '';
+    areaClear.classList.remove('show');
+    $$('.type-chip').forEach(c => c.classList.remove('active'));
+    $$('.bed-pill').forEach(p => p.classList.toggle('active', p.dataset.beds === ''));
+    $$('.price-chip').forEach(c => c.classList.remove('active'));
+    $$('.preset-chip').forEach(c => c.classList.remove('active'));
+    $('#customPrice').classList.remove('show');
+    $('#priceMin').value = '';
+    $('#priceMax').value = '';
+    $('#furnishedToggle').classList.remove('on');
+    $('#sortSelect').value = '';
+    updateBtnBadge();
+  }
+
+  // --- Search ---
+  $('#searchBtn').addEventListener('click', () => doSearch());
+  $('#sortSelect').addEventListener('change', () => updateBtnBadge());
+
+  // Enter key on custom price inputs
+  $$('#customPrice input').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); }));
 
   function getParams(page) {
     const params = new URLSearchParams();
-    const area = $('#areaSelect').value;
-    const type = $('#typeSelect').value;
-    const pMin = $('#priceMin').value;
-    const pMax = $('#priceMax').value;
-    const sort = $('#sortSelect').value;
-    if (area) params.set('area', area);
-    if (type) params.set('property_type', type);
+    if (selectedArea) params.set('area', selectedArea);
+    if (selectedType) params.set('property_type', selectedType);
     if (selectedBeds) params.set('bedrooms', selectedBeds);
-    if (pMin) params.set('price_min', pMin);
-    if (pMax) params.set('price_max', pMax);
+    if (selectedPriceMin) params.set('price_min', selectedPriceMin);
+    if (selectedPriceMax) params.set('price_max', selectedPriceMax);
     if (furnished) params.set('furnished', 'true');
+    const sort = $('#sortSelect').value;
     if (sort) params.set('sort', sort);
     params.set('page', page);
     return params;
@@ -238,16 +762,15 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
 
   function saveSearch() {
     try {
-      const data = {
-        area: $('#areaSelect').value,
-        type: $('#typeSelect').value,
+      localStorage.setItem('rk_last_search', JSON.stringify({
+        area: selectedArea,
+        type: selectedType,
         beds: selectedBeds,
-        priceMin: $('#priceMin').value,
-        priceMax: $('#priceMax').value,
+        priceMin: selectedPriceMin,
+        priceMax: selectedPriceMax,
         furnished,
         sort: $('#sortSelect').value
-      };
-      localStorage.setItem('rk_last_search', JSON.stringify(data));
+      }));
     } catch(e) {}
   }
 
@@ -255,18 +778,21 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
     try {
       const data = JSON.parse(localStorage.getItem('rk_last_search'));
       if (!data) return;
-      if (data.area) $('#areaSelect').value = data.area;
-      if (data.type) $('#typeSelect').value = data.type;
+      if (data.area) selectArea(data.area);
+      if (data.type) {
+        selectedType = data.type;
+        $$('.type-chip').forEach(c => c.classList.toggle('active', c.dataset.type === data.type));
+      }
       if (data.beds) {
         selectedBeds = data.beds;
-        $$('.bed-pill').forEach(p => {
-          p.classList.toggle('active', p.dataset.beds === data.beds);
-        });
+        $$('.bed-pill').forEach(p => p.classList.toggle('active', p.dataset.beds === data.beds));
       }
-      if (data.priceMin) $('#priceMin').value = data.priceMin;
-      if (data.priceMax) $('#priceMax').value = data.priceMax;
+      if (data.priceMin) selectedPriceMin = data.priceMin;
+      if (data.priceMax) selectedPriceMax = data.priceMax;
+      if (data.priceMin || data.priceMax) syncPriceChips();
       if (data.furnished) { furnished = true; $('#furnishedToggle').classList.add('on'); }
       if (data.sort) $('#sortSelect').value = data.sort;
+      updateBtnBadge();
     } catch(e) {}
   }
 
@@ -286,14 +812,18 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
     if (item.bathrooms) badges.push(`<span class="badge">&#x1f6bf; ${item.bathrooms} Bath${item.bathrooms>1?'s':''}</span>`);
     if (item.area_size) badges.push(`<span class="badge">&#x1f4d0; ${item.area_size}</span>`);
 
-    return `<div class="card" style="animation-delay:${delay}ms">
+    const imgHtml = item.image_url
+      ? `<img class="card-img" src="${escAttr(item.image_url)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'card-img-placeholder\\'>&#x1f3e0;</div>'">`
+      : `<div class="card-img-placeholder">&#x1f3e0;</div>`;
+
+    return `<div class="card" data-idx="${idx}" style="animation-delay:${delay}ms">
+      ${imgHtml}
       <div class="card-body">
         <div class="card-title">${escHtml(item.title || 'Rental Property')}</div>
         <div class="card-price">${escHtml(formatPrice(item.price, item.price_text))}</div>
         ${item.location ? `<div class="card-location">&#x1f4cd; ${escHtml(item.location)}</div>` : ''}
         ${badges.length ? `<div class="card-badges">${badges.join('')}</div>` : ''}
         ${item.added ? `<div style="font-size:12px;color:var(--gray-400);margin-bottom:10px">${escHtml(item.added)}</div>` : ''}
-        ${item.url ? `<a class="card-link" href="${escAttr(item.url)}" target="_blank" rel="noopener">View on Zameen &rarr;</a>` : ''}
       </div>
     </div>`;
   }
@@ -344,10 +874,6 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
     showLoading(append);
     saveSearch();
 
-    // Remove active chip if area doesn't match
-    const areaVal = $('#areaSelect').value;
-    $$('.chip').forEach(c => c.classList.toggle('active', c.dataset.area === areaVal));
-
     try {
       const params = getParams(currentPage);
       const resp = await fetch('/api/search?' + params.toString());
@@ -376,13 +902,19 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
         newResults.forEach((item, i) => area.insertAdjacentHTML('beforeend', renderCard(item, i)));
       }
 
-      // Load more button
       if ((data.results || []).length >= 15) {
         const btn = document.createElement('button');
         btn.className = 'load-more';
         btn.textContent = 'Load More Results';
         btn.addEventListener('click', () => doSearch(currentPage + 1));
         $('#resultsArea').appendChild(btn);
+      }
+
+      // Smooth scroll to results
+      if (!append) {
+        setTimeout(() => {
+          $('#resultsArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
       }
 
     } catch(e) {
@@ -393,9 +925,205 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--gra
     }
   }
 
+  // === LEAFLET MAP ===
+  let map = null;
+  let markers = {};
+  let activeMarker = null;
+  const defaultIcon = L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+  });
+  const activeIcon = L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [30, 49], iconAnchor: [15, 49], popupAnchor: [1, -40], shadowSize: [49, 49],
+    className: 'active-marker'
+  });
+
+  const mapToggle = $('#mapToggle');
+  const mapWrap = $('#mapWrap');
+  let mapOpen = false;
+
+  mapToggle.addEventListener('click', () => {
+    mapOpen = !mapOpen;
+    mapWrap.classList.toggle('open', mapOpen);
+    mapToggle.classList.toggle('open', mapOpen);
+    mapToggle.innerHTML = mapOpen ? '&#x1f5fa;&#xfe0f; Hide Map' : '&#x1f5fa;&#xfe0f; Show Map';
+    if (mapOpen && !map) initMap();
+    else if (map) setTimeout(() => map.invalidateSize(), 350);
+  });
+
+  function initMap() {
+    map = L.map('mapContainer', { zoomControl: true }).setView([24.86, 67.01], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 18
+    }).addTo(map);
+    setTimeout(() => map.invalidateSize(), 100);
+    placeMarkers();
+  }
+
+  function placeMarkers() {
+    if (!map || !allAreas.length) return;
+    allAreas.forEach(a => {
+      if (!a.lat || !a.lng || a.name === 'Karachi') return;
+      const m = L.marker([a.lat, a.lng], { icon: defaultIcon })
+        .bindTooltip(a.name, { direction: 'top', offset: [0, -38] })
+        .addTo(map);
+      m.on('click', () => {
+        selectArea(a.name);
+        doSearch();
+      });
+      markers[a.name] = m;
+    });
+  }
+
+  function highlightMarker(name) {
+    if (!map) return;
+    if (activeMarker && markers[activeMarker]) markers[activeMarker].setIcon(defaultIcon);
+    if (name && markers[name]) {
+      markers[name].setIcon(activeIcon);
+      const ll = markers[name].getLatLng();
+      map.flyTo(ll, 14, { duration: 0.8 });
+      activeMarker = name;
+    } else {
+      activeMarker = null;
+    }
+  }
+
+  function resetMapView() {
+    if (!map) return;
+    if (activeMarker && markers[activeMarker]) markers[activeMarker].setIcon(defaultIcon);
+    activeMarker = null;
+    map.setView([24.86, 67.01], 11, { animate: true });
+  }
+
+  // === DETAIL DRAWER ===
+  const drawer = $('#drawer');
+  const drawerOverlay = $('#drawerOverlay');
+  const drawerClose = $('#drawerClose');
+  const drawerContent = $('#drawerContent');
+  const drawerImgArea = $('#drawerImgArea');
+  let miniMap = null;
+
+  function getNearbyAreas(areaName, count) {
+    const target = allAreas.find(a => a.name === areaName);
+    if (!target || !target.lat) return [];
+    return allAreas
+      .filter(a => a.name !== areaName && a.name !== 'Karachi' && a.lat && a.lng)
+      .map(a => ({
+        name: a.name,
+        dist: Math.sqrt(Math.pow(a.lat - target.lat, 2) + Math.pow(a.lng - target.lng, 2))
+      }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, count);
+  }
+
+  function getAreaForListing(item) {
+    if (!item.location) return null;
+    const loc = item.location.toLowerCase();
+    for (const a of allAreas) {
+      if (loc.includes(a.name.toLowerCase())) return a;
+    }
+    if (selectedArea) return allAreas.find(a => a.name === selectedArea) || null;
+    return null;
+  }
+
+  function openDrawer(item) {
+    // Image
+    if (item.image_url) {
+      drawerImgArea.innerHTML = `<img class="drawer-img" src="${escAttr(item.image_url)}" alt="" onerror="this.outerHTML='<div class=\\'drawer-img-placeholder\\'>&#x1f3e0;</div>'">`;
+    } else {
+      drawerImgArea.innerHTML = `<div class="drawer-img-placeholder">&#x1f3e0;</div>`;
+    }
+
+    // Badges
+    const badges = [];
+    if (item.bedrooms) badges.push(`<span class="badge">&#x1f6cf;&#xfe0f; ${item.bedrooms} Bed${item.bedrooms>1?'s':''}</span>`);
+    if (item.bathrooms) badges.push(`<span class="badge">&#x1f6bf; ${item.bathrooms} Bath${item.bathrooms>1?'s':''}</span>`);
+    if (item.area_size) badges.push(`<span class="badge">&#x1f4d0; ${item.area_size}</span>`);
+
+    // Area + nearby
+    const area = getAreaForListing(item);
+    let nearbyHtml = '';
+    if (area) {
+      const nearby = getNearbyAreas(area.name, 5);
+      if (nearby.length) {
+        nearbyHtml = `<div class="drawer-nearby"><h4>Nearby Areas</h4><div class="drawer-nearby-chips">
+          ${nearby.map(n => `<span class="nearby-chip" data-area="${escAttr(n.name)}">${escHtml(n.name)}</span>`).join('')}
+        </div></div>`;
+      }
+    }
+
+    drawerContent.innerHTML = `
+      <div class="drawer-title">${escHtml(item.title || 'Rental Property')}</div>
+      <div class="drawer-price">${escHtml(formatPrice(item.price, item.price_text))}</div>
+      ${item.location ? `<div class="drawer-location">&#x1f4cd; ${escHtml(item.location)}</div>` : ''}
+      ${badges.length ? `<div class="drawer-badges">${badges.join('')}</div>` : ''}
+      ${item.added ? `<div class="drawer-added">${escHtml(item.added)}</div>` : ''}
+      ${area && area.lat ? `<div id="drawerMiniMap" class="drawer-minimap"></div>` : ''}
+      ${nearbyHtml}
+      ${item.url ? `<a class="drawer-cta" href="${escAttr(item.url)}" target="_blank" rel="noopener">View on Zameen.com &rarr;</a>` : ''}
+    `;
+
+    // Mini map
+    if (area && area.lat) {
+      setTimeout(() => {
+        const el = document.getElementById('drawerMiniMap');
+        if (!el) return;
+        if (miniMap) { miniMap.remove(); miniMap = null; }
+        miniMap = L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false, attributionControl: false }).setView([area.lat, area.lng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(miniMap);
+        L.marker([area.lat, area.lng]).addTo(miniMap);
+      }, 100);
+    }
+
+    // Show
+    drawer.classList.add('open');
+    drawerOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    drawerOverlay.classList.remove('open');
+    document.body.style.overflow = '';
+    if (miniMap) { miniMap.remove(); miniMap = null; }
+  }
+
+  drawerClose.addEventListener('click', closeDrawer);
+  drawerOverlay.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+  // Nearby chip click
+  drawerContent.addEventListener('click', e => {
+    const chip = e.target.closest('.nearby-chip');
+    if (!chip) return;
+    const areaName = chip.dataset.area;
+    closeDrawer();
+    selectArea(areaName);
+    doSearch();
+  });
+
+  // Card click delegation
+  $('#resultsArea').addEventListener('click', e => {
+    // Don't intercept load-more button clicks
+    if (e.target.closest('.load-more')) return;
+    const card = e.target.closest('.card');
+    if (!card) return;
+    const idx = parseInt(card.dataset.idx, 10);
+    if (!isNaN(idx) && currentResults[idx]) {
+      openDrawer(currentResults[idx]);
+    }
+  });
+
   // Init
-  loadFilters().then(() => {
+  loadAreas().then(() => {
     loadLastSearch();
+    if (map) placeMarkers();
   });
 })();
 </script>
