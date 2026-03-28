@@ -1,103 +1,44 @@
-"""Static data: area definitions, property types, and translations."""
+"""Static data: area definitions, property types, and translations.
 
-KARACHI_AREAS = {
-    # --- DHA Defence ---
-    "DHA Defence": ("Karachi_DHA_Defence", 213, 24.8007, 67.0531),
-    "DHA Phase 1": ("Karachi_DHA_Defence_DHA_Phase_1", 1478, 24.8120, 67.0380),
-    "DHA Phase 2": ("Karachi_DHA_Defence_DHA_Phase_2", 1479, 24.8080, 67.0480),
-    "DHA Phase 2 Extension": ("Karachi_DHA_Defence_DHA_Phase_2_Extension", 1672, 24.8050, 67.0610),
-    "DHA Phase 3": ("Karachi_DHA_Defence_DHA_Phase_3", 1480, 24.8040, 67.0550),
-    "DHA Phase 4": ("Karachi_DHA_Defence_DHA_Phase_4", 1481, 24.7980, 67.0590),
-    "DHA Phase 5": ("Karachi_DHA_Defence_DHA_Phase_5", 1482, 24.7920, 67.0650),
-    "DHA Phase 6": ("Karachi_DHA_Defence_DHA_Phase_6", 1483, 24.7850, 67.0720),
-    "DHA Phase 7": ("Karachi_DHA_Defence_DHA_Phase_7", 1673, 24.7780, 67.0780),
-    "DHA Phase 7 Extension": ("Karachi_DHA_Defence_DHA_Phase_7_Extension", 1674, 24.7720, 67.0830),
-    "DHA Phase 8": ("Karachi_DHA_Defence_DHA_Phase_8", 7294, 24.7660, 67.0880),
-    "DHA City Karachi": ("Karachi_DHA_City_Karachi", 1429, 24.7790, 67.3160),
-    # --- Clifton ---
-    "Clifton": ("Karachi_Clifton", 5, 24.8200, 67.0280),
-    "Clifton Block 2": ("Karachi_Clifton_Block_2", 1664, 24.8220, 67.0320),
-    "Clifton Block 3": ("Karachi_Clifton_Block_3", 1665, 24.8200, 67.0310),
-    "Clifton Block 4": ("Karachi_Clifton_Block_4", 1666, 24.8190, 67.0300),
-    "Clifton Block 5": ("Karachi_Clifton_Block_5", 1667, 24.8210, 67.0290),
-    "Clifton Block 6": ("Karachi_Clifton_Block_6", 1668, 24.8230, 67.0270),
-    "Clifton Block 7": ("Karachi_Clifton_Block_7", 1669, 24.8240, 67.0260),
-    "Clifton Block 8": ("Karachi_Clifton_Block_8", 1670, 24.8250, 67.0240),
-    "Clifton Block 9": ("Karachi_Clifton_Block_9", 1671, 24.8260, 67.0220),
-    "Sea View Apartments": ("Karachi_Sea_View_Apartments", 7292, 24.8190, 67.0230),
-    "Boat Basin": ("Karachi_Boat_Basin", 6738, 24.8210, 67.0270),
-    # --- Gulshan / Gulistan ---
-    "Gulshan-e-Iqbal": ("Karachi_Gulshan_e_Iqbal", 233, 24.9180, 67.0920),
-    "Gulshan-e-Iqbal Town": ("Karachi_Gulshan_e_Iqbal_Town", 6858, 24.9200, 67.0900),
-    "Gulistan-e-Jauhar": ("Karachi_Gulistan_e_Jauhar", 232, 24.9240, 67.1180),
-    "Gulistan-e-Jauhar Block 1": ("Karachi_Gulistan_e_Jauhar_Block_1", 6823, 24.9250, 67.1200),
-    "Gulistan-e-Jauhar Block 2": ("Karachi_Gulistan_e_Jauhar_Block_2", 6825, 24.9270, 67.1220),
-    "Gulberg": ("Karachi_Gulberg", 231, 24.8910, 67.0810),
-    "Gulshan-e-Maymar": ("Karachi_Gulshan_e_Maymar", 440, 25.0100, 67.0840),
-    "Gulshan-e-Hadeed": ("Karachi_Gulshan_e_Hadeed", 234, 24.8330, 67.3530),
-    # --- Bahria ---
-    "Bahria Town Karachi": ("Karachi_Bahria_Town_Karachi", 8298, 24.9600, 67.3400),
-    # --- Nazimabad ---
-    "North Nazimabad": ("Karachi_North_Nazimabad", 11, 24.9420, 67.0360),
-    "North Nazimabad Block A": ("Karachi_North_Nazimabad_Block_A", 7209, 24.9440, 67.0380),
-    "North Nazimabad Block H": ("Karachi_North_Nazimabad_Block_H", 7216, 24.9460, 67.0340),
-    "Nazimabad": ("Karachi_Nazimabad", 278, 24.9340, 67.0340),
-    "Naya Nazimabad": ("Karachi_Naya_Nazimabad", 10079, 24.9490, 67.0520),
-    # --- Central ---
-    "Federal B Area": ("Karachi_Federal_B._Area", 12, 24.9260, 67.0340),
-    "North Karachi": ("Karachi_North_Karachi", 282, 24.9650, 67.0480),
-    "Saddar": ("Karachi_Saddar_Town", 7269, 24.8560, 67.0180),
-    "PECHS": ("Karachi_PECHS", 283, 24.8680, 67.0620),
-    "Bahadurabad": ("Karachi_Bahadurabad", 6730, 24.8810, 67.0560),
-    "Tariq Road": ("Karachi_Tariq_Road", 532, 24.8760, 67.0640),
-    "Liaquatabad": ("Karachi_Liaquatabad", 260, 24.9100, 67.0400),
-    "Mehmoodabad": ("Karachi_Mehmoodabad", 7158, 24.8580, 67.0720),
-    "Karimabad": ("Karachi_Karimabad", 6949, 24.9210, 67.0370),
-    "PIB Colony": ("Karachi_PIB_Colony", 7236, 24.8840, 67.0510),
-    # --- Garden / Jamshed ---
-    "Garden West": ("Karachi_Garden_West", 10984, 24.8720, 67.0380),
-    "Garden East": ("Karachi_Garden_East", 6805, 24.8700, 67.0420),
-    "Jamshed Town": ("Karachi_Jamshed_Town", 6916, 24.8750, 67.0560),
-    # --- Faisal ---
-    "Shah Faisal Town": ("Karachi_Shah_Faisal_Town", 774, 24.8690, 67.1070),
-    "Shahra-e-Faisal": ("Karachi_Shahra_e_Faisal", 310, 24.8610, 67.0780),
-    "Shaheed-e-Millat Road": ("Karachi_Shaheed_e_Millat_Road", 7282, 24.8690, 67.0570),
-    "Karsaz": ("Karachi_Karsaz", 6943, 24.8720, 67.0890),
-    # --- Cantonment ---
-    "Cantt": ("Karachi_Cantt", 525, 24.8580, 67.0470),
-    "Askari 5": ("Karachi_Askari_5", 6726, 24.8550, 67.0710),
-    "Defence View": ("Karachi_Defence_View", 6788, 24.8650, 67.0920),
-    # --- South-west ---
-    "Frere Town": ("Karachi_Frere_Town", 224, 24.8440, 67.0230),
-    "Bath Island": ("Karachi_Bath_Island", 198, 24.8340, 67.0230),
-    "Gizri": ("Karachi_Gizri", 6809, 24.8120, 67.0410),
-    "Old Clifton": ("Karachi_Old_Clifton", 9052, 24.8240, 67.0290),
-    "Zamzama": ("Karachi_Zamzama", 416, 24.8140, 67.0340),
-    # --- South-east / Malir ---
-    "Malir": ("Karachi_Malir", 476, 24.8860, 67.1870),
-    "Korangi": ("Karachi_Korangi", 255, 24.8400, 67.1360),
-    "Landhi": ("Karachi_Landhi", 258, 24.8700, 67.2270),
-    "Model Colony": ("Karachi_Model_Colony", 277, 24.8530, 67.1280),
-    "Saadi Town": ("Karachi_Saadi_Town", 7271, 24.8800, 67.1360),
-    "Scheme 33": ("Karachi_Scheme_33", 495, 24.8950, 67.1710),
-    "Safoora Goth": ("Karachi_Safoora_Goth", 7273, 24.9150, 67.1420),
-    # --- Hill / University ---
-    "Hill Park": ("Karachi_Hill_Park", 758, 24.8700, 67.0570),
-    "University Road": ("Karachi_University_Road", 324, 24.9190, 67.1050),
-    # --- Buffer Zone / Surjani ---
-    "Buffer Zone": ("Karachi_Buffer_Zone", 6748, 24.9550, 67.0550),
-    "Surjani Town": ("Karachi_Surjani_Town", 303, 24.9780, 67.0120),
-    # --- West Karachi ---
-    "Orangi Town": ("Karachi_Orangi_Town", 285, 24.9460, 67.0080),
-    "Baldia Town": ("Karachi_Baldia_Town", 6734, 24.9310, 66.9960),
-    "Lyari": ("Karachi_Lyari", 262, 24.8680, 67.0100),
-    "Kemari": ("Karachi_Keamari_Town", 7098, 24.8460, 66.9850),
-    # --- Remote ---
-    "Gadap Town": ("Karachi_Gadap_Town", 6803, 25.0700, 67.1500),
-    "Bin Qasim Town": ("Karachi_Bin_Qasim_Town", 6740, 24.8350, 67.3200),
-    # --- Overall ---
-    "Karachi": ("Karachi", 2, 24.8607, 67.0011),
+Areas are loaded from JSON files (scraped from Zameen.com via tools/deep_discover.py).
+Supports multiple cities: Karachi, Lahore, Islamabad.
+"""
+import json
+from pathlib import Path
+
+_DATA_DIR = Path(__file__).resolve().parent
+
+# City definitions: name, Zameen.com ID, default lat/lng, area file
+CITIES = {
+    "karachi":   {"name": "Karachi",   "id": 2, "lat": 24.8607, "lng": 67.0011, "file": "areas.json"},
+    "lahore":    {"name": "Lahore",    "id": 1, "lat": 31.5204, "lng": 74.3587, "file": "areas_lahore.json"},
+    "islamabad": {"name": "Islamabad", "id": 3, "lat": 33.6844, "lng": 73.0479, "file": "areas_islamabad.json"},
 }
+
+def _load_areas(filename, city_name, city_id, default_lat, default_lng):
+    p = _DATA_DIR / filename
+    if not p.exists():
+        return {city_name: (city_name, city_id, default_lat, default_lng)}
+    with open(p) as f:
+        raw = json.load(f)
+    areas = {}
+    for name, info in raw.items():
+        areas[name] = (info["slug"], info["id"], info.get("lat", default_lat), info.get("lng", default_lng))
+    if city_name not in areas:
+        areas[city_name] = (city_name, city_id, default_lat, default_lng)
+    return areas
+
+# All city areas: {"karachi": {name: (slug, id, lat, lng), ...}, ...}
+CITY_AREAS = {}
+for _ck, _ci in CITIES.items():
+    CITY_AREAS[_ck] = _load_areas(_ci["file"], _ci["name"], _ci["id"], _ci["lat"], _ci["lng"])
+
+# Backwards compatibility
+KARACHI_AREAS = CITY_AREAS["karachi"]
+
+def get_areas(city="karachi"):
+    """Get areas dict for a city."""
+    return CITY_AREAS.get(city, CITY_AREAS["karachi"])
 
 PROPERTY_TYPES = {
     "house": {"label": "House", "slug": "Rentals_Houses_Property"},
@@ -111,86 +52,86 @@ PROPERTY_TYPES = {
 }
 
 URDU_AREAS = {
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2": "DHA Defence",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0641\u06cc\u0632 1": "DHA Phase 1",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0641\u06cc\u0632 2": "DHA Phase 2",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0641\u06cc\u0632 2 \u0627\u06cc\u06a9\u0633\u0679\u06cc\u0646\u0634\u0646": "DHA Phase 2 Extension",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0641\u06cc\u0632 3": "DHA Phase 3",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0641\u06cc\u0632 4": "DHA Phase 4",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0641\u06cc\u0632 5": "DHA Phase 5",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0641\u06cc\u0632 6": "DHA Phase 6",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0641\u06cc\u0632 7": "DHA Phase 7",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0641\u06cc\u0632 7 \u0627\u06cc\u06a9\u0633\u0679\u06cc\u0646\u0634\u0646": "DHA Phase 7 Extension",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0641\u06cc\u0632 8": "DHA Phase 8",
-    "\u0688\u06cc \u0627\u06cc\u0686 \u0627\u06d2 \u0633\u0679\u06cc": "DHA City Karachi",
-    "\u06a9\u0644\u0641\u0679\u0646": "Clifton",
-    "\u06a9\u0644\u0641\u0679\u0646 \u0628\u0644\u0627\u06a9 2": "Clifton Block 2",
-    "\u06a9\u0644\u0641\u0679\u0646 \u0628\u0644\u0627\u06a9 3": "Clifton Block 3",
-    "\u06a9\u0644\u0641\u0679\u0646 \u0628\u0644\u0627\u06a9 4": "Clifton Block 4",
-    "\u06a9\u0644\u0641\u0679\u0646 \u0628\u0644\u0627\u06a9 5": "Clifton Block 5",
-    "\u06a9\u0644\u0641\u0679\u0646 \u0628\u0644\u0627\u06a9 6": "Clifton Block 6",
-    "\u06a9\u0644\u0641\u0679\u0646 \u0628\u0644\u0627\u06a9 7": "Clifton Block 7",
-    "\u06a9\u0644\u0641\u0679\u0646 \u0628\u0644\u0627\u06a9 8": "Clifton Block 8",
-    "\u06a9\u0644\u0641\u0679\u0646 \u0628\u0644\u0627\u06a9 9": "Clifton Block 9",
-    "\u0633\u06cc \u0648\u06cc\u0648 \u0627\u067e\u0627\u0631\u0679\u0645\u0646\u0679\u0633": "Sea View Apartments",
-    "\u0628\u0648\u0679 \u0628\u06cc\u0633\u0646": "Boat Basin",
-    "\u06af\u0644\u0634\u0646 \u0627\u0642\u0628\u0627\u0644": "Gulshan-e-Iqbal",
-    "\u06af\u0644\u0634\u0646 \u0627\u0642\u0628\u0627\u0644 \u0679\u0627\u0624\u0646": "Gulshan-e-Iqbal Town",
-    "\u06af\u0644\u0633\u062a\u0627\u0646 \u062c\u0648\u06c1\u0631": "Gulistan-e-Jauhar",
-    "\u06af\u0644\u0633\u062a\u0627\u0646 \u062c\u0648\u06c1\u0631 \u0628\u0644\u0627\u06a9 1": "Gulistan-e-Jauhar Block 1",
-    "\u06af\u0644\u0633\u062a\u0627\u0646 \u062c\u0648\u06c1\u0631 \u0628\u0644\u0627\u06a9 2": "Gulistan-e-Jauhar Block 2",
-    "\u06af\u0644\u0628\u0631\u06af": "Gulberg",
-    "\u06af\u0644\u0634\u0646 \u0645\u0639\u0645\u0627\u0631": "Gulshan-e-Maymar",
-    "\u06af\u0644\u0634\u0646 \u062d\u062f\u06cc\u062f": "Gulshan-e-Hadeed",
-    "\u0628\u062d\u0631\u06cc\u06c1 \u0679\u0627\u0624\u0646": "Bahria Town Karachi",
-    "\u0646\u0627\u0631\u062a\u06be \u0646\u0627\u0638\u0645 \u0622\u0628\u0627\u062f": "North Nazimabad",
-    "\u0646\u0627\u0631\u062a\u06be \u0646\u0627\u0638\u0645 \u0622\u0628\u0627\u062f \u0628\u0644\u0627\u06a9 \u0627\u06d2": "North Nazimabad Block A",
-    "\u0646\u0627\u0631\u062a\u06be \u0646\u0627\u0638\u0645 \u0622\u0628\u0627\u062f \u0628\u0644\u0627\u06a9 \u0627\u06cc\u0686": "North Nazimabad Block H",
-    "\u0646\u0627\u0638\u0645 \u0622\u0628\u0627\u062f": "Nazimabad",
-    "\u0646\u06cc\u0627 \u0646\u0627\u0638\u0645 \u0622\u0628\u0627\u062f": "Naya Nazimabad",
-    "\u0641\u06cc\u0688\u0631\u0644 \u0628\u06cc \u0627\u06cc\u0631\u06cc\u0627": "Federal B Area",
-    "\u0646\u0627\u0631\u062a\u06be \u06a9\u0631\u0627\u0686\u06cc": "North Karachi",
-    "\u0635\u062f\u0631": "Saddar",
-    "\u067e\u06cc \u0627\u06cc \u0633\u06cc \u0627\u06cc\u0686 \u0627\u06cc\u0633": "PECHS",
-    "\u0628\u06c1\u0627\u062f\u0631 \u0622\u0628\u0627\u062f": "Bahadurabad",
-    "\u0637\u0627\u0631\u0642 \u0631\u0648\u0688": "Tariq Road",
-    "\u0644\u06cc\u0627\u0642\u062a \u0622\u0628\u0627\u062f": "Liaquatabad",
-    "\u0645\u062d\u0645\u0648\u062f \u0622\u0628\u0627\u062f": "Mehmoodabad",
-    "\u06a9\u0631\u06cc\u0645 \u0622\u0628\u0627\u062f": "Karimabad",
-    "\u067e\u06cc \u0622\u0626\u06cc \u0628\u06cc \u06a9\u0627\u0644\u0648\u0646\u06cc": "PIB Colony",
-    "\u06af\u0627\u0631\u0688\u0646 \u0648\u06cc\u0633\u0679": "Garden West",
-    "\u06af\u0627\u0631\u0688\u0646 \u0627\u06cc\u0633\u0679": "Garden East",
-    "\u062c\u0645\u0634\u06cc\u062f \u0679\u0627\u0624\u0646": "Jamshed Town",
-    "\u0634\u0627\u06c1 \u0641\u06cc\u0635\u0644 \u0679\u0627\u0624\u0646": "Shah Faisal Town",
-    "\u0634\u0627\u06c1\u0631\u0627\u06c1 \u0641\u06cc\u0635\u0644": "Shahra-e-Faisal",
-    "\u0634\u06c1\u06cc\u062f \u0645\u0644\u062a \u0631\u0648\u0688": "Shaheed-e-Millat Road",
-    "\u06a9\u0627\u0631\u0633\u0627\u0632": "Karsaz",
-    "\u06a9\u06cc\u0646\u0679": "Cantt",
-    "\u0639\u0633\u06a9\u0631\u06cc 5": "Askari 5",
-    "\u0688\u06cc\u0641\u06cc\u0646\u0633 \u0648\u06cc\u0648": "Defence View",
-    "\u0641\u0631\u06cc\u0626\u0631 \u0679\u0627\u0624\u0646": "Frere Town",
-    "\u0628\u0627\u062a\u06be \u0622\u0626\u06cc \u0644\u06cc\u0646\u0688": "Bath Island",
-    "\u06af\u0632\u0631\u06cc": "Gizri",
-    "\u0627\u0648\u0644\u0688 \u06a9\u0644\u0641\u0679\u0646": "Old Clifton",
-    "\u0632\u0645 \u0632\u0645\u06c1": "Zamzama",
-    "\u0645\u0644\u06cc\u0631": "Malir",
-    "\u06a9\u0648\u0631\u0646\u06af\u06cc": "Korangi",
-    "\u0644\u0627\u0646\u0688\u06be\u06cc": "Landhi",
-    "\u0645\u0627\u0688\u0644 \u06a9\u0627\u0644\u0648\u0646\u06cc": "Model Colony",
-    "\u0633\u0639\u062f\u06cc \u0679\u0627\u0624\u0646": "Saadi Town",
-    "\u0627\u0633\u06a9\u06cc\u0645 33": "Scheme 33",
-    "\u0635\u0641\u0648\u0631\u0627 \u06af\u0648\u0679\u06be": "Safoora Goth",
-    "\u06c1\u0644 \u067e\u0627\u0631\u06a9": "Hill Park",
-    "\u06cc\u0648\u0646\u06cc\u0648\u0631\u0633\u0679\u06cc \u0631\u0648\u0688": "University Road",
-    "\u0628\u0641\u0631 \u0632\u0648\u0646": "Buffer Zone",
-    "\u0633\u0631\u062c\u0627\u0646\u06cc \u0679\u0627\u0624\u0646": "Surjani Town",
-    "\u0627\u0648\u0631\u0646\u06af\u06cc \u0679\u0627\u0624\u0646": "Orangi Town",
-    "\u0628\u0644\u062f\u06cc\u06c1 \u0679\u0627\u0624\u0646": "Baldia Town",
-    "\u0644\u06cc\u0627\u0631\u06cc": "Lyari",
-    "\u06a9\u06cc\u0645\u0627\u0631\u06cc": "Kemari",
-    "\u06af\u0688\u0627\u067e \u0679\u0627\u0624\u0646": "Gadap Town",
-    "\u0628\u0646 \u0642\u0627\u0633\u0645 \u0679\u0627\u0624\u0646": "Bin Qasim Town",
-    "\u06a9\u0631\u0627\u0686\u06cc": "Karachi",
+    "ڈی ایچ اے": "DHA Defence",
+    "ڈی ایچ اے فیز 1": "DHA Phase 1",
+    "ڈی ایچ اے فیز 2": "DHA Phase 2",
+    "ڈی ایچ اے فیز 2 ایکسٹینشن": "DHA Phase 2 Extension",
+    "ڈی ایچ اے فیز 3": "DHA Phase 3",
+    "ڈی ایچ اے فیز 4": "DHA Phase 4",
+    "ڈی ایچ اے فیز 5": "DHA Phase 5",
+    "ڈی ایچ اے فیز 6": "DHA Phase 6",
+    "ڈی ایچ اے فیز 7": "DHA Phase 7",
+    "ڈی ایچ اے فیز 7 ایکسٹینشن": "DHA Phase 7 Extension",
+    "ڈی ایچ اے فیز 8": "DHA Phase 8",
+    "ڈی ایچ اے سٹی": "DHA City Karachi",
+    "کلفٹن": "Clifton",
+    "کلفٹن بلاک 2": "Clifton Block 2",
+    "کلفٹن بلاک 3": "Clifton Block 3",
+    "کلفٹن بلاک 4": "Clifton Block 4",
+    "کلفٹن بلاک 5": "Clifton Block 5",
+    "کلفٹن بلاک 6": "Clifton Block 6",
+    "کلفٹن بلاک 7": "Clifton Block 7",
+    "کلفٹن بلاک 8": "Clifton Block 8",
+    "کلفٹن بلاک 9": "Clifton Block 9",
+    "سی ویو اپارٹمنٹس": "Sea View Apartments",
+    "بوٹ بیسن": "Boat Basin",
+    "گلشن اقبال": "Gulshan-e-Iqbal",
+    "گلشن اقبال ٹاؤن": "Gulshan-e-Iqbal Town",
+    "گلستان جوہر": "Gulistan-e-Jauhar",
+    "گلستان جوہر بلاک 1": "Gulistan-e-Jauhar Block 1",
+    "گلستان جوہر بلاک 2": "Gulistan-e-Jauhar Block 2",
+    "گلبرگ": "Gulberg",
+    "گلشن معمار": "Gulshan-e-Maymar",
+    "گلشن حدید": "Gulshan-e-Hadeed",
+    "بحریہ ٹاؤن": "Bahria Town Karachi",
+    "نارتھ ناظم آباد": "North Nazimabad",
+    "نارتھ ناظم آباد بلاک اے": "North Nazimabad Block A",
+    "نارتھ ناظم آباد بلاک ایچ": "North Nazimabad Block H",
+    "ناظم آباد": "Nazimabad",
+    "نیا ناظم آباد": "Naya Nazimabad",
+    "فیڈرل بی ایریا": "Federal B Area",
+    "نارتھ کراچی": "North Karachi",
+    "صدر": "Saddar",
+    "پی ای سی ایچ ایس": "PECHS",
+    "بہادر آباد": "Bahadurabad",
+    "طارق روڈ": "Tariq Road",
+    "لیاقت آباد": "Liaquatabad",
+    "محمود آباد": "Mehmoodabad",
+    "کریم آباد": "Karimabad",
+    "پی آئی بی کالونی": "PIB Colony",
+    "گارڈن ویسٹ": "Garden West",
+    "گارڈن ایسٹ": "Garden East",
+    "جمشید ٹاؤن": "Jamshed Town",
+    "شاہ فیصل ٹاؤن": "Shah Faisal Town",
+    "شاہراہ فیصل": "Shahra-e-Faisal",
+    "شہید ملت روڈ": "Shaheed-e-Millat Road",
+    "کارساز": "Karsaz",
+    "کینٹ": "Cantt",
+    "عسکری 5": "Askari 5",
+    "ڈیفینس ویو": "Defence View",
+    "فریئر ٹاؤن": "Frere Town",
+    "باتھ آئی لینڈ": "Bath Island",
+    "گزری": "Gizri",
+    "اولڈ کلفٹن": "Old Clifton",
+    "زم زمہ": "Zamzama",
+    "ملیر": "Malir",
+    "کورنگی": "Korangi",
+    "لانڈھی": "Landhi",
+    "ماڈل کالونی": "Model Colony",
+    "سعدی ٹاؤن": "Saadi Town",
+    "اسکیم 33": "Scheme 33",
+    "صفورا گوٹھ": "Safoora Goth",
+    "ہل پارک": "Hill Park",
+    "یونیورسٹی روڈ": "University Road",
+    "بفر زون": "Buffer Zone",
+    "سرجانی ٹاؤن": "Surjani Town",
+    "اورنگی ٹاؤن": "Orangi Town",
+    "بلدیہ ٹاؤن": "Baldia Town",
+    "لیاری": "Lyari",
+    "کیماری": "Kemari",
+    "گڈاپ ٹاؤن": "Gadap Town",
+    "بن قاسم ٹاؤن": "Bin Qasim Town",
+    "کراچی": "Karachi",
 }
 
 # Reverse lookup: English name -> Urdu name
@@ -208,13 +149,13 @@ ROMAN_URDU_TYPES = {
 }
 
 URDU_TYPES = {
-    "\u06af\u06be\u0631": "house", "\u0645\u06a9\u0627\u0646": "house",
-    "\u0641\u0644\u06cc\u0679": "apartment", "\u0627\u067e\u0627\u0631\u0679\u0645\u0646\u0679": "apartment",
-    "\u0628\u0627\u0644\u0627 \u062d\u0635\u06c1": "upper_portion", "\u0627\u0648\u067e\u0631 \u0648\u0627\u0644\u0627 \u062d\u0635\u06c1": "upper_portion",
-    "\u0646\u0686\u0644\u0627 \u062d\u0635\u06c1": "lower_portion", "\u0646\u06cc\u0686\u06d2 \u0648\u0627\u0644\u0627 \u062d\u0635\u06c1": "lower_portion",
-    "\u06a9\u0645\u0631\u06c1": "room",
-    "\u067e\u06cc\u0646\u0679 \u06c1\u0627\u0624\u0633": "penthouse",
-    "\u0641\u0627\u0631\u0645 \u06c1\u0627\u0624\u0633": "farm_house",
+    "گھر": "house", "مکان": "house",
+    "فلیٹ": "apartment", "اپارٹمنٹ": "apartment",
+    "بالا حصہ": "upper_portion", "اوپر والا حصہ": "upper_portion",
+    "نچلا حصہ": "lower_portion", "نیچے والا حصہ": "lower_portion",
+    "کمرہ": "room",
+    "پینٹ ہاؤس": "penthouse",
+    "فارم ہاؤس": "farm_house",
 }
 
 ROMAN_URDU_AREAS = {
@@ -231,6 +172,11 @@ ROMAN_URDU_AREAS = {
     "clifton": "Clifton", "klifton": "Clifton",
     "boat basin": "Boat Basin",
     "gulshan": "Gulshan-e-Iqbal", "gulshan e iqbal": "Gulshan-e-Iqbal", "gulshan iqbal": "Gulshan-e-Iqbal",
+    "gulshan e iqbal block 1": "Gulshan-e-Iqbal Block 1", "gulshan block 1": "Gulshan-e-Iqbal Block 1",
+    "gulshan e iqbal block 2": "Gulshan-e-Iqbal Block 2", "gulshan block 2": "Gulshan-e-Iqbal Block 2",
+    "gulshan e iqbal block 4": "Gulshan-e-Iqbal Block 4", "gulshan block 4": "Gulshan-e-Iqbal Block 4",
+    "gulshan e iqbal block 5": "Gulshan-e-Iqbal Block 5", "gulshan block 5": "Gulshan-e-Iqbal Block 5",
+    "gulshan e iqbal block 7": "Gulshan-e-Iqbal Block 7", "gulshan block 7": "Gulshan-e-Iqbal Block 7",
     "johar": "Gulistan-e-Jauhar", "jauhar": "Gulistan-e-Jauhar", "gulistan e johar": "Gulistan-e-Jauhar", "gulistan e jauhar": "Gulistan-e-Jauhar",
     "gulberg": "Gulberg",
     "gulshan e maymar": "Gulshan-e-Maymar", "maymar": "Gulshan-e-Maymar",
@@ -281,6 +227,9 @@ ROMAN_URDU_AREAS = {
     "kemari": "Kemari", "keamari": "Kemari",
     "gadap": "Gadap Town", "gadap town": "Gadap Town",
     "bin qasim": "Bin Qasim Town",
+    "falcon": "Falcon Complex Faisal", "falcon complex": "Falcon Complex Faisal",
+    "gulshan e kaneez fatima": "Scheme 33 Gulshan-e-Kaneez Fatima",
+    "kaneez fatima": "Scheme 33 Gulshan-e-Kaneez Fatima",
 }
 
 USER_AGENTS = [

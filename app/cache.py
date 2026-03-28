@@ -1,23 +1,23 @@
-"""In-memory cache and rate limiter."""
+"""Cache (backed by SQLite) and rate limiter."""
 import asyncio, hashlib, json, time
 
-_cache = {}
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+from app.database import db_cache_get, db_cache_set
+
+limiter = Limiter(key_func=get_remote_address)
+
 CACHE_TTL = 300
 
 def cache_key(**kw):
     return hashlib.md5(json.dumps(kw, sort_keys=True).encode()).hexdigest()
 
 def cache_get(key):
-    if key in _cache:
-        ts, data = _cache[key]
-        if time.time() - ts < CACHE_TTL: return data
-        del _cache[key]
-    return None
+    return db_cache_get(key)
 
 def cache_set(key, data):
-    _cache[key] = (time.time(), data)
-    if len(_cache) > 200:
-        for k in sorted(_cache, key=lambda k: _cache[k][0])[:50]: del _cache[k]
+    db_cache_set(key, data)
 
 class RateLimiter:
     def __init__(self, rate=2.0, burst=3):

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Outer diamond shape (two chevron strokes forming pin/diamond) -->
+  <path d="M32 6L6 34l26 26 26-26L32 6zm0 10l18 18-18 18L14 34 32 16z" fill="#0a8f3c"/>
+  <!-- Inner white diamond cutout -->
+  <path d="M32 22L18 34l14 16 14-16L32 22z" fill="white"/>
+  <!-- Small chimney accent -->
+  <rect x="28.5" y="1" width="7" height="7" rx="1.5" fill="#2ab556"/>
+</svg>

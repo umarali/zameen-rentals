@@ -1,0 +1,2198 @@
+{
+  "Al Hamra Society": {
+    "slug": "Karachi_Al_Hamra_Society",
+    "id": 1194,
+    "lat": 24.8684,
+    "lng": 66.9815
+  },
+  "Al Hilal Society": {
+    "slug": "Karachi_Al_Hilal_Society",
+    "id": 11941,
+    "lat": 24.8465,
+    "lng": 66.9934
+  },
+  "Amil Colony": {
+    "slug": "Karachi_Amil_Colony",
+    "id": 11638,
+    "lat": 24.8742,
+    "lng": 67.0206
+  },
+  "Amir Khusro": {
+    "slug": "Karachi_Amir_Khusro",
+    "id": 526,
+    "lat": 24.8835,
+    "lng": 66.9852
+  },
+  "Azam Town": {
+    "slug": "Karachi_Azam_Town",
+    "id": 10733,
+    "lat": 24.8553,
+    "lng": 66.9818
+  },
+  "Bahria Town Bahria Apartments": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Apartments",
+    "id": 9030,
+    "lat": 24.8431,
+    "lng": 67.0103
+  },
+  "Bahria Town Bahria Heights": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Heights",
+    "id": 11761,
+    "lat": 24.8316,
+    "lng": 66.9919
+  },
+  "Bahria Town Bahria Hills": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Hills",
+    "id": 13173,
+    "lat": 24.869,
+    "lng": 67.0127
+  },
+  "Bahria Town Bahria Paradise": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Paradise",
+    "id": 11458,
+    "lat": 24.8432,
+    "lng": 67.0154
+  },
+  "Bahria Town Bahria Sports City": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Sports_City",
+    "id": 10061,
+    "lat": 24.8786,
+    "lng": 66.9804
+  },
+  "Bahria Town - Jinnah Avenue": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Jinnah_Avenue",
+    "id": 13847,
+    "lat": 24.8783,
+    "lng": 67.0219
+  },
+  "Bahria Town - Precinct 1": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_1",
+    "id": 10007,
+    "lat": 24.8504,
+    "lng": 66.9893
+  },
+  "Bahria Town - Precinct 10": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_10",
+    "id": 10018,
+    "lat": 24.8874,
+    "lng": 67.0002
+  },
+  "Bahria Town - Precinct 10 A": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_10_A",
+    "id": 18125,
+    "lat": 24.8356,
+    "lng": 66.9858
+  },
+  "Bahria Town - Precinct 10 B": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_10_B",
+    "id": 18126,
+    "lat": 24.8808,
+    "lng": 67.0162
+  },
+  "Bahria Town - Precinct 11": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_11",
+    "id": 10019,
+    "lat": 24.8784,
+    "lng": 67.0238
+  },
+  "Bahria Town - Precinct 12": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_12",
+    "id": 10022,
+    "lat": 24.8622,
+    "lng": 67.0384
+  },
+  "Bahria Town - Precinct 16": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_16",
+    "id": 10027,
+    "lat": 24.8527,
+    "lng": 67.0131
+  },
+  "Bahria Town - Precinct 17": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_17",
+    "id": 10028,
+    "lat": 24.8798,
+    "lng": 67.0171
+  },
+  "Bahria Town - Precinct 19": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_19",
+    "id": 10030,
+    "lat": 24.8817,
+    "lng": 67.0146
+  },
+  "Bahria Town - Precinct 2": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_2",
+    "id": 10010,
+    "lat": 24.8723,
+    "lng": 66.9827
+  },
+  "Bahria Town - Precinct 27": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_27",
+    "id": 10040,
+    "lat": 24.8437,
+    "lng": 66.9974
+  },
+  "Bahria Town - Precinct 31": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_31",
+    "id": 10045,
+    "lat": 24.8348,
+    "lng": 66.994
+  },
+  "Bahria Town - Precinct 4": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_4",
+    "id": 10013,
+    "lat": 24.8361,
+    "lng": 66.9967
+  },
+  "Bahria Town - Precinct 6": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_6",
+    "id": 10014,
+    "lat": 24.8681,
+    "lng": 67.0019
+  },
+  "Bahria Town - Precinct 7": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_7",
+    "id": 10015,
+    "lat": 24.8522,
+    "lng": 66.9926
+  },
+  "Bahria Town - Precinct 8": {
+    "slug": "Karachi_Bahria_Town_Karachi_Bahria_Town___Precinct_8",
+    "id": 10016,
+    "lat": 24.846,
+    "lng": 67.0362
+  },
+  "Bahria Town Karachi": {
+    "slug": "Karachi_Bahria_Town_Karachi",
+    "id": 8298,
+    "lat": 24.96,
+    "lng": 67.34
+  },
+  "Bath Island": {
+    "slug": "Karachi_Bath_Island",
+    "id": 198,
+    "lat": 24.834,
+    "lng": 67.023
+  },
+  "Bath Island Royal Elite": {
+    "slug": "Karachi_Bath_Island_Royal_Elite",
+    "id": 9738,
+    "lat": 24.8355,
+    "lng": 67.0241
+  },
+  "Bath Island Tricon Tower": {
+    "slug": "Karachi_Bath_Island_Tricon_Tower",
+    "id": 11744,
+    "lat": 24.8307,
+    "lng": 67.0253
+  },
+  "Bin Qasim Town": {
+    "slug": "Karachi_Bin_Qasim_Town",
+    "id": 677,
+    "lat": 24.835,
+    "lng": 67.32
+  },
+  "Bin Qasim Town Gulshan-e-Bahar": {
+    "slug": "Karachi_Bin_Qasim_Town_Gulshan_e_Bahar",
+    "id": 21315,
+    "lat": 24.8316,
+    "lng": 67.3188
+  },
+  "Bin Qasim Town Model Colony": {
+    "slug": "Karachi_Bin_Qasim_Town_Model_Colony",
+    "id": 6601,
+    "lat": 24.8399,
+    "lng": 67.3214
+  },
+  "Bin Qasim Town Shah Latif Town": {
+    "slug": "Karachi_Bin_Qasim_Town_Shah_Latif_Town",
+    "id": 686,
+    "lat": 24.8356,
+    "lng": 67.3218
+  },
+  "Callachi Cooperative Housing Society": {
+    "slug": "Karachi_Callachi_Cooperative_Housing_Society",
+    "id": 12954,
+    "lat": 24.8806,
+    "lng": 67.0266
+  },
+  "Cantt": {
+    "slug": "Karachi_Cantt",
+    "id": 525,
+    "lat": 24.858,
+    "lng": 67.047
+  },
+  "Cantt Cantonment": {
+    "slug": "Karachi_Cantt_Karachi_Cantonment",
+    "id": 6637,
+    "lat": 24.8553,
+    "lng": 67.0423
+  },
+  "Cantt Faisal Cantonment": {
+    "slug": "Karachi_Cantt_Faisal_Cantonment",
+    "id": 6643,
+    "lat": 24.8562,
+    "lng": 67.0447
+  },
+  "Cantt Malir Cantonment": {
+    "slug": "Karachi_Cantt_Malir_Cantonment",
+    "id": 6654,
+    "lat": 24.8551,
+    "lng": 67.0514
+  },
+  "Chapal Courtyard": {
+    "slug": "Karachi_Chapal_Courtyard",
+    "id": 9714,
+    "lat": 24.8826,
+    "lng": 66.9989
+  },
+  "Chapal Uptown": {
+    "slug": "Karachi_Chapal_Uptown",
+    "id": 9720,
+    "lat": 24.8693,
+    "lng": 67.0037
+  },
+  "Civil Lines": {
+    "slug": "Karachi_Civil_Lines",
+    "id": 493,
+    "lat": 24.8849,
+    "lng": 67.0075
+  },
+  "Clifton": {
+    "slug": "Karachi_Clifton",
+    "id": 5,
+    "lat": 24.82,
+    "lng": 67.028
+  },
+  "Clifton Block 1": {
+    "slug": "Karachi_Clifton_Block_1",
+    "id": 1663,
+    "lat": 24.8176,
+    "lng": 67.0255
+  },
+  "Clifton Block 2": {
+    "slug": "Karachi_Clifton_Block_2",
+    "id": 1664,
+    "lat": 24.822,
+    "lng": 67.032
+  },
+  "Clifton Block 3": {
+    "slug": "Karachi_Clifton_Block_3",
+    "id": 1665,
+    "lat": 24.82,
+    "lng": 67.031
+  },
+  "Clifton Block 4": {
+    "slug": "Karachi_Clifton_Block_4",
+    "id": 1666,
+    "lat": 24.819,
+    "lng": 67.03
+  },
+  "Clifton Block 5": {
+    "slug": "Karachi_Clifton_Block_5",
+    "id": 1667,
+    "lat": 24.821,
+    "lng": 67.029
+  },
+  "Clifton Block 6": {
+    "slug": "Karachi_Clifton_Block_6",
+    "id": 1668,
+    "lat": 24.823,
+    "lng": 67.027
+  },
+  "Clifton Block 7": {
+    "slug": "Karachi_Clifton_Block_7",
+    "id": 1669,
+    "lat": 24.824,
+    "lng": 67.026
+  },
+  "Clifton Block 8": {
+    "slug": "Karachi_Clifton_Block_8",
+    "id": 1670,
+    "lat": 24.825,
+    "lng": 67.024
+  },
+  "Clifton Block 9": {
+    "slug": "Karachi_Clifton_Block_9",
+    "id": 1671,
+    "lat": 24.826,
+    "lng": 67.022
+  },
+  "Clifton Khayaban e Iqbal": {
+    "slug": "Karachi_Clifton_Khayaban_e_Iqbal",
+    "id": 21806,
+    "lat": 24.8206,
+    "lng": 67.0256
+  },
+  "Cosmopolitan Society": {
+    "slug": "Karachi_Cosmopolitan_Society",
+    "id": 11599,
+    "lat": 24.8651,
+    "lng": 67.0339
+  },
+  "DHA Phase 6": {
+    "slug": "Karachi_D.H.A_DHA_Phase_6",
+    "id": 1483,
+    "lat": 24.785,
+    "lng": 67.072
+  },
+  "DHA Phase 2": {
+    "slug": "Karachi_D.H.A_Phase_2",
+    "id": 1479,
+    "lat": 24.808,
+    "lng": 67.048
+  },
+  "DHA Phase 4": {
+    "slug": "Karachi_D.H.A_Phase_4",
+    "id": 1481,
+    "lat": 24.798,
+    "lng": 67.059
+  },
+  "DHA Phase 5": {
+    "slug": "Karachi_D.H.A_Phase_5",
+    "id": 1482,
+    "lat": 24.792,
+    "lng": 67.065
+  },
+  "DHA Phase 7": {
+    "slug": "Karachi_D.H.A_Phase_7",
+    "id": 1484,
+    "lat": 24.778,
+    "lng": 67.078
+  },
+  "DHA Phase 8": {
+    "slug": "Karachi_D.H.A_Phase_8",
+    "id": 1485,
+    "lat": 24.766,
+    "lng": 67.088
+  },
+  "DHA City - Sector 3": {
+    "slug": "Karachi_DHA_City_Karachi_DHA_City___Sector_3",
+    "id": 8449,
+    "lat": 24.854,
+    "lng": 66.9932
+  },
+  "DHA City Karachi": {
+    "slug": "Karachi_DHA_City_Karachi",
+    "id": 1429,
+    "lat": 24.779,
+    "lng": 67.316
+  },
+  "DHA Defence": {
+    "slug": "Karachi_DHA_Defence",
+    "id": 213,
+    "lat": 24.8007,
+    "lng": 67.0531
+  },
+  "DHA Phase 1": {
+    "slug": "Karachi_DHA_Defence_DHA_Phase_1",
+    "id": 1478,
+    "lat": 24.812,
+    "lng": 67.038
+  },
+  "DHA Phase 2 Extension": {
+    "slug": "Karachi_DHA_Defence_DHA_Phase_2_Extension",
+    "id": 1672,
+    "lat": 24.805,
+    "lng": 67.061
+  },
+  "DHA Phase 7 Extension": {
+    "slug": "Karachi_DHA_Defence_DHA_Phase_7_Extension",
+    "id": 1674,
+    "lat": 24.772,
+    "lng": 67.083
+  },
+  "Dalmia Cement Factory Road": {
+    "slug": "Karachi_Dalmia_Cement_Factory_Road",
+    "id": 10273,
+    "lat": 24.8899,
+    "lng": 67.0106
+  },
+  "Dalmia Cement Factory Road The Court Regency": {
+    "slug": "Karachi_Dalmia_Cement_Factory_Road_The_Court_Regency",
+    "id": 11833,
+    "lat": 24.8355,
+    "lng": 66.9828
+  },
+  "Darul Aman Society": {
+    "slug": "Karachi_Darul_Aman_Society",
+    "id": 13726,
+    "lat": 24.8366,
+    "lng": 67.0176
+  },
+  "Defence View Society": {
+    "slug": "Karachi_Defence_View_Society",
+    "id": 8274,
+    "lat": 24.8679,
+    "lng": 67.0912
+  },
+  "Defence View Society Defence View Phase 1": {
+    "slug": "Karachi_Defence_View_Society_Defence_View_Phase_1",
+    "id": 8275,
+    "lat": 24.8606,
+    "lng": 67.0908
+  },
+  "Defence View Society Defence View Phase 2": {
+    "slug": "Karachi_Defence_View_Society_Defence_View_Phase_2",
+    "id": 8276,
+    "lat": 24.87,
+    "lng": 67.0923
+  },
+  "Defence View Society Defence View Phase 3": {
+    "slug": "Karachi_Defence_View_Society_Defence_View_Phase_3",
+    "id": 8277,
+    "lat": 24.8697,
+    "lng": 67.0956
+  },
+  "Delhi Colony": {
+    "slug": "Karachi_Delhi_Colony",
+    "id": 6669,
+    "lat": 24.8307,
+    "lng": 67.0232
+  },
+  "Dr Daud Pota Road": {
+    "slug": "Karachi_Dr_Daud_Pota_Road",
+    "id": 9882,
+    "lat": 24.8709,
+    "lng": 67.0122
+  },
+  "Falaknaz Dynasty": {
+    "slug": "Karachi_Falaknaz_Dynasty",
+    "id": 10152,
+    "lat": 24.846,
+    "lng": 67.0185
+  },
+  "Falaknaz Harmony": {
+    "slug": "Karachi_Falaknaz_Harmony",
+    "id": 21461,
+    "lat": 24.8367,
+    "lng": 67.0061
+  },
+  "Falcon Complex Faisal": {
+    "slug": "Karachi_Falcon_Complex_Faisal",
+    "id": 11088,
+    "lat": 24.855,
+    "lng": 67.096
+  },
+  "Federal B Area Block 10": {
+    "slug": "Karachi_Federal_B_Area_Block_10",
+    "id": 6694,
+    "lat": 24.9255,
+    "lng": 67.0385
+  },
+  "Federal B Area Block 11": {
+    "slug": "Karachi_Federal_B_Area_Block_11",
+    "id": 6695,
+    "lat": 24.9298,
+    "lng": 67.0316
+  },
+  "Federal B Area Block 12": {
+    "slug": "Karachi_Federal_B_Area_Block_12",
+    "id": 6696,
+    "lat": 24.926,
+    "lng": 67.0308
+  },
+  "Federal B Area Block 13": {
+    "slug": "Karachi_Federal_B_Area_Block_13",
+    "id": 6697,
+    "lat": 24.9301,
+    "lng": 67.0377
+  },
+  "Federal B Area Block 14": {
+    "slug": "Karachi_Federal_B_Area_Block_14",
+    "id": 6698,
+    "lat": 24.924,
+    "lng": 67.0354
+  },
+  "Federal B Area Block 15": {
+    "slug": "Karachi_Federal_B_Area_Block_15",
+    "id": 6699,
+    "lat": 24.9271,
+    "lng": 67.0305
+  },
+  "Federal B Area Block 16": {
+    "slug": "Karachi_Federal_B_Area_Block_16",
+    "id": 6700,
+    "lat": 24.9286,
+    "lng": 67.0344
+  },
+  "Federal B Area Block 17": {
+    "slug": "Karachi_Federal_B_Area_Block_17",
+    "id": 6701,
+    "lat": 24.9288,
+    "lng": 67.0343
+  },
+  "Federal B Area Block 18": {
+    "slug": "Karachi_Federal_B_Area_Block_18",
+    "id": 6702,
+    "lat": 24.921,
+    "lng": 67.0322
+  },
+  "Federal B Area Block 19": {
+    "slug": "Karachi_Federal_B_Area_Block_19",
+    "id": 6703,
+    "lat": 24.9212,
+    "lng": 67.0383
+  },
+  "Federal B Area Block 2": {
+    "slug": "Karachi_Federal_B_Area_Block_2",
+    "id": 6686,
+    "lat": 24.9298,
+    "lng": 67.0373
+  },
+  "Federal B Area Block 20": {
+    "slug": "Karachi_Federal_B_Area_Block_20",
+    "id": 6704,
+    "lat": 24.9241,
+    "lng": 67.0296
+  },
+  "Federal B Area Block 21": {
+    "slug": "Karachi_Federal_B_Area_Block_21",
+    "id": 6705,
+    "lat": 24.9298,
+    "lng": 67.0385
+  },
+  "Federal B Area Block 4": {
+    "slug": "Karachi_Federal_B_Area_Block_4",
+    "id": 6688,
+    "lat": 24.9219,
+    "lng": 67.0339
+  },
+  "Federal B Area Block 6": {
+    "slug": "Karachi_Federal_B_Area_Block_6",
+    "id": 6690,
+    "lat": 24.9217,
+    "lng": 67.0366
+  },
+  "Federal B Area Block 7": {
+    "slug": "Karachi_Federal_B_Area_Block_7",
+    "id": 6691,
+    "lat": 24.9287,
+    "lng": 67.0303
+  },
+  "Federal B Area Block 8": {
+    "slug": "Karachi_Federal_B_Area_Block_8",
+    "id": 6692,
+    "lat": 24.9258,
+    "lng": 67.0345
+  },
+  "Federal B Area Block 9": {
+    "slug": "Karachi_Federal_B_Area_Block_9",
+    "id": 6693,
+    "lat": 24.9237,
+    "lng": 67.0377
+  },
+  "Federal B. Area": {
+    "slug": "Karachi_Federal_B._Area",
+    "id": 12,
+    "lat": 24.8554,
+    "lng": 66.9927
+  },
+  "Frere Town": {
+    "slug": "Karachi_Frere_Town",
+    "id": 224,
+    "lat": 24.844,
+    "lng": 67.023
+  },
+  "Gadap Town": {
+    "slug": "Karachi_Gadap_Town",
+    "id": 570,
+    "lat": 25.07,
+    "lng": 67.15
+  },
+  "Gadap Town Ahsanabad": {
+    "slug": "Karachi_Gadap_Town_Ahsanabad",
+    "id": 1019,
+    "lat": 25.0704,
+    "lng": 67.1523
+  },
+  "Gadap Town Chapal Uptown": {
+    "slug": "Karachi_Gadap_Town_Chapal_Uptown",
+    "id": 9713,
+    "lat": 25.067,
+    "lng": 67.1481
+  },
+  "Gadap Town Garden City": {
+    "slug": "Karachi_Gadap_Town_Garden_City",
+    "id": 1350,
+    "lat": 25.075,
+    "lng": 67.1515
+  },
+  "Gadap Town Gulshan-e-Maymar": {
+    "slug": "Karachi_Gadap_Town_Gulshan_e_Maymar",
+    "id": 680,
+    "lat": 25.0694,
+    "lng": 67.1502
+  },
+  "Gadap Town Saima Arabian Villas": {
+    "slug": "Karachi_Gadap_Town_Saima_Arabian_Villas",
+    "id": 8856,
+    "lat": 25.0662,
+    "lng": 67.1472
+  },
+  "Gadap Town Surjani Town": {
+    "slug": "Karachi_Gadap_Town_Surjani_Town",
+    "id": 319,
+    "lat": 25.0684,
+    "lng": 67.1509
+  },
+  "Garden West": {
+    "slug": "Karachi_Garden_West",
+    "id": 10984,
+    "lat": 24.872,
+    "lng": 67.038
+  },
+  "Gizri": {
+    "slug": "Karachi_Gizri",
+    "id": 6809,
+    "lat": 24.812,
+    "lng": 67.041
+  },
+  "Gizri Upper Gizri": {
+    "slug": "Karachi_Gizri_Upper_Gizri",
+    "id": 6811,
+    "lat": 24.8093,
+    "lng": 67.0382
+  },
+  "Gulistan-e-Jauhar": {
+    "slug": "Karachi_Gulistan_e_Jauhar",
+    "id": 232,
+    "lat": 24.924,
+    "lng": 67.118
+  },
+  "Gulistan-e-Jauhar Askari 4": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Askari_4",
+    "id": 6648,
+    "lat": 24.9197,
+    "lng": 67.1193
+  },
+  "Gulistan-e-Jauhar Block 1": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_1",
+    "id": 6823,
+    "lat": 24.925,
+    "lng": 67.12
+  },
+  "Gulistan-e-Jauhar Block 10": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_10",
+    "id": 6834,
+    "lat": 24.9213,
+    "lng": 67.1221
+  },
+  "Gulistan-e-Jauhar Block 11": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_11",
+    "id": 6835,
+    "lat": 24.9276,
+    "lng": 67.1137
+  },
+  "Gulistan-e-Jauhar Block 12": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_12",
+    "id": 6836,
+    "lat": 24.9214,
+    "lng": 67.1197
+  },
+  "Gulistan-e-Jauhar Block 14": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_14",
+    "id": 6838,
+    "lat": 24.9211,
+    "lng": 67.1143
+  },
+  "Gulistan-e-Jauhar Block 15": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_15",
+    "id": 6839,
+    "lat": 24.9284,
+    "lng": 67.1187
+  },
+  "Gulistan-e-Jauhar Block 16": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_16",
+    "id": 6840,
+    "lat": 24.9237,
+    "lng": 67.1208
+  },
+  "Gulistan-e-Jauhar Block 17": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_17",
+    "id": 6841,
+    "lat": 24.9271,
+    "lng": 67.1149
+  },
+  "Gulistan-e-Jauhar Block 18": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_18",
+    "id": 6842,
+    "lat": 24.92,
+    "lng": 67.1173
+  },
+  "Gulistan-e-Jauhar Block 19": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_19",
+    "id": 6843,
+    "lat": 24.9232,
+    "lng": 67.1177
+  },
+  "Gulistan-e-Jauhar Block 2": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_2",
+    "id": 6825,
+    "lat": 24.927,
+    "lng": 67.122
+  },
+  "Gulistan-e-Jauhar Block 20": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_20",
+    "id": 6844,
+    "lat": 24.9263,
+    "lng": 67.1197
+  },
+  "Gulistan-e-Jauhar Block 3": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_3",
+    "id": 6826,
+    "lat": 24.9288,
+    "lng": 67.114
+  },
+  "Gulistan-e-Jauhar Block 3 A": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_3_A",
+    "id": 6827,
+    "lat": 24.923,
+    "lng": 67.1164
+  },
+  "Gulistan-e-Jauhar Block 4": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_4",
+    "id": 6828,
+    "lat": 24.9276,
+    "lng": 67.1155
+  },
+  "Gulistan-e-Jauhar Block 5": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_5",
+    "id": 6829,
+    "lat": 24.9209,
+    "lng": 67.1175
+  },
+  "Gulistan-e-Jauhar Block 6": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_6",
+    "id": 6830,
+    "lat": 24.9232,
+    "lng": 67.1158
+  },
+  "Gulistan-e-Jauhar Block 7": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_7",
+    "id": 6831,
+    "lat": 24.9215,
+    "lng": 67.1222
+  },
+  "Gulistan-e-Jauhar Block 8": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_8",
+    "id": 6832,
+    "lat": 24.9234,
+    "lng": 67.1216
+  },
+  "Gulistan-e-Jauhar Block 9": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Block_9",
+    "id": 6833,
+    "lat": 24.9245,
+    "lng": 67.1135
+  },
+  "Gulistan-e-Jauhar Fatima Golf Residency": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Fatima_Golf_Residency",
+    "id": 11050,
+    "lat": 24.929,
+    "lng": 67.1214
+  },
+  "Gulistan-e-Jauhar - Block 13": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Gulistan_e_Jauhar___Block_13",
+    "id": 6837,
+    "lat": 24.9287,
+    "lng": 67.1223
+  },
+  "Gulistan-e-Jauhar - Block 16 A": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Gulistan_e_Jauhar___Block_16_A",
+    "id": 8889,
+    "lat": 24.9275,
+    "lng": 67.1147
+  },
+  "Gulistan-e-Jauhar Kings Presidency": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Kings_Presidency",
+    "id": 9174,
+    "lat": 24.9239,
+    "lng": 67.1151
+  },
+  "Gulistan-e-Jauhar Mehran Banglows Town": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Mehran_Banglows_Town",
+    "id": 6852,
+    "lat": 24.923,
+    "lng": 67.1136
+  },
+  "Gulistan-e-Jauhar Safoora Goth": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Safoora_Goth",
+    "id": 10343,
+    "lat": 24.9228,
+    "lng": 67.1229
+  },
+  "Gulistan-e-Jauhar Saima Mall Residency": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Saima_Mall___Residency",
+    "id": 22364,
+    "lat": 24.9217,
+    "lng": 67.1208
+  },
+  "Gulistan-e-Jauhar Sindh Baloch Housing Society": {
+    "slug": "Karachi_Gulistan_e_Jauhar_Sindh_Baloch_Housing_Society",
+    "id": 6848,
+    "lat": 24.9236,
+    "lng": 67.1172
+  },
+  "Gulshan-e-Iqbal": {
+    "slug": "Karachi_Gulshan_e_Iqbal",
+    "id": 233,
+    "lat": 24.918,
+    "lng": 67.092
+  },
+  "Gulshan-e-Iqbal Block 1": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Block_1",
+    "id": 6861,
+    "lat": 24.920535,
+    "lng": 67.08312
+  },
+  "Gulshan-e-Iqbal Block 2": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Block_2",
+    "id": 6862,
+    "lat": 24.924038,
+    "lng": 67.087233
+  },
+  "Gulshan-e-Iqbal Block 4": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Block_4",
+    "id": 6864,
+    "lat": 24.934623,
+    "lng": 67.099164
+  },
+  "Gulshan-e-Iqbal Block 5": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Block_5",
+    "id": 6866,
+    "lat": 24.919484,
+    "lng": 67.089765
+  },
+  "Gulshan-e-Iqbal Block 7": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Block_7",
+    "id": 6868,
+    "lat": 24.92754,
+    "lng": 67.104406
+  },
+  "Gulshan-e-Iqbal Town": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town",
+    "id": 6858,
+    "lat": 24.92,
+    "lng": 67.09
+  },
+  "Gulshan-e-Iqbal Town Adamjee Nagar": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Adamjee_Nagar",
+    "id": 184,
+    "lat": 24.9226,
+    "lng": 67.097
+  },
+  "Gulshan-e-Iqbal Town Alamgir Road": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Alamgir_Road",
+    "id": 9655,
+    "lat": 24.9186,
+    "lng": 67.0942
+  },
+  "Bahadurabad": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Bahadurabad",
+    "id": 524,
+    "lat": 24.881,
+    "lng": 67.056
+  },
+  "Gulshan-e-Iqbal Town CP Barar Society": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_CP_Barar_Society",
+    "id": 9654,
+    "lat": 24.9145,
+    "lng": 67.09
+  },
+  "Gulshan-e-Iqbal Town Dawood Society": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Dawood_Society",
+    "id": 6903,
+    "lat": 24.9227,
+    "lng": 67.0928
+  },
+  "Gulshan-e-Iqbal Town Delhi Mercantile Society": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Delhi_Mercantile_Society",
+    "id": 6859,
+    "lat": 24.9184,
+    "lng": 67.0945
+  },
+  "Gulshan-e-Iqbal Town Dhoraji Colony": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Dhoraji_Colony",
+    "id": 217,
+    "lat": 24.9136,
+    "lng": 67.0928
+  },
+  "Gulshan-e-Iqbal Town Faran Cooperative Housing Society": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Faran_Cooperative_Housing_Society",
+    "id": 19979,
+    "lat": 24.918,
+    "lng": 67.0955
+  },
+  "Gulshan-e-Iqbal Town Gulshan-e-Jamal": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Gulshan_e_Jamal",
+    "id": 13,
+    "lat": 24.9146,
+    "lng": 67.0966
+  },
+  "Gulshan-e-Iqbal Town Harmain Royal Residency": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Harmain_Royal_Residency",
+    "id": 9675,
+    "lat": 24.9138,
+    "lng": 67.0889
+  },
+  "Gulshan-e-Iqbal Town Jauhar Chowrangi Road": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Jauhar_Chowrangi_Road",
+    "id": 11464,
+    "lat": 24.919,
+    "lng": 67.0938
+  },
+  "Gulshan-e-Iqbal Town KDA Officers Society": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_KDA_Officers_Society",
+    "id": 508,
+    "lat": 24.9154,
+    "lng": 67.0882
+  },
+  "Gulshan-e-Iqbal Town Kokan Society": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Kokan_Society",
+    "id": 9146,
+    "lat": 24.9219,
+    "lng": 67.0895
+  },
+  "Gulshan-e-Iqbal Town Mohammad Ali Society": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Mohammad_Ali_Society",
+    "id": 411,
+    "lat": 24.9189,
+    "lng": 67.0932
+  },
+  "Gulshan-e-Iqbal Town Royal 8 Icon": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Royal_8_Icon",
+    "id": 9735,
+    "lat": 24.9172,
+    "lng": 67.0928
+  },
+  "Gulshan-e-Iqbal Town Sharfabad": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Sharfabad",
+    "id": 313,
+    "lat": 24.9182,
+    "lng": 67.0963
+  },
+  "Gulshan-e-Iqbal Town Shaz Residency": {
+    "slug": "Karachi_Gulshan_e_Iqbal_Town_Shaz_Residency",
+    "id": 13917,
+    "lat": 24.915,
+    "lng": 67.0942
+  },
+  "Hill Park": {
+    "slug": "Karachi_Hill_Park",
+    "id": 758,
+    "lat": 24.87,
+    "lng": 67.057
+  },
+  "I.I. Chundrigar Road": {
+    "slug": "Karachi_I.I._Chundrigar_Road",
+    "id": 530,
+    "lat": 24.8443,
+    "lng": 67.0037
+  },
+  "Jamaluddin Afghani Road": {
+    "slug": "Karachi_Jamaluddin_Afghani_Road",
+    "id": 9853,
+    "lat": 24.8703,
+    "lng": 66.998
+  },
+  "Jamshed Quarters": {
+    "slug": "Karachi_Jamshed_Quarters",
+    "id": 6924,
+    "lat": 24.849,
+    "lng": 67.0251
+  },
+  "Jamshed Road": {
+    "slug": "Karachi_Jamshed_Road",
+    "id": 244,
+    "lat": 24.8344,
+    "lng": 67.0075
+  },
+  "Jamshed Town": {
+    "slug": "Karachi_Jamshed_Town",
+    "id": 6916,
+    "lat": 24.875,
+    "lng": 67.056
+  },
+  "Jamshed Town Administration Employees Society": {
+    "slug": "Karachi_Jamshed_Town_Karachi_Administration_Employees_Society",
+    "id": 750,
+    "lat": 24.88,
+    "lng": 67.061
+  },
+  "Jamshed Town Garden East": {
+    "slug": "Karachi_Jamshed_Town_Garden_East",
+    "id": 6922,
+    "lat": 24.8707,
+    "lng": 67.0531
+  },
+  "PECHS": {
+    "slug": "Karachi_Jamshed_Town_PECHS",
+    "id": 403,
+    "lat": 24.868,
+    "lng": 67.062
+  },
+  "Jamshed Town Parsi Colony": {
+    "slug": "Karachi_Jamshed_Town_Parsi_Colony",
+    "id": 6948,
+    "lat": 24.8727,
+    "lng": 67.0603
+  },
+  "Jamshed Town SMCHS Sindhi Muslim Society": {
+    "slug": "Karachi_Jamshed_Town_SMCHS_Sindhi_Muslim_Society",
+    "id": 418,
+    "lat": 24.8788,
+    "lng": 67.0598
+  },
+  "Jamshed Town Soldier Bazar": {
+    "slug": "Karachi_Jamshed_Town_Soldier_Bazar",
+    "id": 317,
+    "lat": 24.8737,
+    "lng": 67.0526
+  },
+  "Jinnah Avenue": {
+    "slug": "Karachi_Jinnah_Avenue",
+    "id": 9059,
+    "lat": 24.88,
+    "lng": 67.0222
+  },
+  "Jinnah Avenue Aman Golf View": {
+    "slug": "Karachi_Jinnah_Avenue_Aman_Golf_View",
+    "id": 18350,
+    "lat": 24.8667,
+    "lng": 67.0392
+  },
+  "Jinnah Avenue Ibrahim Heaven": {
+    "slug": "Karachi_Jinnah_Avenue_Ibrahim_Heaven",
+    "id": 11470,
+    "lat": 24.8692,
+    "lng": 66.9805
+  },
+  "Jinnah Avenue Metropolis Residency": {
+    "slug": "Karachi_Jinnah_Avenue_Metropolis_Residency",
+    "id": 11073,
+    "lat": 24.879,
+    "lng": 66.998
+  },
+  "Jinnah Avenue Metropolis Signature": {
+    "slug": "Karachi_Jinnah_Avenue_Metropolis_Signature",
+    "id": 21570,
+    "lat": 24.8698,
+    "lng": 67.0363
+  },
+  "Jinnah Avenue Shanzil Golf Residencia": {
+    "slug": "Karachi_Jinnah_Avenue_Shanzil_Golf_Residencia",
+    "id": 12769,
+    "lat": 24.8381,
+    "lng": 66.9869
+  },
+  "KDA Scheme 1": {
+    "slug": "Karachi_KDA_Scheme_1",
+    "id": 8292,
+    "lat": 24.8364,
+    "lng": 67.0132
+  },
+  "KDA Scheme 1 Extension": {
+    "slug": "Karachi_KDA_Scheme_1_Extension",
+    "id": 19981,
+    "lat": 24.8463,
+    "lng": 67.0163
+  },
+  "KN Gohar Green City": {
+    "slug": "Karachi_KN_Gohar_Green_City",
+    "id": 14400,
+    "lat": 24.8731,
+    "lng": 66.9922
+  },
+  "Kamran Chowrangi": {
+    "slug": "Karachi_Kamran_Chowrangi",
+    "id": 12526,
+    "lat": 24.8681,
+    "lng": 66.9958
+  },
+  "Kashmir Road": {
+    "slug": "Karachi_Kashmir_Road",
+    "id": 9922,
+    "lat": 24.8593,
+    "lng": 67.0343
+  },
+  "Khalid Bin Walid Road": {
+    "slug": "Karachi_Khalid_Bin_Walid_Road",
+    "id": 253,
+    "lat": 24.8808,
+    "lng": 66.9855
+  },
+  "Khayaban e Ittehad Road": {
+    "slug": "Karachi_Khayaban_e_Ittehad_Road",
+    "id": 9991,
+    "lat": 24.8554,
+    "lng": 66.9966
+  },
+  "Korangi": {
+    "slug": "Karachi_Korangi",
+    "id": 255,
+    "lat": 24.84,
+    "lng": 67.136
+  },
+  "Korangi Allahwala Town": {
+    "slug": "Karachi_Korangi_Allahwala_Town",
+    "id": 7056,
+    "lat": 24.835,
+    "lng": 67.1387
+  },
+  "Korangi Bhittai Colony": {
+    "slug": "Karachi_Korangi_Bhittai_Colony",
+    "id": 7059,
+    "lat": 24.8414,
+    "lng": 67.1336
+  },
+  "Korangi Darusslam Society": {
+    "slug": "Karachi_Korangi_Darusslam_Society",
+    "id": 7057,
+    "lat": 24.8424,
+    "lng": 67.1365
+  },
+  "Korangi KDA Employees Society Korangi": {
+    "slug": "Karachi_Korangi_KDA_Employees_Society___Korangi",
+    "id": 13027,
+    "lat": 24.8393,
+    "lng": 67.1311
+  },
+  "Korangi Lucknow Society": {
+    "slug": "Karachi_Korangi_Lucknow_Society",
+    "id": 7054,
+    "lat": 24.8358,
+    "lng": 67.1398
+  },
+  "Korangi MBCHS Makhdoom Bilawal Society": {
+    "slug": "Karachi_Korangi_MBCHS_Makhdoom_Bilawal_Society",
+    "id": 7060,
+    "lat": 24.844,
+    "lng": 67.1365
+  },
+  "Korangi Makhdoom Bilawal Society": {
+    "slug": "Karachi_Korangi_Makhdoom_Bilawal_Society",
+    "id": 18621,
+    "lat": 24.8433,
+    "lng": 67.1368
+  },
+  "Liaqatabad": {
+    "slug": "Karachi_Liaqatabad",
+    "id": 681,
+    "lat": 24.8389,
+    "lng": 66.9876
+  },
+  "Liaquatabad Gharibabad": {
+    "slug": "Karachi_Liaquatabad_Gharibabad",
+    "id": 7091,
+    "lat": 24.9081,
+    "lng": 67.044
+  },
+  "Liaquatabad Qasimabad": {
+    "slug": "Karachi_Liaquatabad_Qasimabad",
+    "id": 7089,
+    "lat": 24.913,
+    "lng": 67.0436
+  },
+  "Lyari Expressway": {
+    "slug": "Karachi_Lyari_Expressway",
+    "id": 7104,
+    "lat": 24.872,
+    "lng": 67.0071
+  },
+  "Lyari Expressway Shahzada Sweet Towers": {
+    "slug": "Karachi_Lyari_Expressway_Shahzada_Sweet_Towers",
+    "id": 13169,
+    "lat": 24.8655,
+    "lng": 67.006
+  },
+  "M.A. Jinnah Road": {
+    "slug": "Karachi_M.A._Jinnah_Road",
+    "id": 475,
+    "lat": 24.8768,
+    "lng": 67.033
+  },
+  "Malir": {
+    "slug": "Karachi_Malir",
+    "id": 476,
+    "lat": 24.886,
+    "lng": 67.187
+  },
+  "Malir Anwar e Ibrahim": {
+    "slug": "Karachi_Malir_Anwar_e_Ibrahim",
+    "id": 15683,
+    "lat": 24.8851,
+    "lng": 67.1882
+  },
+  "Malir Falaknaz Dreams": {
+    "slug": "Karachi_Malir_Falaknaz_Dreams",
+    "id": 9697,
+    "lat": 24.8825,
+    "lng": 67.1913
+  },
+  "Malir Falaknaz Presidency": {
+    "slug": "Karachi_Malir_Falaknaz_Presidency",
+    "id": 9700,
+    "lat": 24.8896,
+    "lng": 67.1918
+  },
+  "Malir Falcon Complex New Malir": {
+    "slug": "Karachi_Malir_Falcon_Complex_New_Malir",
+    "id": 9582,
+    "lat": 24.8891,
+    "lng": 67.1908
+  },
+  "Malir Golden Town": {
+    "slug": "Karachi_Malir_Golden_Town",
+    "id": 9593,
+    "lat": 24.8812,
+    "lng": 67.1894
+  },
+  "Malir Jamia Millia Road": {
+    "slug": "Karachi_Malir_Jamia_Millia_Road",
+    "id": 9597,
+    "lat": 24.8843,
+    "lng": 67.1913
+  },
+  "Malir Kazimabad": {
+    "slug": "Karachi_Malir_Kazimabad",
+    "id": 1463,
+    "lat": 24.889,
+    "lng": 67.1906
+  },
+  "Malir Link To Super Highway": {
+    "slug": "Karachi_Malir_Link_To_Super_Highway",
+    "id": 10918,
+    "lat": 24.8891,
+    "lng": 67.1847
+  },
+  "Malir Link To Super Highway Burj Ul Imran Apartments": {
+    "slug": "Karachi_Malir_Link_To_Super_Highway_Burj_Ul_Imran_Apartments",
+    "id": 15055,
+    "lat": 24.8889,
+    "lng": 67.1831
+  },
+  "Malir Link To Super Highway Cantt View Lodges": {
+    "slug": "Karachi_Malir_Link_To_Super_Highway_Cantt_View_Lodges",
+    "id": 10924,
+    "lat": 24.8897,
+    "lng": 67.1906
+  },
+  "Malir Model Colony Malir": {
+    "slug": "Karachi_Malir_Model_Colony___Malir",
+    "id": 518,
+    "lat": 24.8832,
+    "lng": 67.1902
+  },
+  "Malir Roomi Residency": {
+    "slug": "Karachi_Malir_Roomi_Residency",
+    "id": 16680,
+    "lat": 24.8856,
+    "lng": 67.1851
+  },
+  "Malir Saima Elite Villas": {
+    "slug": "Karachi_Malir_Saima_Elite_Villas",
+    "id": 10096,
+    "lat": 24.889,
+    "lng": 67.1843
+  },
+  "Malir Saima Jinnah Avenue": {
+    "slug": "Karachi_Malir_Saima_Jinnah_Avenue",
+    "id": 13172,
+    "lat": 24.8812,
+    "lng": 67.1839
+  },
+  "Malir Tariq Bin Ziyad Housing Society": {
+    "slug": "Karachi_Malir_Tariq_Bin_Ziyad_Housing_Society",
+    "id": 6651,
+    "lat": 24.8843,
+    "lng": 67.1906
+  },
+  "Malir Tipu Sultan Society": {
+    "slug": "Karachi_Malir_Tipu_Sultan_Society",
+    "id": 9421,
+    "lat": 24.8907,
+    "lng": 67.1848
+  },
+  "Mehmoodabad": {
+    "slug": "Karachi_Mehmoodabad",
+    "id": 9201,
+    "lat": 24.858,
+    "lng": 67.072
+  },
+  "Mehmoodabad - Number 1": {
+    "slug": "Karachi_Mehmoodabad_Mehmoodabad_Number_1",
+    "id": 13411,
+    "lat": 24.8594,
+    "lng": 67.071
+  },
+  "Motorway": {
+    "slug": "Karachi_Karachi_Motorway",
+    "id": 10147,
+    "lat": 24.8889,
+    "lng": 67.0122
+  },
+  "Motorway Saima Villas": {
+    "slug": "Karachi_Karachi_Motorway_Saima_Villas",
+    "id": 10570,
+    "lat": 24.8864,
+    "lng": 66.9869
+  },
+  "Muslimabad Society": {
+    "slug": "Karachi_Muslimabad_Society",
+    "id": 12425,
+    "lat": 24.8882,
+    "lng": 66.9907
+  },
+  "Navy Housing Scheme Karsaz": {
+    "slug": "Karachi_Navy_Housing_Scheme_Karsaz",
+    "id": 11579,
+    "lat": 24.8878,
+    "lng": 66.9959
+  },
+  "Navy Housing Scheme Karsaz - Phase 1": {
+    "slug": "Karachi_Navy_Housing_Scheme_Karsaz_Navy_Housing_Scheme_Karsaz___Phase_1",
+    "id": 11580,
+    "lat": 24.8365,
+    "lng": 67.0061
+  },
+  "Navy Housing Scheme Karsaz - Phase 2": {
+    "slug": "Karachi_Navy_Housing_Scheme_Karsaz_Navy_Housing_Scheme_Karsaz___Phase_2",
+    "id": 11581,
+    "lat": 24.8737,
+    "lng": 66.9988
+  },
+  "Navy Housing Scheme Karsaz - Phase 3": {
+    "slug": "Karachi_Navy_Housing_Scheme_Karsaz_Navy_Housing_Scheme_Karsaz___Phase_3",
+    "id": 11582,
+    "lat": 24.8664,
+    "lng": 67.0107
+  },
+  "Navy Housing Scheme Karsaz - Road": {
+    "slug": "Karachi_Navy_Housing_Scheme_Karsaz_Navy_Housing_Scheme_Karsaz_Road",
+    "id": 9198,
+    "lat": 24.8531,
+    "lng": 67.0146
+  },
+  "Naya Nazimabad": {
+    "slug": "Karachi_Naya_Nazimabad",
+    "id": 10079,
+    "lat": 24.949,
+    "lng": 67.052
+  },
+  "Naya Nazimabad - Block A": {
+    "slug": "Karachi_Naya_Nazimabad_Naya_Nazimabad___Block_A",
+    "id": 14291,
+    "lat": 24.9465,
+    "lng": 67.0541
+  },
+  "Naya Nazimabad - Block B": {
+    "slug": "Karachi_Naya_Nazimabad_Naya_Nazimabad___Block_B",
+    "id": 14292,
+    "lat": 24.944,
+    "lng": 67.0563
+  },
+  "Naya Nazimabad - Block C": {
+    "slug": "Karachi_Naya_Nazimabad_Naya_Nazimabad___Block_C",
+    "id": 14293,
+    "lat": 24.9494,
+    "lng": 67.0542
+  },
+  "Naya Nazimabad - Block D": {
+    "slug": "Karachi_Naya_Nazimabad_Naya_Nazimabad___Block_D",
+    "id": 14294,
+    "lat": 24.9514,
+    "lng": 67.0537
+  },
+  "Nazimabad": {
+    "slug": "Karachi_Nazimabad",
+    "id": 278,
+    "lat": 24.934,
+    "lng": 67.034
+  },
+  "Nazimabad - Block 5C": {
+    "slug": "Karachi_Nazimabad_Nazimabad___Block_5C",
+    "id": 7085,
+    "lat": 24.9326,
+    "lng": 67.0297
+  },
+  "Nazimabad - 1": {
+    "slug": "Karachi_Nazimabad_Nazimabad_1",
+    "id": 7078,
+    "lat": 24.9356,
+    "lng": 67.0323
+  },
+  "Nazimabad - 3": {
+    "slug": "Karachi_Nazimabad_Nazimabad_3",
+    "id": 7080,
+    "lat": 24.9321,
+    "lng": 67.0375
+  },
+  "Nazimabad - 4": {
+    "slug": "Karachi_Nazimabad_Nazimabad_4",
+    "id": 7081,
+    "lat": 24.9362,
+    "lng": 67.032
+  },
+  "North Buffer Zone": {
+    "slug": "Karachi_North_Karachi_Buffer_Zone",
+    "id": 1343,
+    "lat": 24.8486,
+    "lng": 67.0045
+  },
+  "North Karachi": {
+    "slug": "Karachi_North_Karachi",
+    "id": 282,
+    "lat": 24.965,
+    "lng": 67.048
+  },
+  "North Nazimabad": {
+    "slug": "Karachi_North_Nazimabad",
+    "id": 11,
+    "lat": 24.942,
+    "lng": 67.036
+  },
+  "North Nazimabad Block A": {
+    "slug": "Karachi_North_Nazimabad_Block_A",
+    "id": 7209,
+    "lat": 24.944,
+    "lng": 67.038
+  },
+  "North Nazimabad Block B": {
+    "slug": "Karachi_North_Nazimabad_Block_B",
+    "id": 7210,
+    "lat": 24.941,
+    "lng": 67.034
+  },
+  "North Nazimabad Block C": {
+    "slug": "Karachi_North_Nazimabad_Block_C",
+    "id": 7211,
+    "lat": 24.9383,
+    "lng": 67.0352
+  },
+  "North Nazimabad Block D": {
+    "slug": "Karachi_North_Nazimabad_Block_D",
+    "id": 7212,
+    "lat": 24.9464,
+    "lng": 67.0378
+  },
+  "North Nazimabad Block F": {
+    "slug": "Karachi_North_Nazimabad_Block_F",
+    "id": 7214,
+    "lat": 24.946,
+    "lng": 67.0372
+  },
+  "North Nazimabad Block G": {
+    "slug": "Karachi_North_Nazimabad_Block_G",
+    "id": 7215,
+    "lat": 24.94,
+    "lng": 67.0365
+  },
+  "North Nazimabad Block H": {
+    "slug": "Karachi_North_Nazimabad_Block_H",
+    "id": 7216,
+    "lat": 24.946,
+    "lng": 67.034
+  },
+  "North Nazimabad Block I": {
+    "slug": "Karachi_North_Nazimabad_Block_I",
+    "id": 7217,
+    "lat": 24.937,
+    "lng": 67.0339
+  },
+  "North Nazimabad Block J": {
+    "slug": "Karachi_North_Nazimabad_Block_J",
+    "id": 7218,
+    "lat": 24.9413,
+    "lng": 67.0368
+  },
+  "North Nazimabad Block K": {
+    "slug": "Karachi_North_Nazimabad_Block_K",
+    "id": 7219,
+    "lat": 24.9435,
+    "lng": 67.0356
+  },
+  "North Nazimabad Block L": {
+    "slug": "Karachi_North_Nazimabad_Block_L",
+    "id": 7220,
+    "lat": 24.9414,
+    "lng": 67.0331
+  },
+  "North Nazimabad Block M": {
+    "slug": "Karachi_North_Nazimabad_Block_M",
+    "id": 7221,
+    "lat": 24.9417,
+    "lng": 67.04
+  },
+  "North Nazimabad Block N": {
+    "slug": "Karachi_North_Nazimabad_Block_N",
+    "id": 7222,
+    "lat": 24.945,
+    "lng": 67.0327
+  },
+  "North Nazimabad - Block S": {
+    "slug": "Karachi_North_Nazimabad_North_Nazimabad___Block_S",
+    "id": 8944,
+    "lat": 24.9378,
+    "lng": 67.0362
+  },
+  "North Nazimabad - Block T": {
+    "slug": "Karachi_North_Nazimabad_North_Nazimabad___Block_T",
+    "id": 8943,
+    "lat": 24.9433,
+    "lng": 67.0344
+  },
+  "North Nazimabad - Block W": {
+    "slug": "Karachi_North_Nazimabad_North_Nazimabad___Block_W",
+    "id": 8948,
+    "lat": 24.9452,
+    "lng": 67.0385
+  },
+  "North Nazimabad Shadman": {
+    "slug": "Karachi_North_Nazimabad_Shadman",
+    "id": 685,
+    "lat": 24.9437,
+    "lng": 67.0332
+  },
+  "North - Sector 11 C1": {
+    "slug": "Karachi_North_Karachi_North_Karachi___Sector_11_C1",
+    "id": 9047,
+    "lat": 24.8419,
+    "lng": 66.9815
+  },
+  "North - Sector 4": {
+    "slug": "Karachi_North_Karachi_North_Karachi___Sector_4",
+    "id": 8859,
+    "lat": 24.8447,
+    "lng": 67.0085
+  },
+  "North - Sector 5 B3": {
+    "slug": "Karachi_North_Karachi_North_Karachi___Sector_5_B3",
+    "id": 19201,
+    "lat": 24.881,
+    "lng": 66.9844
+  },
+  "North - Sector 7 D1": {
+    "slug": "Karachi_North_Karachi_North_Karachi___Sector_7_D1",
+    "id": 19019,
+    "lat": 24.8549,
+    "lng": 67.0178
+  },
+  "North - Sector 7 D2": {
+    "slug": "Karachi_North_Karachi_North_Karachi___Sector_7_D2",
+    "id": 12436,
+    "lat": 24.8417,
+    "lng": 67.0218
+  },
+  "North - Sector 7 D3": {
+    "slug": "Karachi_North_Karachi_North_Karachi___Sector_7_D3",
+    "id": 8892,
+    "lat": 24.8597,
+    "lng": 66.9946
+  },
+  "North Sector 10": {
+    "slug": "Karachi_North_Karachi_Sector_10",
+    "id": 7183,
+    "lat": 24.8694,
+    "lng": 66.9803
+  },
+  "North Sector 11A": {
+    "slug": "Karachi_North_Karachi_Sector_11A",
+    "id": 7184,
+    "lat": 24.8751,
+    "lng": 67.0262
+  },
+  "North Sector 11B": {
+    "slug": "Karachi_North_Karachi_Sector_11B",
+    "id": 7185,
+    "lat": 24.8364,
+    "lng": 67.0055
+  },
+  "North Sector 11C": {
+    "slug": "Karachi_North_Karachi_Sector_11C",
+    "id": 7186,
+    "lat": 24.8406,
+    "lng": 67.0375
+  },
+  "North Sector 15A": {
+    "slug": "Karachi_North_Karachi_Sector_15A",
+    "id": 7194,
+    "lat": 24.8611,
+    "lng": 66.983
+  },
+  "North Sector 8": {
+    "slug": "Karachi_North_Karachi_Sector_8",
+    "id": 7181,
+    "lat": 24.845,
+    "lng": 67.0309
+  },
+  "North Sector 9": {
+    "slug": "Karachi_North_Karachi_Sector_9",
+    "id": 7182,
+    "lat": 24.8574,
+    "lng": 67.0281
+  },
+  "Northern Bypass": {
+    "slug": "Karachi_Northern_Bypass",
+    "id": 1241,
+    "lat": 24.8701,
+    "lng": 67.0393
+  },
+  "Northern Bypass Lalazar Society": {
+    "slug": "Karachi_Northern_Bypass_Lalazar_Society",
+    "id": 21259,
+    "lat": 24.8657,
+    "lng": 67.037
+  },
+  "Northern Bypass NHS Mauripur": {
+    "slug": "Karachi_Northern_Bypass_NHS_Mauripur",
+    "id": 21108,
+    "lat": 24.8835,
+    "lng": 67.0168
+  },
+  "Old Clifton": {
+    "slug": "Karachi_Old_Clifton",
+    "id": 9052,
+    "lat": 24.824,
+    "lng": 67.029
+  },
+  "P T Colony": {
+    "slug": "Karachi_P___T_Colony",
+    "id": 11233,
+    "lat": 24.8732,
+    "lng": 67.0103
+  },
+  "PIDC": {
+    "slug": "Karachi_PIDC",
+    "id": 1380,
+    "lat": 24.8798,
+    "lng": 67.0129
+  },
+  "Pak Ideal Cooperative Housing Society": {
+    "slug": "Karachi_Pak_Ideal_Cooperative_Housing_Society",
+    "id": 10614,
+    "lat": 24.8838,
+    "lng": 67.0246
+  },
+  "Punjab Colony": {
+    "slug": "Karachi_Punjab_Colony",
+    "id": 7253,
+    "lat": 24.8585,
+    "lng": 66.9956
+  },
+  "Rashid Minhas Road": {
+    "slug": "Karachi_Rashid_Minhas_Road",
+    "id": 301,
+    "lat": 24.8448,
+    "lng": 67.0183
+  },
+  "Rashid Minhas Road Lucky One Apartment": {
+    "slug": "Karachi_Rashid_Minhas_Road_Lucky_One_Apartment",
+    "id": 11029,
+    "lat": 24.8759,
+    "lng": 67.0113
+  },
+  "Rashid Minhas Road Saima Royal Residency": {
+    "slug": "Karachi_Rashid_Minhas_Road_Saima_Royal_Residency",
+    "id": 10509,
+    "lat": 24.8676,
+    "lng": 66.9965
+  },
+  "Royal Defence Tower": {
+    "slug": "Karachi_Royal_Defence_Tower",
+    "id": 9743,
+    "lat": 24.8346,
+    "lng": 66.9971
+  },
+  "Saadi Road": {
+    "slug": "Karachi_Saadi_Road",
+    "id": 8849,
+    "lat": 24.8463,
+    "lng": 66.9992
+  },
+  "Saadi Road Sanober Twin Tower": {
+    "slug": "Karachi_Saadi_Road_Sanober_Twin_Tower",
+    "id": 11047,
+    "lat": 24.8624,
+    "lng": 66.9883
+  },
+  "Saadi Road Tulip Tower": {
+    "slug": "Karachi_Saadi_Road_Tulip_Tower",
+    "id": 10827,
+    "lat": 24.8439,
+    "lng": 67.0216
+  },
+  "Saddar": {
+    "slug": "Karachi_Saddar",
+    "id": 304,
+    "lat": 24.856,
+    "lng": 67.018
+  },
+  "Saddar Town": {
+    "slug": "Karachi_Saddar_Town",
+    "id": 7269,
+    "lat": 24.8581,
+    "lng": 67.0136
+  },
+  "Saddar Town Gazdarabad": {
+    "slug": "Karachi_Saddar_Town_Gazdarabad",
+    "id": 7272,
+    "lat": 24.8551,
+    "lng": 67.0184
+  },
+  "Saima Luxury Homes": {
+    "slug": "Karachi_Saima_Luxury_Homes",
+    "id": 10136,
+    "lat": 24.8549,
+    "lng": 66.9924
+  },
+  "Scheme 33": {
+    "slug": "Karachi_Scheme_33",
+    "id": 495,
+    "lat": 24.895,
+    "lng": 67.171
+  },
+  "Scheme 33 Ali Garh Society": {
+    "slug": "Karachi_Scheme_33_Ali_Garh_Society",
+    "id": 9215,
+    "lat": 24.8942,
+    "lng": 67.175
+  },
+  "Scheme 33 Central Information Cooperative Housing Society": {
+    "slug": "Karachi_Scheme_33_Central_Information_Cooperative_Housing_Society",
+    "id": 9039,
+    "lat": 24.8958,
+    "lng": 67.173
+  },
+  "Scheme 33 Chapal Sun City": {
+    "slug": "Karachi_Scheme_33_Chapal_Sun_City",
+    "id": 15265,
+    "lat": 24.8986,
+    "lng": 67.1737
+  },
+  "Scheme 33 Commander Heights": {
+    "slug": "Karachi_Scheme_33_Commander_Heights",
+    "id": 15806,
+    "lat": 24.8938,
+    "lng": 67.1661
+  },
+  "Scheme 33 Daniyal Residency": {
+    "slug": "Karachi_Scheme_33_Daniyal_Residency",
+    "id": 10578,
+    "lat": 24.8935,
+    "lng": 67.1735
+  },
+  "Scheme 33 Federal Government Employees Housing Foundation": {
+    "slug": "Karachi_Scheme_33_Federal_Government_Employees_Housing_Foundation",
+    "id": 10621,
+    "lat": 24.8985,
+    "lng": 67.1755
+  },
+  "Scheme 33 Grey Noor Tower Shopping Mall": {
+    "slug": "Karachi_Scheme_33_Grey_Noor_Tower___Shopping_Mall",
+    "id": 10106,
+    "lat": 24.8942,
+    "lng": 67.1735
+  },
+  "Scheme 33 Gulshan-e-Azeem": {
+    "slug": "Karachi_Scheme_33_Gulshan_e_Azeem",
+    "id": 9218,
+    "lat": 24.8955,
+    "lng": 67.172
+  },
+  "Scheme 33 Gulshan-e-Kaneez Fatima": {
+    "slug": "Karachi_Scheme_33_Gulshan_e_Kaneez_Fatima",
+    "id": 6885,
+    "lat": 24.8922,
+    "lng": 67.1682
+  },
+  "Scheme 33 Gulzar e Hijri": {
+    "slug": "Karachi_Scheme_33_Gulzar_e_Hijri",
+    "id": 235,
+    "lat": 24.8944,
+    "lng": 67.1663
+  },
+  "Scheme 33 Gwalior Cooperative Housing Society": {
+    "slug": "Karachi_Scheme_33_Gwalior_Cooperative_Housing_Society",
+    "id": 9074,
+    "lat": 24.8934,
+    "lng": 67.1728
+  },
+  "Scheme 33 Hanas Society": {
+    "slug": "Karachi_Scheme_33_Hanas_Society",
+    "id": 9185,
+    "lat": 24.894,
+    "lng": 67.1677
+  },
+  "Scheme 33 Hansa Society": {
+    "slug": "Karachi_Scheme_33_Hansa_Society",
+    "id": 9217,
+    "lat": 24.8947,
+    "lng": 67.1673
+  },
+  "Scheme 33 KESC Housing Society": {
+    "slug": "Karachi_Scheme_33_KESC_Housing_Society",
+    "id": 9075,
+    "lat": 24.8962,
+    "lng": 67.1663
+  },
+  "Scheme 33 Lakhani Fantasia": {
+    "slug": "Karachi_Scheme_33_Lakhani_Fantasia",
+    "id": 11734,
+    "lat": 24.8939,
+    "lng": 67.1716
+  },
+  "Scheme 33 Meerut Society": {
+    "slug": "Karachi_Scheme_33_Meerut_Society",
+    "id": 9078,
+    "lat": 24.8903,
+    "lng": 67.1724
+  },
+  "Scheme 33 Memon Nagar": {
+    "slug": "Karachi_Scheme_33_Memon_Nagar",
+    "id": 6886,
+    "lat": 24.8914,
+    "lng": 67.1706
+  },
+  "Scheme 33 Noman Residencia": {
+    "slug": "Karachi_Scheme_33_Noman_Residencia",
+    "id": 10377,
+    "lat": 24.8905,
+    "lng": 67.1698
+  },
+  "Scheme 33 Rafi Premier Residency": {
+    "slug": "Karachi_Scheme_33_Rafi_Premier_Residency",
+    "id": 15294,
+    "lat": 24.8921,
+    "lng": 67.1693
+  },
+  "Scheme 33 Rimjhim VIllas": {
+    "slug": "Karachi_Scheme_33_Rimjhim_VIllas",
+    "id": 10105,
+    "lat": 24.8976,
+    "lng": 67.1698
+  },
+  "Scheme 33 Saadabad Cooperative Housing Society": {
+    "slug": "Karachi_Scheme_33_Saadabad_Cooperative_Housing_Society",
+    "id": 10429,
+    "lat": 24.8975,
+    "lng": 67.1743
+  },
+  "Scheme 33 Saadi Garden": {
+    "slug": "Karachi_Scheme_33_Saadi_Garden",
+    "id": 9087,
+    "lat": 24.8925,
+    "lng": 67.1668
+  },
+  "Scheme 33 Saadi Town": {
+    "slug": "Karachi_Scheme_33_Saadi_Town",
+    "id": 6853,
+    "lat": 24.8902,
+    "lng": 67.1714
+  },
+  "Scheme 33 Sadat-e-Amroha Coop Housing Society": {
+    "slug": "Karachi_Scheme_33_Sadat_e_Amroha_Coop_Housing_Society",
+    "id": 6854,
+    "lat": 24.9,
+    "lng": 67.1695
+  },
+  "Scheme 33 - Sector 15 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_15_A",
+    "id": 9310,
+    "lat": 24.8965,
+    "lng": 67.1738
+  },
+  "Scheme 33 - Sector 16 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_16_A",
+    "id": 9305,
+    "lat": 24.8965,
+    "lng": 67.1735
+  },
+  "Scheme 33 - Sector 17 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_17_A",
+    "id": 9298,
+    "lat": 24.8995,
+    "lng": 67.168
+  },
+  "Scheme 33 - Sector 18 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_18_A",
+    "id": 9320,
+    "lat": 24.8902,
+    "lng": 67.1675
+  },
+  "Scheme 33 - Sector 19 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_19_A",
+    "id": 9304,
+    "lat": 24.8913,
+    "lng": 67.1727
+  },
+  "Scheme 33 - Sector 20 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_20_A",
+    "id": 9309,
+    "lat": 24.8956,
+    "lng": 67.1682
+  },
+  "Scheme 33 - Sector 21 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_21_A",
+    "id": 9303,
+    "lat": 24.897,
+    "lng": 67.1737
+  },
+  "Scheme 33 - Sector 24 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_24_A",
+    "id": 9314,
+    "lat": 24.8917,
+    "lng": 67.1721
+  },
+  "Scheme 33 - Sector 25 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_25_A",
+    "id": 9315,
+    "lat": 24.8975,
+    "lng": 67.1671
+  },
+  "Scheme 33 - Sector 31": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_31",
+    "id": 13688,
+    "lat": 24.8982,
+    "lng": 67.1756
+  },
+  "Scheme 33 - Sector 32": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_32",
+    "id": 13690,
+    "lat": 24.8911,
+    "lng": 67.1663
+  },
+  "Scheme 33 - Sector 34 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_34_A",
+    "id": 9291,
+    "lat": 24.8931,
+    "lng": 67.1728
+  },
+  "Scheme 33 - Sector 35 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_35_A",
+    "id": 9297,
+    "lat": 24.8996,
+    "lng": 67.17
+  },
+  "Scheme 33 - Sector 36 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_36_A",
+    "id": 14112,
+    "lat": 24.8972,
+    "lng": 67.1668
+  },
+  "Scheme 33 - Sector 38 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_38_A",
+    "id": 10361,
+    "lat": 24.8969,
+    "lng": 67.1723
+  },
+  "Scheme 33 - Sector 50": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_50",
+    "id": 9312,
+    "lat": 24.891,
+    "lng": 67.1737
+  },
+  "Scheme 33 - Sector 51 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_51_A",
+    "id": 12042,
+    "lat": 24.8985,
+    "lng": 67.172
+  },
+  "Scheme 33 - Sector 52 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_52_A",
+    "id": 9301,
+    "lat": 24.8912,
+    "lng": 67.1758
+  },
+  "Scheme 33 - Sector 53 A": {
+    "slug": "Karachi_Scheme_33_Scheme_33___Sector_53_A",
+    "id": 12753,
+    "lat": 24.8978,
+    "lng": 67.1695
+  },
+  "Scheme 33 Soomra Society": {
+    "slug": "Karachi_Scheme_33_Soomra_Society",
+    "id": 12877,
+    "lat": 24.8943,
+    "lng": 67.1697
+  },
+  "Scheme 33 University Housing Society": {
+    "slug": "Karachi_Scheme_33_Karachi_University_Housing_Society",
+    "id": 9184,
+    "lat": 24.8951,
+    "lng": 67.1694
+  },
+  "Scheme 33 Zeenatabad": {
+    "slug": "Karachi_Scheme_33_Zeenatabad",
+    "id": 9195,
+    "lat": 24.8985,
+    "lng": 67.1742
+  },
+  "Sea View Apartments": {
+    "slug": "Karachi_Sea_View_Apartments",
+    "id": 7292,
+    "lat": 24.819,
+    "lng": 67.023
+  },
+  "Shah Faisal Town": {
+    "slug": "Karachi_Shah_Faisal_Town",
+    "id": 774,
+    "lat": 24.869,
+    "lng": 67.107
+  },
+  "Shah Faisal Town Al Ghaffar Nagori City": {
+    "slug": "Karachi_Shah_Faisal_Town_Al_Ghaffar_Nagori_City",
+    "id": 20724,
+    "lat": 24.8651,
+    "lng": 67.1116
+  },
+  "Shah Faisal Town Rafah-e-Aam": {
+    "slug": "Karachi_Shah_Faisal_Town_Rafah_e_Aam",
+    "id": 1370,
+    "lat": 24.8704,
+    "lng": 67.1103
+  },
+  "Shah Faisal Town Shamsi Society": {
+    "slug": "Karachi_Shah_Faisal_Town_Shamsi_Society",
+    "id": 7300,
+    "lat": 24.8711,
+    "lng": 67.1064
+  },
+  "Shaheed Millat Road": {
+    "slug": "Karachi_Shaheed_Millat_Road",
+    "id": 413,
+    "lat": 24.874,
+    "lng": 67.0379
+  },
+  "Shaheed-e-Millat Expressway": {
+    "slug": "Karachi_Shaheed_e_Millat_Expressway",
+    "id": 10171,
+    "lat": 24.8462,
+    "lng": 67.0285
+  },
+  "Shaheed-e-Millat Expressway Defence Skyline": {
+    "slug": "Karachi_Shaheed_e_Millat_Expressway_Defence_Skyline",
+    "id": 9447,
+    "lat": 24.8623,
+    "lng": 67.009
+  },
+  "Shahra-e-Faisal": {
+    "slug": "Karachi_Shahra_e_Faisal",
+    "id": 310,
+    "lat": 24.861,
+    "lng": 67.078
+  },
+  "Shahra-e-Faisal Shah Faisal Colony": {
+    "slug": "Karachi_Shahra_e_Faisal_Shah_Faisal_Colony",
+    "id": 678,
+    "lat": 24.8604,
+    "lng": 67.0803
+  },
+  "Shahra-e-Qaideen": {
+    "slug": "Karachi_Shahra_e_Qaideen",
+    "id": 531,
+    "lat": 24.8461,
+    "lng": 67.0311
+  },
+  "Shahra-e-Usman": {
+    "slug": "Karachi_Shahra_e_Usman",
+    "id": 7311,
+    "lat": 24.8798,
+    "lng": 66.9852
+  },
+  "Shahra-e-Usman Royal Tower": {
+    "slug": "Karachi_Shahra_e_Usman_Royal_Tower",
+    "id": 9730,
+    "lat": 24.8829,
+    "lng": 66.9946
+  },
+  "Shahrah-e-Pakistan": {
+    "slug": "Karachi_Shahrah_e_Pakistan",
+    "id": 12728,
+    "lat": 24.8579,
+    "lng": 67.0166
+  },
+  "Suparco Road": {
+    "slug": "Karachi_Suparco_Road",
+    "id": 10698,
+    "lat": 24.8527,
+    "lng": 66.9817
+  },
+  "Suparco Road Sawera Enclave": {
+    "slug": "Karachi_Suparco_Road_Sawera_Enclave",
+    "id": 21849,
+    "lat": 24.8811,
+    "lng": 66.9909
+  },
+  "Tariq Road": {
+    "slug": "Karachi_Tariq_Road",
+    "id": 532,
+    "lat": 24.876,
+    "lng": 67.064
+  },
+  "Tipu Sultan Road": {
+    "slug": "Karachi_Tipu_Sultan_Road",
+    "id": 415,
+    "lat": 24.8427,
+    "lng": 67.0279
+  },
+  "University Road": {
+    "slug": "Karachi_University_Road",
+    "id": 324,
+    "lat": 24.919,
+    "lng": 67.105
+  },
+  "University Road Burj Ul Harmain": {
+    "slug": "Karachi_University_Road_Burj_Ul_Harmain",
+    "id": 9674,
+    "lat": 24.9174,
+    "lng": 67.1088
+  },
+  "University Road City Tower And Shopping Mall": {
+    "slug": "Karachi_University_Road_City_Tower_And_Shopping_Mall",
+    "id": 10367,
+    "lat": 24.921,
+    "lng": 67.1028
+  },
+  "University Road Safari Enclave Apartments": {
+    "slug": "Karachi_University_Road_Safari_Enclave_Apartments",
+    "id": 10971,
+    "lat": 24.9141,
+    "lng": 67.1095
+  },
+  "Zamzama": {
+    "slug": "Karachi_Zamzama",
+    "id": 416,
+    "lat": 24.814,
+    "lng": 67.034
+  },
+  "Zamzama Navy Housing Scheme Zamzama": {
+    "slug": "Karachi_Zamzama_Navy_Housing_Scheme_Zamzama",
+    "id": 1508,
+    "lat": 24.8099,
+    "lng": 67.0362
+  },
+  "Gulshan-e-Kaneez Fatima - Block 1": {
+    "slug": "Karachi_Scheme_33_Gulshan_e_Kaneez_Fatima_Gulshan_e_Kaneez_Fatima___Block_1",
+    "id": 13851,
+    "lat": 24.897,
+    "lng": 67.173
+  },
+  "Gulshan-e-Kaneez Fatima - Block 2": {
+    "slug": "Karachi_Scheme_33_Gulshan_e_Kaneez_Fatima_Gulshan_e_Kaneez_Fatima___Block_2",
+    "id": 13852,
+    "lat": 24.896,
+    "lng": 67.172
+  },
+  "Gulshan-e-Kaneez Fatima - Block 4": {
+    "slug": "Karachi_Scheme_33_Gulshan_e_Kaneez_Fatima_Gulshan_e_Kaneez_Fatima___Block_4",
+    "id": 13853,
+    "lat": 24.894,
+    "lng": 67.174
+  },
+  "Karachi": {
+    "slug": "Karachi",
+    "id": 2,
+    "lat": 24.8607,
+    "lng": 67.0011
+  }
+}

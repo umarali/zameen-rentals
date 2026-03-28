@@ -5,7 +5,7 @@ import httpx
 from bs4 import BeautifulSoup
 from fastapi import HTTPException
 
-from app.data import USER_AGENTS
+from app.data import USER_AGENTS, PROPERTY_TYPES
 from app.cache import cache_key, cache_get, cache_set, rate_limiter
 from app.parsing import build_url, parse_price
 
@@ -138,13 +138,15 @@ def parse_listings(html):
             loc_text = "".join(loc_el.find_all(string=True, recursive=False)).strip()
             if not loc_text:
                 loc_text = loc_el.get_text(strip=True)
+            # Strip area-size that bleeds in (e.g. "DHA Phase 845292 Sq. Yd.")
+            loc_text = re.sub(r'[\d,]+\s*(?:Sq\.?\s*(?:Yd|Ft|M)\.?|Marla|Kanal).*$', '', loc_text, flags=re.I).strip()
             # Strip trailing digits that may bleed in from adjacent elements
             loc_text = re.sub(r'\d+\s*$', '', loc_text).strip().rstrip(',')
             listing["location"] = loc_text
         else:
             for span in card.select("span, div"):
                 t = span.get_text(strip=True)
-                if ("DHA" in t or "Commercial" in t or "Karachi" in t or "Block" in t) and 5 < len(t) < 80 and "Thousand" not in t and "sqft" not in t:
+                if ("DHA" in t or "Commercial" in t or "Karachi" in t or "Lahore" in t or "Islamabad" in t or "Block" in t) and 5 < len(t) < 80 and "Thousand" not in t and "sqft" not in t:
                     listing["location"] = t; break
         # Extract all images
         images = _extract_images(card)
@@ -183,16 +185,20 @@ def parse_listings(html):
     return listings
 
 
-async def search_zameen(area=None, property_type=None, bedrooms=None, price_min=None, price_max=None, furnished=None, page=1, sort=None):
-    ck = cache_key(area=area, property_type=property_type, bedrooms=bedrooms, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort)
+async def search_zameen(area=None, property_type=None, bedrooms=None, price_min=None, price_max=None, furnished=None, page=1, sort=None, city="karachi"):
+    ck = cache_key(city=city, area=area, property_type=property_type, bedrooms=bedrooms, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort)
     cached = cache_get(ck)
     if cached: return cached
-    url = build_url(area, property_type, bedrooms, price_min, price_max, furnished, page, sort)
+    url = build_url(area, property_type, bedrooms, price_min, price_max, furnished, page, sort, city=city)
     logger.info(f"Fetching: {url}")
     async with httpx.AsyncClient() as client:
         html = await fetch_page(url, client)
     if not html: raise HTTPException(status_code=502, detail="Could not fetch results from Zameen.com. Try again shortly.")
     listings = parse_listings(html)
+    if property_type and property_type.lower() in PROPERTY_TYPES:
+        label = PROPERTY_TYPES[property_type.lower()]["label"]
+        for listing in listings:
+            listing["property_type"] = label
     total = len(listings)
     soup = BeautifulSoup(html, "html.parser")
     count_el = soup.select_one('h1, [class*="count"], [class*="total"]')

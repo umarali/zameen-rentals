@@ -9,7 +9,7 @@ import instructor
 from pydantic import BaseModel, Field
 
 from app.data import (
-    KARACHI_AREAS, PROPERTY_TYPES,
+    KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas,
     URDU_AREAS, ROMAN_URDU_AREAS,
     URDU_TYPES, ROMAN_URDU_TYPES,
 )
@@ -35,7 +35,7 @@ def _parse_price_token(text):
     return None
 
 
-def parse_natural_query(query: str) -> dict:
+def parse_natural_query(query: str, city: str = "karachi") -> dict:
     """Parse a natural language rental query into structured filters.
     Supports English, Roman Urdu, and Urdu script."""
     result = {}
@@ -43,6 +43,7 @@ def parse_natural_query(query: str) -> dict:
     if not q:
         return result
     ql = q.lower()
+    areas = get_areas(city)
 
     # --- Furnished ---
     if re.search(r'\b(?:furnished|furnish|فرنشڈ|فرنش)\b', q, re.I):
@@ -104,17 +105,18 @@ def parse_natural_query(query: str) -> dict:
                 if pmin is not None: result['price_min'] = pmin
 
     # --- Area ---
-    for ur_area, en_area in sorted(URDU_AREAS.items(), key=lambda x: -len(x[0])):
-        if ur_area in q:
-            result['area'] = en_area
-            break
-    if 'area' not in result:
-        for alias, area_name in sorted(ROMAN_URDU_AREAS.items(), key=lambda x: -len(x[0])):
-            if re.search(r'\b' + re.escape(alias) + r'\b', ql):
-                result['area'] = area_name
+    if city == "karachi":
+        for ur_area, en_area in sorted(URDU_AREAS.items(), key=lambda x: -len(x[0])):
+            if ur_area in q:
+                result['area'] = en_area
                 break
+        if 'area' not in result:
+            for alias, area_name in sorted(ROMAN_URDU_AREAS.items(), key=lambda x: -len(x[0])):
+                if re.search(r'\b' + re.escape(alias) + r'\b', ql):
+                    result['area'] = area_name
+                    break
     if 'area' not in result:
-        for name in sorted(KARACHI_AREAS.keys(), key=lambda x: -len(x)):
+        for name in sorted(areas.keys(), key=lambda x: -len(x)):
             if name.lower() in ql:
                 result['area'] = name
                 break
@@ -122,26 +124,54 @@ def parse_natural_query(query: str) -> dict:
     return result
 
 
-def match_area(query):
+def match_area(query, city="karachi"):
+    areas = get_areas(city)
     q = query.strip()
-    for ur, en in URDU_AREAS.items():
-        if ur == q: return en
-    for ur, en in URDU_AREAS.items():
-        if q in ur or ur in q: return en
-    q = q.lower()
-    for name in KARACHI_AREAS:
-        if name.lower() == q: return name
-    for name in KARACHI_AREAS:
-        if q in name.lower() or name.lower() in q: return name
-    qt = set(re.findall(r'\w+', q))
+    if not q:
+        return None
+    # 1. Exact Urdu match (Karachi only for now)
+    if city == "karachi":
+        for ur, en in URDU_AREAS.items():
+            if ur == q: return en
+        # 2. Fuzzy Urdu match
+        for ur, en in URDU_AREAS.items():
+            if q in ur or ur in q: return en
+    ql = q.lower()
+    # 3. Roman Urdu alias match (Karachi only — other cities use direct name matching)
+    if city == "karachi":
+        if ql in ROMAN_URDU_AREAS:
+            return ROMAN_URDU_AREAS[ql]
+        for alias, area_name in sorted(ROMAN_URDU_AREAS.items(), key=lambda x: -len(x[0])):
+            if alias in ql or ql in alias:
+                return area_name
+    # 4. Exact English match (case-insensitive)
+    for name in areas:
+        if name.lower() == ql: return name
+    # 5. Substring match — prefer shorter (more specific) matches
+    candidates = []
+    for name in areas:
+        nl = name.lower()
+        if ql in nl or nl in ql:
+            candidates.append(name)
+    if candidates:
+        candidates.sort(key=lambda n: abs(len(n) - len(q)))
+        return candidates[0]
+    # 6. Token overlap
+    qt = set(re.findall(r'\w+', ql))
     best, best_score = None, 0
-    for name in KARACHI_AREAS:
-        score = len(qt & set(re.findall(r'\w+', name.lower())))
-        if score > best_score: best_score, best = score, name
-    if best_score >= 1: return best
+    for name in areas:
+        nt = set(re.findall(r'\w+', name.lower()))
+        score = len(qt & nt)
+        if nt and score > 0:
+            ratio = score / max(len(qt), len(nt))
+            if ratio > best_score:
+                best_score, best = ratio, name
+    if best_score >= 0.3:
+        return best
+    # 7. Sequence matching
     best, best_ratio = None, 0.0
-    for name in KARACHI_AREAS:
-        r = SequenceMatcher(None, q, name.lower()).ratio()
+    for name in areas:
+        r = SequenceMatcher(None, ql, name.lower()).ratio()
         if r > best_ratio: best_ratio, best = r, name
     return best if best_ratio >= 0.5 else None
 
@@ -159,14 +189,16 @@ def parse_price(text):
     return int(float(m.group(0))) if m else None
 
 
-def build_url(area=None, property_type=None, bedrooms=None, price_min=None, price_max=None, furnished=None, page=1, sort=None):
+def build_url(area=None, property_type=None, bedrooms=None, price_min=None, price_max=None, furnished=None, page=1, sort=None, city="karachi"):
     ptype_slug = "Rentals"
     if property_type and property_type.lower() in PROPERTY_TYPES:
         ptype_slug = PROPERTY_TYPES[property_type.lower()]["slug"]
-    area_slug, area_id = "Karachi", 2
+    city_info = CITIES.get(city, CITIES["karachi"])
+    areas = get_areas(city)
+    area_slug, area_id = city_info["name"], city_info["id"]
     if area:
-        matched = match_area(area)
-        if matched: area_slug, area_id = KARACHI_AREAS[matched][:2]
+        matched = match_area(area, city=city)
+        if matched: area_slug, area_id = areas[matched][:2]
     url = f"https://www.zameen.com/{ptype_slug}/{area_slug}-{area_id}-{page}.html"
     params = {}
     if bedrooms is not None: params["beds_in"] = str(bedrooms)
@@ -216,18 +248,19 @@ def _get_instructor_client():
     return _instructor_client
 
 
-async def parse_query_with_claude(query: str) -> dict:
+async def parse_query_with_claude(query: str, city: str = "karachi") -> dict:
     """Use Instructor + Claude Haiku to parse a natural language rental query."""
     client = _get_instructor_client()
     if client is None:
-        return parse_natural_query(query)
+        return parse_natural_query(query, city=city)
 
-    ck = cache_key(nlq=query)
+    ck = cache_key(nlq=query, city=city)
     cached = cache_get(ck)
     if cached is not None:
         return cached
 
-    areas_list = ", ".join(sorted(KARACHI_AREAS.keys()))
+    areas = get_areas(city)
+    areas_list = ", ".join(sorted(areas.keys()))
 
     try:
         filters = await asyncio.to_thread(
@@ -239,8 +272,8 @@ async def parse_query_with_claude(query: str) -> dict:
             response_model=RentalFilters,
         )
         result = filters.model_dump(exclude_none=True)
-        if "area" in result and result["area"] not in KARACHI_AREAS:
-            matched = match_area(result["area"])
+        if "area" in result and result["area"] not in areas:
+            matched = match_area(result["area"], city=city)
             result["area"] = matched if matched else result.pop("area", None)
             if result.get("area") is None:
                 result.pop("area", None)
@@ -249,4 +282,4 @@ async def parse_query_with_claude(query: str) -> dict:
         return result
     except Exception as e:
         logger.warning(f"Instructor parse failed, falling back to regex: {e}")
-        return parse_natural_query(query)
+        return parse_natural_query(query, city=city)

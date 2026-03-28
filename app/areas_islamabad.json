@@ -1,0 +1,1820 @@
+{
+  "  Murree Expressway": {
+    "slug": "Islamabad_Islamabad___Murree_Expressway",
+    "id": 342,
+    "lat": 33.787708,
+    "lng": 73.272972
+  },
+  "AGHOSH": {
+    "slug": "Islamabad_AGHOSH",
+    "id": 1468,
+    "lat": 33.564508,
+    "lng": 73.153458
+  },
+  "Abdullah Garden": {
+    "slug": "Islamabad_Abdullah_Garden",
+    "id": 8373,
+    "lat": 33.634773754186,
+    "lng": 72.98415184021
+  },
+  "Axis Mall   Apartments": {
+    "slug": "Islamabad_Axis_Mall___Apartments",
+    "id": 12717,
+    "lat": 33.615139,
+    "lng": 72.865944
+  },
+  "B 17": {
+    "slug": "Islamabad_B_17",
+    "id": 616,
+    "lat": 33.68064,
+    "lng": 72.822189
+  },
+  "B 17 Capital Square": {
+    "slug": "Islamabad_B_17_Capital_Square",
+    "id": 11252,
+    "lat": 33.684626,
+    "lng": 72.826765
+  },
+  "B 17 Faisal Margalla City": {
+    "slug": "Islamabad_B_17_Faisal_Margalla_City",
+    "id": 13424,
+    "lat": 33.694255,
+    "lng": 72.817584
+  },
+  "B 17 MPCHS   Multi Gardens": {
+    "slug": "Islamabad_B_17_MPCHS___Multi_Gardens",
+    "id": 3115,
+    "lat": 33.680211,
+    "lng": 72.816696
+  },
+  "Bahria Town": {
+    "slug": "Islamabad_Bahria_Town",
+    "id": 383,
+    "lat": 33.66090824,
+    "lng": 73.21461259
+  },
+  "Bahria Town Bahria Enclave": {
+    "slug": "Islamabad_Bahria_Town_Bahria_Enclave",
+    "id": 1705,
+    "lat": 33.692638,
+    "lng": 73.218813
+  },
+  "Bahria Town Bahria Garden City": {
+    "slug": "Islamabad_Bahria_Town_Bahria_Garden_City",
+    "id": 8120,
+    "lat": 33.493611470492,
+    "lng": 73.128966093282
+  },
+  "Bani Gala": {
+    "slug": "Islamabad_Bani_Gala",
+    "id": 340,
+    "lat": 33.713488,
+    "lng": 73.16268
+  },
+  "Bani Gala Iqbal Heights": {
+    "slug": "Islamabad_Bani_Gala_Iqbal_Heights",
+    "id": 10935,
+    "lat": 33.718273,
+    "lng": 73.166655
+  },
+  "Bani Gala Lake View Lanes": {
+    "slug": "Islamabad_Bani_Gala_Lake_View_Lanes",
+    "id": 19698,
+    "lat": 33.724304,
+    "lng": 73.166379
+  },
+  "Bhara kahu": {
+    "slug": "Islamabad_Bhara_kahu",
+    "id": 156,
+    "lat": 33.737402,
+    "lng": 73.179159
+  },
+  "Blue Area": {
+    "slug": "Islamabad_Blue_Area",
+    "id": 157,
+    "lat": 33.713845,
+    "lng": 73.06097
+  },
+  "Blue Area Elysium Mall": {
+    "slug": "Islamabad_Blue_Area_Elysium_Mall",
+    "id": 10739,
+    "lat": 33.70672,
+    "lng": 73.050973
+  },
+  "Blue Area Mall of Islamabad": {
+    "slug": "Islamabad_Blue_Area_Mall_of_Islamabad",
+    "id": 17132,
+    "lat": 33.7132355,
+    "lng": 73.0603236
+  },
+  "C 17": {
+    "slug": "Islamabad_C_17",
+    "id": 10756,
+    "lat": 33.668289,
+    "lng": 72.847183
+  },
+  "CBR Town": {
+    "slug": "Islamabad_CBR_Town",
+    "id": 1219,
+    "lat": 33.559814,
+    "lng": 73.142939
+  },
+  "CBR Town Phase 1": {
+    "slug": "Islamabad_CBR_Town_Phase_1",
+    "id": 3147,
+    "lat": 33.559385,
+    "lng": 73.141265
+  },
+  "Canyon Views Prados": {
+    "slug": "Islamabad_Canyon_Views_Prados",
+    "id": 16298,
+    "lat": 33.5210115,
+    "lng": 73.18319824
+  },
+  "Capital Enclave": {
+    "slug": "Islamabad_Capital_Enclave",
+    "id": 8881,
+    "lat": 33.57501454,
+    "lng": 73.1630755
+  },
+  "Chak Shahzad": {
+    "slug": "Islamabad_Chak_Shahzad",
+    "id": 158,
+    "lat": 33.66608918,
+    "lng": 73.14085721
+  },
+  "Chak Shahzad Chak Shahzad Farms": {
+    "slug": "Islamabad_Chak_Shahzad_Chak_Shahzad_Farms",
+    "id": 20291,
+    "lat": 33.662384,
+    "lng": 73.145943
+  },
+  "Chatha Bakhtawar": {
+    "slug": "Islamabad_Chatha_Bakhtawar",
+    "id": 3153,
+    "lat": 33.66647,
+    "lng": 73.153934
+  },
+  "Club Road": {
+    "slug": "Islamabad_Club_Road",
+    "id": 1696,
+    "lat": 33.711489,
+    "lng": 73.103435
+  },
+  "Constitution Avenue": {
+    "slug": "Islamabad_Constitution_Avenue",
+    "id": 8284,
+    "lat": 33.728016,
+    "lng": 73.096583
+  },
+  "Constitution Avenue One Constitution Avenue": {
+    "slug": "Islamabad_Constitution_Avenue_One_Constitution_Avenue",
+    "id": 21856,
+    "lat": 33.713468351011,
+    "lng": 73.107924784662
+  },
+  "D 12": {
+    "slug": "Islamabad_D_12",
+    "id": 160,
+    "lat": 33.701636,
+    "lng": 72.948532
+  },
+  "D 12 D 12 1": {
+    "slug": "Islamabad_D_12_D_12_1",
+    "id": 3154,
+    "lat": 33.697565,
+    "lng": 72.944241
+  },
+  "D 12 D 12 2": {
+    "slug": "Islamabad_D_12_D_12_2",
+    "id": 3155,
+    "lat": 33.702421,
+    "lng": 72.941837
+  },
+  "D 12 D 12 3": {
+    "slug": "Islamabad_D_12_D_12_3",
+    "id": 3156,
+    "lat": 33.706562,
+    "lng": 72.951107
+  },
+  "D 12 D 12 4": {
+    "slug": "Islamabad_D_12_D_12_4",
+    "id": 3157,
+    "lat": 33.701707,
+    "lng": 72.956686
+  },
+  "D 12 Markaz": {
+    "slug": "Islamabad_D_12_Markaz",
+    "id": 3158,
+    "lat": 33.701636,
+    "lng": 72.94733
+  },
+  "D 17": {
+    "slug": "Islamabad_D_17",
+    "id": 737,
+    "lat": 33.659746,
+    "lng": 72.860341
+  },
+  "D 17 Margalla View Housing Society": {
+    "slug": "Islamabad_D_17_Margalla_View_Housing_Society",
+    "id": 3160,
+    "lat": 33.657388,
+    "lng": 72.852831
+  },
+  "D 17 Pine Heights Luxury Apartments": {
+    "slug": "Islamabad_D_17_Pine_Heights_Luxury_Apartments",
+    "id": 9684,
+    "lat": 33.656941,
+    "lng": 72.859772
+  },
+  "D 17 Pine Villas": {
+    "slug": "Islamabad_D_17_Pine_Villas",
+    "id": 21103,
+    "lat": 33.654939536715,
+    "lng": 72.858361257223
+  },
+  "D 18": {
+    "slug": "Islamabad_D_18",
+    "id": 1316,
+    "lat": 33.653316,
+    "lng": 72.839949
+  },
+  "DHA Defence": {
+    "slug": "Islamabad_DHA_Defence",
+    "id": 3188,
+    "lat": 33.539392,
+    "lng": 73.096933
+  },
+  "DHA Defence DHA Defence Phase 3": {
+    "slug": "Islamabad_DHA_Defence_DHA_Defence_Phase_3",
+    "id": 8412,
+    "lat": 33.48414731,
+    "lng": 73.18384333
+  },
+  "DHA Defence DHA Defence Phase 4": {
+    "slug": "Islamabad_DHA_Defence_DHA_Defence_Phase_4",
+    "id": 8413,
+    "lat": 33.51928957,
+    "lng": 73.07595663
+  },
+  "DHA Defence DHA Defence Phase 5": {
+    "slug": "Islamabad_DHA_Defence_DHA_Defence_Phase_5",
+    "id": 10991,
+    "lat": 33.534569,
+    "lng": 73.195107
+  },
+  "DHA Defence DHA Defence Phase 7": {
+    "slug": "Islamabad_DHA_Defence_DHA_Defence_Phase_7",
+    "id": 22460,
+    "lat": 33.476288,
+    "lng": 73.259997
+  },
+  "DHA Defence DHA Valley": {
+    "slug": "Islamabad_DHA_Defence_DHA_Valley",
+    "id": 1333,
+    "lat": 33.495884,
+    "lng": 73.24532
+  },
+  "DHA Defence Phase 1": {
+    "slug": "Islamabad_DHA_Defence_Phase_1",
+    "id": 376,
+    "lat": 33.540894,
+    "lng": 73.095732
+  },
+  "DHA Defence Phase 2": {
+    "slug": "Islamabad_DHA_Defence_Phase_2",
+    "id": 339,
+    "lat": 33.527944,
+    "lng": 73.161392
+  },
+  "Diplomatic Enclave": {
+    "slug": "Islamabad_Diplomatic_Enclave",
+    "id": 429,
+    "lat": 33.728873,
+    "lng": 73.119628
+  },
+  "Doctors Housing Society": {
+    "slug": "Islamabad_Doctors_Housing_Society",
+    "id": 10071,
+    "lat": 33.56918,
+    "lng": 73.127448
+  },
+  "E  7": {
+    "slug": "Islamabad_E__7",
+    "id": 343,
+    "lat": 33.727409,
+    "lng": 73.047581
+  },
+  "E 11": {
+    "slug": "Islamabad_E_11",
+    "id": 329,
+    "lat": 33.698137,
+    "lng": 72.978215
+  },
+  "E 11 Ahad Residences": {
+    "slug": "Islamabad_E_11_Ahad_Residences",
+    "id": 9920,
+    "lat": 33.691549,
+    "lng": 72.980116
+  },
+  "E 11 E 11 1": {
+    "slug": "Islamabad_E_11_E_11_1",
+    "id": 3230,
+    "lat": 33.693852,
+    "lng": 72.970591
+  },
+  "E 11 E 11 2": {
+    "slug": "Islamabad_E_11_E_11_2",
+    "id": 3233,
+    "lat": 33.699958,
+    "lng": 72.970119
+  },
+  "E 11 E 11 3": {
+    "slug": "Islamabad_E_11_E_11_3",
+    "id": 3238,
+    "lat": 33.704599,
+    "lng": 72.978702
+  },
+  "E 11 E 11 4": {
+    "slug": "Islamabad_E_11_E_11_4",
+    "id": 3241,
+    "lat": 33.698244,
+    "lng": 72.984238
+  },
+  "E 11 Madina Tower": {
+    "slug": "Islamabad_E_11_Madina_Tower",
+    "id": 11138,
+    "lat": 33.691748,
+    "lng": 72.980822
+  },
+  "E 11 Makkah Tower": {
+    "slug": "Islamabad_E_11_Makkah_Tower",
+    "id": 13376,
+    "lat": 33.69335,
+    "lng": 72.98026
+  },
+  "E 11 Margalla Hills 2": {
+    "slug": "Islamabad_E_11_Margalla_Hills_2",
+    "id": 9668,
+    "lat": 33.691895,
+    "lng": 72.983462
+  },
+  "E 12": {
+    "slug": "Islamabad_E_12",
+    "id": 161,
+    "lat": 33.690281,
+    "lng": 72.957802
+  },
+  "E 16": {
+    "slug": "Islamabad_E_16",
+    "id": 334,
+    "lat": 33.651601,
+    "lng": 72.888232
+  },
+  "E 17": {
+    "slug": "Islamabad_E_17",
+    "id": 1409,
+    "lat": 33.65063283,
+    "lng": 72.87601032
+  },
+  "E 18": {
+    "slug": "Islamabad_E_18",
+    "id": 332,
+    "lat": 33.631451,
+    "lng": 72.854419
+  },
+  "E 18 Gulshan e Sehat 1": {
+    "slug": "Islamabad_E_18_Gulshan_e_Sehat_1",
+    "id": 3258,
+    "lat": 33.63331434,
+    "lng": 72.8563803
+  },
+  "E 18 Gulshan e Sehat 2": {
+    "slug": "Islamabad_E_18_Gulshan_e_Sehat_2",
+    "id": 3266,
+    "lat": 33.630164,
+    "lng": 72.861371
+  },
+  "Emaar Canyon Views": {
+    "slug": "Islamabad_Emaar_Canyon_Views",
+    "id": 8370,
+    "lat": 33.518929,
+    "lng": 73.184692
+  },
+  "Emaar Canyon Views Emaar Canyon Views   Alma 1 Block": {
+    "slug": "Islamabad_Emaar_Canyon_Views_Emaar_Canyon_Views___Alma_1_Block",
+    "id": 16773,
+    "lat": 33.52528647,
+    "lng": 73.18980015
+  },
+  "Emaar Canyon Views Emaar Canyon Views   Meridian 2 Block": {
+    "slug": "Islamabad_Emaar_Canyon_Views_Emaar_Canyon_Views___Meridian_2_Block",
+    "id": 16778,
+    "lat": 33.52256859,
+    "lng": 73.19210936
+  },
+  "Emaar Canyon Views Emaar Canyon Views   Meridian Block": {
+    "slug": "Islamabad_Emaar_Canyon_Views_Emaar_Canyon_Views___Meridian_Block",
+    "id": 16780,
+    "lat": 33.51894509,
+    "lng": 73.19274033
+  },
+  "Expressway": {
+    "slug": "Islamabad_Islamabad_Expressway",
+    "id": 9014,
+    "lat": 33.632166,
+    "lng": 73.111507
+  },
+  "F 10": {
+    "slug": "Islamabad_F_10",
+    "id": 162,
+    "lat": 33.691531,
+    "lng": 73.005431
+  },
+  "F 10 F 10 1": {
+    "slug": "Islamabad_F_10_F_10_1",
+    "id": 3276,
+    "lat": 33.686996,
+    "lng": 73.003721
+  },
+  "F 10 F 10 2": {
+    "slug": "Islamabad_F_10_F_10_2",
+    "id": 3277,
+    "lat": 33.691781,
+    "lng": 73.000288
+  },
+  "F 10 F 10 3": {
+    "slug": "Islamabad_F_10_F_10_3",
+    "id": 3278,
+    "lat": 33.695352,
+    "lng": 73.006983
+  },
+  "F 10 F 10 4": {
+    "slug": "Islamabad_F_10_F_10_4",
+    "id": 3279,
+    "lat": 33.690353,
+    "lng": 73.010416
+  },
+  "F 10 Markaz": {
+    "slug": "Islamabad_F_10_Markaz",
+    "id": 3280,
+    "lat": 33.695423,
+    "lng": 73.012562
+  },
+  "F 10 Silver Oaks Apartments": {
+    "slug": "Islamabad_F_10_Silver_Oaks_Apartments",
+    "id": 11308,
+    "lat": 33.691065,
+    "lng": 73.016382
+  },
+  "F 10 Sukh Chayn Residence": {
+    "slug": "Islamabad_F_10_Sukh_Chayn_Residence",
+    "id": 13589,
+    "lat": 33.692002,
+    "lng": 73.016229
+  },
+  "F 11": {
+    "slug": "Islamabad_F_11",
+    "id": 163,
+    "lat": 33.683532,
+    "lng": 72.99041
+  },
+  "F 11 Executive Heights": {
+    "slug": "Islamabad_F_11_Executive_Heights",
+    "id": 10658,
+    "lat": 33.7114,
+    "lng": 73.060839
+  },
+  "F 11 F 11 1": {
+    "slug": "Islamabad_F_11_F_11_1",
+    "id": 3282,
+    "lat": 33.679211,
+    "lng": 72.988787
+  },
+  "F 11 F 11 2": {
+    "slug": "Islamabad_F_11_F_11_2",
+    "id": 3283,
+    "lat": 33.683425,
+    "lng": 72.980804
+  },
+  "F 11 F 11 3": {
+    "slug": "Islamabad_F_11_F_11_3",
+    "id": 3284,
+    "lat": 33.689282,
+    "lng": 72.988958
+  },
+  "F 11 F 11 4": {
+    "slug": "Islamabad_F_11_F_11_4",
+    "id": 3285,
+    "lat": 33.680925,
+    "lng": 72.997971
+  },
+  "F 11 Karakoram Enclave 2": {
+    "slug": "Islamabad_F_11_Karakoram_Enclave_2",
+    "id": 10899,
+    "lat": 33.681241,
+    "lng": 72.986004
+  },
+  "F 11 Markaz": {
+    "slug": "Islamabad_F_11_Markaz",
+    "id": 3286,
+    "lat": 33.684782,
+    "lng": 72.986383
+  },
+  "F 11 Park Avenue": {
+    "slug": "Islamabad_F_11_Park_Avenue",
+    "id": 10657,
+    "lat": 33.682639,
+    "lng": 72.986272
+  },
+  "F 11 Savoy Residence": {
+    "slug": "Islamabad_F_11_Savoy_Residence",
+    "id": 10656,
+    "lat": 33.680818,
+    "lng": 72.989323
+  },
+  "F 15": {
+    "slug": "Islamabad_F_15",
+    "id": 336,
+    "lat": 33.646493,
+    "lng": 72.919521
+  },
+  "F 15 F 15 1": {
+    "slug": "Islamabad_F_15_F_15_1",
+    "id": 3291,
+    "lat": 33.639383,
+    "lng": 72.918105
+  },
+  "F 15 F 15 Markaz": {
+    "slug": "Islamabad_F_15_F_15_Markaz",
+    "id": 14683,
+    "lat": 33.64255522,
+    "lng": 72.91360455
+  },
+  "F 17": {
+    "slug": "Islamabad_F_17",
+    "id": 335,
+    "lat": 33.631987,
+    "lng": 72.880297
+  },
+  "F 17 F 17 2": {
+    "slug": "Islamabad_F_17_F_17_2",
+    "id": 3293,
+    "lat": 33.629271,
+    "lng": 72.877593
+  },
+  "F 17 F 17 3": {
+    "slug": "Islamabad_F_17_F_17_3",
+    "id": 3294,
+    "lat": 33.634559,
+    "lng": 72.883
+  },
+  "F 17 Tele Garden  T T ECHS ": {
+    "slug": "Islamabad_F_17_Tele_Garden__T_T_ECHS_",
+    "id": 12136,
+    "lat": 33.627577,
+    "lng": 72.877002
+  },
+  "F 6": {
+    "slug": "Islamabad_F_6",
+    "id": 164,
+    "lat": 33.730907,
+    "lng": 73.074431
+  },
+  "F 6 F 6 1": {
+    "slug": "Islamabad_F_6_F_6_1",
+    "id": 3299,
+    "lat": 33.724018,
+    "lng": 73.074524
+  },
+  "F 6 F 6 2": {
+    "slug": "Islamabad_F_6_F_6_2",
+    "id": 3300,
+    "lat": 33.731335,
+    "lng": 73.068473
+  },
+  "F 6 F 6 3": {
+    "slug": "Islamabad_F_6_F_6_3",
+    "id": 3301,
+    "lat": 33.735118,
+    "lng": 73.077486
+  },
+  "F 6 F 6 4": {
+    "slug": "Islamabad_F_6_F_6_4",
+    "id": 3302,
+    "lat": 33.727945,
+    "lng": 73.083236
+  },
+  "F 7": {
+    "slug": "Islamabad_F_7",
+    "id": 165,
+    "lat": 33.720413,
+    "lng": 73.056493
+  },
+  "F 7 F 7 1": {
+    "slug": "Islamabad_F_7_F_7_1",
+    "id": 3307,
+    "lat": 33.716273,
+    "lng": 73.056235
+  },
+  "F 7 F 7 2": {
+    "slug": "Islamabad_F_7_F_7_2",
+    "id": 3308,
+    "lat": 33.72334,
+    "lng": 73.051171
+  },
+  "F 7 F 7 3": {
+    "slug": "Islamabad_F_7_F_7_3",
+    "id": 3309,
+    "lat": 33.727338,
+    "lng": 73.059754
+  },
+  "F 7 F 7 4": {
+    "slug": "Islamabad_F_7_F_7_4",
+    "id": 3310,
+    "lat": 33.720556,
+    "lng": 73.06499
+  },
+  "F 7 Markaz": {
+    "slug": "Islamabad_F_7_Markaz",
+    "id": 3311,
+    "lat": 33.721127,
+    "lng": 73.057008
+  },
+  "F 8": {
+    "slug": "Islamabad_F_8",
+    "id": 166,
+    "lat": 33.713131,
+    "lng": 73.038383
+  },
+  "F 8 F 8 1": {
+    "slug": "Islamabad_F_8_F_8_1",
+    "id": 3314,
+    "lat": 33.707384,
+    "lng": 73.036723
+  },
+  "F 8 F 8 2": {
+    "slug": "Islamabad_F_8_F_8_2",
+    "id": 3315,
+    "lat": 33.713524,
+    "lng": 73.033712
+  },
+  "F 8 F 8 3": {
+    "slug": "Islamabad_F_8_F_8_3",
+    "id": 3316,
+    "lat": 33.716665,
+    "lng": 73.042209
+  },
+  "F 8 F 8 4": {
+    "slug": "Islamabad_F_8_F_8_4",
+    "id": 3317,
+    "lat": 33.708954,
+    "lng": 73.045042
+  },
+  "F 8 Markaz": {
+    "slug": "Islamabad_F_8_Markaz",
+    "id": 3318,
+    "lat": 33.711489,
+    "lng": 73.040457
+  },
+  "F 8 The Centaurus": {
+    "slug": "Islamabad_F_8_The_Centaurus",
+    "id": 8349,
+    "lat": 33.707982,
+    "lng": 73.050476
+  },
+  "FECHS": {
+    "slug": "Islamabad_FECHS",
+    "id": 3321,
+    "lat": 33.568218,
+    "lng": 73.178215
+  },
+  "FECHS Jinnah Gardens": {
+    "slug": "Islamabad_FECHS_Jinnah_Gardens",
+    "id": 1420,
+    "lat": 33.572044,
+    "lng": 73.175082
+  },
+  "Faisal Town   F 18": {
+    "slug": "Islamabad_Faisal_Town___F_18",
+    "id": 8260,
+    "lat": 33.60942315,
+    "lng": 72.87230719
+  },
+  "Faisal Town   F 18 Faisal Town Phase 1": {
+    "slug": "Islamabad_Faisal_Town___F_18_Faisal_Town_Phase_1",
+    "id": 16415,
+    "lat": 33.61178464,
+    "lng": 72.86966965
+  },
+  "Faisal Town   F 18 The Gate Mall   Apartments": {
+    "slug": "Islamabad_Faisal_Town___F_18_The_Gate_Mall___Apartments",
+    "id": 11456,
+    "lat": 33.616271,
+    "lng": 72.867666
+  },
+  "G  5": {
+    "slug": "Islamabad_G__5",
+    "id": 328,
+    "lat": 33.721805,
+    "lng": 73.09792
+  },
+  "G  6": {
+    "slug": "Islamabad_G__6",
+    "id": 169,
+    "lat": 33.713238,
+    "lng": 73.084788
+  },
+  "G  7": {
+    "slug": "Islamabad_G__7",
+    "id": 563,
+    "lat": 33.705313,
+    "lng": 73.067193
+  },
+  "G  8": {
+    "slug": "Islamabad_G__8",
+    "id": 170,
+    "lat": 33.697423,
+    "lng": 73.049555
+  },
+  "G 10": {
+    "slug": "Islamabad_G_10",
+    "id": 167,
+    "lat": 33.676104,
+    "lng": 73.013842
+  },
+  "G 10 G 10 1": {
+    "slug": "Islamabad_G_10_G_10_1",
+    "id": 3324,
+    "lat": 33.67189,
+    "lng": 73.012254
+  },
+  "G 10 G 10 2": {
+    "slug": "Islamabad_G_10_G_10_2",
+    "id": 3325,
+    "lat": 33.67989,
+    "lng": 73.01264
+  },
+  "G 10 G 10 3": {
+    "slug": "Islamabad_G_10_G_10_3",
+    "id": 3326,
+    "lat": 33.686139,
+    "lng": 73.018134
+  },
+  "G 10 G 10 4": {
+    "slug": "Islamabad_G_10_G_10_4",
+    "id": 3327,
+    "lat": 33.678711,
+    "lng": 73.021395
+  },
+  "G 10 Markaz": {
+    "slug": "Islamabad_G_10_Markaz",
+    "id": 3328,
+    "lat": 33.676104,
+    "lng": 73.016467
+  },
+  "G 11": {
+    "slug": "Islamabad_G_11",
+    "id": 168,
+    "lat": 33.669533,
+    "lng": 73.000073
+  },
+  "G 11 G 11 1": {
+    "slug": "Islamabad_G_11_G_11_1",
+    "id": 3330,
+    "lat": 33.663818,
+    "lng": 72.99526
+  },
+  "G 11 G 11 2": {
+    "slug": "Islamabad_G_11_G_11_2",
+    "id": 3331,
+    "lat": 33.67164,
+    "lng": 72.991655
+  },
+  "G 11 G 11 3": {
+    "slug": "Islamabad_G_11_G_11_3",
+    "id": 3332,
+    "lat": 33.675604,
+    "lng": 73.000367
+  },
+  "G 11 G 11 4": {
+    "slug": "Islamabad_G_11_G_11_4",
+    "id": 3333,
+    "lat": 33.667854,
+    "lng": 73.003843
+  },
+  "G 11 Markaz": {
+    "slug": "Islamabad_G_11_Markaz",
+    "id": 3334,
+    "lat": 33.669211,
+    "lng": 72.998693
+  },
+  "G 12": {
+    "slug": "Islamabad_G_12",
+    "id": 3336,
+    "lat": 33.659496,
+    "lng": 72.981019
+  },
+  "G 13": {
+    "slug": "Islamabad_G_13",
+    "id": 330,
+    "lat": 33.650065,
+    "lng": 72.963681
+  },
+  "G 13 G 13 1": {
+    "slug": "Islamabad_G_13_G_13_1",
+    "id": 3337,
+    "lat": 33.645957,
+    "lng": 72.962472
+  },
+  "G 13 G 13 2": {
+    "slug": "Islamabad_G_13_G_13_2",
+    "id": 3338,
+    "lat": 33.650458,
+    "lng": 72.956636
+  },
+  "G 13 G 13 3": {
+    "slug": "Islamabad_G_13_G_13_3",
+    "id": 3339,
+    "lat": 33.656995,
+    "lng": 72.964962
+  },
+  "G 13 G 13 4": {
+    "slug": "Islamabad_G_13_G_13_4",
+    "id": 3340,
+    "lat": 33.649315,
+    "lng": 72.968395
+  },
+  "G 13 Markaz": {
+    "slug": "Islamabad_G_13_Markaz",
+    "id": 3341,
+    "lat": 33.650958,
+    "lng": 72.96303
+  },
+  "G 14": {
+    "slug": "Islamabad_G_14",
+    "id": 454,
+    "lat": 33.644456,
+    "lng": 72.943296
+  },
+  "G 14 G 14 3": {
+    "slug": "Islamabad_G_14_G_14_3",
+    "id": 3345,
+    "lat": 33.647779,
+    "lng": 72.948611
+  },
+  "G 14 G 14 4": {
+    "slug": "Islamabad_G_14_G_14_4",
+    "id": 3346,
+    "lat": 33.641955,
+    "lng": 72.952859
+  },
+  "G 15": {
+    "slug": "Islamabad_G_15",
+    "id": 764,
+    "lat": 33.631486,
+    "lng": 72.926559
+  },
+  "G 15 G 15 1": {
+    "slug": "Islamabad_G_15_G_15_1",
+    "id": 3348,
+    "lat": 33.626913,
+    "lng": 72.924328
+  },
+  "G 15 G 15 2": {
+    "slug": "Islamabad_G_15_G_15_2",
+    "id": 3349,
+    "lat": 33.633416,
+    "lng": 72.91822
+  },
+  "G 15 G 15 3": {
+    "slug": "Islamabad_G_15_G_15_3",
+    "id": 3350,
+    "lat": 33.636846,
+    "lng": 72.922769
+  },
+  "G 15 G 15 4": {
+    "slug": "Islamabad_G_15_G_15_4",
+    "id": 3351,
+    "lat": 33.631915,
+    "lng": 72.929034
+  },
+  "G 15 Khayaban E Kashmir": {
+    "slug": "Islamabad_G_15_Khayaban_E_Kashmir",
+    "id": 11728,
+    "lat": 33.632428,
+    "lng": 72.922147
+  },
+  "G 15 Markaz": {
+    "slug": "Islamabad_G_15_Markaz",
+    "id": 3352,
+    "lat": 33.631701,
+    "lng": 72.921395
+  },
+  "G 15 Zarkon Heights": {
+    "slug": "Islamabad_G_15_Zarkon_Heights",
+    "id": 10169,
+    "lat": 33.637407,
+    "lng": 72.927834
+  },
+  "G 16": {
+    "slug": "Islamabad_G_16",
+    "id": 580,
+    "lat": 33.625197,
+    "lng": 72.912827
+  },
+  "G 16 G 16 4": {
+    "slug": "Islamabad_G_16_G_16_4",
+    "id": 3355,
+    "lat": 33.625269,
+    "lng": 72.91832
+  },
+  "G 16 G 163": {
+    "slug": "Islamabad_G_16_G_163",
+    "id": 9850,
+    "lat": 33.623158,
+    "lng": 72.917804
+  },
+  "G 6 G 6 1": {
+    "slug": "Islamabad_G_6_G_6_1",
+    "id": 3361,
+    "lat": 33.70899,
+    "lng": 73.083158
+  },
+  "G 6 G 6 2": {
+    "slug": "Islamabad_G_6_G_6_2",
+    "id": 3363,
+    "lat": 33.716594,
+    "lng": 73.080411
+  },
+  "G 6 G 6 3": {
+    "slug": "Islamabad_G_6_G_6_3",
+    "id": 3364,
+    "lat": 33.720592,
+    "lng": 73.089466
+  },
+  "G 8 G 8 1": {
+    "slug": "Islamabad_G_8_G_8_1",
+    "id": 3376,
+    "lat": 33.690603,
+    "lng": 73.050749
+  },
+  "G 8 G 8 2": {
+    "slug": "Islamabad_G_8_G_8_2",
+    "id": 3377,
+    "lat": 33.698065,
+    "lng": 73.044612
+  },
+  "G 8 Markaz": {
+    "slug": "Islamabad_G_8_Markaz",
+    "id": 3380,
+    "lat": 33.697565,
+    "lng": 73.049634
+  },
+  "G 9": {
+    "slug": "Islamabad_G_9",
+    "id": 171,
+    "lat": 33.68946,
+    "lng": 73.031445
+  },
+  "G 9 G 9 1": {
+    "slug": "Islamabad_G_9_G_9_1",
+    "id": 3384,
+    "lat": 33.682675,
+    "lng": 73.030243
+  },
+  "G 9 G 9 2": {
+    "slug": "Islamabad_G_9_G_9_2",
+    "id": 3385,
+    "lat": 33.690103,
+    "lng": 73.027017
+  },
+  "G 9 G 9 3": {
+    "slug": "Islamabad_G_9_G_9_3",
+    "id": 3386,
+    "lat": 33.694138,
+    "lng": 73.036201
+  },
+  "G 9 G 9 4": {
+    "slug": "Islamabad_G_9_G_9_4",
+    "id": 3387,
+    "lat": 33.686496,
+    "lng": 73.039076
+  },
+  "GT Road": {
+    "slug": "Islamabad_GT_Road",
+    "id": 3397,
+    "lat": 33.6369,
+    "lng": 72.929006
+  },
+  "GT Road El Cielo": {
+    "slug": "Islamabad_GT_Road_El_Cielo",
+    "id": 10358,
+    "lat": 33.523954,
+    "lng": 73.149059
+  },
+  "GT Road Minara Residence": {
+    "slug": "Islamabad_GT_Road_Minara_Residence",
+    "id": 9641,
+    "lat": 33.555424,
+    "lng": 73.097011
+  },
+  "GT Road The Crown Mall   Residency": {
+    "slug": "Islamabad_GT_Road_The_Crown_Mall___Residency",
+    "id": 21104,
+    "lat": 33.53630039015,
+    "lng": 73.125957900547
+  },
+  "GT Road Zeta 1 Mall": {
+    "slug": "Islamabad_GT_Road_Zeta_1_Mall",
+    "id": 16699,
+    "lat": 33.520216,
+    "lng": 72.158651
+  },
+  "Gandhara City": {
+    "slug": "Islamabad_Gandhara_City",
+    "id": 10738,
+    "lat": 33.596,
+    "lng": 72.859
+  },
+  "Ghauri Town": {
+    "slug": "Islamabad_Ghauri_Town",
+    "id": 1314,
+    "lat": 33.62264682,
+    "lng": 73.12562478
+  },
+  "Ghauri Town Ghauri Garden": {
+    "slug": "Islamabad_Ghauri_Town_Ghauri_Garden",
+    "id": 10660,
+    "lat": 33.630792,
+    "lng": 73.138835
+  },
+  "Ghauri Town Ghauri Town Phase 4 C1": {
+    "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_4_C1",
+    "id": 16229,
+    "lat": 33.62273245,
+    "lng": 73.14794987
+  },
+  "Ghauri Town Ghauri Town Phase 4A": {
+    "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_4A",
+    "id": 14956,
+    "lat": 33.61945825,
+    "lng": 73.13499089
+  },
+  "Ghauri Town Ghauri Town Phase 4B": {
+    "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_4B",
+    "id": 14964,
+    "lat": 33.61954729,
+    "lng": 73.14275199
+  },
+  "Ghauri Town Ghauri Town Phase 5A": {
+    "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_5A",
+    "id": 16786,
+    "lat": 33.61467546,
+    "lng": 73.13780329
+  },
+  "Ghauri Town Ghauri Town Phase 5B": {
+    "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_5B",
+    "id": 16419,
+    "lat": 33.62204422,
+    "lng": 73.14256712
+  },
+  "Ghauri Town Ghauri Town Phase 7": {
+    "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_7",
+    "id": 8245,
+    "lat": 33.61853179,
+    "lng": 73.15362146
+  },
+  "Ghauri Town Phase 1": {
+    "slug": "Islamabad_Ghauri_Town_Phase_1",
+    "id": 3390,
+    "lat": 33.623947,
+    "lng": 73.126588
+  },
+  "Ghauri Town Phase 3": {
+    "slug": "Islamabad_Ghauri_Town_Phase_3",
+    "id": 3393,
+    "lat": 33.616406,
+    "lng": 73.130665
+  },
+  "Ghauri Town Phase 5": {
+    "slug": "Islamabad_Ghauri_Town_Phase_5",
+    "id": 3395,
+    "lat": 33.613118,
+    "lng": 73.130908
+  },
+  "Green Avenue": {
+    "slug": "Islamabad_Green_Avenue",
+    "id": 8566,
+    "lat": 33.668941,
+    "lng": 73.151413
+  },
+  "Gulberg": {
+    "slug": "Islamabad_Gulberg",
+    "id": 1682,
+    "lat": 33.599018,
+    "lng": 73.211968
+  },
+  "Gulberg Gulberg Business Park": {
+    "slug": "Islamabad_Gulberg_Gulberg_Business_Park",
+    "id": 11451,
+    "lat": 33.5987497,
+    "lng": 73.1539679
+  },
+  "Gulberg Gulberg Business Square": {
+    "slug": "Islamabad_Gulberg_Gulberg_Business_Square",
+    "id": 11450,
+    "lat": 33.6171478,
+    "lng": 73.168323
+  },
+  "Gulberg Gulberg Expressway": {
+    "slug": "Islamabad_Gulberg_Gulberg_Expressway",
+    "id": 21096,
+    "lat": 33.609098,
+    "lng": 73.169367
+  },
+  "Gulberg Gulberg Greens": {
+    "slug": "Islamabad_Gulberg_Gulberg_Greens",
+    "id": 8312,
+    "lat": 33.60983,
+    "lng": 73.170133
+  },
+  "Gulberg Gulberg Residencia": {
+    "slug": "Islamabad_Gulberg_Gulberg_Residencia",
+    "id": 8319,
+    "lat": 33.600394,
+    "lng": 73.215451
+  },
+  "H 13": {
+    "slug": "Islamabad_H_13",
+    "id": 1039,
+    "lat": 33.637489,
+    "lng": 72.972193
+  },
+  "I  8": {
+    "slug": "Islamabad_I__8",
+    "id": 174,
+    "lat": 33.668497,
+    "lng": 73.07416
+  },
+  "I  9": {
+    "slug": "Islamabad_I__9",
+    "id": 175,
+    "lat": 33.658781,
+    "lng": 73.05459
+  },
+  "I 10": {
+    "slug": "Islamabad_I_10",
+    "id": 173,
+    "lat": 33.648922,
+    "lng": 73.038969
+  },
+  "I 10 I 10 1": {
+    "slug": "Islamabad_I_10_I_10_1",
+    "id": 3420,
+    "lat": 33.642563,
+    "lng": 73.035994
+  },
+  "I 10 I 10 2": {
+    "slug": "Islamabad_I_10_I_10_2",
+    "id": 3421,
+    "lat": 33.649779,
+    "lng": 73.029385
+  },
+  "I 10 I 10 4": {
+    "slug": "Islamabad_I_10_I_10_4",
+    "id": 3423,
+    "lat": 33.646421,
+    "lng": 73.045263
+  },
+  "I 10 Markaz": {
+    "slug": "Islamabad_I_10_Markaz",
+    "id": 3424,
+    "lat": 33.64756967,
+    "lng": 73.03867088
+  },
+  "I 11": {
+    "slug": "Islamabad_I_11",
+    "id": 706,
+    "lat": 33.638775,
+    "lng": 73.017855
+  },
+  "I 11 I 111": {
+    "slug": "Islamabad_I_11_I_111",
+    "id": 9878,
+    "lat": 33.633018,
+    "lng": 73.019991
+  },
+  "I 11 I 112": {
+    "slug": "Islamabad_I_11_I_112",
+    "id": 9879,
+    "lat": 33.642308,
+    "lng": 73.015399
+  },
+  "I 14": {
+    "slug": "Islamabad_I_14",
+    "id": 1045,
+    "lat": 33.609902,
+    "lng": 72.967386
+  },
+  "I 14 I 141": {
+    "slug": "Islamabad_I_14_I_141",
+    "id": 8340,
+    "lat": 33.605863,
+    "lng": 72.96582
+  },
+  "I 14 I 142": {
+    "slug": "Islamabad_I_14_I_142",
+    "id": 8341,
+    "lat": 33.612564,
+    "lng": 72.960321
+  },
+  "I 14 I 143": {
+    "slug": "Islamabad_I_14_I_143",
+    "id": 8342,
+    "lat": 33.617443,
+    "lng": 72.969296
+  },
+  "I 14 I 144": {
+    "slug": "Islamabad_I_14_I_144",
+    "id": 8343,
+    "lat": 33.609044,
+    "lng": 72.972085
+  },
+  "I 16": {
+    "slug": "Islamabad_I_16",
+    "id": 449,
+    "lat": 33.593888,
+    "lng": 72.932882
+  },
+  "I 8 I 8 1": {
+    "slug": "Islamabad_I_8_I_8_1",
+    "id": 3441,
+    "lat": 33.66021,
+    "lng": 73.070927
+  },
+  "I 8 I 8 2": {
+    "slug": "Islamabad_I_8_I_8_2",
+    "id": 3442,
+    "lat": 33.66764,
+    "lng": 73.065948
+  },
+  "I 8 I 8 3": {
+    "slug": "Islamabad_I_8_I_8_3",
+    "id": 3443,
+    "lat": 33.673783,
+    "lng": 73.074703
+  },
+  "I 8 I 8 4": {
+    "slug": "Islamabad_I_8_I_8_4",
+    "id": 3444,
+    "lat": 33.662782,
+    "lng": 73.077793
+  },
+  "I 8 Markaz": {
+    "slug": "Islamabad_I_8_Markaz",
+    "id": 3445,
+    "lat": 33.667211,
+    "lng": 73.075476
+  },
+  "Jinnah Avenue": {
+    "slug": "Islamabad_Jinnah_Avenue",
+    "id": 1709,
+    "lat": 33.709454,
+    "lng": 73.055434
+  },
+  "Karakoram Diplomatic Enclave": {
+    "slug": "Islamabad_Karakoram_Diplomatic_Enclave",
+    "id": 9063,
+    "lat": 33.724426,
+    "lng": 73.120331
+  },
+  "Karakoram Enclave 1": {
+    "slug": "Islamabad_Karakoram_Enclave_1",
+    "id": 10898,
+    "lat": 33.681755,
+    "lng": 72.985775
+  },
+  "Kashmir Highway": {
+    "slug": "Islamabad_Kashmir_Highway",
+    "id": 3456,
+    "lat": 33.651923,
+    "lng": 72.985343
+  },
+  "Khanna Pul": {
+    "slug": "Islamabad_Khanna_Pul",
+    "id": 9020,
+    "lat": 33.629662,
+    "lng": 73.112268
+  },
+  "Koral Town": {
+    "slug": "Islamabad_Koral_Town",
+    "id": 3460,
+    "lat": 33.602038,
+    "lng": 73.141966
+  },
+  "Korang Town": {
+    "slug": "Islamabad_Korang_Town",
+    "id": 445,
+    "lat": 33.579034,
+    "lng": 73.139591
+  },
+  "Kuri Road": {
+    "slug": "Islamabad_Kuri_Road",
+    "id": 10322,
+    "lat": 33.678171,
+    "lng": 73.162161
+  },
+  "Kuri Road PHAF Officers Residencia": {
+    "slug": "Islamabad_Kuri_Road_PHAF_Officers_Residencia",
+    "id": 13099,
+    "lat": 33.680191,
+    "lng": 73.164502
+  },
+  "Lehtarar Road": {
+    "slug": "Islamabad_Lehtarar_Road",
+    "id": 3461,
+    "lat": 33.639311,
+    "lng": 73.148646
+  },
+  "Madina Town": {
+    "slug": "Islamabad_Madina_Town",
+    "id": 11255,
+    "lat": 33.62805496,
+    "lng": 73.12586615
+  },
+  "Margalla Town": {
+    "slug": "Islamabad_Margalla_Town",
+    "id": 1028,
+    "lat": 33.668854,
+    "lng": 73.10611
+  },
+  "Margalla Town Margalla Town Phase 1": {
+    "slug": "Islamabad_Margalla_Town_Margalla_Town_Phase_1",
+    "id": 9150,
+    "lat": 33.672515,
+    "lng": 73.106276
+  },
+  "Margalla Town Margalla Town Phase 2": {
+    "slug": "Islamabad_Margalla_Town_Margalla_Town_Phase_2",
+    "id": 9151,
+    "lat": 33.668604,
+    "lng": 73.106169
+  },
+  "Marwa Town": {
+    "slug": "Islamabad_Marwa_Town",
+    "id": 10078,
+    "lat": 33.6262005,
+    "lng": 73.16016681
+  },
+  "Mohra Nur Road": {
+    "slug": "Islamabad_Mohra_Nur_Road",
+    "id": 12800,
+    "lat": 33.702363,
+    "lng": 73.162517
+  },
+  "Mumtaz City": {
+    "slug": "Islamabad_Mumtaz_City",
+    "id": 3464,
+    "lat": 33.589205,
+    "lng": 72.860634
+  },
+  "Mumtaz City Mumtaz City   Chanab Block": {
+    "slug": "Islamabad_Mumtaz_City_Mumtaz_City___Chanab_Block",
+    "id": 14993,
+    "lat": 33.58761212,
+    "lng": 72.85330865
+  },
+  "Mumtaz City Mumtaz City   Exective Enclave": {
+    "slug": "Islamabad_Mumtaz_City_Mumtaz_City___Exective_Enclave",
+    "id": 14994,
+    "lat": 33.59054724,
+    "lng": 72.85939596
+  },
+  "Mumtaz City Mumtaz City   Indus Block": {
+    "slug": "Islamabad_Mumtaz_City_Mumtaz_City___Indus_Block",
+    "id": 14995,
+    "lat": 33.59084813,
+    "lng": 72.86372762
+  },
+  "Mumtaz City Mumtaz City   Jehlum Block": {
+    "slug": "Islamabad_Mumtaz_City_Mumtaz_City___Jehlum_Block",
+    "id": 22487,
+    "lat": 33.581758,
+    "lng": 72.849217
+  },
+  "Mumtaz City Mumtaz City   Ravi Block": {
+    "slug": "Islamabad_Mumtaz_City_Mumtaz_City___Ravi_Block",
+    "id": 14996,
+    "lat": 33.58298503,
+    "lng": 72.85462096
+  },
+  "National Police Foundation": {
+    "slug": "Islamabad_National_Police_Foundation",
+    "id": 434,
+    "lat": 33.700462,
+    "lng": 72.981226
+  },
+  "National Police Foundation O 9": {
+    "slug": "Islamabad_National_Police_Foundation_O_9",
+    "id": 331,
+    "lat": 33.570792,
+    "lng": 73.13251
+  },
+  "National Police Foundation O 9 National Police Foundation O 9   Block A": {
+    "slug": "Islamabad_National_Police_Foundation_O_9_National_Police_Foundation_O_9___Block_A",
+    "id": 16425,
+    "lat": 33.56465103,
+    "lng": 73.13426771
+  },
+  "National Police Foundation O 9 National Police Foundation O 9   Block B": {
+    "slug": "Islamabad_National_Police_Foundation_O_9_National_Police_Foundation_O_9___Block_B",
+    "id": 16426,
+    "lat": 33.57130504,
+    "lng": 73.13005219
+  },
+  "National Police Foundation O 9 National Police Foundation O 9   Block C": {
+    "slug": "Islamabad_National_Police_Foundation_O_9_National_Police_Foundation_O_9___Block_C",
+    "id": 16427,
+    "lat": 33.57026216,
+    "lng": 73.13416968
+  },
+  "National Police Foundation O 9 National Police Foundation O 9   Block F": {
+    "slug": "Islamabad_National_Police_Foundation_O_9_National_Police_Foundation_O_9___Block_F",
+    "id": 16430,
+    "lat": 33.56300082,
+    "lng": 73.12854774
+  },
+  "Naval Anchorage": {
+    "slug": "Islamabad_Naval_Anchorage",
+    "id": 375,
+    "lat": 33.573009,
+    "lng": 73.198629
+  },
+  "Naval Anchorage Naval Anchorage   Block A": {
+    "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_A",
+    "id": 3467,
+    "lat": 33.569648,
+    "lng": 73.190489
+  },
+  "Naval Anchorage Naval Anchorage   Block D": {
+    "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_D",
+    "id": 3470,
+    "lat": 33.573009,
+    "lng": 73.198628
+  },
+  "Naval Anchorage Naval Anchorage   Block E": {
+    "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_E",
+    "id": 3471,
+    "lat": 33.565464,
+    "lng": 73.199236
+  },
+  "Naval Anchorage Naval Anchorage   Block F": {
+    "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_F",
+    "id": 3472,
+    "lat": 33.571007,
+    "lng": 73.203743
+  },
+  "Naval Anchorage Naval Anchorage   Block G": {
+    "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_G",
+    "id": 9158,
+    "lat": 33.57081,
+    "lng": 73.207288
+  },
+  "Naval Anchorage Naval Anchorage   Block K": {
+    "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_K",
+    "id": 9161,
+    "lat": 33.582345,
+    "lng": 73.19367
+  },
+  "Naval Anchorage Naval Anchorage   Block L": {
+    "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_L",
+    "id": 9162,
+    "lat": 33.589638,
+    "lng": 73.193413
+  },
+  "Naval Farms Housing Scheme": {
+    "slug": "Islamabad_Naval_Farms_Housing_Scheme",
+    "id": 1724,
+    "lat": 33.721306,
+    "lng": 73.217903
+  },
+  "O 9 Federation Housing Society   O 9": {
+    "slug": "Islamabad_O_9_Federation_Housing_Society___O_9",
+    "id": 9585,
+    "lat": 33.576472,
+    "lng": 73.13221
+  },
+  "OPF Valley": {
+    "slug": "Islamabad_OPF_Valley",
+    "id": 8339,
+    "lat": 33.582412,
+    "lng": 73.241898
+  },
+  "Orchard Scheme": {
+    "slug": "Islamabad_Orchard_Scheme",
+    "id": 1408,
+    "lat": 33.675997,
+    "lng": 73.10066
+  },
+  "PAEC Employees Cooperative Housing Society": {
+    "slug": "Islamabad_PAEC_Employees_Cooperative_Housing_Society",
+    "id": 9647,
+    "lat": 33.480561,
+    "lng": 73.205827
+  },
+  "PAF Tarnol": {
+    "slug": "Islamabad_PAF_Tarnol",
+    "id": 421,
+    "lat": 33.605559,
+    "lng": 72.846068
+  },
+  "PECHS": {
+    "slug": "Islamabad_PECHS",
+    "id": 333,
+    "lat": 33.584736,
+    "lng": 72.831116
+  },
+  "PWD Housing Scheme": {
+    "slug": "Islamabad_PWD_Housing_Scheme",
+    "id": 424,
+    "lat": 33.570792,
+    "lng": 73.145256
+  },
+  "PWD Housing Scheme PWD Housing Society   Block A": {
+    "slug": "Islamabad_PWD_Housing_Scheme_PWD_Housing_Society___Block_A",
+    "id": 15004,
+    "lat": 33.57441587,
+    "lng": 73.14774979
+  },
+  "PWD Housing Scheme PWD Housing Society   Block B": {
+    "slug": "Islamabad_PWD_Housing_Scheme_PWD_Housing_Society___Block_B",
+    "id": 15003,
+    "lat": 33.57107525,
+    "lng": 73.1409226
+  },
+  "PWD Housing Scheme PWD Housing Society   Block C": {
+    "slug": "Islamabad_PWD_Housing_Scheme_PWD_Housing_Society___Block_C",
+    "id": 15001,
+    "lat": 33.5678555,
+    "lng": 73.14342635
+  },
+  "PWD Housing Scheme PWD Housing Society   Block D": {
+    "slug": "Islamabad_PWD_Housing_Scheme_PWD_Housing_Society___Block_D",
+    "id": 15002,
+    "lat": 33.571594,
+    "lng": 73.14878361
+  },
+  "PWD Road": {
+    "slug": "Islamabad_PWD_Road",
+    "id": 10652,
+    "lat": 33.567125,
+    "lng": 73.134901
+  },
+  "Pakistan Town": {
+    "slug": "Islamabad_Pakistan_Town",
+    "id": 1378,
+    "lat": 33.575405,
+    "lng": 73.143325
+  },
+  "Pakistan Town Pakistan Town   Phase 1": {
+    "slug": "Islamabad_Pakistan_Town_Pakistan_Town___Phase_1",
+    "id": 14998,
+    "lat": 33.57597244,
+    "lng": 73.14426454
+  },
+  "Pakistan Town Pakistan Town   Phase 2": {
+    "slug": "Islamabad_Pakistan_Town_Pakistan_Town___Phase_2",
+    "id": 16525,
+    "lat": 33.56477058,
+    "lng": 73.1427903
+  },
+  "Park Enclave": {
+    "slug": "Islamabad_Park_Enclave",
+    "id": 1706,
+    "lat": 33.671497,
+    "lng": 73.16627
+  },
+  "Park Enclave Park Enclave 1": {
+    "slug": "Islamabad_Park_Enclave_Park_Enclave_1",
+    "id": 17148,
+    "lat": 33.672545,
+    "lng": 73.165545
+  },
+  "Park Road": {
+    "slug": "Islamabad_Park_Road",
+    "id": 3485,
+    "lat": 33.66789,
+    "lng": 73.149333
+  },
+  "Park View City": {
+    "slug": "Islamabad_Park_View_City",
+    "id": 10933,
+    "lat": 33.720586,
+    "lng": 73.222006
+  },
+  "Police Foundation Housing Society": {
+    "slug": "Islamabad_Police_Foundation_Housing_Society",
+    "id": 13297,
+    "lat": 33.48466922,
+    "lng": 73.20191525
+  },
+  "Rawal Town": {
+    "slug": "Islamabad_Rawal_Town",
+    "id": 1246,
+    "lat": 33.686032,
+    "lng": 73.117268
+  },
+  "River Garden": {
+    "slug": "Islamabad_River_Garden",
+    "id": 1457,
+    "lat": 33.551696,
+    "lng": 73.166027
+  },
+  "Shah Allah Ditta": {
+    "slug": "Islamabad_Shah_Allah_Ditta",
+    "id": 8424,
+    "lat": 33.712988384938,
+    "lng": 72.921280860901
+  },
+  "Shalimar Town": {
+    "slug": "Islamabad_Shalimar_Town",
+    "id": 3490,
+    "lat": 33.62509,
+    "lng": 72.865319
+  },
+  "Shehzad Town": {
+    "slug": "Islamabad_Shehzad_Town",
+    "id": 1007,
+    "lat": 33.671872,
+    "lng": 73.140278
+  },
+  "Soan Garden": {
+    "slug": "Islamabad_Soan_Garden",
+    "id": 338,
+    "lat": 33.564427,
+    "lng": 73.157101
+  },
+  "Soan Garden Block A": {
+    "slug": "Islamabad_Soan_Garden_Block_A",
+    "id": 3491,
+    "lat": 33.569648,
+    "lng": 73.151522
+  },
+  "Soan Garden Block B": {
+    "slug": "Islamabad_Soan_Garden_Block_B",
+    "id": 3492,
+    "lat": 33.56786,
+    "lng": 73.149805
+  },
+  "Soan Garden Block C": {
+    "slug": "Islamabad_Soan_Garden_Block_C",
+    "id": 3493,
+    "lat": 33.56301831,
+    "lng": 73.1464595
+  },
+  "Soan Garden Block D": {
+    "slug": "Islamabad_Soan_Garden_Block_D",
+    "id": 3494,
+    "lat": 33.56128,
+    "lng": 73.148346
+  },
+  "Soan Garden Block E": {
+    "slug": "Islamabad_Soan_Garden_Block_E",
+    "id": 3495,
+    "lat": 33.566358,
+    "lng": 73.155298
+  },
+  "Soan Garden Block F": {
+    "slug": "Islamabad_Soan_Garden_Block_F",
+    "id": 3496,
+    "lat": 33.556774,
+    "lng": 73.153496
+  },
+  "Soan Garden Block G": {
+    "slug": "Islamabad_Soan_Garden_Block_G",
+    "id": 3497,
+    "lat": 33.562621,
+    "lng": 73.15959
+  },
+  "Soan Garden Block H": {
+    "slug": "Islamabad_Soan_Garden_Block_H",
+    "id": 3498,
+    "lat": 33.554271,
+    "lng": 73.155599
+  },
+  "Soan Garden Soan Garden   Block H Extension": {
+    "slug": "Islamabad_Soan_Garden_Soan_Garden___Block_H_Extension",
+    "id": 16449,
+    "lat": 33.55571221,
+    "lng": 73.16271612
+  },
+  "Sohan Valley": {
+    "slug": "Islamabad_Sohan_Valley",
+    "id": 1243,
+    "lat": 33.649494,
+    "lng": 73.104401
+  },
+  "Taramrri": {
+    "slug": "Islamabad_Taramrri",
+    "id": 3500,
+    "lat": 33.64192,
+    "lng": 73.165727
+  },
+  "Tarlai": {
+    "slug": "Islamabad_Tarlai",
+    "id": 1144,
+    "lat": 33.640276,
+    "lng": 73.153925
+  },
+  "Tarnol": {
+    "slug": "Islamabad_Tarnol",
+    "id": 8121,
+    "lat": 33.650065,
+    "lng": 72.90699
+  },
+  "Tarnol Fazaia Housing Scheme": {
+    "slug": "Islamabad_Tarnol_Fazaia_Housing_Scheme",
+    "id": 10314,
+    "lat": 33.6051833,
+    "lng": 72.84397618
+  },
+  "Top City 1": {
+    "slug": "Islamabad_Top_City_1",
+    "id": 1383,
+    "lat": 33.587954,
+    "lng": 72.86725
+  },
+  "Top City 1 Kanwar Moiz Block": {
+    "slug": "Islamabad_Top_City_1_Kanwar_Moiz_Block",
+    "id": 22390,
+    "lat": 33.58242,
+    "lng": 72.860985
+  },
+  "Top City 1 Top City 1   Block A": {
+    "slug": "Islamabad_Top_City_1_Top_City_1___Block_A",
+    "id": 9231,
+    "lat": 33.57976918,
+    "lng": 72.86154199
+  },
+  "Top City 1 Top City 1   Block B": {
+    "slug": "Islamabad_Top_City_1_Top_City_1___Block_B",
+    "id": 9230,
+    "lat": 33.582877,
+    "lng": 72.871049
+  },
+  "Top City 1 Top City 1   Block C": {
+    "slug": "Islamabad_Top_City_1_Top_City_1___Block_C",
+    "id": 9232,
+    "lat": 33.576871,
+    "lng": 72.875985
+  },
+  "Top City 1 Top City 1   Block D": {
+    "slug": "Islamabad_Top_City_1_Top_City_1___Block_D",
+    "id": 9233,
+    "lat": 33.573045,
+    "lng": 72.864097
+  },
+  "Top City 1 Top City 1   Block I": {
+    "slug": "Islamabad_Top_City_1_Top_City_1___Block_I",
+    "id": 16278,
+    "lat": 33.56797142,
+    "lng": 72.87067135
+  },
+  "Top City 1 Top City 1   Block K": {
+    "slug": "Islamabad_Top_City_1_Top_City_1___Block_K",
+    "id": 16277,
+    "lat": 33.58007521,
+    "lng": 72.87578333
+  },
+  "University Town": {
+    "slug": "Islamabad_University_Town",
+    "id": 1164,
+    "lat": 33.586238,
+    "lng": 72.887506
+  },
+  "Zaraj Housing Scheme": {
+    "slug": "Islamabad_Zaraj_Housing_Scheme",
+    "id": 3508,
+    "lat": 33.512166,
+    "lng": 73.15135
+  },
+  "Zaraj Housing Scheme Rania Heights": {
+    "slug": "Islamabad_Zaraj_Housing_Scheme_Rania_Heights",
+    "id": 9709,
+    "lat": 33.520068,
+    "lng": 73.158699
+  },
+  "Zaraj Housing Scheme The Atrium": {
+    "slug": "Islamabad_Zaraj_Housing_Scheme_The_Atrium",
+    "id": 10229,
+    "lat": 33.516388,
+    "lng": 73.156221
+  },
+  "Zaraj Scheme Sector C": {
+    "slug": "Islamabad_Zaraj_Scheme_Sector_C",
+    "id": 3512,
+    "lat": 33.510878,
+    "lng": 73.150706
+  }
+}

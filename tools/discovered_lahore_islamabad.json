@@ -1,0 +1,3066 @@
+{
+  "lahore": {
+    "Aabpara Coop Housing Society": {
+      "slug": "Lahore_Aabpara_Coop_Housing_Society",
+      "id": 4487
+    },
+    "Abbot Road": {
+      "slug": "Lahore_Abbot_Road",
+      "id": 479
+    },
+    "Abdalians Cooperative Housing Society": {
+      "slug": "Lahore_Abdalians_Cooperative_Housing_Society",
+      "id": 492
+    },
+    "Agrics Town": {
+      "slug": "Lahore_Agrics_Town",
+      "id": 4445
+    },
+    "Airline Housing Society": {
+      "slug": "Lahore_Airline_Housing_Society",
+      "id": 1290
+    },
+    "Airport Road": {
+      "slug": "Lahore_Airport_Road",
+      "id": 8347
+    },
+    "Al Hamad Colony  AIT ": {
+      "slug": "Lahore_Al_Hamad_Colony__AIT_",
+      "id": 12103
+    },
+    "Al Hamd Park": {
+      "slug": "Lahore_Al_Hamd_Park",
+      "id": 9997
+    },
+    "Al Hamra Town": {
+      "slug": "Lahore_Al_Hamra_Town",
+      "id": 4425
+    },
+    "Al Rehman Garden": {
+      "slug": "Lahore_Al_Rehman_Garden",
+      "id": 4504
+    },
+    "Al Rehman Garden Phase 2": {
+      "slug": "Lahore_Al_Rehman_Garden_Phase_2",
+      "id": 4506
+    },
+    "Al Rehman Garden Phase 4": {
+      "slug": "Lahore_Al_Rehman_Garden_Phase_4",
+      "id": 4508
+    },
+    "Alfalah Town": {
+      "slug": "Lahore_Alfalah_Town",
+      "id": 738
+    },
+    "Ali Town": {
+      "slug": "Lahore_Ali_Town",
+      "id": 8931
+    },
+    "Allama Iqbal Town": {
+      "slug": "Lahore_Allama_Iqbal_Town",
+      "id": 58
+    },
+    "Allama Iqbal Town Asif Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Asif_Block",
+      "id": 3526
+    },
+    "Allama Iqbal Town Chinab Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Chinab_Block",
+      "id": 3528
+    },
+    "Allama Iqbal Town College Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_College_Block",
+      "id": 3523
+    },
+    "Allama Iqbal Town Gulshan Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Gulshan_Block",
+      "id": 3535
+    },
+    "Allama Iqbal Town Huma Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Huma_Block",
+      "id": 3534
+    },
+    "Allama Iqbal Town Hunza Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Hunza_Block",
+      "id": 3525
+    },
+    "Allama Iqbal Town Jahanzeb Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Jahanzeb_Block",
+      "id": 3532
+    },
+    "Allama Iqbal Town Kamran Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Kamran_Block",
+      "id": 3519
+    },
+    "Allama Iqbal Town Karim Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Karim_Block",
+      "id": 3520
+    },
+    "Allama Iqbal Town Khyber Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Khyber_Block",
+      "id": 3530
+    },
+    "Allama Iqbal Town Mehran Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Mehran_Block",
+      "id": 3518
+    },
+    "Allama Iqbal Town Moon Market": {
+      "slug": "Lahore_Allama_Iqbal_Town_Moon_Market",
+      "id": 9456
+    },
+    "Allama Iqbal Town Muslim Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Muslim_Block",
+      "id": 3536
+    },
+    "Allama Iqbal Town Nargis Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Nargis_Block",
+      "id": 3540
+    },
+    "Allama Iqbal Town Neelam Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Neelam_Block",
+      "id": 3529
+    },
+    "Allama Iqbal Town Nishtar Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Nishtar_Block",
+      "id": 3543
+    },
+    "Allama Iqbal Town Nizam Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Nizam_Block",
+      "id": 3524
+    },
+    "Allama Iqbal Town Rachna Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Rachna_Block",
+      "id": 3539
+    },
+    "Allama Iqbal Town Ravi Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Ravi_Block",
+      "id": 3542
+    },
+    "Allama Iqbal Town Raza Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Raza_Block",
+      "id": 3522
+    },
+    "Allama Iqbal Town Satluj Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Satluj_Block",
+      "id": 3531
+    },
+    "Allama Iqbal Town Sikandar Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Sikandar_Block",
+      "id": 3521
+    },
+    "Allama Iqbal Town Umar Block": {
+      "slug": "Lahore_Allama_Iqbal_Town_Umar_Block",
+      "id": 3538
+    },
+    "Architects Engineers Housing Society": {
+      "slug": "Lahore_Architects_Engineers_Housing_Society",
+      "id": 1242
+    },
+    "Architects Engineers Society Block B": {
+      "slug": "Lahore_Architects_Engineers_Society_Block_B",
+      "id": 3546
+    },
+    "Askari": {
+      "slug": "Lahore_Askari",
+      "id": 3555
+    },
+    "Askari 1": {
+      "slug": "Lahore_Askari_1",
+      "id": 3556
+    },
+    "Askari 2": {
+      "slug": "Lahore_Askari_2",
+      "id": 3557
+    },
+    "Askari 5": {
+      "slug": "Lahore_Askari_5",
+      "id": 3559
+    },
+    "Askari 9": {
+      "slug": "Lahore_Askari_9",
+      "id": 1676
+    },
+    "Askari Askari 10": {
+      "slug": "Lahore_Askari_Askari_10",
+      "id": 1011
+    },
+    "Askari Askari 11": {
+      "slug": "Lahore_Askari_Askari_11",
+      "id": 1503
+    },
+    "Askari Askari 8": {
+      "slug": "Lahore_Askari_Askari_8",
+      "id": 8223
+    },
+    "Audit  amp  Accounts Co operative Society": {
+      "slug": "Lahore_Audit__amp__Accounts_Co_operative_Society",
+      "id": 1134
+    },
+    "Azam Gardens": {
+      "slug": "Lahore_Azam_Gardens",
+      "id": 4384
+    },
+    "Bahria Nasheman": {
+      "slug": "Lahore_Bahria_Nasheman",
+      "id": 4510
+    },
+    "Bahria Nasheman Iris": {
+      "slug": "Lahore_Bahria_Nasheman_Iris",
+      "id": 4512
+    },
+    "Bahria Nasheman Sunflower": {
+      "slug": "Lahore_Bahria_Nasheman_Sunflower",
+      "id": 4513
+    },
+    "Bahria Orchard": {
+      "slug": "Lahore_Bahria_Orchard",
+      "id": 1474
+    },
+    "Bahria Orchard Awami Villas": {
+      "slug": "Lahore_Bahria_Orchard_Awami_Villas",
+      "id": 15704
+    },
+    "Bahria Orchard Bahria Orchard Phase 1": {
+      "slug": "Lahore_Bahria_Orchard_Bahria_Orchard_Phase_1",
+      "id": 8235
+    },
+    "Bahria Orchard Bahria Orchard Phase 2": {
+      "slug": "Lahore_Bahria_Orchard_Bahria_Orchard_Phase_2",
+      "id": 8236
+    },
+    "Bahria Orchard Bahria Orchard Phase 3": {
+      "slug": "Lahore_Bahria_Orchard_Bahria_Orchard_Phase_3",
+      "id": 10320
+    },
+    "Bahria Orchard Bahria Orchard Phase 4": {
+      "slug": "Lahore_Bahria_Orchard_Bahria_Orchard_Phase_4",
+      "id": 11201
+    },
+    "Bahria Town": {
+      "slug": "Lahore_Bahria_Town",
+      "id": 509
+    },
+    "Bahria Town Bahria Town   Overseas Enclave": {
+      "slug": "Lahore_Bahria_Town_Bahria_Town___Overseas_Enclave",
+      "id": 1811
+    },
+    "Bahria Town Bahria Town   Sector A": {
+      "slug": "Lahore_Bahria_Town_Bahria_Town___Sector_A",
+      "id": 1769
+    },
+    "Bahria Town Bahria Town   Sector B": {
+      "slug": "Lahore_Bahria_Town_Bahria_Town___Sector_B",
+      "id": 1772
+    },
+    "Bahria Town Bahria Town   Sector C": {
+      "slug": "Lahore_Bahria_Town_Bahria_Town___Sector_C",
+      "id": 1784
+    },
+    "Bahria Town Bahria Town   Sector D": {
+      "slug": "Lahore_Bahria_Town_Bahria_Town___Sector_D",
+      "id": 1796
+    },
+    "Bahria Town Bahria Town   Sector F": {
+      "slug": "Lahore_Bahria_Town_Bahria_Town___Sector_F",
+      "id": 3097
+    },
+    "Bahria Town Bahria Town Main Boulevard": {
+      "slug": "Lahore_Bahria_Town_Bahria_Town_Main_Boulevard",
+      "id": 9109
+    },
+    "Bahria Town Bahria Town Sector E": {
+      "slug": "Lahore_Bahria_Town_Bahria_Town_Sector_E",
+      "id": 1802
+    },
+    "Bahria Town Golf View Residencia": {
+      "slug": "Lahore_Bahria_Town_Golf_View_Residencia",
+      "id": 8198
+    },
+    "Bahria Town Midway Commercial": {
+      "slug": "Lahore_Bahria_Town_Midway_Commercial",
+      "id": 21559
+    },
+    "Bahria Town Rose Garden": {
+      "slug": "Lahore_Bahria_Town_Rose_Garden",
+      "id": 9480
+    },
+    "Bankers Avenue Cooperative Housing Society": {
+      "slug": "Lahore_Bankers_Avenue_Cooperative_Housing_Society",
+      "id": 8325
+    },
+    "Bankers Avenue Cooperative Housing Society Bankers Avenue   Block A": {
+      "slug": "Lahore_Bankers_Avenue_Cooperative_Housing_Society_Bankers_Avenue___Block_A",
+      "id": 16011
+    },
+    "Bankers Avenue Cooperative Housing Society Bankers Avenue   Block G": {
+      "slug": "Lahore_Bankers_Avenue_Cooperative_Housing_Society_Bankers_Avenue___Block_G",
+      "id": 16017
+    },
+    "Bankers Avenue Cooperative Housing Society Bankers Avenue   Block H": {
+      "slug": "Lahore_Bankers_Avenue_Cooperative_Housing_Society_Bankers_Avenue___Block_H",
+      "id": 16018
+    },
+    "Bankers Co operative Housing Society": {
+      "slug": "Lahore_Bankers_Co_operative_Housing_Society",
+      "id": 1052
+    },
+    "Bedian Road": {
+      "slug": "Lahore_Bedian_Road",
+      "id": 378
+    },
+    "Bedian Road Bedian": {
+      "slug": "Lahore_Bedian_Road_Bedian",
+      "id": 20804
+    },
+    "Bedian Road Elite Villas": {
+      "slug": "Lahore_Bedian_Road_Elite_Villas",
+      "id": 10795
+    },
+    "Bedian Road Paradise Homes Bedian Road": {
+      "slug": "Lahore_Bedian_Road_Paradise_Homes_Bedian_Road",
+      "id": 17663
+    },
+    "Bedian Road SJ Garden": {
+      "slug": "Lahore_Bedian_Road_SJ_Garden",
+      "id": 12693
+    },
+    "Bedian Road Spring Meadows": {
+      "slug": "Lahore_Bedian_Road_Spring_Meadows",
+      "id": 8567
+    },
+    "Begampura": {
+      "slug": "Lahore_Begampura",
+      "id": 4549
+    },
+    "Canal Bank Cooperative Housing Society": {
+      "slug": "Lahore_Lahore_Canal_Bank_Cooperative_Housing_Society",
+      "id": 9770
+    },
+    "Canal Bank Housing Scheme": {
+      "slug": "Lahore_Canal_Bank_Housing_Scheme",
+      "id": 9354
+    },
+    "Canal Garden": {
+      "slug": "Lahore_Canal_Garden",
+      "id": 1287
+    },
+    "Canal Garden Block A": {
+      "slug": "Lahore_Canal_Garden_Block_A",
+      "id": 3641
+    },
+    "Canal Garden Block B": {
+      "slug": "Lahore_Canal_Garden_Block_B",
+      "id": 3642
+    },
+    "Canal Garden Block D": {
+      "slug": "Lahore_Canal_Garden_Block_D",
+      "id": 3644
+    },
+    "Canal Garden Block E": {
+      "slug": "Lahore_Canal_Garden_Block_E",
+      "id": 3645
+    },
+    "Canal Garden Block F": {
+      "slug": "Lahore_Canal_Garden_Block_F",
+      "id": 3646
+    },
+    "Canal Garden Canal Garden   Block H": {
+      "slug": "Lahore_Canal_Garden_Canal_Garden___Block_H",
+      "id": 12184
+    },
+    "Canal Garden Canal Garden   Tip Sector": {
+      "slug": "Lahore_Canal_Garden_Canal_Garden___Tip_Sector",
+      "id": 12183
+    },
+    "Canal Garden Canal Gardens   Block AA": {
+      "slug": "Lahore_Canal_Garden_Canal_Gardens___Block_AA",
+      "id": 10659
+    },
+    "Canal View": {
+      "slug": "Lahore_Canal_View",
+      "id": 67
+    },
+    "Cantt": {
+      "slug": "Lahore_Cantt",
+      "id": 427
+    },
+    "Cantt Ali Park": {
+      "slug": "Lahore_Cantt_Ali_Park",
+      "id": 3089
+    },
+    "Cantt Alla ud Din Road": {
+      "slug": "Lahore_Cantt_Alla_ud_Din_Road",
+      "id": 3680
+    },
+    "Cantt Aziz Bhatti Road": {
+      "slug": "Lahore_Cantt_Aziz_Bhatti_Road",
+      "id": 3681
+    },
+    "Cantt Barki Road": {
+      "slug": "Lahore_Cantt_Barki_Road",
+      "id": 8147
+    },
+    "Cantt Bridge Colony": {
+      "slug": "Lahore_Cantt_Bridge_Colony",
+      "id": 3653
+    },
+    "Cantt Falcon Complex   Tufail Road": {
+      "slug": "Lahore_Cantt_Falcon_Complex___Tufail_Road",
+      "id": 13921
+    },
+    "Cantt Ghazi Road": {
+      "slug": "Lahore_Cantt_Ghazi_Road",
+      "id": 381
+    },
+    "Cantt Green Avenue Housing Society": {
+      "slug": "Lahore_Cantt_Green_Avenue_Housing_Society",
+      "id": 3673
+    },
+    "Cantt Khuda Buksh Colony": {
+      "slug": "Lahore_Cantt_Khuda_Buksh_Colony",
+      "id": 3672
+    },
+    "Cantt New Iqbal Park Cantt": {
+      "slug": "Lahore_Cantt_New_Iqbal_Park_Cantt",
+      "id": 8398
+    },
+    "Cantt Nisar Colony": {
+      "slug": "Lahore_Cantt_Nisar_Colony",
+      "id": 3666
+    },
+    "Cantt PAF Officers Colony": {
+      "slug": "Lahore_Cantt_PAF_Officers_Colony",
+      "id": 3661
+    },
+    "Cantt Saddar": {
+      "slug": "Lahore_Cantt_Saddar",
+      "id": 3655
+    },
+    "Cantt Sarfaraz Rafiqui Road": {
+      "slug": "Lahore_Cantt_Sarfaraz_Rafiqui_Road",
+      "id": 3678
+    },
+    "Cantt Sarwar Colony": {
+      "slug": "Lahore_Cantt_Sarwar_Colony",
+      "id": 3652
+    },
+    "Cantt Sarwar Road": {
+      "slug": "Lahore_Cantt_Sarwar_Road",
+      "id": 3676
+    },
+    "Cantt Shami Road": {
+      "slug": "Lahore_Cantt_Shami_Road",
+      "id": 3675
+    },
+    "Cantt Subedar Colony": {
+      "slug": "Lahore_Cantt_Subedar_Colony",
+      "id": 3662
+    },
+    "Cantt Tufail Road": {
+      "slug": "Lahore_Cantt_Tufail_Road",
+      "id": 3677
+    },
+    "Cantt Zarrar Shaheed Road": {
+      "slug": "Lahore_Cantt_Zarrar_Shaheed_Road",
+      "id": 3682
+    },
+    "Cavalry Extension": {
+      "slug": "Lahore_Cavalry_Extension",
+      "id": 15484
+    },
+    "Cavalry Ground": {
+      "slug": "Lahore_Cavalry_Ground",
+      "id": 69
+    },
+    "Central Park Block C": {
+      "slug": "Lahore_Central_Park_Block_C",
+      "id": 3686
+    },
+    "Central Park Block D": {
+      "slug": "Lahore_Central_Park_Block_D",
+      "id": 3687
+    },
+    "Central Park Block F": {
+      "slug": "Lahore_Central_Park_Block_F",
+      "id": 3689
+    },
+    "Central Park Housing Scheme": {
+      "slug": "Lahore_Central_Park_Housing_Scheme",
+      "id": 1013
+    },
+    "Central Park Housing Scheme Central Park   Block A": {
+      "slug": "Lahore_Central_Park_Housing_Scheme_Central_Park___Block_A",
+      "id": 3684
+    },
+    "Central Park Housing Scheme Central Park   Block A1": {
+      "slug": "Lahore_Central_Park_Housing_Scheme_Central_Park___Block_A1",
+      "id": 17927
+    },
+    "Central Park Housing Scheme Central Park   Block AA": {
+      "slug": "Lahore_Central_Park_Housing_Scheme_Central_Park___Block_AA",
+      "id": 20409
+    },
+    "Central Park Housing Scheme Central Park   Block B": {
+      "slug": "Lahore_Central_Park_Housing_Scheme_Central_Park___Block_B",
+      "id": 3685
+    },
+    "Central Park Housing Scheme Central Park   Block G": {
+      "slug": "Lahore_Central_Park_Housing_Scheme_Central_Park___Block_G",
+      "id": 3690
+    },
+    "Chinar Bagh": {
+      "slug": "Lahore_Chinar_Bagh",
+      "id": 763
+    },
+    "Clifton Colony": {
+      "slug": "Lahore_Clifton_Colony",
+      "id": 4526
+    },
+    "College Road": {
+      "slug": "Lahore_College_Road",
+      "id": 4576
+    },
+    "College Road Eden Boulevard Housing Scheme": {
+      "slug": "Lahore_College_Road_Eden_Boulevard_Housing_Scheme",
+      "id": 12447
+    },
+    "College Road Nespak Scheme Phase 1": {
+      "slug": "Lahore_College_Road_Nespak_Scheme_Phase_1",
+      "id": 4077
+    },
+    "College Road Serene Apartments": {
+      "slug": "Lahore_College_Road_Serene_Apartments",
+      "id": 13916
+    },
+    "College Road Union Green": {
+      "slug": "Lahore_College_Road_Union_Green",
+      "id": 21381
+    },
+    "DHA 11 Rahbar": {
+      "slug": "Lahore_DHA_11_Rahbar",
+      "id": 1410
+    },
+    "DHA 11 Rahbar DHA 11 Rahbar Phase 1": {
+      "slug": "Lahore_DHA_11_Rahbar_DHA_11_Rahbar_Phase_1",
+      "id": 3710
+    },
+    "DHA 11 Rahbar DHA 11 Rahbar Phase 2": {
+      "slug": "Lahore_DHA_11_Rahbar_DHA_11_Rahbar_Phase_2",
+      "id": 3717
+    },
+    "DHA 11 Rahbar DHA 11 Rahbar Phase 2 Extension": {
+      "slug": "Lahore_DHA_11_Rahbar_DHA_11_Rahbar_Phase_2_Extension",
+      "id": 8429
+    },
+    "DHA 11 Rahbar DHA 11 Rahbar Phase 4": {
+      "slug": "Lahore_DHA_11_Rahbar_DHA_11_Rahbar_Phase_4",
+      "id": 14114
+    },
+    "DHA Defence": {
+      "slug": "Lahore_DHA_Defence",
+      "id": 9
+    },
+    "DHA Defence DHA Phase 2": {
+      "slug": "Lahore_DHA_Defence_DHA_Phase_2",
+      "id": 1444
+    },
+    "DHA Defence DHA Phase 8": {
+      "slug": "Lahore_DHA_Defence_DHA_Phase_8",
+      "id": 1451
+    },
+    "DHA Defence DHA Phase 9 Prism": {
+      "slug": "Lahore_DHA_Defence_DHA_Phase_9_Prism",
+      "id": 8431
+    },
+    "DHA Defence Defence Chowk": {
+      "slug": "Lahore_DHA_Defence_Defence_Chowk",
+      "id": 8323
+    },
+    "DHA Defence Defence Raya": {
+      "slug": "Lahore_DHA_Defence_Defence_Raya",
+      "id": 8172
+    },
+    "DHA Defence Main Boulevard DHA Defence": {
+      "slug": "Lahore_DHA_Defence_Main_Boulevard_DHA_Defence",
+      "id": 8234
+    },
+    "Defence  DHA  DHA 9 Town": {
+      "slug": "Lahore_Defence__DHA__DHA_9_Town",
+      "id": 1452
+    },
+    "Defence  DHA  Phase 1": {
+      "slug": "Lahore_Defence__DHA__Phase_1",
+      "id": 1442
+    },
+    "Defence  DHA  Phase 11  Halloki Gardens ": {
+      "slug": "Lahore_Defence__DHA__Phase_11__Halloki_Gardens_",
+      "id": 3025
+    },
+    "Defence  DHA  Phase 3": {
+      "slug": "Lahore_Defence__DHA__Phase_3",
+      "id": 1454
+    },
+    "Defence  DHA  Phase 4": {
+      "slug": "Lahore_Defence__DHA__Phase_4",
+      "id": 1446
+    },
+    "Defence  DHA  Phase 5": {
+      "slug": "Lahore_Defence__DHA__Phase_5",
+      "id": 1447
+    },
+    "Defence  DHA  Phase 6": {
+      "slug": "Lahore_Defence__DHA__Phase_6",
+      "id": 1448
+    },
+    "Defence  DHA  Phase 7": {
+      "slug": "Lahore_Defence__DHA__Phase_7",
+      "id": 1450
+    },
+    "Defence %28DHA%29": {
+      "slug": "Lahore_Defence_%28DHA%29",
+      "id": 9
+    },
+    "Defence (DHA) Phase 3": {
+      "slug": "Lahore_Defence_(DHA)_Phase_3",
+      "id": 1454
+    },
+    "Defence (DHA) Phase 5": {
+      "slug": "Lahore_Defence_(DHA)_Phase_5",
+      "id": 1447
+    },
+    "Defence Road": {
+      "slug": "Lahore_Defence_Road",
+      "id": 4574
+    },
+    "Defence Road Dawood Residency Housing Scheme": {
+      "slug": "Lahore_Defence_Road_Dawood_Residency_Housing_Scheme",
+      "id": 10453
+    },
+    "Defence Road Dream Gardens": {
+      "slug": "Lahore_Defence_Road_Dream_Gardens",
+      "id": 4393
+    },
+    "Defence Road Gulshan e Habib": {
+      "slug": "Lahore_Defence_Road_Gulshan_e_Habib",
+      "id": 17579
+    },
+    "Defence Road Nespak Scheme Phase 3": {
+      "slug": "Lahore_Defence_Road_Nespak_Scheme_Phase_3",
+      "id": 9092
+    },
+    "Divine Gardens": {
+      "slug": "Lahore_Divine_Gardens",
+      "id": 1487
+    },
+    "Divine Gardens Block A": {
+      "slug": "Lahore_Divine_Gardens_Block_A",
+      "id": 3704
+    },
+    "Divine Gardens Block B": {
+      "slug": "Lahore_Divine_Gardens_Block_B",
+      "id": 3705
+    },
+    "EME Society": {
+      "slug": "Lahore_EME_Society",
+      "id": 410
+    },
+    "EME Society Block A": {
+      "slug": "Lahore_EME_Society_Block_A",
+      "id": 3745
+    },
+    "EME Society Block B": {
+      "slug": "Lahore_EME_Society_Block_B",
+      "id": 3746
+    },
+    "EME Society Block C": {
+      "slug": "Lahore_EME_Society_Block_C",
+      "id": 3747
+    },
+    "EME Society Block D": {
+      "slug": "Lahore_EME_Society_Block_D",
+      "id": 3748
+    },
+    "EME Society Block E": {
+      "slug": "Lahore_EME_Society_Block_E",
+      "id": 3749
+    },
+    "EME Society Block F": {
+      "slug": "Lahore_EME_Society_Block_F",
+      "id": 3750
+    },
+    "EME Society Block G": {
+      "slug": "Lahore_EME_Society_Block_G",
+      "id": 3751
+    },
+    "EME Society Block H": {
+      "slug": "Lahore_EME_Society_Block_H",
+      "id": 3752
+    },
+    "EME Society Block J": {
+      "slug": "Lahore_EME_Society_Block_J",
+      "id": 3753
+    },
+    "EME Society DHA   EME Cottages": {
+      "slug": "Lahore_EME_Society_DHA___EME_Cottages",
+      "id": 9659
+    },
+    "Eden": {
+      "slug": "Lahore_Eden",
+      "id": 3098
+    },
+    "Eden Avenue": {
+      "slug": "Lahore_Eden_Avenue",
+      "id": 75
+    },
+    "Eden Canal Villas": {
+      "slug": "Lahore_Eden_Canal_Villas",
+      "id": 1102
+    },
+    "Eden Eden Boulevard": {
+      "slug": "Lahore_Eden_Eden_Boulevard",
+      "id": 8328
+    },
+    "Eden Eden City": {
+      "slug": "Lahore_Eden_Eden_City",
+      "id": 409
+    },
+    "Eden Eden Cottage 1": {
+      "slug": "Lahore_Eden_Eden_Cottage_1",
+      "id": 468
+    },
+    "Eden Eden Residencia": {
+      "slug": "Lahore_Eden_Eden_Residencia",
+      "id": 3100
+    },
+    "Eden Edenabad": {
+      "slug": "Lahore_Eden_Edenabad",
+      "id": 1225
+    },
+    "Eden Lane Villas 2": {
+      "slug": "Lahore_Eden_Lane_Villas_2",
+      "id": 3732
+    },
+    "Faisal Town": {
+      "slug": "Lahore_Faisal_Town",
+      "id": 79
+    },
+    "Faisal Town Block A": {
+      "slug": "Lahore_Faisal_Town_Block_A",
+      "id": 3755
+    },
+    "Faisal Town Block B": {
+      "slug": "Lahore_Faisal_Town_Block_B",
+      "id": 3756
+    },
+    "Faisal Town Block C": {
+      "slug": "Lahore_Faisal_Town_Block_C",
+      "id": 3757
+    },
+    "Faisal Town Block C1": {
+      "slug": "Lahore_Faisal_Town_Block_C1",
+      "id": 3758
+    },
+    "Faisal Town Block D": {
+      "slug": "Lahore_Faisal_Town_Block_D",
+      "id": 3759
+    },
+    "Fazaia Housing Scheme": {
+      "slug": "Lahore_Fazaia_Housing_Scheme",
+      "id": 1677
+    },
+    "Fazaia Housing Scheme Fazaia Housing Scheme Phase 1": {
+      "slug": "Lahore_Fazaia_Housing_Scheme_Fazaia_Housing_Scheme_Phase_1",
+      "id": 9238
+    },
+    "Fazaia Housing Scheme Fazaia Housing Scheme Phase 2": {
+      "slug": "Lahore_Fazaia_Housing_Scheme_Fazaia_Housing_Scheme_Phase_2",
+      "id": 9148
+    },
+    "Ferozepur Road": {
+      "slug": "Lahore_Ferozepur_Road",
+      "id": 81
+    },
+    "Formanites Housing Scheme": {
+      "slug": "Lahore_Formanites_Housing_Scheme",
+      "id": 1020
+    },
+    "Formanites Housing Scheme Block A": {
+      "slug": "Lahore_Formanites_Housing_Scheme_Block_A",
+      "id": 3775
+    },
+    "Formanites Housing Scheme Block J": {
+      "slug": "Lahore_Formanites_Housing_Scheme_Block_J",
+      "id": 3782
+    },
+    "Formanites Housing Scheme Block K": {
+      "slug": "Lahore_Formanites_Housing_Scheme_Block_K",
+      "id": 3783
+    },
+    "Formanites Housing Scheme Block M": {
+      "slug": "Lahore_Formanites_Housing_Scheme_Block_M",
+      "id": 3785
+    },
+    "Formanites Housing Scheme Block N": {
+      "slug": "Lahore_Formanites_Housing_Scheme_Block_N",
+      "id": 3786
+    },
+    "Formanites Housing Scheme Formanities Housing Scheme   Block DD": {
+      "slug": "Lahore_Formanites_Housing_Scheme_Formanities_Housing_Scheme___Block_DD",
+      "id": 20928
+    },
+    "GT Road": {
+      "slug": "Lahore_GT_Road",
+      "id": 472
+    },
+    "GT Road Al Ahmad Garden Housing Scheme": {
+      "slug": "Lahore_GT_Road_Al_Ahmad_Garden_Housing_Scheme",
+      "id": 9707
+    },
+    "GT Road Al Ghani Garden": {
+      "slug": "Lahore_GT_Road_Al_Ghani_Garden",
+      "id": 11649
+    },
+    "GT Road Al Hafeez Gardens": {
+      "slug": "Lahore_GT_Road_Al_Hafeez_Gardens",
+      "id": 8573
+    },
+    "GT Road Al Hafeez Gardens Al Hafeez Garden   Phase 2": {
+      "slug": "Lahore_GT_Road_Al_Hafeez_Gardens_Al_Hafeez_Garden___Phase_2",
+      "id": 11172
+    },
+    "GT Road Al Raheem Garden   Phase 4": {
+      "slug": "Lahore_GT_Road_Al_Raheem_Garden___Phase_4",
+      "id": 8444
+    },
+    "GT Road Bismillah Housing Scheme": {
+      "slug": "Lahore_GT_Road_Bismillah_Housing_Scheme",
+      "id": 8446
+    },
+    "GT Road SA Gardens": {
+      "slug": "Lahore_GT_Road_SA_Gardens",
+      "id": 8382
+    },
+    "Garden Town": {
+      "slug": "Lahore_Garden_Town",
+      "id": 4
+    },
+    "Garden Town Barkat Market": {
+      "slug": "Lahore_Garden_Town_Barkat_Market",
+      "id": 3788
+    },
+    "Garden Town Garden Town   Abu Bakar Block": {
+      "slug": "Lahore_Garden_Town_Garden_Town___Abu_Bakar_Block",
+      "id": 1536
+    },
+    "Garden Town Garden Town   Ahmed Block": {
+      "slug": "Lahore_Garden_Town_Garden_Town___Ahmed_Block",
+      "id": 1534
+    },
+    "Garden Town Garden Town   Aibak Block": {
+      "slug": "Lahore_Garden_Town_Garden_Town___Aibak_Block",
+      "id": 8520
+    },
+    "Garden Town Garden Town   Aurangzaib Block": {
+      "slug": "Lahore_Garden_Town_Garden_Town___Aurangzaib_Block",
+      "id": 1543
+    },
+    "Garden Town Garden Town   Baber Block": {
+      "slug": "Lahore_Garden_Town_Garden_Town___Baber_Block",
+      "id": 1544
+    },
+    "Garden Town Garden Town   Garden Block": {
+      "slug": "Lahore_Garden_Town_Garden_Town___Garden_Block",
+      "id": 1535
+    },
+    "Garden Town Garden Town   Sher Shah Block": {
+      "slug": "Lahore_Garden_Town_Garden_Town___Sher_Shah_Block",
+      "id": 1537
+    },
+    "Garden Town Garden Town   Tariq Block": {
+      "slug": "Lahore_Garden_Town_Garden_Town___Tariq_Block",
+      "id": 1540
+    },
+    "Garden Town Garden Town   Tipu Block": {
+      "slug": "Lahore_Garden_Town_Garden_Town___Tipu_Block",
+      "id": 1440
+    },
+    "Garden Town Garden Town   Usman Block": {
+      "slug": "Lahore_Garden_Town_Garden_Town___Usman_Block",
+      "id": 1542
+    },
+    "Green City": {
+      "slug": "Lahore_Green_City",
+      "id": 1012
+    },
+    "Gulberg": {
+      "slug": "Lahore_Gulberg",
+      "id": 7
+    },
+    "Gulberg 1": {
+      "slug": "Lahore_Gulberg_1",
+      "id": 3808
+    },
+    "Gulberg 2": {
+      "slug": "Lahore_Gulberg_2",
+      "id": 3809
+    },
+    "Gulberg 3": {
+      "slug": "Lahore_Gulberg_3",
+      "id": 3824
+    },
+    "Gulberg 4": {
+      "slug": "Lahore_Gulberg_4",
+      "id": 3847
+    },
+    "Gulberg 5": {
+      "slug": "Lahore_Gulberg_5",
+      "id": 3848
+    },
+    "Gulberg Canal Park": {
+      "slug": "Lahore_Gulberg_Canal_Park",
+      "id": 8337
+    },
+    "Gulberg Ghalib Market": {
+      "slug": "Lahore_Gulberg_Ghalib_Market",
+      "id": 12239
+    },
+    "Gulberg Hali Road": {
+      "slug": "Lahore_Gulberg_Hali_Road",
+      "id": 10753
+    },
+    "Gulberg Hyde Park": {
+      "slug": "Lahore_Gulberg_Hyde_Park",
+      "id": 10255
+    },
+    "Gulberg Indigo Boutique Apartments": {
+      "slug": "Lahore_Gulberg_Indigo_Boutique_Apartments",
+      "id": 12837
+    },
+    "Gulberg MM Alam Road": {
+      "slug": "Lahore_Gulberg_MM_Alam_Road",
+      "id": 3850
+    },
+    "Gulberg Main Boulevard Gulberg": {
+      "slug": "Lahore_Gulberg_Main_Boulevard_Gulberg",
+      "id": 3852
+    },
+    "Gulberg Main Market": {
+      "slug": "Lahore_Gulberg_Main_Market",
+      "id": 3853
+    },
+    "Gulberg PAF Falcon Complex": {
+      "slug": "Lahore_Gulberg_PAF_Falcon_Complex",
+      "id": 3102
+    },
+    "Gulberg Sterling Residences": {
+      "slug": "Lahore_Gulberg_Sterling_Residences",
+      "id": 12660
+    },
+    "Gulberg Zafar Ali Road": {
+      "slug": "Lahore_Gulberg_Zafar_Ali_Road",
+      "id": 154
+    },
+    "Gulberg Zahoor Elahi Road": {
+      "slug": "Lahore_Gulberg_Zahoor_Elahi_Road",
+      "id": 3851
+    },
+    "Gulshan e Ahbab": {
+      "slug": "Lahore_Gulshan_e_Ahbab",
+      "id": 1104
+    },
+    "Gulshan e Lahore": {
+      "slug": "Lahore_Gulshan_e_Lahore",
+      "id": 498
+    },
+    "Gulshan e Ravi": {
+      "slug": "Lahore_Gulshan_e_Ravi",
+      "id": 893
+    },
+    "Gulshan e Ravi Block A": {
+      "slug": "Lahore_Gulshan_e_Ravi_Block_A",
+      "id": 3860
+    },
+    "Gulshan e Ravi Block C": {
+      "slug": "Lahore_Gulshan_e_Ravi_Block_C",
+      "id": 3862
+    },
+    "Gulshan e Ravi Block E": {
+      "slug": "Lahore_Gulshan_e_Ravi_Block_E",
+      "id": 3866
+    },
+    "Gulshan e Ravi Block F": {
+      "slug": "Lahore_Gulshan_e_Ravi_Block_F",
+      "id": 3867
+    },
+    "Gulshan e Ravi Block G": {
+      "slug": "Lahore_Gulshan_e_Ravi_Block_G",
+      "id": 3868
+    },
+    "Gulshan e Ravi Block H": {
+      "slug": "Lahore_Gulshan_e_Ravi_Block_H",
+      "id": 3869
+    },
+    "HBFC Housing Society": {
+      "slug": "Lahore_HBFC_Housing_Society",
+      "id": 1718
+    },
+    "Highcourt Society": {
+      "slug": "Lahore_Highcourt_Society",
+      "id": 3101
+    },
+    "IEP Engineers Town": {
+      "slug": "Lahore_IEP_Engineers_Town",
+      "id": 8425
+    },
+    "IEP Engineers Town IEP Engineers Town   Palm Garden": {
+      "slug": "Lahore_IEP_Engineers_Town_IEP_Engineers_Town___Palm_Garden",
+      "id": 16470
+    },
+    "IEP Engineers Town IEP Engineers Town   Sector A": {
+      "slug": "Lahore_IEP_Engineers_Town_IEP_Engineers_Town___Sector_A",
+      "id": 614
+    },
+    "Ichhra": {
+      "slug": "Lahore_Ichhra",
+      "id": 88
+    },
+    "Icon Valley": {
+      "slug": "Lahore_Icon_Valley",
+      "id": 17703
+    },
+    "Iqbal Avenue": {
+      "slug": "Lahore_Iqbal_Avenue",
+      "id": 1269
+    },
+    "Iqbal Park": {
+      "slug": "Lahore_Iqbal_Park",
+      "id": 513
+    },
+    "Izmir Town": {
+      "slug": "Lahore_Izmir_Town",
+      "id": 483
+    },
+    "Izmir Town Block B": {
+      "slug": "Lahore_Izmir_Town_Block_B",
+      "id": 3918
+    },
+    "Izmir Town Block L": {
+      "slug": "Lahore_Izmir_Town_Block_L",
+      "id": 3927
+    },
+    "Izmir Town Block P": {
+      "slug": "Lahore_Izmir_Town_Block_P",
+      "id": 3930
+    },
+    "Izmir Town Block Q": {
+      "slug": "Lahore_Izmir_Town_Block_Q",
+      "id": 3931
+    },
+    "Jail Road": {
+      "slug": "Lahore_Jail_Road",
+      "id": 528
+    },
+    "Johar Town": {
+      "slug": "Lahore_Johar_Town",
+      "id": 93
+    },
+    "Johar Town Phase 1": {
+      "slug": "Lahore_Johar_Town_Phase_1",
+      "id": 3937
+    },
+    "Johar Town Phase 2": {
+      "slug": "Lahore_Johar_Town_Phase_2",
+      "id": 3961
+    },
+    "Jubilee Town": {
+      "slug": "Lahore_Jubilee_Town",
+      "id": 766
+    },
+    "Jubilee Town Block A": {
+      "slug": "Lahore_Jubilee_Town_Block_A",
+      "id": 3985
+    },
+    "Jubilee Town Block B": {
+      "slug": "Lahore_Jubilee_Town_Block_B",
+      "id": 3986
+    },
+    "Jubilee Town Block C": {
+      "slug": "Lahore_Jubilee_Town_Block_C",
+      "id": 3987
+    },
+    "Jubilee Town Block D": {
+      "slug": "Lahore_Jubilee_Town_Block_D",
+      "id": 3988
+    },
+    "Jubilee Town Block E": {
+      "slug": "Lahore_Jubilee_Town_Block_E",
+      "id": 3989
+    },
+    "Jubilee Town Block F": {
+      "slug": "Lahore_Jubilee_Town_Block_F",
+      "id": 3990
+    },
+    "Jubilee Town Palm Villas": {
+      "slug": "Lahore_Jubilee_Town_Palm_Villas",
+      "id": 11086
+    },
+    "Judicial Colony": {
+      "slug": "Lahore_Judicial_Colony",
+      "id": 1684
+    },
+    "Khayaban e Amin": {
+      "slug": "Lahore_Khayaban_e_Amin",
+      "id": 1514
+    },
+    "Khayaban e Amin Khayaban e Amin   Block A": {
+      "slug": "Lahore_Khayaban_e_Amin_Khayaban_e_Amin___Block_A",
+      "id": 8200
+    },
+    "Khayaban e Amin Khayaban e Amin   Block C": {
+      "slug": "Lahore_Khayaban_e_Amin_Khayaban_e_Amin___Block_C",
+      "id": 8202
+    },
+    "Khayaban e Amin Khayaban e Amin   Block G": {
+      "slug": "Lahore_Khayaban_e_Amin_Khayaban_e_Amin___Block_G",
+      "id": 14336
+    },
+    "Khayaban e Amin Khayaban e Amin   Block L": {
+      "slug": "Lahore_Khayaban_e_Amin_Khayaban_e_Amin___Block_L",
+      "id": 8357
+    },
+    "Khayaban e Amin Khayaban e Amin   Block M": {
+      "slug": "Lahore_Khayaban_e_Amin_Khayaban_e_Amin___Block_M",
+      "id": 10326
+    },
+    "Khayaban e Amin Khayaban e Amin   Block N": {
+      "slug": "Lahore_Khayaban_e_Amin_Khayaban_e_Amin___Block_N",
+      "id": 10604
+    },
+    "Khayaban e Amin Khayaban e Amin   Block P": {
+      "slug": "Lahore_Khayaban_e_Amin_Khayaban_e_Amin___Block_P",
+      "id": 10327
+    },
+    "Khayaban e Amin Khayaban e Amin   Block Q": {
+      "slug": "Lahore_Khayaban_e_Amin_Khayaban_e_Amin___Block_Q",
+      "id": 10328
+    },
+    "LDA Avenue": {
+      "slug": "Lahore_LDA_Avenue",
+      "id": 547
+    },
+    "LDA Avenue LDA Avenue   Block A": {
+      "slug": "Lahore_LDA_Avenue_LDA_Avenue___Block_A",
+      "id": 8159
+    },
+    "LDA Avenue LDA Avenue   Block B": {
+      "slug": "Lahore_LDA_Avenue_LDA_Avenue___Block_B",
+      "id": 8160
+    },
+    "LDA Avenue LDA Avenue   Block C": {
+      "slug": "Lahore_LDA_Avenue_LDA_Avenue___Block_C",
+      "id": 8161
+    },
+    "LDA Avenue LDA Avenue   Block D": {
+      "slug": "Lahore_LDA_Avenue_LDA_Avenue___Block_D",
+      "id": 8162
+    },
+    "LDA Avenue LDA Avenue   Block F": {
+      "slug": "Lahore_LDA_Avenue_LDA_Avenue___Block_F",
+      "id": 8164
+    },
+    "LDA Avenue LDA Avenue   Block G": {
+      "slug": "Lahore_LDA_Avenue_LDA_Avenue___Block_G",
+      "id": 8165
+    },
+    "LDA Avenue LDA Avenue   Block H": {
+      "slug": "Lahore_LDA_Avenue_LDA_Avenue___Block_H",
+      "id": 8166
+    },
+    "LDA Avenue LDA Avenue   Block J": {
+      "slug": "Lahore_LDA_Avenue_LDA_Avenue___Block_J",
+      "id": 8167
+    },
+    "LDA Avenue LDA Avenue   Block M": {
+      "slug": "Lahore_LDA_Avenue_LDA_Avenue___Block_M",
+      "id": 8170
+    },
+    "Labor Colony": {
+      "slug": "Lahore_Labor_Colony",
+      "id": 10932
+    },
+    "Lalazaar Garden": {
+      "slug": "Lahore_Lalazaar_Garden",
+      "id": 9996
+    },
+    "Land Breeze Housing Society": {
+      "slug": "Lahore_Land_Breeze_Housing_Society",
+      "id": 9784
+    },
+    "Lawrence Road": {
+      "slug": "Lahore_Lawrence_Road",
+      "id": 8288
+    },
+    "Main Canal Bank Road": {
+      "slug": "Lahore_Main_Canal_Bank_Road",
+      "id": 431
+    },
+    "Main Canal Bank Road Canal Valley": {
+      "slug": "Lahore_Main_Canal_Bank_Road_Canal_Valley",
+      "id": 13296
+    },
+    "Main Canal Bank Road Nespak Housing Scheme": {
+      "slug": "Lahore_Main_Canal_Bank_Road_Nespak_Housing_Scheme",
+      "id": 571
+    },
+    "Main Canal Bank Road Palm Villas": {
+      "slug": "Lahore_Main_Canal_Bank_Road_Palm_Villas",
+      "id": 20965
+    },
+    "Main Canal Bank Road Sheranwala Heights": {
+      "slug": "Lahore_Main_Canal_Bank_Road_Sheranwala_Heights",
+      "id": 9281
+    },
+    "Main Canal Bank Road Union Livings": {
+      "slug": "Lahore_Main_Canal_Bank_Road_Union_Livings",
+      "id": 18404
+    },
+    "Main Canal Road The Spring Apartment Homes": {
+      "slug": "Lahore_Main_Canal_Road_The_Spring_Apartment_Homes",
+      "id": 10099
+    },
+    "Mall Road": {
+      "slug": "Lahore_Mall_Road",
+      "id": 107
+    },
+    "Marghzar Officers Colony": {
+      "slug": "Lahore_Marghzar_Officers_Colony",
+      "id": 1047
+    },
+    "Maulana Shaukat Ali Road": {
+      "slug": "Lahore_Maulana_Shaukat_Ali_Road",
+      "id": 9866
+    },
+    "Medical Housing Society": {
+      "slug": "Lahore_Medical_Housing_Society",
+      "id": 4359
+    },
+    "Military Accounts Housing Society": {
+      "slug": "Lahore_Military_Accounts_Housing_Society",
+      "id": 781
+    },
+    "Military Accounts Society Block A": {
+      "slug": "Lahore_Military_Accounts_Society_Block_A",
+      "id": 4030
+    },
+    "Military Accounts Society Block B": {
+      "slug": "Lahore_Military_Accounts_Society_Block_B",
+      "id": 4031
+    },
+    "Military Accounts Society Block C": {
+      "slug": "Lahore_Military_Accounts_Society_Block_C",
+      "id": 4032
+    },
+    "Model Town": {
+      "slug": "Lahore_Model_Town",
+      "id": 8
+    },
+    "Model Town Block F": {
+      "slug": "Lahore_Model_Town_Block_F",
+      "id": 1552
+    },
+    "Model Town Block L": {
+      "slug": "Lahore_Model_Town_Block_L",
+      "id": 4037
+    },
+    "Model Town Block M": {
+      "slug": "Lahore_Model_Town_Block_M",
+      "id": 4038
+    },
+    "Model Town Model Town   Block C": {
+      "slug": "Lahore_Model_Town_Model_Town___Block_C",
+      "id": 1549
+    },
+    "Model Town Model Town   Block D": {
+      "slug": "Lahore_Model_Town_Model_Town___Block_D",
+      "id": 1550
+    },
+    "Model Town Model Town   Block E": {
+      "slug": "Lahore_Model_Town_Model_Town___Block_E",
+      "id": 1551
+    },
+    "Model Town Model Town   Block G": {
+      "slug": "Lahore_Model_Town_Model_Town___Block_G",
+      "id": 1553
+    },
+    "Model Town Model Town   Block H": {
+      "slug": "Lahore_Model_Town_Model_Town___Block_H",
+      "id": 1554
+    },
+    "Model Town Model Town   Block J": {
+      "slug": "Lahore_Model_Town_Model_Town___Block_J",
+      "id": 1555
+    },
+    "Model Town Model Town   Block K": {
+      "slug": "Lahore_Model_Town_Model_Town___Block_K",
+      "id": 1556
+    },
+    "Model Town Model Town   Block Q": {
+      "slug": "Lahore_Model_Town_Model_Town___Block_Q",
+      "id": 4042
+    },
+    "Model Town Model Town   Block R": {
+      "slug": "Lahore_Model_Town_Model_Town___Block_R",
+      "id": 4043
+    },
+    "Model Town Model Town Extension": {
+      "slug": "Lahore_Model_Town_Model_Town_Extension",
+      "id": 17704
+    },
+    "Model Town Model Town Link Road": {
+      "slug": "Lahore_Model_Town_Model_Town_Link_Road",
+      "id": 3086
+    },
+    "Mohafiz Town": {
+      "slug": "Lahore_Mohafiz_Town",
+      "id": 757
+    },
+    "Muslim Town": {
+      "slug": "Lahore_Muslim_Town",
+      "id": 326
+    },
+    "Mustafa Town": {
+      "slug": "Lahore_Mustafa_Town",
+      "id": 325
+    },
+    "NFC 1": {
+      "slug": "Lahore_NFC_1",
+      "id": 4083
+    },
+    "NFC 1 Block B  SW ": {
+      "slug": "Lahore_NFC_1_Block_B__SW_",
+      "id": 4085
+    },
+    "NFC 1 Block C  NE ": {
+      "slug": "Lahore_NFC_1_Block_C__NE_",
+      "id": 4086
+    },
+    "NFC 1 Block D  SE ": {
+      "slug": "Lahore_NFC_1_Block_D__SE_",
+      "id": 4087
+    },
+    "Nasheman e Iqbal": {
+      "slug": "Lahore_Nasheman_e_Iqbal",
+      "id": 499
+    },
+    "Nasheman e Iqbal Nasheman e Iqbal Phase 1": {
+      "slug": "Lahore_Nasheman_e_Iqbal_Nasheman_e_Iqbal_Phase_1",
+      "id": 4070
+    },
+    "Nasheman e Iqbal Phase 2": {
+      "slug": "Lahore_Nasheman_e_Iqbal_Phase_2",
+      "id": 4071
+    },
+    "Nawab Town": {
+      "slug": "Lahore_Nawab_Town",
+      "id": 4424
+    },
+    "Nawab Town ARK Villas": {
+      "slug": "Lahore_Nawab_Town_ARK_Villas",
+      "id": 9943
+    },
+    "Nawab Town Nawab Town   Block B": {
+      "slug": "Lahore_Nawab_Town_Nawab_Town___Block_B",
+      "id": 14882
+    },
+    "Nawab Town Nawab Town   Block C": {
+      "slug": "Lahore_Nawab_Town_Nawab_Town___Block_C",
+      "id": 14883
+    },
+    "Nawab Town Nawab Town   Block D": {
+      "slug": "Lahore_Nawab_Town_Nawab_Town___Block_D",
+      "id": 14884
+    },
+    "New City": {
+      "slug": "Lahore_New_Lahore_City",
+      "id": 8152
+    },
+    "New Garden Town": {
+      "slug": "Lahore_New_Garden_Town",
+      "id": 16690
+    },
+    "New Muslim Town": {
+      "slug": "Lahore_New_Muslim_Town",
+      "id": 469
+    },
+    "New Super Town": {
+      "slug": "Lahore_New_Super_Town",
+      "id": 520
+    },
+    "OPF Housing Scheme": {
+      "slug": "Lahore_OPF_Housing_Scheme",
+      "id": 637
+    },
+    "OPF Housing Scheme OPF Housing Scheme   Block A": {
+      "slug": "Lahore_OPF_Housing_Scheme_OPF_Housing_Scheme___Block_A",
+      "id": 9021
+    },
+    "OPF Housing Scheme OPF Housing Scheme   Block C": {
+      "slug": "Lahore_OPF_Housing_Scheme_OPF_Housing_Scheme___Block_C",
+      "id": 9022
+    },
+    "P   D Housing Society": {
+      "slug": "Lahore_P___D_Housing_Society",
+      "id": 1456
+    },
+    "PAF Colony": {
+      "slug": "Lahore_PAF_Colony",
+      "id": 14024
+    },
+    "PCSIR Housing Scheme": {
+      "slug": "Lahore_PCSIR_Housing_Scheme",
+      "id": 450
+    },
+    "PCSIR Staff Colony": {
+      "slug": "Lahore_PCSIR_Staff_Colony",
+      "id": 4573
+    },
+    "PIA Housing Scheme": {
+      "slug": "Lahore_PIA_Housing_Scheme",
+      "id": 444
+    },
+    "PIA Housing Scheme Block B": {
+      "slug": "Lahore_PIA_Housing_Scheme_Block_B",
+      "id": 4144
+    },
+    "PIA Housing Scheme Block B1": {
+      "slug": "Lahore_PIA_Housing_Scheme_Block_B1",
+      "id": 4145
+    },
+    "PIA Housing Scheme Block C": {
+      "slug": "Lahore_PIA_Housing_Scheme_Block_C",
+      "id": 4146
+    },
+    "PIA Housing Scheme Block D": {
+      "slug": "Lahore_PIA_Housing_Scheme_Block_D",
+      "id": 4147
+    },
+    "PIA Housing Scheme Block F": {
+      "slug": "Lahore_PIA_Housing_Scheme_Block_F",
+      "id": 4149
+    },
+    "Pak Arab Housing Society": {
+      "slug": "Lahore_Pak_Arab_Housing_Society",
+      "id": 1006
+    },
+    "Pak Arab Housing Society Pak Arab Housing Society Phase 1": {
+      "slug": "Lahore_Pak_Arab_Housing_Society_Pak_Arab_Housing_Society_Phase_1",
+      "id": 8246
+    },
+    "Pak Arab Housing Society Pak Arab Housing Society Phase 2": {
+      "slug": "Lahore_Pak_Arab_Housing_Society_Pak_Arab_Housing_Society_Phase_2",
+      "id": 8247
+    },
+    "Paragon City": {
+      "slug": "Lahore_Paragon_City",
+      "id": 1014
+    },
+    "Paragon City Grove Block": {
+      "slug": "Lahore_Paragon_City_Grove_Block",
+      "id": 4118
+    },
+    "Paragon City Imperial Garden Homes": {
+      "slug": "Lahore_Paragon_City_Imperial_Garden_Homes",
+      "id": 4119
+    },
+    "Paragon City Orchard Block": {
+      "slug": "Lahore_Paragon_City_Orchard_Block",
+      "id": 4113
+    },
+    "Paragon City Paragon City   Imperial 2 Block": {
+      "slug": "Lahore_Paragon_City_Paragon_City___Imperial_2_Block",
+      "id": 9247
+    },
+    "Paragon City Paragon City   Imperial Block": {
+      "slug": "Lahore_Paragon_City_Paragon_City___Imperial_Block",
+      "id": 9245
+    },
+    "Paragon City Paragon City   Orchard 1 Block": {
+      "slug": "Lahore_Paragon_City_Paragon_City___Orchard_1_Block",
+      "id": 9249
+    },
+    "Paragon City Woods Block": {
+      "slug": "Lahore_Paragon_City_Woods_Block",
+      "id": 4114
+    },
+    "Park View City": {
+      "slug": "Lahore_Park_View_City",
+      "id": 1466
+    },
+    "Park View City Park View City   Crystal Block": {
+      "slug": "Lahore_Park_View_City_Park_View_City___Crystal_Block",
+      "id": 17960
+    },
+    "Park View City Park View City   Diamond Block": {
+      "slug": "Lahore_Park_View_City_Park_View_City___Diamond_Block",
+      "id": 17433
+    },
+    "Park View City Park View City   Executive Block": {
+      "slug": "Lahore_Park_View_City_Park_View_City___Executive_Block",
+      "id": 17598
+    },
+    "Park View City Park View City   Jade Block": {
+      "slug": "Lahore_Park_View_City_Park_View_City___Jade_Block",
+      "id": 4135
+    },
+    "Park View City Park View City   Platinum Block": {
+      "slug": "Lahore_Park_View_City_Park_View_City___Platinum_Block",
+      "id": 16617
+    },
+    "Park View City Park View City   Rose Block": {
+      "slug": "Lahore_Park_View_City_Park_View_City___Rose_Block",
+      "id": 13322
+    },
+    "Park View City Park View City   Topaz Block": {
+      "slug": "Lahore_Park_View_City_Park_View_City___Topaz_Block",
+      "id": 4137
+    },
+    "Park View City Park View City   Tulip Block": {
+      "slug": "Lahore_Park_View_City_Park_View_City___Tulip_Block",
+      "id": 8465
+    },
+    "Park View City Park View City   Tulip Extension Block": {
+      "slug": "Lahore_Park_View_City_Park_View_City___Tulip_Extension_Block",
+      "id": 16719
+    },
+    "Park View City Park View City   Tulip Overseas": {
+      "slug": "Lahore_Park_View_City_Park_View_City___Tulip_Overseas",
+      "id": 13754
+    },
+    "Pico Road": {
+      "slug": "Lahore_Pico_Road",
+      "id": 21483
+    },
+    "Punjab Co operative Housing Society": {
+      "slug": "Lahore_Punjab_Co_operative_Housing_Society",
+      "id": 456
+    },
+    "Punjab Coop Housing Society Punjab Coop Housing   Block B": {
+      "slug": "Lahore_Punjab_Coop_Housing_Society_Punjab_Coop_Housing___Block_B",
+      "id": 4152
+    },
+    "Punjab Coop Housing Society Punjab Coop Housing   Block C": {
+      "slug": "Lahore_Punjab_Coop_Housing_Society_Punjab_Coop_Housing___Block_C",
+      "id": 4153
+    },
+    "Punjab Coop Housing Society Punjab Coop Housing   Block D": {
+      "slug": "Lahore_Punjab_Coop_Housing_Society_Punjab_Coop_Housing___Block_D",
+      "id": 4154
+    },
+    "Punjab Coop Housing Society Punjab Coop Housing   Block E": {
+      "slug": "Lahore_Punjab_Coop_Housing_Society_Punjab_Coop_Housing___Block_E",
+      "id": 4155
+    },
+    "Punjab Govt Employees Society": {
+      "slug": "Lahore_Punjab_Govt_Employees_Society",
+      "id": 4430
+    },
+    "Punjab Govt Employees Society PGECHS Phase 1": {
+      "slug": "Lahore_Punjab_Govt_Employees_Society_PGECHS_Phase_1",
+      "id": 4431
+    },
+    "Punjab Govt Employees Society PGECHS Phase 2": {
+      "slug": "Lahore_Punjab_Govt_Employees_Society_PGECHS_Phase_2",
+      "id": 4432
+    },
+    "Punjab Small Industries Colony": {
+      "slug": "Lahore_Punjab_Small_Industries_Colony",
+      "id": 4420
+    },
+    "Punjab Small Industries Colony Punjab Small Industries Colony   Block A": {
+      "slug": "Lahore_Punjab_Small_Industries_Colony_Punjab_Small_Industries_Colony___Block_A",
+      "id": 16353
+    },
+    "Punjab Small Industries Colony Punjab Small Industries Colony   Block B": {
+      "slug": "Lahore_Punjab_Small_Industries_Colony_Punjab_Small_Industries_Colony___Block_B",
+      "id": 16354
+    },
+    "Punjab University Employees Society": {
+      "slug": "Lahore_Punjab_University_Employees_Society",
+      "id": 4569
+    },
+    "Punjab University Employees Society Punjab University Society Phase 2": {
+      "slug": "Lahore_Punjab_University_Employees_Society_Punjab_University_Society_Phase_2",
+      "id": 12804
+    },
+    "Rail Town  Canal City ": {
+      "slug": "Lahore_Rail_Town__Canal_City_",
+      "id": 1460
+    },
+    "Raiwind Road": {
+      "slug": "Lahore_Raiwind_Road",
+      "id": 128
+    },
+    "Raiwind Road AWT Army Welfare Trust": {
+      "slug": "Lahore_Raiwind_Road_AWT_Army_Welfare_Trust",
+      "id": 408
+    },
+    "Raiwind Road Al Kabir Town": {
+      "slug": "Lahore_Raiwind_Road_Al_Kabir_Town",
+      "id": 11433
+    },
+    "Raiwind Road Ali Raza Abad": {
+      "slug": "Lahore_Raiwind_Road_Ali_Raza_Abad",
+      "id": 20823
+    },
+    "Raiwind Road Etihad Town": {
+      "slug": "Lahore_Raiwind_Road_Etihad_Town",
+      "id": 11895
+    },
+    "Raiwind Road Icon Valley Phase 1": {
+      "slug": "Lahore_Raiwind_Road_Icon_Valley_Phase_1",
+      "id": 8469
+    },
+    "Raiwind Road Icon Valley Phase 2": {
+      "slug": "Lahore_Raiwind_Road_Icon_Valley_Phase_2",
+      "id": 12610
+    },
+    "Raiwind Road J Heights": {
+      "slug": "Lahore_Raiwind_Road_J_Heights",
+      "id": 18413
+    },
+    "Raiwind Road Lake City": {
+      "slug": "Lahore_Raiwind_Road_Lake_City",
+      "id": 1103
+    },
+    "Raiwind Road Sky View Town": {
+      "slug": "Lahore_Raiwind_Road_Sky_View_Town",
+      "id": 22033
+    },
+    "Real Cottages": {
+      "slug": "Lahore_Real_Cottages",
+      "id": 4419
+    },
+    "Sabzazar Scheme": {
+      "slug": "Lahore_Sabzazar_Scheme",
+      "id": 562
+    },
+    "Sabzazar Scheme Block E": {
+      "slug": "Lahore_Sabzazar_Scheme_Block_E",
+      "id": 4168
+    },
+    "Sabzazar Scheme Block G": {
+      "slug": "Lahore_Sabzazar_Scheme_Block_G",
+      "id": 4170
+    },
+    "Sabzazar Scheme Block J": {
+      "slug": "Lahore_Sabzazar_Scheme_Block_J",
+      "id": 4173
+    },
+    "Sabzazar Scheme Block K": {
+      "slug": "Lahore_Sabzazar_Scheme_Block_K",
+      "id": 4174
+    },
+    "Sabzazar Scheme Block N": {
+      "slug": "Lahore_Sabzazar_Scheme_Block_N",
+      "id": 4177
+    },
+    "Sabzazar Scheme Block P": {
+      "slug": "Lahore_Sabzazar_Scheme_Block_P",
+      "id": 4178
+    },
+    "Sadaat Town": {
+      "slug": "Lahore_Sadaat_Town",
+      "id": 4421
+    },
+    "Samanabad": {
+      "slug": "Lahore_Samanabad",
+      "id": 377
+    },
+    "Samanabad Block N": {
+      "slug": "Lahore_Samanabad_Block_N",
+      "id": 4183
+    },
+    "Shadab Garden": {
+      "slug": "Lahore_Shadab_Garden",
+      "id": 4451
+    },
+    "Shadman": {
+      "slug": "Lahore_Shadman",
+      "id": 15803
+    },
+    "Shah Jamal": {
+      "slug": "Lahore_Shah_Jamal",
+      "id": 1491
+    },
+    "Shanghai Road": {
+      "slug": "Lahore_Shanghai_Road",
+      "id": 12334
+    },
+    "Shanghai Road Defence View Apartments": {
+      "slug": "Lahore_Shanghai_Road_Defence_View_Apartments",
+      "id": 12643
+    },
+    "State Life Housing Phase 1": {
+      "slug": "Lahore_State_Life_Housing_Phase_1",
+      "id": 4190
+    },
+    "State Life Housing Society": {
+      "slug": "Lahore_State_Life_Housing_Society",
+      "id": 487
+    },
+    "Sue e Asal": {
+      "slug": "Lahore_Sue_e_Asal",
+      "id": 8287
+    },
+    "Sui Gas Housing Society": {
+      "slug": "Lahore_Sui_Gas_Housing_Society",
+      "id": 446
+    },
+    "Sui Gas Society Phase 1": {
+      "slug": "Lahore_Sui_Gas_Society_Phase_1",
+      "id": 4210
+    },
+    "Sui Northern Gas Housing Society Sui Gas Society Phase 2": {
+      "slug": "Lahore_Sui_Northern_Gas_Housing_Society_Sui_Gas_Society_Phase_2",
+      "id": 4218
+    },
+    "Sukh Chayn Gardens": {
+      "slug": "Lahore_Sukh_Chayn_Gardens",
+      "id": 473
+    },
+    "Super Town": {
+      "slug": "Lahore_Super_Town",
+      "id": 8504
+    },
+    "Tariq Gardens": {
+      "slug": "Lahore_Tariq_Gardens",
+      "id": 1356
+    },
+    "Tarogill": {
+      "slug": "Lahore_Tarogill",
+      "id": 10796
+    },
+    "Tech Society": {
+      "slug": "Lahore_Tech_Society",
+      "id": 417
+    },
+    "Thokar Niaz Baig": {
+      "slug": "Lahore_Thokar_Niaz_Baig",
+      "id": 145
+    },
+    "Town Ship": {
+      "slug": "Lahore_Town_Ship",
+      "id": 146
+    },
+    "Township Sector A2": {
+      "slug": "Lahore_Township_Sector_A2",
+      "id": 4255
+    },
+    "Township Sector B1": {
+      "slug": "Lahore_Township_Sector_B1",
+      "id": 4256
+    },
+    "Township Sector B2": {
+      "slug": "Lahore_Township_Sector_B2",
+      "id": 4257
+    },
+    "Township Sector C2": {
+      "slug": "Lahore_Township_Sector_C2",
+      "id": 4259
+    },
+    "Township Township   Sector A1": {
+      "slug": "Lahore_Township_Township___Sector_A1",
+      "id": 4254
+    },
+    "Township Township   Sector C1": {
+      "slug": "Lahore_Township_Township___Sector_C1",
+      "id": 4258
+    },
+    "UET Housing Society": {
+      "slug": "Lahore_UET_Housing_Society",
+      "id": 615
+    },
+    "Upper Mall": {
+      "slug": "Lahore_Upper_Mall",
+      "id": 514
+    },
+    "Valencia Housing Society": {
+      "slug": "Lahore_Valencia_Housing_Society",
+      "id": 373
+    },
+    "Valencia Housing Society Valencia   Block A1": {
+      "slug": "Lahore_Valencia_Housing_Society_Valencia___Block_A1",
+      "id": 4268
+    },
+    "Valencia Housing Society Valencia   Block A3": {
+      "slug": "Lahore_Valencia_Housing_Society_Valencia___Block_A3",
+      "id": 4270
+    },
+    "Valencia Housing Society Valencia   Block E": {
+      "slug": "Lahore_Valencia_Housing_Society_Valencia___Block_E",
+      "id": 4275
+    },
+    "Valencia Housing Society Valencia   Block E1": {
+      "slug": "Lahore_Valencia_Housing_Society_Valencia___Block_E1",
+      "id": 4276
+    },
+    "Valencia Housing Society Valencia   Block H": {
+      "slug": "Lahore_Valencia_Housing_Society_Valencia___Block_H",
+      "id": 4280
+    },
+    "Valencia Housing Society Valencia   Block J1": {
+      "slug": "Lahore_Valencia_Housing_Society_Valencia___Block_J1",
+      "id": 4283
+    },
+    "Valencia Housing Society Valencia   Block P1": {
+      "slug": "Lahore_Valencia_Housing_Society_Valencia___Block_P1",
+      "id": 4291
+    },
+    "Venus Housing Scheme": {
+      "slug": "Lahore_Venus_Housing_Scheme",
+      "id": 4562
+    },
+    "Vital Homes Housing Scheme": {
+      "slug": "Lahore_Vital_Homes_Housing_Scheme",
+      "id": 9461
+    },
+    "Wagha Town": {
+      "slug": "Lahore_Wagha_Town",
+      "id": 14063
+    },
+    "Walton Railway Officers Colony": {
+      "slug": "Lahore_Walton_Railway_Officers_Colony",
+      "id": 4469
+    },
+    "Walton Road": {
+      "slug": "Lahore_Walton_Road",
+      "id": 153
+    },
+    "Wapda Town": {
+      "slug": "Lahore_Wapda_Town",
+      "id": 423
+    },
+    "Wapda Town Wapda Town Phase 1": {
+      "slug": "Lahore_Wapda_Town_Wapda_Town_Phase_1",
+      "id": 4307
+    },
+    "Wapda Town Wapda Town Phase 2": {
+      "slug": "Lahore_Wapda_Town_Wapda_Town_Phase_2",
+      "id": 4330
+    }
+  },
+  "islamabad": {
+    "  Murree Expressway": {
+      "slug": "Islamabad_Islamabad___Murree_Expressway",
+      "id": 342
+    },
+    "AGHOSH": {
+      "slug": "Islamabad_AGHOSH",
+      "id": 1468
+    },
+    "Abdullah Garden": {
+      "slug": "Islamabad_Abdullah_Garden",
+      "id": 8373
+    },
+    "Axis Mall   Apartments": {
+      "slug": "Islamabad_Axis_Mall___Apartments",
+      "id": 12717
+    },
+    "B 17": {
+      "slug": "Islamabad_B_17",
+      "id": 616
+    },
+    "B 17 Capital Square": {
+      "slug": "Islamabad_B_17_Capital_Square",
+      "id": 11252
+    },
+    "B 17 Faisal Margalla City": {
+      "slug": "Islamabad_B_17_Faisal_Margalla_City",
+      "id": 13424
+    },
+    "B 17 MPCHS   Multi Gardens": {
+      "slug": "Islamabad_B_17_MPCHS___Multi_Gardens",
+      "id": 3115
+    },
+    "Bahria Town": {
+      "slug": "Islamabad_Bahria_Town",
+      "id": 383
+    },
+    "Bahria Town Bahria Enclave": {
+      "slug": "Islamabad_Bahria_Town_Bahria_Enclave",
+      "id": 1705
+    },
+    "Bahria Town Bahria Garden City": {
+      "slug": "Islamabad_Bahria_Town_Bahria_Garden_City",
+      "id": 8120
+    },
+    "Bani Gala": {
+      "slug": "Islamabad_Bani_Gala",
+      "id": 340
+    },
+    "Bani Gala Iqbal Heights": {
+      "slug": "Islamabad_Bani_Gala_Iqbal_Heights",
+      "id": 10935
+    },
+    "Bani Gala Lake View Lanes": {
+      "slug": "Islamabad_Bani_Gala_Lake_View_Lanes",
+      "id": 19698
+    },
+    "Bhara kahu": {
+      "slug": "Islamabad_Bhara_kahu",
+      "id": 156
+    },
+    "Blue Area": {
+      "slug": "Islamabad_Blue_Area",
+      "id": 157
+    },
+    "Blue Area Elysium Mall": {
+      "slug": "Islamabad_Blue_Area_Elysium_Mall",
+      "id": 10739
+    },
+    "Blue Area Mall of Islamabad": {
+      "slug": "Islamabad_Blue_Area_Mall_of_Islamabad",
+      "id": 17132
+    },
+    "C 17": {
+      "slug": "Islamabad_C_17",
+      "id": 10756
+    },
+    "CBR Town": {
+      "slug": "Islamabad_CBR_Town",
+      "id": 1219
+    },
+    "CBR Town Phase 1": {
+      "slug": "Islamabad_CBR_Town_Phase_1",
+      "id": 3147
+    },
+    "Canyon Views Prados": {
+      "slug": "Islamabad_Canyon_Views_Prados",
+      "id": 16298
+    },
+    "Capital Enclave": {
+      "slug": "Islamabad_Capital_Enclave",
+      "id": 8881
+    },
+    "Chak Shahzad": {
+      "slug": "Islamabad_Chak_Shahzad",
+      "id": 158
+    },
+    "Chak Shahzad Chak Shahzad Farms": {
+      "slug": "Islamabad_Chak_Shahzad_Chak_Shahzad_Farms",
+      "id": 20291
+    },
+    "Chatha Bakhtawar": {
+      "slug": "Islamabad_Chatha_Bakhtawar",
+      "id": 3153
+    },
+    "Club Road": {
+      "slug": "Islamabad_Club_Road",
+      "id": 1696
+    },
+    "Constitution Avenue": {
+      "slug": "Islamabad_Constitution_Avenue",
+      "id": 8284
+    },
+    "Constitution Avenue One Constitution Avenue": {
+      "slug": "Islamabad_Constitution_Avenue_One_Constitution_Avenue",
+      "id": 21856
+    },
+    "D 12": {
+      "slug": "Islamabad_D_12",
+      "id": 160
+    },
+    "D 12 D 12 1": {
+      "slug": "Islamabad_D_12_D_12_1",
+      "id": 3154
+    },
+    "D 12 D 12 2": {
+      "slug": "Islamabad_D_12_D_12_2",
+      "id": 3155
+    },
+    "D 12 D 12 3": {
+      "slug": "Islamabad_D_12_D_12_3",
+      "id": 3156
+    },
+    "D 12 D 12 4": {
+      "slug": "Islamabad_D_12_D_12_4",
+      "id": 3157
+    },
+    "D 12 Markaz": {
+      "slug": "Islamabad_D_12_Markaz",
+      "id": 3158
+    },
+    "D 17": {
+      "slug": "Islamabad_D_17",
+      "id": 737
+    },
+    "D 17 Margalla View Housing Society": {
+      "slug": "Islamabad_D_17_Margalla_View_Housing_Society",
+      "id": 3160
+    },
+    "D 17 Pine Heights Luxury Apartments": {
+      "slug": "Islamabad_D_17_Pine_Heights_Luxury_Apartments",
+      "id": 9684
+    },
+    "D 17 Pine Villas": {
+      "slug": "Islamabad_D_17_Pine_Villas",
+      "id": 21103
+    },
+    "D 18": {
+      "slug": "Islamabad_D_18",
+      "id": 1316
+    },
+    "DHA Defence": {
+      "slug": "Islamabad_DHA_Defence",
+      "id": 3188
+    },
+    "DHA Defence DHA Defence Phase 3": {
+      "slug": "Islamabad_DHA_Defence_DHA_Defence_Phase_3",
+      "id": 8412
+    },
+    "DHA Defence DHA Defence Phase 4": {
+      "slug": "Islamabad_DHA_Defence_DHA_Defence_Phase_4",
+      "id": 8413
+    },
+    "DHA Defence DHA Defence Phase 5": {
+      "slug": "Islamabad_DHA_Defence_DHA_Defence_Phase_5",
+      "id": 10991
+    },
+    "DHA Defence DHA Defence Phase 7": {
+      "slug": "Islamabad_DHA_Defence_DHA_Defence_Phase_7",
+      "id": 22460
+    },
+    "DHA Defence DHA Valley": {
+      "slug": "Islamabad_DHA_Defence_DHA_Valley",
+      "id": 1333
+    },
+    "DHA Defence Phase 1": {
+      "slug": "Islamabad_DHA_Defence_Phase_1",
+      "id": 376
+    },
+    "DHA Defence Phase 2": {
+      "slug": "Islamabad_DHA_Defence_Phase_2",
+      "id": 339
+    },
+    "Diplomatic Enclave": {
+      "slug": "Islamabad_Diplomatic_Enclave",
+      "id": 429
+    },
+    "Doctors Housing Society": {
+      "slug": "Islamabad_Doctors_Housing_Society",
+      "id": 10071
+    },
+    "E  7": {
+      "slug": "Islamabad_E__7",
+      "id": 343
+    },
+    "E 11": {
+      "slug": "Islamabad_E_11",
+      "id": 329
+    },
+    "E 11 Ahad Residences": {
+      "slug": "Islamabad_E_11_Ahad_Residences",
+      "id": 9920
+    },
+    "E 11 E 11 1": {
+      "slug": "Islamabad_E_11_E_11_1",
+      "id": 3230
+    },
+    "E 11 E 11 2": {
+      "slug": "Islamabad_E_11_E_11_2",
+      "id": 3233
+    },
+    "E 11 E 11 3": {
+      "slug": "Islamabad_E_11_E_11_3",
+      "id": 3238
+    },
+    "E 11 E 11 4": {
+      "slug": "Islamabad_E_11_E_11_4",
+      "id": 3241
+    },
+    "E 11 Madina Tower": {
+      "slug": "Islamabad_E_11_Madina_Tower",
+      "id": 11138
+    },
+    "E 11 Makkah Tower": {
+      "slug": "Islamabad_E_11_Makkah_Tower",
+      "id": 13376
+    },
+    "E 11 Margalla Hills 2": {
+      "slug": "Islamabad_E_11_Margalla_Hills_2",
+      "id": 9668
+    },
+    "E 12": {
+      "slug": "Islamabad_E_12",
+      "id": 161
+    },
+    "E 16": {
+      "slug": "Islamabad_E_16",
+      "id": 334
+    },
+    "E 17": {
+      "slug": "Islamabad_E_17",
+      "id": 1409
+    },
+    "E 18": {
+      "slug": "Islamabad_E_18",
+      "id": 332
+    },
+    "E 18 Gulshan e Sehat 1": {
+      "slug": "Islamabad_E_18_Gulshan_e_Sehat_1",
+      "id": 3258
+    },
+    "E 18 Gulshan e Sehat 2": {
+      "slug": "Islamabad_E_18_Gulshan_e_Sehat_2",
+      "id": 3266
+    },
+    "Emaar Canyon Views": {
+      "slug": "Islamabad_Emaar_Canyon_Views",
+      "id": 8370
+    },
+    "Emaar Canyon Views Emaar Canyon Views   Alma 1 Block": {
+      "slug": "Islamabad_Emaar_Canyon_Views_Emaar_Canyon_Views___Alma_1_Block",
+      "id": 16773
+    },
+    "Emaar Canyon Views Emaar Canyon Views   Meridian 2 Block": {
+      "slug": "Islamabad_Emaar_Canyon_Views_Emaar_Canyon_Views___Meridian_2_Block",
+      "id": 16778
+    },
+    "Emaar Canyon Views Emaar Canyon Views   Meridian Block": {
+      "slug": "Islamabad_Emaar_Canyon_Views_Emaar_Canyon_Views___Meridian_Block",
+      "id": 16780
+    },
+    "Expressway": {
+      "slug": "Islamabad_Islamabad_Expressway",
+      "id": 9014
+    },
+    "F 10": {
+      "slug": "Islamabad_F_10",
+      "id": 162
+    },
+    "F 10 F 10 1": {
+      "slug": "Islamabad_F_10_F_10_1",
+      "id": 3276
+    },
+    "F 10 F 10 2": {
+      "slug": "Islamabad_F_10_F_10_2",
+      "id": 3277
+    },
+    "F 10 F 10 3": {
+      "slug": "Islamabad_F_10_F_10_3",
+      "id": 3278
+    },
+    "F 10 F 10 4": {
+      "slug": "Islamabad_F_10_F_10_4",
+      "id": 3279
+    },
+    "F 10 Markaz": {
+      "slug": "Islamabad_F_10_Markaz",
+      "id": 3280
+    },
+    "F 10 Silver Oaks Apartments": {
+      "slug": "Islamabad_F_10_Silver_Oaks_Apartments",
+      "id": 11308
+    },
+    "F 10 Sukh Chayn Residence": {
+      "slug": "Islamabad_F_10_Sukh_Chayn_Residence",
+      "id": 13589
+    },
+    "F 11": {
+      "slug": "Islamabad_F_11",
+      "id": 163
+    },
+    "F 11 Executive Heights": {
+      "slug": "Islamabad_F_11_Executive_Heights",
+      "id": 10658
+    },
+    "F 11 F 11 1": {
+      "slug": "Islamabad_F_11_F_11_1",
+      "id": 3282
+    },
+    "F 11 F 11 2": {
+      "slug": "Islamabad_F_11_F_11_2",
+      "id": 3283
+    },
+    "F 11 F 11 3": {
+      "slug": "Islamabad_F_11_F_11_3",
+      "id": 3284
+    },
+    "F 11 F 11 4": {
+      "slug": "Islamabad_F_11_F_11_4",
+      "id": 3285
+    },
+    "F 11 Karakoram Enclave 2": {
+      "slug": "Islamabad_F_11_Karakoram_Enclave_2",
+      "id": 10899
+    },
+    "F 11 Markaz": {
+      "slug": "Islamabad_F_11_Markaz",
+      "id": 3286
+    },
+    "F 11 Park Avenue": {
+      "slug": "Islamabad_F_11_Park_Avenue",
+      "id": 10657
+    },
+    "F 11 Savoy Residence": {
+      "slug": "Islamabad_F_11_Savoy_Residence",
+      "id": 10656
+    },
+    "F 15": {
+      "slug": "Islamabad_F_15",
+      "id": 336
+    },
+    "F 15 F 15 1": {
+      "slug": "Islamabad_F_15_F_15_1",
+      "id": 3291
+    },
+    "F 15 F 15 Markaz": {
+      "slug": "Islamabad_F_15_F_15_Markaz",
+      "id": 14683
+    },
+    "F 17": {
+      "slug": "Islamabad_F_17",
+      "id": 335
+    },
+    "F 17 F 17 2": {
+      "slug": "Islamabad_F_17_F_17_2",
+      "id": 3293
+    },
+    "F 17 F 17 3": {
+      "slug": "Islamabad_F_17_F_17_3",
+      "id": 3294
+    },
+    "F 17 Tele Garden  T T ECHS ": {
+      "slug": "Islamabad_F_17_Tele_Garden__T_T_ECHS_",
+      "id": 12136
+    },
+    "F 6": {
+      "slug": "Islamabad_F_6",
+      "id": 164
+    },
+    "F 6 F 6 1": {
+      "slug": "Islamabad_F_6_F_6_1",
+      "id": 3299
+    },
+    "F 6 F 6 2": {
+      "slug": "Islamabad_F_6_F_6_2",
+      "id": 3300
+    },
+    "F 6 F 6 3": {
+      "slug": "Islamabad_F_6_F_6_3",
+      "id": 3301
+    },
+    "F 6 F 6 4": {
+      "slug": "Islamabad_F_6_F_6_4",
+      "id": 3302
+    },
+    "F 7": {
+      "slug": "Islamabad_F_7",
+      "id": 165
+    },
+    "F 7 F 7 1": {
+      "slug": "Islamabad_F_7_F_7_1",
+      "id": 3307
+    },
+    "F 7 F 7 2": {
+      "slug": "Islamabad_F_7_F_7_2",
+      "id": 3308
+    },
+    "F 7 F 7 3": {
+      "slug": "Islamabad_F_7_F_7_3",
+      "id": 3309
+    },
+    "F 7 F 7 4": {
+      "slug": "Islamabad_F_7_F_7_4",
+      "id": 3310
+    },
+    "F 7 Markaz": {
+      "slug": "Islamabad_F_7_Markaz",
+      "id": 3311
+    },
+    "F 8": {
+      "slug": "Islamabad_F_8",
+      "id": 166
+    },
+    "F 8 F 8 1": {
+      "slug": "Islamabad_F_8_F_8_1",
+      "id": 3314
+    },
+    "F 8 F 8 2": {
+      "slug": "Islamabad_F_8_F_8_2",
+      "id": 3315
+    },
+    "F 8 F 8 3": {
+      "slug": "Islamabad_F_8_F_8_3",
+      "id": 3316
+    },
+    "F 8 F 8 4": {
+      "slug": "Islamabad_F_8_F_8_4",
+      "id": 3317
+    },
+    "F 8 Markaz": {
+      "slug": "Islamabad_F_8_Markaz",
+      "id": 3318
+    },
+    "F 8 The Centaurus": {
+      "slug": "Islamabad_F_8_The_Centaurus",
+      "id": 8349
+    },
+    "FECHS": {
+      "slug": "Islamabad_FECHS",
+      "id": 3321
+    },
+    "FECHS Jinnah Gardens": {
+      "slug": "Islamabad_FECHS_Jinnah_Gardens",
+      "id": 1420
+    },
+    "Faisal Town   F 18": {
+      "slug": "Islamabad_Faisal_Town___F_18",
+      "id": 8260
+    },
+    "Faisal Town   F 18 Faisal Town Phase 1": {
+      "slug": "Islamabad_Faisal_Town___F_18_Faisal_Town_Phase_1",
+      "id": 16415
+    },
+    "Faisal Town   F 18 The Gate Mall   Apartments": {
+      "slug": "Islamabad_Faisal_Town___F_18_The_Gate_Mall___Apartments",
+      "id": 11456
+    },
+    "G  5": {
+      "slug": "Islamabad_G__5",
+      "id": 328
+    },
+    "G  6": {
+      "slug": "Islamabad_G__6",
+      "id": 169
+    },
+    "G  7": {
+      "slug": "Islamabad_G__7",
+      "id": 563
+    },
+    "G  8": {
+      "slug": "Islamabad_G__8",
+      "id": 170
+    },
+    "G 10": {
+      "slug": "Islamabad_G_10",
+      "id": 167
+    },
+    "G 10 G 10 1": {
+      "slug": "Islamabad_G_10_G_10_1",
+      "id": 3324
+    },
+    "G 10 G 10 2": {
+      "slug": "Islamabad_G_10_G_10_2",
+      "id": 3325
+    },
+    "G 10 G 10 3": {
+      "slug": "Islamabad_G_10_G_10_3",
+      "id": 3326
+    },
+    "G 10 G 10 4": {
+      "slug": "Islamabad_G_10_G_10_4",
+      "id": 3327
+    },
+    "G 10 Markaz": {
+      "slug": "Islamabad_G_10_Markaz",
+      "id": 3328
+    },
+    "G 11": {
+      "slug": "Islamabad_G_11",
+      "id": 168
+    },
+    "G 11 G 11 1": {
+      "slug": "Islamabad_G_11_G_11_1",
+      "id": 3330
+    },
+    "G 11 G 11 2": {
+      "slug": "Islamabad_G_11_G_11_2",
+      "id": 3331
+    },
+    "G 11 G 11 3": {
+      "slug": "Islamabad_G_11_G_11_3",
+      "id": 3332
+    },
+    "G 11 G 11 4": {
+      "slug": "Islamabad_G_11_G_11_4",
+      "id": 3333
+    },
+    "G 11 Markaz": {
+      "slug": "Islamabad_G_11_Markaz",
+      "id": 3334
+    },
+    "G 12": {
+      "slug": "Islamabad_G_12",
+      "id": 3336
+    },
+    "G 13": {
+      "slug": "Islamabad_G_13",
+      "id": 330
+    },
+    "G 13 G 13 1": {
+      "slug": "Islamabad_G_13_G_13_1",
+      "id": 3337
+    },
+    "G 13 G 13 2": {
+      "slug": "Islamabad_G_13_G_13_2",
+      "id": 3338
+    },
+    "G 13 G 13 3": {
+      "slug": "Islamabad_G_13_G_13_3",
+      "id": 3339
+    },
+    "G 13 G 13 4": {
+      "slug": "Islamabad_G_13_G_13_4",
+      "id": 3340
+    },
+    "G 13 Markaz": {
+      "slug": "Islamabad_G_13_Markaz",
+      "id": 3341
+    },
+    "G 14": {
+      "slug": "Islamabad_G_14",
+      "id": 454
+    },
+    "G 14 G 14 3": {
+      "slug": "Islamabad_G_14_G_14_3",
+      "id": 3345
+    },
+    "G 14 G 14 4": {
+      "slug": "Islamabad_G_14_G_14_4",
+      "id": 3346
+    },
+    "G 15": {
+      "slug": "Islamabad_G_15",
+      "id": 764
+    },
+    "G 15 G 15 1": {
+      "slug": "Islamabad_G_15_G_15_1",
+      "id": 3348
+    },
+    "G 15 G 15 2": {
+      "slug": "Islamabad_G_15_G_15_2",
+      "id": 3349
+    },
+    "G 15 G 15 3": {
+      "slug": "Islamabad_G_15_G_15_3",
+      "id": 3350
+    },
+    "G 15 G 15 4": {
+      "slug": "Islamabad_G_15_G_15_4",
+      "id": 3351
+    },
+    "G 15 Khayaban E Kashmir": {
+      "slug": "Islamabad_G_15_Khayaban_E_Kashmir",
+      "id": 11728
+    },
+    "G 15 Markaz": {
+      "slug": "Islamabad_G_15_Markaz",
+      "id": 3352
+    },
+    "G 15 Zarkon Heights": {
+      "slug": "Islamabad_G_15_Zarkon_Heights",
+      "id": 10169
+    },
+    "G 16": {
+      "slug": "Islamabad_G_16",
+      "id": 580
+    },
+    "G 16 G 16 4": {
+      "slug": "Islamabad_G_16_G_16_4",
+      "id": 3355
+    },
+    "G 16 G 163": {
+      "slug": "Islamabad_G_16_G_163",
+      "id": 9850
+    },
+    "G 6 G 6 1": {
+      "slug": "Islamabad_G_6_G_6_1",
+      "id": 3361
+    },
+    "G 6 G 6 2": {
+      "slug": "Islamabad_G_6_G_6_2",
+      "id": 3363
+    },
+    "G 6 G 6 3": {
+      "slug": "Islamabad_G_6_G_6_3",
+      "id": 3364
+    },
+    "G 8 G 8 1": {
+      "slug": "Islamabad_G_8_G_8_1",
+      "id": 3376
+    },
+    "G 8 G 8 2": {
+      "slug": "Islamabad_G_8_G_8_2",
+      "id": 3377
+    },
+    "G 8 Markaz": {
+      "slug": "Islamabad_G_8_Markaz",
+      "id": 3380
+    },
+    "G 9": {
+      "slug": "Islamabad_G_9",
+      "id": 171
+    },
+    "G 9 G 9 1": {
+      "slug": "Islamabad_G_9_G_9_1",
+      "id": 3384
+    },
+    "G 9 G 9 2": {
+      "slug": "Islamabad_G_9_G_9_2",
+      "id": 3385
+    },
+    "G 9 G 9 3": {
+      "slug": "Islamabad_G_9_G_9_3",
+      "id": 3386
+    },
+    "G 9 G 9 4": {
+      "slug": "Islamabad_G_9_G_9_4",
+      "id": 3387
+    },
+    "GT Road": {
+      "slug": "Islamabad_GT_Road",
+      "id": 3397
+    },
+    "GT Road El Cielo": {
+      "slug": "Islamabad_GT_Road_El_Cielo",
+      "id": 10358
+    },
+    "GT Road Minara Residence": {
+      "slug": "Islamabad_GT_Road_Minara_Residence",
+      "id": 9641
+    },
+    "GT Road The Crown Mall   Residency": {
+      "slug": "Islamabad_GT_Road_The_Crown_Mall___Residency",
+      "id": 21104
+    },
+    "GT Road Zeta 1 Mall": {
+      "slug": "Islamabad_GT_Road_Zeta_1_Mall",
+      "id": 16699
+    },
+    "Gandhara City": {
+      "slug": "Islamabad_Gandhara_City",
+      "id": 10738
+    },
+    "Ghauri Town": {
+      "slug": "Islamabad_Ghauri_Town",
+      "id": 1314
+    },
+    "Ghauri Town Ghauri Garden": {
+      "slug": "Islamabad_Ghauri_Town_Ghauri_Garden",
+      "id": 10660
+    },
+    "Ghauri Town Ghauri Town Phase 4 C1": {
+      "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_4_C1",
+      "id": 16229
+    },
+    "Ghauri Town Ghauri Town Phase 4A": {
+      "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_4A",
+      "id": 14956
+    },
+    "Ghauri Town Ghauri Town Phase 4B": {
+      "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_4B",
+      "id": 14964
+    },
+    "Ghauri Town Ghauri Town Phase 5A": {
+      "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_5A",
+      "id": 16786
+    },
+    "Ghauri Town Ghauri Town Phase 5B": {
+      "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_5B",
+      "id": 16419
+    },
+    "Ghauri Town Ghauri Town Phase 7": {
+      "slug": "Islamabad_Ghauri_Town_Ghauri_Town_Phase_7",
+      "id": 8245
+    },
+    "Ghauri Town Phase 1": {
+      "slug": "Islamabad_Ghauri_Town_Phase_1",
+      "id": 3390
+    },
+    "Ghauri Town Phase 3": {
+      "slug": "Islamabad_Ghauri_Town_Phase_3",
+      "id": 3393
+    },
+    "Ghauri Town Phase 5": {
+      "slug": "Islamabad_Ghauri_Town_Phase_5",
+      "id": 3395
+    },
+    "Green Avenue": {
+      "slug": "Islamabad_Green_Avenue",
+      "id": 8566
+    },
+    "Gulberg": {
+      "slug": "Islamabad_Gulberg",
+      "id": 1682
+    },
+    "Gulberg Gulberg Business Park": {
+      "slug": "Islamabad_Gulberg_Gulberg_Business_Park",
+      "id": 11451
+    },
+    "Gulberg Gulberg Business Square": {
+      "slug": "Islamabad_Gulberg_Gulberg_Business_Square",
+      "id": 11450
+    },
+    "Gulberg Gulberg Expressway": {
+      "slug": "Islamabad_Gulberg_Gulberg_Expressway",
+      "id": 21096
+    },
+    "Gulberg Gulberg Greens": {
+      "slug": "Islamabad_Gulberg_Gulberg_Greens",
+      "id": 8312
+    },
+    "Gulberg Gulberg Residencia": {
+      "slug": "Islamabad_Gulberg_Gulberg_Residencia",
+      "id": 8319
+    },
+    "H 13": {
+      "slug": "Islamabad_H_13",
+      "id": 1039
+    },
+    "I  8": {
+      "slug": "Islamabad_I__8",
+      "id": 174
+    },
+    "I  9": {
+      "slug": "Islamabad_I__9",
+      "id": 175
+    },
+    "I 10": {
+      "slug": "Islamabad_I_10",
+      "id": 173
+    },
+    "I 10 I 10 1": {
+      "slug": "Islamabad_I_10_I_10_1",
+      "id": 3420
+    },
+    "I 10 I 10 2": {
+      "slug": "Islamabad_I_10_I_10_2",
+      "id": 3421
+    },
+    "I 10 I 10 4": {
+      "slug": "Islamabad_I_10_I_10_4",
+      "id": 3423
+    },
+    "I 10 Markaz": {
+      "slug": "Islamabad_I_10_Markaz",
+      "id": 3424
+    },
+    "I 11": {
+      "slug": "Islamabad_I_11",
+      "id": 706
+    },
+    "I 11 I 111": {
+      "slug": "Islamabad_I_11_I_111",
+      "id": 9878
+    },
+    "I 11 I 112": {
+      "slug": "Islamabad_I_11_I_112",
+      "id": 9879
+    },
+    "I 14": {
+      "slug": "Islamabad_I_14",
+      "id": 1045
+    },
+    "I 14 I 141": {
+      "slug": "Islamabad_I_14_I_141",
+      "id": 8340
+    },
+    "I 14 I 142": {
+      "slug": "Islamabad_I_14_I_142",
+      "id": 8341
+    },
+    "I 14 I 143": {
+      "slug": "Islamabad_I_14_I_143",
+      "id": 8342
+    },
+    "I 14 I 144": {
+      "slug": "Islamabad_I_14_I_144",
+      "id": 8343
+    },
+    "I 16": {
+      "slug": "Islamabad_I_16",
+      "id": 449
+    },
+    "I 8 I 8 1": {
+      "slug": "Islamabad_I_8_I_8_1",
+      "id": 3441
+    },
+    "I 8 I 8 2": {
+      "slug": "Islamabad_I_8_I_8_2",
+      "id": 3442
+    },
+    "I 8 I 8 3": {
+      "slug": "Islamabad_I_8_I_8_3",
+      "id": 3443
+    },
+    "I 8 I 8 4": {
+      "slug": "Islamabad_I_8_I_8_4",
+      "id": 3444
+    },
+    "I 8 Markaz": {
+      "slug": "Islamabad_I_8_Markaz",
+      "id": 3445
+    },
+    "Jinnah Avenue": {
+      "slug": "Islamabad_Jinnah_Avenue",
+      "id": 1709
+    },
+    "Karakoram Diplomatic Enclave": {
+      "slug": "Islamabad_Karakoram_Diplomatic_Enclave",
+      "id": 9063
+    },
+    "Karakoram Enclave 1": {
+      "slug": "Islamabad_Karakoram_Enclave_1",
+      "id": 10898
+    },
+    "Kashmir Highway": {
+      "slug": "Islamabad_Kashmir_Highway",
+      "id": 3456
+    },
+    "Khanna Pul": {
+      "slug": "Islamabad_Khanna_Pul",
+      "id": 9020
+    },
+    "Koral Town": {
+      "slug": "Islamabad_Koral_Town",
+      "id": 3460
+    },
+    "Korang Town": {
+      "slug": "Islamabad_Korang_Town",
+      "id": 445
+    },
+    "Kuri Road": {
+      "slug": "Islamabad_Kuri_Road",
+      "id": 10322
+    },
+    "Kuri Road PHAF Officers Residencia": {
+      "slug": "Islamabad_Kuri_Road_PHAF_Officers_Residencia",
+      "id": 13099
+    },
+    "Lehtarar Road": {
+      "slug": "Islamabad_Lehtarar_Road",
+      "id": 3461
+    },
+    "Madina Town": {
+      "slug": "Islamabad_Madina_Town",
+      "id": 11255
+    },
+    "Margalla Town": {
+      "slug": "Islamabad_Margalla_Town",
+      "id": 1028
+    },
+    "Margalla Town Margalla Town Phase 1": {
+      "slug": "Islamabad_Margalla_Town_Margalla_Town_Phase_1",
+      "id": 9150
+    },
+    "Margalla Town Margalla Town Phase 2": {
+      "slug": "Islamabad_Margalla_Town_Margalla_Town_Phase_2",
+      "id": 9151
+    },
+    "Marwa Town": {
+      "slug": "Islamabad_Marwa_Town",
+      "id": 10078
+    },
+    "Mohra Nur Road": {
+      "slug": "Islamabad_Mohra_Nur_Road",
+      "id": 12800
+    },
+    "Mumtaz City": {
+      "slug": "Islamabad_Mumtaz_City",
+      "id": 3464
+    },
+    "Mumtaz City Mumtaz City   Chanab Block": {
+      "slug": "Islamabad_Mumtaz_City_Mumtaz_City___Chanab_Block",
+      "id": 14993
+    },
+    "Mumtaz City Mumtaz City   Exective Enclave": {
+      "slug": "Islamabad_Mumtaz_City_Mumtaz_City___Exective_Enclave",
+      "id": 14994
+    },
+    "Mumtaz City Mumtaz City   Indus Block": {
+      "slug": "Islamabad_Mumtaz_City_Mumtaz_City___Indus_Block",
+      "id": 14995
+    },
+    "Mumtaz City Mumtaz City   Jehlum Block": {
+      "slug": "Islamabad_Mumtaz_City_Mumtaz_City___Jehlum_Block",
+      "id": 22487
+    },
+    "Mumtaz City Mumtaz City   Ravi Block": {
+      "slug": "Islamabad_Mumtaz_City_Mumtaz_City___Ravi_Block",
+      "id": 14996
+    },
+    "National Police Foundation": {
+      "slug": "Islamabad_National_Police_Foundation",
+      "id": 434
+    },
+    "National Police Foundation O 9": {
+      "slug": "Islamabad_National_Police_Foundation_O_9",
+      "id": 331
+    },
+    "National Police Foundation O 9 National Police Foundation O 9   Block A": {
+      "slug": "Islamabad_National_Police_Foundation_O_9_National_Police_Foundation_O_9___Block_A",
+      "id": 16425
+    },
+    "National Police Foundation O 9 National Police Foundation O 9   Block B": {
+      "slug": "Islamabad_National_Police_Foundation_O_9_National_Police_Foundation_O_9___Block_B",
+      "id": 16426
+    },
+    "National Police Foundation O 9 National Police Foundation O 9   Block C": {
+      "slug": "Islamabad_National_Police_Foundation_O_9_National_Police_Foundation_O_9___Block_C",
+      "id": 16427
+    },
+    "National Police Foundation O 9 National Police Foundation O 9   Block F": {
+      "slug": "Islamabad_National_Police_Foundation_O_9_National_Police_Foundation_O_9___Block_F",
+      "id": 16430
+    },
+    "Naval Anchorage": {
+      "slug": "Islamabad_Naval_Anchorage",
+      "id": 375
+    },
+    "Naval Anchorage Naval Anchorage   Block A": {
+      "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_A",
+      "id": 3467
+    },
+    "Naval Anchorage Naval Anchorage   Block D": {
+      "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_D",
+      "id": 3470
+    },
+    "Naval Anchorage Naval Anchorage   Block E": {
+      "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_E",
+      "id": 3471
+    },
+    "Naval Anchorage Naval Anchorage   Block F": {
+      "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_F",
+      "id": 3472
+    },
+    "Naval Anchorage Naval Anchorage   Block G": {
+      "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_G",
+      "id": 9158
+    },
+    "Naval Anchorage Naval Anchorage   Block K": {
+      "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_K",
+      "id": 9161
+    },
+    "Naval Anchorage Naval Anchorage   Block L": {
+      "slug": "Islamabad_Naval_Anchorage_Naval_Anchorage___Block_L",
+      "id": 9162
+    },
+    "Naval Farms Housing Scheme": {
+      "slug": "Islamabad_Naval_Farms_Housing_Scheme",
+      "id": 1724
+    },
+    "O 9 Federation Housing Society   O 9": {
+      "slug": "Islamabad_O_9_Federation_Housing_Society___O_9",
+      "id": 9585
+    },
+    "OPF Valley": {
+      "slug": "Islamabad_OPF_Valley",
+      "id": 8339
+    },
+    "Orchard Scheme": {
+      "slug": "Islamabad_Orchard_Scheme",
+      "id": 1408
+    },
+    "PAEC Employees Cooperative Housing Society": {
+      "slug": "Islamabad_PAEC_Employees_Cooperative_Housing_Society",
+      "id": 9647
+    },
+    "PAF Tarnol": {
+      "slug": "Islamabad_PAF_Tarnol",
+      "id": 421
+    },
+    "PECHS": {
+      "slug": "Islamabad_PECHS",
+      "id": 333
+    },
+    "PWD Housing Scheme": {
+      "slug": "Islamabad_PWD_Housing_Scheme",
+      "id": 424
+    },
+    "PWD Housing Scheme PWD Housing Society   Block A": {
+      "slug": "Islamabad_PWD_Housing_Scheme_PWD_Housing_Society___Block_A",
+      "id": 15004
+    },
+    "PWD Housing Scheme PWD Housing Society   Block B": {
+      "slug": "Islamabad_PWD_Housing_Scheme_PWD_Housing_Society___Block_B",
+      "id": 15003
+    },
+    "PWD Housing Scheme PWD Housing Society   Block C": {
+      "slug": "Islamabad_PWD_Housing_Scheme_PWD_Housing_Society___Block_C",
+      "id": 15001
+    },
+    "PWD Housing Scheme PWD Housing Society   Block D": {
+      "slug": "Islamabad_PWD_Housing_Scheme_PWD_Housing_Society___Block_D",
+      "id": 15002
+    },
+    "PWD Road": {
+      "slug": "Islamabad_PWD_Road",
+      "id": 10652
+    },
+    "Pakistan Town": {
+      "slug": "Islamabad_Pakistan_Town",
+      "id": 1378
+    },
+    "Pakistan Town Pakistan Town   Phase 1": {
+      "slug": "Islamabad_Pakistan_Town_Pakistan_Town___Phase_1",
+      "id": 14998
+    },
+    "Pakistan Town Pakistan Town   Phase 2": {
+      "slug": "Islamabad_Pakistan_Town_Pakistan_Town___Phase_2",
+      "id": 16525
+    },
+    "Park Enclave": {
+      "slug": "Islamabad_Park_Enclave",
+      "id": 1706
+    },
+    "Park Enclave Park Enclave 1": {
+      "slug": "Islamabad_Park_Enclave_Park_Enclave_1",
+      "id": 17148
+    },
+    "Park Road": {
+      "slug": "Islamabad_Park_Road",
+      "id": 3485
+    },
+    "Park View City": {
+      "slug": "Islamabad_Park_View_City",
+      "id": 10933
+    },
+    "Police Foundation Housing Society": {
+      "slug": "Islamabad_Police_Foundation_Housing_Society",
+      "id": 13297
+    },
+    "Rawal Town": {
+      "slug": "Islamabad_Rawal_Town",
+      "id": 1246
+    },
+    "River Garden": {
+      "slug": "Islamabad_River_Garden",
+      "id": 1457
+    },
+    "Shah Allah Ditta": {
+      "slug": "Islamabad_Shah_Allah_Ditta",
+      "id": 8424
+    },
+    "Shalimar Town": {
+      "slug": "Islamabad_Shalimar_Town",
+      "id": 3490
+    },
+    "Shehzad Town": {
+      "slug": "Islamabad_Shehzad_Town",
+      "id": 1007
+    },
+    "Soan Garden": {
+      "slug": "Islamabad_Soan_Garden",
+      "id": 338
+    },
+    "Soan Garden Block A": {
+      "slug": "Islamabad_Soan_Garden_Block_A",
+      "id": 3491
+    },
+    "Soan Garden Block B": {
+      "slug": "Islamabad_Soan_Garden_Block_B",
+      "id": 3492
+    },
+    "Soan Garden Block C": {
+      "slug": "Islamabad_Soan_Garden_Block_C",
+      "id": 3493
+    },
+    "Soan Garden Block D": {
+      "slug": "Islamabad_Soan_Garden_Block_D",
+      "id": 3494
+    },
+    "Soan Garden Block E": {
+      "slug": "Islamabad_Soan_Garden_Block_E",
+      "id": 3495
+    },
+    "Soan Garden Block F": {
+      "slug": "Islamabad_Soan_Garden_Block_F",
+      "id": 3496
+    },
+    "Soan Garden Block G": {
+      "slug": "Islamabad_Soan_Garden_Block_G",
+      "id": 3497
+    },
+    "Soan Garden Block H": {
+      "slug": "Islamabad_Soan_Garden_Block_H",
+      "id": 3498
+    },
+    "Soan Garden Soan Garden   Block H Extension": {
+      "slug": "Islamabad_Soan_Garden_Soan_Garden___Block_H_Extension",
+      "id": 16449
+    },
+    "Sohan Valley": {
+      "slug": "Islamabad_Sohan_Valley",
+      "id": 1243
+    },
+    "Taramrri": {
+      "slug": "Islamabad_Taramrri",
+      "id": 3500
+    },
+    "Tarlai": {
+      "slug": "Islamabad_Tarlai",
+      "id": 1144
+    },
+    "Tarnol": {
+      "slug": "Islamabad_Tarnol",
+      "id": 8121
+    },
+    "Tarnol Fazaia Housing Scheme": {
+      "slug": "Islamabad_Tarnol_Fazaia_Housing_Scheme",
+      "id": 10314
+    },
+    "Top City 1": {
+      "slug": "Islamabad_Top_City_1",
+      "id": 1383
+    },
+    "Top City 1 Kanwar Moiz Block": {
+      "slug": "Islamabad_Top_City_1_Kanwar_Moiz_Block",
+      "id": 22390
+    },
+    "Top City 1 Top City 1   Block A": {
+      "slug": "Islamabad_Top_City_1_Top_City_1___Block_A",
+      "id": 9231
+    },
+    "Top City 1 Top City 1   Block B": {
+      "slug": "Islamabad_Top_City_1_Top_City_1___Block_B",
+      "id": 9230
+    },
+    "Top City 1 Top City 1   Block C": {
+      "slug": "Islamabad_Top_City_1_Top_City_1___Block_C",
+      "id": 9232
+    },
+    "Top City 1 Top City 1   Block D": {
+      "slug": "Islamabad_Top_City_1_Top_City_1___Block_D",
+      "id": 9233
+    },
+    "Top City 1 Top City 1   Block I": {
+      "slug": "Islamabad_Top_City_1_Top_City_1___Block_I",
+      "id": 16278
+    },
+    "Top City 1 Top City 1   Block K": {
+      "slug": "Islamabad_Top_City_1_Top_City_1___Block_K",
+      "id": 16277
+    },
+    "University Town": {
+      "slug": "Islamabad_University_Town",
+      "id": 1164
+    },
+    "Zaraj Housing Scheme": {
+      "slug": "Islamabad_Zaraj_Housing_Scheme",
+      "id": 3508
+    },
+    "Zaraj Housing Scheme Rania Heights": {
+      "slug": "Islamabad_Zaraj_Housing_Scheme_Rania_Heights",
+      "id": 9709
+    },
+    "Zaraj Housing Scheme The Atrium": {
+      "slug": "Islamabad_Zaraj_Housing_Scheme_The_Atrium",
+      "id": 10229
+    },
+    "Zaraj Scheme Sector C": {
+      "slug": "Islamabad_Zaraj_Scheme_Sector_C",
+      "id": 3512
+    }
+  }
+}
