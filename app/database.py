@@ -122,6 +122,18 @@ def init_db():
             );
             CREATE INDEX IF NOT EXISTS idx_crawl_priority ON crawl_state(priority, last_crawl_at);
 
+            -- ── Crawl state per area+property_type combo ──
+            CREATE TABLE IF NOT EXISTS crawl_type_state (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                city            TEXT NOT NULL,
+                area_slug       TEXT NOT NULL,
+                property_type   TEXT NOT NULL,
+                last_crawl_at   TEXT,
+                listings_found  INTEGER DEFAULT 0,
+                is_empty        INTEGER DEFAULT 0,
+                UNIQUE(city, area_slug, property_type)
+            );
+
             -- ── Crawl audit log ──
             CREATE TABLE IF NOT EXISTS crawl_log (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,

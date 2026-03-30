@@ -261,21 +261,21 @@ async def fetch_listing_detail(listing_url):
     # --- All images (detail page has more than search results) ---
     images = []
     seen = set()
-    for img in soup.select('img[src*="/property/"], img[src*="zameen-media"], img[aria-label="Listing photo"]'):
+    for img in soup.select('img[src*="media.zameen.com"], img[src*="zameen-media"], img[src*="/property/"], img[aria-label="Listing photo"], img[aria-label="Cover Photo"]'):
         src = img.get("src") or img.get("data-src") or ""
         if not src or not _is_property_photo_url(src):
             continue
-        # Normalize to high-res
+        src = re.sub(r'-\d+x\d+\.', '-800x600.', src)
         src = re.sub(r'/\d+x\d+/', '/800x600/', src)
         if src not in seen:
             seen.add(src)
             images.append(src)
-    # Also check picture/source elements
-    for source in soup.select('picture source[srcset*="zameen-media"], picture source[srcset*="/property/"]'):
+    for source in soup.select('picture source[srcset*="media.zameen.com"], picture source[srcset*="zameen-media"], picture source[srcset*="/property/"]'):
         srcset = source.get("srcset", "")
         for part in srcset.split(","):
             url = part.strip().split(" ")[0]
             if url and _is_property_photo_url(url):
+                url = re.sub(r'-\d+x\d+\.', '-800x600.', url)
                 url = re.sub(r'/\d+x\d+/', '/800x600/', url)
                 if url not in seen:
                     seen.add(url)

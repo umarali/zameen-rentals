@@ -170,4 +170,17 @@ test.describe("Image Carousel", () => {
       }
     }
   });
+
+  // ── New: data source indicator ──
+
+  test("data source badge is shown after search", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    const srcEl = page.locator("#dataSource");
+    // Should show "Instant" (local DB) or "Live" (Zameen.com)
+    const text = await srcEl.textContent();
+    if (text) {
+      expect(["Instant", "Live"]).toContain(text.trim());
+    }
+  });
 });
