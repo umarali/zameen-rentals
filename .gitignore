@@ -7,4 +7,6 @@ venv/
 dist/
 build/
 .DS_Store
-data/*.db
+data/
+node_modules/
+test-results/
