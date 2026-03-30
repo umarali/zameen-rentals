@@ -1,4 +1,4 @@
-"""SQLite database for persistent cache and search history."""
+"""SQLite database for persistent cache, search history, and listing storage."""
 import json, logging, os, sqlite3, threading, time
 from pathlib import Path
 
@@ -30,6 +30,7 @@ def init_db():
     conn = _get_conn()
     with conn:
         conn.executescript("""
+            -- Legacy cache (kept for backward compat during migration)
             CREATE TABLE IF NOT EXISTS listing_cache (
                 cache_key   TEXT PRIMARY KEY,
                 data        TEXT NOT NULL,
@@ -53,7 +54,120 @@ def init_db():
             );
             CREATE INDEX IF NOT EXISTS idx_history_searched ON search_history(searched_at);
             CREATE INDEX IF NOT EXISTS idx_history_area ON search_history(area);
+
+            -- ── Structured listings table ──
+            CREATE TABLE IF NOT EXISTS listings (
+                id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                zameen_id          TEXT UNIQUE NOT NULL,
+                url                TEXT NOT NULL,
+                title              TEXT,
+                price              INTEGER,
+                price_text         TEXT,
+                bedrooms           INTEGER,
+                bathrooms          INTEGER,
+                area_size          TEXT,
+                area_size_sqft     REAL,
+                location           TEXT,
+                image_url          TEXT,
+                images_json        TEXT,
+                property_type      TEXT,
+                added_text         TEXT,
+                phone              TEXT,
+                description        TEXT,
+                features_json      TEXT,
+                amenities_json     TEXT,
+                details_json       TEXT,
+                agent_name         TEXT,
+                agent_agency       TEXT,
+                detail_images_json TEXT,
+                city               TEXT NOT NULL,
+                area_name          TEXT,
+                area_slug          TEXT,
+                latitude           REAL,
+                longitude          REAL,
+                first_seen_at      TEXT NOT NULL DEFAULT (datetime('now')),
+                card_scraped_at    TEXT,
+                detail_scraped_at  TEXT,
+                last_seen_at       TEXT NOT NULL DEFAULT (datetime('now')),
+                is_active          INTEGER NOT NULL DEFAULT 1,
+                content_hash       TEXT,
+                detail_hash        TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_listings_city ON listings(city);
+            CREATE INDEX IF NOT EXISTS idx_listings_city_area ON listings(city, area_name);
+            CREATE INDEX IF NOT EXISTS idx_listings_price ON listings(price);
+            CREATE INDEX IF NOT EXISTS idx_listings_bedrooms ON listings(bedrooms);
+            CREATE INDEX IF NOT EXISTS idx_listings_type ON listings(property_type);
+            CREATE INDEX IF NOT EXISTS idx_listings_active ON listings(is_active);
+            CREATE INDEX IF NOT EXISTS idx_listings_zameen_id ON listings(zameen_id);
+            CREATE INDEX IF NOT EXISTS idx_listings_last_seen ON listings(last_seen_at);
+            CREATE INDEX IF NOT EXISTS idx_listings_detail ON listings(detail_scraped_at);
+
+            -- ── Crawl state per area ──
+            CREATE TABLE IF NOT EXISTS crawl_state (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                city            TEXT NOT NULL,
+                area_name       TEXT NOT NULL,
+                area_slug       TEXT NOT NULL,
+                area_id         INTEGER NOT NULL,
+                last_crawl_at   TEXT,
+                pages_crawled   INTEGER DEFAULT 0,
+                listings_found  INTEGER DEFAULT 0,
+                new_listings    INTEGER DEFAULT 0,
+                updated_listings INTEGER DEFAULT 0,
+                crawl_status    TEXT DEFAULT 'pending',
+                error_message   TEXT,
+                priority        INTEGER DEFAULT 50,
+                UNIQUE(city, area_slug)
+            );
+            CREATE INDEX IF NOT EXISTS idx_crawl_priority ON crawl_state(priority, last_crawl_at);
+
+            -- ── Crawl audit log ──
+            CREATE TABLE IF NOT EXISTS crawl_log (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                started_at       TEXT NOT NULL DEFAULT (datetime('now')),
+                finished_at      TEXT,
+                crawl_type       TEXT NOT NULL,
+                areas_crawled    INTEGER DEFAULT 0,
+                pages_fetched    INTEGER DEFAULT 0,
+                listings_added   INTEGER DEFAULT 0,
+                listings_updated INTEGER DEFAULT 0,
+                listings_removed INTEGER DEFAULT 0,
+                errors           INTEGER DEFAULT 0,
+                status           TEXT DEFAULT 'running'
+            );
         """)
+
+        # Set up FTS5 for full-text search on listings
+        # Check if FTS table exists first (CREATE VIRTUAL TABLE doesn't support IF NOT EXISTS in all SQLite versions)
+        fts_exists = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='listings_fts'"
+        ).fetchone()
+        if not fts_exists:
+            conn.executescript("""
+                CREATE VIRTUAL TABLE listings_fts USING fts5(
+                    title, location, description, area_name, property_type,
+                    content='listings', content_rowid='id'
+                );
+
+                CREATE TRIGGER listings_fts_insert AFTER INSERT ON listings BEGIN
+                    INSERT INTO listings_fts(rowid, title, location, description, area_name, property_type)
+                    VALUES (new.id, new.title, new.location, new.description, new.area_name, new.property_type);
+                END;
+
+                CREATE TRIGGER listings_fts_delete AFTER DELETE ON listings BEGIN
+                    INSERT INTO listings_fts(listings_fts, rowid, title, location, description, area_name, property_type)
+                    VALUES ('delete', old.id, old.title, old.location, old.description, old.area_name, old.property_type);
+                END;
+
+                CREATE TRIGGER listings_fts_update AFTER UPDATE ON listings BEGIN
+                    INSERT INTO listings_fts(listings_fts, rowid, title, location, description, area_name, property_type)
+                    VALUES ('delete', old.id, old.title, old.location, old.description, old.area_name, old.property_type);
+                    INSERT INTO listings_fts(rowid, title, location, description, area_name, property_type)
+                    VALUES (new.id, new.title, new.location, new.description, new.area_name, new.property_type);
+                END;
+            """)
+
         # Clean expired cache on startup
         conn.execute("DELETE FROM listing_cache WHERE created_at < ?", (time.time() - CACHE_TTL,))
     logger.info("Database initialized at %s", _DB_PATH)
