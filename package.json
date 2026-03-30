@@ -1,0 +1,26 @@
+{
+  "name": "zameenrental",
+  "version": "1.0.0",
+  "description": "A fast rental property search engine powered by [Zameen.com](https://www.zameen.com) data. Built with FastAPI and vanilla JavaScript.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/umarali/zameen-rentals.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/umarali/zameen-rentals/issues"
+  },
+  "homepage": "https://github.com/umarali/zameen-rentals#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}
