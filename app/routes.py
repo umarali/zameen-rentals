@@ -11,7 +11,8 @@ from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_area
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches
 from app.parsing import parse_query_with_claude
-from app.scraper import search_zameen
+from app.scraper import search_zameen, fetch_phone_number, fetch_listing_detail, extract_zameen_id
+from app.db_listings import search_listings, get_listing_by_zameen_id, get_crawl_stats
 
 logger = logging.getLogger("zameenrentals")
 router = APIRouter()
@@ -115,7 +116,22 @@ async def api_parse_query(request: Request, q: str = Query(..., min_length=1), c
 @limiter.limit("10/minute")
 async def search(request: Request, city: str = Query("karachi"), area: Optional[str]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
     try:
+        # Try local DB first (instant results from crawler data)
+        local_result = search_listings(
+            city=city, area=area, property_type=property_type,
+            bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+            furnished=furnished, sort=sort, page=page
+        )
+        if local_result["total"] > 0:
+            local_result["source"] = "local"
+            log_search(city=city, area=area, property_type=property_type, bedrooms=bedrooms,
+                       price_min=price_min, price_max=price_max, furnished=furnished,
+                       sort=sort, result_count=local_result["total"])
+            return local_result
+
+        # Fallback to live scraping if local DB has no results for this query
         result = await search_zameen(area=area, property_type=property_type, bedrooms=bedrooms, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort, city=city)
+        result["source"] = "live"
         log_search(city=city, area=area, property_type=property_type, bedrooms=bedrooms,
                    price_min=price_min, price_max=price_max, furnished=furnished,
                    sort=sort, result_count=result.get("total", 0))
@@ -125,6 +141,63 @@ async def search(request: Request, city: str = Query("karachi"), area: Optional[
     except Exception:
         logger.exception("Search error")
         raise HTTPException(status_code=500, detail="An internal error occurred. Please try again later.")
+
+
+@router.get("/api/listing-detail")
+@limiter.limit("20/minute")
+async def listing_detail(request: Request, url: str = Query(...)):
+    """Fetch enriched detail — from local DB if available, else live scrape."""
+    if not url.startswith("https://www.zameen.com/"):
+        raise HTTPException(status_code=400, detail="Invalid Zameen.com URL")
+    try:
+        # Try local DB first
+        zid = extract_zameen_id(url)
+        if zid:
+            listing = get_listing_by_zameen_id(zid)
+            if listing and listing.get("detail_scraped_at"):
+                import json
+                return {
+                    "phone": listing.get("phone"),
+                    "description": listing.get("description"),
+                    "features": json.loads(listing["features_json"]) if listing.get("features_json") else [],
+                    "amenities": json.loads(listing["amenities_json"]) if listing.get("amenities_json") else [],
+                    "details": json.loads(listing["details_json"]) if listing.get("details_json") else {},
+                    "agent_name": listing.get("agent_name"),
+                    "agent_agency": listing.get("agent_agency"),
+                    "images": json.loads(listing["detail_images_json"]) if listing.get("detail_images_json") else [],
+                    "source": "local",
+                }
+        # Fallback to live scrape
+        detail = await fetch_listing_detail(url)
+        return detail or {}
+    except Exception:
+        logger.exception("Detail fetch error")
+        return {}
+
+
+@router.get("/api/listing-phone")
+@limiter.limit("20/minute")
+async def listing_phone(request: Request, url: str = Query(...)):
+    """Fetch phone number — from local DB if available, else live scrape."""
+    if not url.startswith("https://www.zameen.com/"):
+        raise HTTPException(status_code=400, detail="Invalid Zameen.com URL")
+    try:
+        zid = extract_zameen_id(url)
+        if zid:
+            listing = get_listing_by_zameen_id(zid)
+            if listing and listing.get("phone"):
+                return {"phone": listing["phone"]}
+        phone = await fetch_phone_number(url)
+        return {"phone": phone}
+    except Exception:
+        logger.exception("Phone fetch error")
+        return {"phone": None}
+
+
+@router.get("/api/crawl-status")
+async def crawl_status(city: Optional[str] = Query(None)):
+    """Return crawl progress and data freshness info."""
+    return get_crawl_stats(city)
 
 
 @router.get("/api/popular-searches")
