@@ -6,6 +6,7 @@ venv/
 *.egg-info/
 dist/
 build/
+static/assets/
 .DS_Store
 data/
 node_modules/

@@ -72,8 +72,8 @@ test.describe("Area Filter", () => {
     await page.waitForTimeout(400);
     await page.locator(".area-opt").first().click();
     await expect(page.locator("#areaChip")).toHaveClass(/has-value/);
-    // Click the chip again (it now shows X behavior)
-    await page.locator("#areaChip").click();
+    // Click the X button inside the chip to clear
+    await page.locator('#areaChip .chip-clear').click();
     await expect(page.locator("#areaChip")).not.toHaveClass(/has-value/);
   });
 });
@@ -91,7 +91,7 @@ test.describe("Property Type Filter", () => {
 
   test("selecting a property type updates chip", async ({ page }) => {
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="house"]').click();
+    await page.locator('#typeGrid .chip[data-type="house"]').click();
     await expect(page.locator("#typeChip")).toHaveClass(/has-value/);
   });
 
@@ -114,7 +114,7 @@ test.describe("Property Type Filter", () => {
   test("selecting type triggers new search", async ({ page }) => {
     const countBefore = await page.locator("#resultsCount").textContent();
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="apartment"]').click();
+    await page.locator('#typeGrid .chip[data-type="apartment"]').click();
     await page.waitForTimeout(2000);
     // Results count may change
     await expect(page.locator("#resultsCount")).not.toHaveText("");
@@ -122,12 +122,12 @@ test.describe("Property Type Filter", () => {
 
   test("type is single-select (mutual exclusion)", async ({ page }) => {
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="house"]').click();
+    await page.locator('#typeGrid .chip[data-type="house"]').click();
     await page.locator("#typeChip").click();
     await expect(
       page.locator('#typeGrid .chip[data-type="house"]')
     ).toHaveClass(/active/);
-    await page.locator('.chip[data-type="apartment"]').click();
+    await page.locator('#typeGrid .chip[data-type="apartment"]').click();
     await page.locator("#typeChip").click();
     await expect(
       page.locator('#typeGrid .chip[data-type="house"]')
@@ -139,11 +139,11 @@ test.describe("Property Type Filter", () => {
 
   test("deselecting type clears filter", async ({ page }) => {
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="house"]').click();
+    await page.locator('#typeGrid .chip[data-type="house"]').click();
     await expect(page.locator("#typeChip")).toHaveClass(/has-value/);
     // Click same type again to deselect
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="house"]').click();
+    await page.locator('#typeGrid .chip[data-type="house"]').click();
     await expect(page.locator("#typeChip")).not.toHaveClass(/has-value/);
   });
 });
@@ -253,7 +253,7 @@ test.describe("More Filters", () => {
     const select = page.locator("#sortSelect");
     await expect(select).toBeVisible();
     const options = select.locator("option");
-    expect(await options.count()).toBe(4); // Relevance, Price Low, Price High, Newest
+    expect(await options.count()).toBe(4); // Default, Price Low, Price High, Newest
   });
 
   test("sort select updates chip", async ({ page }) => {
@@ -281,7 +281,7 @@ test.describe("Clear All", () => {
 
     // Set multiple filters
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="house"]').click();
+    await page.locator('#typeGrid .chip[data-type="house"]').click();
     await page.locator("#bedsChip").click();
     await page.locator('#bedRow .chip[data-beds="3"]').click();
 

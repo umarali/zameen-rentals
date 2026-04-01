@@ -19,12 +19,12 @@ test.describe("Page Load & Layout", () => {
     await expect(page.locator("#nlSearchBtn")).toBeVisible();
   });
 
-  test("city tabs render with Karachi active by default", async ({ page }) => {
+  test("city tabs render with Lahore active by default", async ({ page }) => {
     await expect(page.locator("#cityTabs")).toBeVisible();
-    const karachiTab = page.locator('.city-tab[data-city="karachi"]');
-    await expect(karachiTab).toHaveClass(/active/);
+    const lahoreTab = page.locator('.city-tab[data-city="lahore"]');
+    await expect(lahoreTab).toHaveClass(/active/);
     await expect(
-      page.locator('.city-tab[data-city="lahore"]')
+      page.locator('.city-tab[data-city="karachi"]')
     ).not.toHaveClass(/active/);
     await expect(
       page.locator('.city-tab[data-city="islamabad"]')
@@ -44,7 +44,7 @@ test.describe("Page Load & Layout", () => {
   }) => {
     await expect(page.locator("#listingsTitle")).toBeVisible();
     await expect(page.locator("#listingsTitle")).toContainText(
-      "Rentals in Karachi"
+      "Rentals in Lahore"
     );
     // Wait for search to complete
     await expect(page.locator("#resultsCount")).not.toHaveText("", {

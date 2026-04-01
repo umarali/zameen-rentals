@@ -38,7 +38,7 @@ test.describe("Detail Drawer", () => {
     await expect(page.locator("#drawer")).toHaveClass(/drawer-open/, {
       timeout: 3000,
     });
-    const link = page.locator('#drawerContent a:text("View on Zameen.com")');
+    const link = page.locator('#drawerContent a[title="View on Zameen.com"]');
     await expect(link).toBeVisible();
     const href = await link.getAttribute("href");
     expect(href).toContain("zameen.com");
@@ -57,7 +57,10 @@ test.describe("Detail Drawer", () => {
     await expect(page.locator("#drawer")).toHaveClass(/drawer-open/, {
       timeout: 3000,
     });
+    // Wait for drawer transition to complete
+    await page.waitForTimeout(500);
     await page.locator("#drawerClose").click();
+    await page.waitForTimeout(500);
     await expect(page.locator("#drawer")).not.toHaveClass(/drawer-open/);
   });
 

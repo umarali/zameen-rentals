@@ -79,7 +79,7 @@ test.describe("Search Results Display", () => {
     page,
   }) => {
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="house"]').click();
+    await page.locator('#typeGrid .chip[data-type="house"]').click();
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
     // Cards should show "HOUSE" badge
     const badges = page.locator(

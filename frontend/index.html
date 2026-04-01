@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>ZameenRentals — Find Rentals in Pakistan</title>
 <meta property="og:title" content="ZameenRentals — Find Rentals in Pakistan">
 <meta property="og:description" content="Find your next rental in Pakistan. Search houses, apartments, and more across all major cities.">
@@ -17,8 +17,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script type="module" crossorigin src="/static/assets/index-B39PLB61.js"></script>
-  <link rel="stylesheet" crossorigin href="/static/assets/index-D-2ulLKQ.css">
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
@@ -66,7 +64,7 @@
 </div>
 
   <!-- Dropdowns -->
-  <div id="dd-area" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
+  <div id="dd-area" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
     <div class="text-sm font-semibold text-gray-700 mb-3">Select Area</div>
     <div class="flex items-center border border-gray-200 rounded-lg px-3 focus-within:border-brand-500 transition-colors">
       <input id="areaInput" type="text" class="flex-1 py-2.5 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Type area name..." autocomplete="off">
@@ -74,7 +72,7 @@
     </div>
     <div id="areaList" class="mt-2 max-h-52 overflow-y-auto scroll-thin"></div>
   </div>
-  <div id="dd-type" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
+  <div id="dd-type" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
     <div class="text-sm font-semibold text-gray-700 mb-3">Property Type</div>
     <div class="flex flex-wrap gap-2" id="typeGrid">
       <span class="chip" data-type="house">House</span>
@@ -86,7 +84,7 @@
       <span class="chip" data-type="farm_house">Farm House</span>
     </div>
   </div>
-  <div id="dd-beds" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
+  <div id="dd-beds" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
     <div class="text-sm font-semibold text-gray-700 mb-3">Bedrooms</div>
     <div class="flex gap-2" id="bedRow">
       <span class="chip active" data-beds="">Any</span>
@@ -97,7 +95,7 @@
       <span class="chip" data-beds="5">5+</span>
     </div>
   </div>
-  <div id="dd-price" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
+  <div id="dd-price" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
     <div class="text-sm font-semibold text-gray-700 mb-3">Price Range</div>
     <div class="flex flex-wrap gap-2" id="priceGrid">
       <span class="chip" data-pmin="0" data-pmax="30000">Under 30K</span>
@@ -115,7 +113,7 @@
       <button id="priceApply" class="w-full mt-2 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors">Apply</button>
     </div>
   </div>
-  <div id="dd-more" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
+  <div id="dd-more" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
     <div class="text-sm font-semibold text-gray-700 mb-2">More Filters</div>
     <div class="flex items-center justify-between py-2">
       <span class="text-sm text-gray-600">Furnished Only</span>
@@ -206,5 +204,6 @@
   <div id="galleryImg" class="w-full h-full flex items-center justify-center p-12"><img class="max-w-full max-h-full object-contain" src="" alt=""></div>
 </div>
 
+<script type="module" src="/src/main.js"></script>
 </body>
 </html>

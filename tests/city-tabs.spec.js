@@ -40,8 +40,8 @@ test.describe("City Tabs", () => {
     await page.locator(".area-opt").first().click();
     await expect(page.locator("#areaChip")).toHaveClass(/has-value/);
 
-    // Switch city
-    await page.locator('.city-tab[data-city="lahore"]').click();
+    // Switch to a different city (default is Lahore, switch to Karachi)
+    await page.locator('.city-tab[data-city="karachi"]').click();
     // Area chip should be cleared
     await expect(page.locator("#areaChip")).not.toHaveClass(/has-value/);
   });

@@ -5,6 +5,9 @@ test.describe("Natural Language Search", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    // Switch to Karachi for NL tests (test queries use Karachi areas)
+    await page.locator('.city-tab[data-city="karachi"]').click();
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
   });
 
   test("search input has placeholder", async ({ page }) => {

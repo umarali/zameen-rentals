@@ -8,6 +8,10 @@ test.describe("End-to-End User Flows", () => {
     await page.goto("/");
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
 
+    // Switch to Karachi for NL tests (DHA is a Karachi area)
+    await page.locator('.city-tab[data-city="karachi"]').click();
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+
     // Step 1: NL search
     await page.locator("#nlInput").fill("flat in DHA");
     await page.locator("#nlInput").press("Enter");
@@ -33,7 +37,7 @@ test.describe("End-to-End User Flows", () => {
     // Step 5: Check drawer content
     await expect(page.locator("#drawerContent")).toContainText(/Rs|Lakh|PKR/i);
     await expect(
-      page.locator('#drawerContent a:text("View on Zameen.com")')
+      page.locator('#drawerContent a[title="View on Zameen.com"]')
     ).toBeVisible();
 
     // Step 6: Close drawer
@@ -41,20 +45,20 @@ test.describe("End-to-End User Flows", () => {
     await expect(page.locator("#drawer")).not.toHaveClass(/drawer-open/);
   });
 
-  test("city switch flow: Karachi → Lahore → search → Islamabad", async ({
+  test("city switch flow: Lahore → Karachi → search → Islamabad", async ({
     page,
   }) => {
     await page.goto("/");
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
 
-    // Switch to Lahore
-    await page.locator('.city-tab[data-city="lahore"]').click();
+    // Switch to Karachi (default is Lahore)
+    await page.locator('.city-tab[data-city="karachi"]').click();
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
-    await expect(page.locator("#listingsTitle")).toContainText("Lahore");
+    await expect(page.locator("#listingsTitle")).toContainText("Karachi");
 
     // Search in Lahore
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="house"]').click();
+    await page.locator('#typeGrid .chip[data-type="house"]').click();
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
 
     // Switch to Islamabad
@@ -138,7 +142,7 @@ test.describe("End-to-End User Flows", () => {
 
     // Type
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="apartment"]').click();
+    await page.locator('#typeGrid .chip[data-type="apartment"]').click();
 
     // Beds
     await page.locator("#bedsChip").click();
@@ -159,7 +163,7 @@ test.describe("End-to-End User Flows", () => {
 
     // Set very restrictive filters to hopefully get 0 results
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="penthouse"]').click();
+    await page.locator('#typeGrid .chip[data-type="penthouse"]').click();
     await page.locator("#priceChip").click();
     await page.locator('.chip[data-custom="1"]').click();
     await page.locator("#priceMin").fill("1");
