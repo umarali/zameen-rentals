@@ -223,6 +223,76 @@ class TestSearchListings:
         assert result["total"] == 0
         assert result["results"] == []
 
+    def test_viewport_search_prioritizes_results_near_map_center(self):
+        upsert_listing(
+            zameen_id="300010",
+            url="https://zameen.com/Property/t-300010-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8201,
+            lng=67.0301,
+            card_data={"title": "Near focus", "price": 120000, "bedrooms": 3, "bathrooms": 2, "area_size": "1500 sqft", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="300011",
+            url="https://zameen.com/Property/t-300011-1-1.html",
+            city="karachi",
+            area_name="DHA Phase 5",
+            area_slug="Karachi_DHA_Phase_5",
+            lat=24.7900,
+            lng=67.1000,
+            card_data={"title": "Far focus", "price": 90000, "bedrooms": 2, "bathrooms": 2, "area_size": "1200 sqft", "property_type": "Apartment"},
+        )
+        conn = _get_conn()
+        conn.execute(
+            "UPDATE listings SET last_seen_at = '9999-01-01T00:00:00' WHERE zameen_id = '300011'"
+        )
+        conn.commit()
+
+        result = search_listings(
+            city="karachi",
+            area_names=["Clifton", "DHA Phase 5"],
+            center_lat=24.8200,
+            center_lng=67.0300,
+        )
+
+        assert result["ranking"] == "map_focus"
+        assert result["results"][0]["title"] == "Near focus"
+        assert result["results"][0]["distance_to_center"] < result["results"][1]["distance_to_center"]
+
+    def test_viewport_search_keeps_explicit_sort_and_uses_distance_as_tiebreaker(self):
+        upsert_listing(
+            zameen_id="300012",
+            url="https://zameen.com/Property/t-300012-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8201,
+            lng=67.0301,
+            card_data={"title": "Cheaper and near", "price": 80000, "bedrooms": 2, "bathrooms": 2, "area_size": "1200 sqft", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="300013",
+            url="https://zameen.com/Property/t-300013-1-1.html",
+            city="karachi",
+            area_name="DHA Phase 5",
+            area_slug="Karachi_DHA_Phase_5",
+            lat=24.7900,
+            lng=67.1000,
+            card_data={"title": "Cheaper but far", "price": 80000, "bedrooms": 2, "bathrooms": 2, "area_size": "1200 sqft", "property_type": "Apartment"},
+        )
+
+        result = search_listings(
+            city="karachi",
+            area_names=["Clifton", "DHA Phase 5"],
+            sort="price_low",
+            center_lat=24.8200,
+            center_lng=67.0300,
+        )
+
+        assert result["results"][0]["title"] == "Cheaper and near"
+
     def test_fts_search(self):
         upsert_listing(
             zameen_id="300001", url="https://zameen.com/Property/t-300001-1-1.html",

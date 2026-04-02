@@ -19,6 +19,7 @@ function selectAreaFull(name, fromMap) {
   refs.searchMode = 'area';
   refs.mapAreaTotals = {};
   refs.viewportAreaNames = [];
+  refs.viewportRanking = 'default';
   refs.previewArea = null;
   refs.hoveredArea = null;
   selectArea(name, fromMap, { highlightMarker, doSearch });
@@ -29,6 +30,7 @@ function clearFilterFull(f) {
     refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
+    refs.viewportRanking = 'default';
     refs.previewArea = null;
     refs.hoveredArea = null;
   }
@@ -153,7 +155,14 @@ function hideLoading() {
   if (s) s.remove();
 }
 
-function updateHeader({ total = 0, source = '', mode = refs.searchMode, visibleAreas = 0, coveredAreas = 0 } = {}) {
+function updateHeader({
+  total = 0,
+  source = '',
+  mode = refs.searchMode,
+  visibleAreas = 0,
+  coveredAreas = 0,
+  ranking = refs.viewportRanking,
+} = {}) {
   const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
   const shown = refs.currentResults.length;
   const titleEl = $('#listingsTitle');
@@ -184,7 +193,7 @@ function updateHeader({ total = 0, source = '', mode = refs.searchMode, visibleA
   }
 
   if (source === 'local') {
-    sourceEl.textContent = 'Instant';
+    sourceEl.textContent = mode === 'viewport' && ranking === 'map_focus' ? 'Instant / Nearest first' : 'Instant';
     sourceEl.className = 'text-xs text-brand-500 font-medium';
     sourceEl.classList.remove('hidden');
   } else if (source === 'live') {
@@ -226,10 +235,10 @@ function updateCoverageBadge() {
       : `${visibleAreas || 0} visible areas, no local coverage`;
     const previewingEmpty = refs.previewArea && !coveredEntries.some(([name]) => name === refs.previewArea);
     const detail = previewingEmpty
-      ? `Previewing ${refs.previewArea}. No local listings there yet.`
+      ? `Previewing ${refs.previewArea}. Gray dots only preview areas until local listings exist there.`
       : coveredAreas > 0
-      ? 'Green labels are areas with local listings right now.'
-      : 'This part of the map has no crawled local listings yet.';
+      ? 'Green dots have local listings. Gray dots are preview-only. Cards are ordered nearest to the map center.'
+      : 'This part of the map has no crawled local listings yet. Gray dots are preview-only.';
 
     el.innerHTML = `
       <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Map Coverage</div>
@@ -246,6 +255,7 @@ refs._refreshCoverageUI = updateCoverageBadge;
 function renderNoResults(message) {
   refs.lastSearchTotal = 0;
   refs.viewportTotal = 0;
+  refs.viewportRanking = 'default';
   refs.currentResults = [];
   $('#resultsCount').textContent = '0 shown';
   $('#resultsMeta').textContent = message;
@@ -282,9 +292,11 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
     refs.mapAreaTotals = data.area_totals || {};
     refs.viewportTotal = data.total || 0;
     refs.viewportShown = append ? refs.currentResults.length : (data.results || []).length;
+    refs.viewportRanking = data.ranking || 'default';
   } else {
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
+    refs.viewportRanking = 'default';
   }
 
   if (!append) {
@@ -296,6 +308,7 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
         mode,
         visibleAreas: data.visible_areas || refs.viewportAreaNames.length,
         coveredAreas: Object.keys(data.area_totals || {}).length,
+        ranking: data.ranking,
       });
       renderNoResults(mode === 'viewport' ? 'Pan or zoom the map to discover other areas' : 'Try removing a filter to see more results');
       updateMapMarkers();
@@ -317,6 +330,7 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
     mode,
     visibleAreas: data.visible_areas || refs.viewportAreaNames.length,
     coveredAreas: Object.keys(data.area_totals || {}).length,
+    ranking: data.ranking,
   });
   $('#reportBtn').classList.remove('hidden');
   initCarousels();
@@ -354,7 +368,10 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     refs.searchMode = 'viewport';
     refs.viewportAreaNames = getVisibleAreaNames(mapInstance);
     const params = getParams(refs.currentPage, { omitArea: true });
+    const center = mapInstance.getCenter();
     refs.viewportAreaNames.forEach(name => params.append('areas', name));
+    params.set('center_lat', center.lat.toFixed(6));
+    params.set('center_lng', center.lng.toFixed(6));
 
     const r = await fetch('/api/map-search?' + params.toString());
     if (!r.ok) {
@@ -368,7 +385,8 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     hideLoading();
     refs.currentResults = [];
     refs.mapAreaTotals = {};
-    updateHeader({ total: 0, source: 'unavailable', mode: 'viewport', visibleAreas: refs.viewportAreaNames.length, coveredAreas: 0 });
+    refs.viewportRanking = 'default';
+    updateHeader({ total: 0, source: 'unavailable', mode: 'viewport', visibleAreas: refs.viewportAreaNames.length, coveredAreas: 0, ranking: 'default' });
     renderNoResults(e.message || 'Could not update the map view right now');
     updateMapMarkers();
     updateCoverageBadge();
@@ -486,6 +504,7 @@ function initCityTabs() {
     refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
+    refs.viewportRanking = 'default';
     refs.previewArea = null;
     refs.hoveredArea = null;
     $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
@@ -571,6 +590,7 @@ function initReportBtn() {
       `- Total available: ${refs.lastSearchTotal || 0}`,
       `- Exact pins in shown results: ${refs.currentResults.filter(item => item.has_exact_geography).length}`,
       `- Visible areas: ${refs.viewportAreaNames.length || 0}`,
+      `- View ordering: ${refs.viewportRanking === 'map_focus' ? 'nearest to map center' : 'default'}`,
       `- Map center: ${center ? `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}` : 'n/a'}`,
       `- Map bounds: ${bounds ? `${bounds.getSouth().toFixed(4)}, ${bounds.getWest().toFixed(4)} -> ${bounds.getNorth().toFixed(4)}, ${bounds.getEast().toFixed(4)}` : 'n/a'}`,
       `- Map zoom: ${zoom ?? 'n/a'}`,
@@ -597,6 +617,7 @@ async function loadCityData() {
   refs.viewportAreaNames = [];
   refs.viewportTotal = 0;
   refs.viewportShown = 0;
+  refs.viewportRanking = 'default';
   refs.previewArea = null;
   refs.hoveredArea = null;
   const cd = CITY_DEFAULTS[S.city];

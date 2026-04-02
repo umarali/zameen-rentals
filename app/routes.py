@@ -176,6 +176,8 @@ async def map_search(
     furnished: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
     sort: Optional[str] = Query(None),
+    center_lat: Optional[float] = Query(None, ge=-90, le=90),
+    center_lng: Optional[float] = Query(None, ge=-180, le=180),
 ):
     area_names = [a for a in areas if a]
     if not area_names:
@@ -194,10 +196,16 @@ async def map_search(
         city=city, area_names=area_names, property_type=property_type,
         bedrooms=bedrooms, price_min=price_min, price_max=price_max,
         furnished=furnished, sort=sort, page=page,
+        center_lat=center_lat, center_lng=center_lng,
     )
     result["source"] = "local"
     result["mode"] = "viewport"
     result["visible_areas"] = len(area_names)
+    result["focus_center"] = (
+        {"lat": center_lat, "lng": center_lng}
+        if center_lat is not None and center_lng is not None
+        else None
+    )
     result["area_totals"] = count_listings_by_area(
         city=city, area_names=area_names, property_type=property_type,
         bedrooms=bedrooms, price_min=price_min, price_max=price_max,

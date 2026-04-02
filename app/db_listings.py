@@ -222,7 +222,8 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
 
 def search_listings(*, city="karachi", area=None, area_names=None, property_type=None,
                     bedrooms=None, price_min=None, price_max=None,
-                    furnished=None, sort=None, q=None, page=1, per_page=25):
+                    furnished=None, sort=None, q=None, page=1, per_page=25,
+                    center_lat=None, center_lng=None):
     """Search listings from local DB. Returns dict matching current API shape."""
     conn = _get_conn()
     conditions = ["is_active = 1", "city = ?"]
@@ -257,24 +258,48 @@ def search_listings(*, city="karachi", area=None, area_names=None, property_type
 
     where = " AND ".join(conditions)
 
-    order = "last_seen_at DESC"
+    map_focus = center_lat is not None and center_lng is not None
+    focus_params = [center_lat, center_lat, center_lng, center_lng] if map_focus else []
+
+    proximity_expr = """
+        CASE
+            WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN
+                ((latitude - ?) * (latitude - ?) + (longitude - ?) * (longitude - ?))
+            ELSE 999999999
+        END
+    """
+
     if sort == "price_low":
         order = "price ASC NULLS LAST"
     elif sort == "price_high":
         order = "price DESC NULLS LAST"
     elif sort == "newest":
         order = "first_seen_at DESC"
+    elif map_focus:
+        order = f"{proximity_expr} ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC, last_seen_at DESC"
+    else:
+        order = "last_seen_at DESC"
+
+    if map_focus and sort in {"price_low", "price_high", "newest"}:
+        order = f"{order}, {proximity_expr} ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC"
 
     total = conn.execute(f"SELECT COUNT(*) FROM listings WHERE {where}", params).fetchone()[0]
 
     offset = (page - 1) * per_page
+    query_params = focus_params + params + focus_params + [per_page, offset]
     rows = conn.execute(
-        f"SELECT * FROM listings WHERE {where} ORDER BY {order} LIMIT ? OFFSET ?",
-        params + [per_page, offset]
+        f"SELECT *, {proximity_expr if map_focus else 'NULL'} AS distance_to_center FROM listings WHERE {where} ORDER BY {order} LIMIT ? OFFSET ?",
+        query_params
     ).fetchall()
 
     results = [_row_to_listing(r) for r in rows]
-    return {"total": total, "page": page, "per_page": per_page, "results": results}
+    return {
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "results": results,
+        "ranking": "map_focus" if map_focus else "default",
+    }
 
 
 def count_listings_by_area(*, city="karachi", area_names=None, property_type=None,
@@ -359,6 +384,8 @@ def _row_to_listing(row):
         d["longitude"] = row["longitude"]
         d["location_source"] = row["location_source"] or "area_centroid"
     d["has_exact_geography"] = row["location_source"] == "listing_exact"
+    if "distance_to_center" in row.keys() and row["distance_to_center"] is not None:
+        d["distance_to_center"] = row["distance_to_center"]
     if row["description"]:
         d["description"] = row["description"]
     if row["features_json"]:

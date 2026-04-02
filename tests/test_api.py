@@ -248,6 +248,40 @@ class TestListingPhoneEndpoint:
         assert data["phone"] == "+923009876543"
 
 
+class TestMapSearchEndpoint:
+    def test_map_search_orders_results_near_viewport_center(self, client):
+        upsert_listing(
+            zameen_id="910001",
+            url="https://www.zameen.com/Property/test-910001-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8201,
+            lng=67.0301,
+            card_data={"title": "Near viewport", "price": 85000, "bedrooms": 2, "bathrooms": 2, "area_size": "5 Marla", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="910002",
+            url="https://www.zameen.com/Property/test-910002-1-1.html",
+            city="karachi",
+            area_name="DHA Phase 5",
+            area_slug="Karachi_DHA_Phase_5",
+            lat=24.7900,
+            lng=67.1000,
+            card_data={"title": "Far viewport", "price": 86000, "bedrooms": 2, "bathrooms": 2, "area_size": "5 Marla", "property_type": "Apartment"},
+        )
+
+        res = client.get(
+            "/api/map-search?city=karachi&areas=Clifton&areas=DHA+Phase+5&center_lat=24.82&center_lng=67.03"
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["mode"] == "viewport"
+        assert data["ranking"] == "map_focus"
+        assert data["focus_center"] == {"lat": 24.82, "lng": 67.03}
+        assert data["results"][0]["title"] == "Near viewport"
+
+
 class TestFrontendServing:
     def test_serves_html(self, client):
         res = client.get("/")

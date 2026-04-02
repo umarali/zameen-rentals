@@ -234,6 +234,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
+    refs.viewportRanking = 'default';
     refs.previewArea = null;
     refs.hoveredArea = null;
     resetMapView(); updateChips(); renderAreaList(refs.allAreas.slice(0, 20)); doSearch();

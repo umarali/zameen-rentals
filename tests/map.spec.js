@@ -106,6 +106,7 @@ test.describe("Desktop Map", () => {
     await page.waitForTimeout(2000);
     await expect(page.locator("#resultsCount")).toContainText("shown");
     await expect(page.locator("#resultsMeta")).toContainText(/available in|available across|No local listings|Move the map/);
+    await expect(page.locator("#dataSource")).toContainText(/Nearest first|Instant/);
   });
 });
 

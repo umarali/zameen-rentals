@@ -57,6 +57,7 @@ export const refs = {
   viewportAreaNames: [],
   viewportTotal: 0,
   viewportShown: 0,
+  viewportRanking: 'default',
   lastSearchTotal: 0,
   pendingMapArea: null,
   hoveredArea: null,
