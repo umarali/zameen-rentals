@@ -20,6 +20,7 @@ function selectAreaFull(name, fromMap) {
   refs.mapAreaTotals = {};
   refs.viewportAreaNames = [];
   refs.viewportRanking = 'default';
+  refs.lastViewportSearchKey = '';
   refs.previewArea = null;
   refs.hoveredArea = null;
   selectArea(name, fromMap, { highlightMarker, doSearch });
@@ -31,6 +32,7 @@ function clearFilterFull(f) {
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
     refs.viewportRanking = 'default';
+    refs.lastViewportSearchKey = '';
     refs.previewArea = null;
     refs.hoveredArea = null;
   }
@@ -348,11 +350,35 @@ function shouldUseViewportSearch({ mobile = false } = {}) {
   return window.innerWidth > 768 && !!refs.map;
 }
 
+function buildViewportSearchKey({ visibleAreaNames, center, mobile = false, page = 1 }) {
+  return JSON.stringify({
+    city: S.city,
+    type: S.type || '',
+    beds: S.beds || '',
+    priceMin: S.priceMin || '',
+    priceMax: S.priceMax || '',
+    furnished: S.furnished ? 1 : 0,
+    sort: S.sort || '',
+    mobile,
+    page,
+    centerLat: center.lat.toFixed(4),
+    centerLng: center.lng.toFixed(4),
+    areas: [...visibleAreaNames].sort(),
+  });
+}
+
 async function doViewportSearch(page = 1, { mobile = false } = {}) {
   const mapInstance = mobile ? refs.mobileMap : refs.map;
   if (!mapInstance || refs.isLoading) return;
 
   const append = page > 1;
+  const visibleAreaNames = getVisibleAreaNames(mapInstance);
+  const center = mapInstance.getCenter();
+  const viewportKey = append
+    ? ''
+    : buildViewportSearchKey({ visibleAreaNames, center, mobile, page });
+  if (!append && viewportKey === refs.lastViewportSearchKey) return;
+
   if (!append) {
     refs.currentPage = 1;
     refs.currentResults = [];
@@ -366,9 +392,8 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
 
   try {
     refs.searchMode = 'viewport';
-    refs.viewportAreaNames = getVisibleAreaNames(mapInstance);
+    refs.viewportAreaNames = visibleAreaNames;
     const params = getParams(refs.currentPage, { omitArea: true });
-    const center = mapInstance.getCenter();
     refs.viewportAreaNames.forEach(name => params.append('areas', name));
     params.set('center_lat', center.lat.toFixed(6));
     params.set('center_lng', center.lng.toFixed(6));
@@ -381,6 +406,7 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     const data = await r.json();
     hideLoading();
     applyResults(data, { append, mode: 'viewport' });
+    if (!append) refs.lastViewportSearchKey = viewportKey;
   } catch (e) {
     hideLoading();
     refs.currentResults = [];
@@ -399,6 +425,7 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
 
 async function doAreaSearch(page = 1) {
   const append = page > 1;
+  refs.lastViewportSearchKey = '';
   if (!append) {
     refs.currentPage = 1;
     refs.currentResults = [];
@@ -618,6 +645,7 @@ async function loadCityData() {
   refs.viewportTotal = 0;
   refs.viewportShown = 0;
   refs.viewportRanking = 'default';
+  refs.lastViewportSearchKey = '';
   refs.previewArea = null;
   refs.hoveredArea = null;
   const cd = CITY_DEFAULTS[S.city];

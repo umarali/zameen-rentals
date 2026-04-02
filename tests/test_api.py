@@ -155,6 +155,27 @@ class TestListingDetailEndpoint:
         assert data.get("source") == "local"
         assert data["phone"] == "+923001234567"
 
+    def test_local_detail_does_not_fallback_whatsapp_to_call_phone(self, client):
+        upsert_listing(
+            zameen_id="900005",
+            url="https://www.zameen.com/Property/test-900005-1-1.html",
+            city="karachi",
+            card_data={"title": "Call only", "price": 50000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"},
+        )
+        upsert_listing(
+            zameen_id="900005",
+            url="https://www.zameen.com/Property/test-900005-1-1.html",
+            city="karachi",
+            detail_data={"call_phone": "+922134567890", "whatsapp_phone": None, "description": "Call only"},
+        )
+
+        res = client.get("/api/listing-detail?url=https://www.zameen.com/Property/test-900005-1-1.html")
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["call_phone"] == "+922134567890"
+        assert data["whatsapp_phone"] is None
+
     def test_local_detail_includes_exact_geography(self, client):
         upsert_listing(
             zameen_id="900003",
@@ -248,6 +269,29 @@ class TestListingPhoneEndpoint:
         assert data["phone"] == "+923009876543"
 
 
+class TestListingContactEndpoint:
+    def test_local_contact_does_not_fallback_whatsapp_to_call_phone(self, client):
+        upsert_listing(
+            zameen_id="900006",
+            url="https://www.zameen.com/Property/test-900006-1-1.html",
+            city="karachi",
+            card_data={"title": "Call only", "price": 60000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"},
+        )
+        upsert_listing(
+            zameen_id="900006",
+            url="https://www.zameen.com/Property/test-900006-1-1.html",
+            city="karachi",
+            detail_data={"call_phone": "+922134567891", "whatsapp_phone": None, "contact_source": "showNumbers"},
+        )
+
+        res = client.get("/api/listing-contact?url=https://www.zameen.com/Property/test-900006-1-1.html")
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["call_phone"] == "+922134567891"
+        assert data["whatsapp_phone"] is None
+
+
 class TestMapSearchEndpoint:
     def test_map_search_orders_results_near_viewport_center(self, client):
         upsert_listing(
@@ -280,6 +324,14 @@ class TestMapSearchEndpoint:
         assert data["ranking"] == "map_focus"
         assert data["focus_center"] == {"lat": 24.82, "lng": 67.03}
         assert data["results"][0]["title"] == "Near viewport"
+
+    def test_map_search_rejects_excessive_area_count(self, client):
+        query = "&".join(f"areas=A{i}" for i in range(501))
+
+        res = client.get(f"/api/map-search?city=karachi&{query}")
+
+        assert res.status_code == 400
+        assert "Too many areas" in res.json()["detail"]
 
 
 class TestFrontendServing:

@@ -4,6 +4,9 @@ import { $, $$, esc, escA, fmtPrice } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import { getAreaForListing, handleContactAction } from './cards.js';
 
+let drawerDetailController = null;
+let drawerDetailRequestId = 0;
+
 // ===== NEARBY AREAS =====
 
 function getNearby(name, n) {
@@ -82,7 +85,7 @@ function renderDrawerMiniMap(target) {
 export function openDrawer(item, selectAreaFull) {
   const imgs = item.images || (item.image_url ? [item.image_url] : []);
   const callPhone = item.call_phone || item.phone || '';
-  const whatsappPhone = item.whatsapp_phone || item.call_phone || item.phone || '';
+  const whatsappPhone = item.whatsapp_phone || '';
   const contactAttrs = [
     callPhone ? `data-call-phone="${escA(callPhone)}"` : '',
     whatsappPhone ? `data-whatsapp-phone="${escA(whatsappPhone)}"` : '',
@@ -170,9 +173,14 @@ async function fetchDrawerDetail(item, existingImgs) {
   const el = $('#drawerEnriched');
   if (!el) return;
   const listingUrl = item.url;
+  drawerDetailController?.abort();
+  const controller = new AbortController();
+  const requestId = ++drawerDetailRequestId;
+  drawerDetailController = controller;
   try {
-    const resp = await fetch(`/api/listing-detail?url=${encodeURIComponent(listingUrl)}`);
+    const resp = await fetch(`/api/listing-detail?url=${encodeURIComponent(listingUrl)}`, { signal: controller.signal });
     const d = await resp.json();
+    if (controller.signal.aborted || requestId !== drawerDetailRequestId) return;
     if (!d || !Object.keys(d).length) { el.innerHTML = ''; return; }
 
     const resolvedItem = { ...item, ...d };
@@ -188,8 +196,10 @@ async function fetchDrawerDetail(item, existingImgs) {
         btn.dataset.callPhone = d.call_phone || d.phone;
         btn.dataset.phone = d.call_phone || d.phone;
       }
-      if (d.whatsapp_phone || d.call_phone || d.phone) {
-        btn.dataset.whatsappPhone = d.whatsapp_phone || d.call_phone || d.phone;
+      if (d.whatsapp_phone) {
+        btn.dataset.whatsappPhone = d.whatsapp_phone;
+      } else {
+        delete btn.dataset.whatsappPhone;
       }
     });
     const locationMeta = document.getElementById('drawerLocationMeta');
@@ -250,13 +260,21 @@ async function fetchDrawerDetail(item, existingImgs) {
       all.classList.toggle('hidden'); all.classList.toggle('flex');
       amToggle.textContent = all.classList.contains('hidden') ? `Show all ${d.amenities.length} amenities` : 'Show less';
     });
-  } catch { el.innerHTML = ''; }
+  } catch (error) {
+    if (error?.name === 'AbortError' || requestId !== drawerDetailRequestId) return;
+    el.innerHTML = '';
+  } finally {
+    if (drawerDetailController === controller) drawerDetailController = null;
+  }
 }
 
 // ===== CLOSE DRAWER =====
 
 export function closeDrawer(fromPopState) {
   if (!$('#drawer').classList.contains('drawer-open')) return;
+  drawerDetailRequestId += 1;
+  drawerDetailController?.abort();
+  drawerDetailController = null;
   $('#drawer').classList.remove('drawer-open');
   $('#drawerOverlay').classList.remove('overlay-open');
   document.body.style.overflow = '';

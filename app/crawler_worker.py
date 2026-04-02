@@ -481,13 +481,12 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None):
     """Refresh phone numbers via API for listings with stale or missing phones."""
     conn = _get_conn()
     rows = conn.execute("""
-        SELECT zameen_id, url FROM listings
+        SELECT zameen_id, url, call_phone, whatsapp_phone FROM listings
         WHERE is_active = 1 AND (
-            call_phone IS NULL
-            OR whatsapp_phone IS NULL
-            OR detail_scraped_at < datetime('now', '-3 days')
+            contact_fetched_at IS NULL
+            OR contact_fetched_at < datetime('now', '-3 days')
         )
-        ORDER BY detail_scraped_at ASC NULLS FIRST
+        ORDER BY contact_fetched_at ASC NULLS FIRST
         LIMIT ?
     """, (limit,)).fetchall()
 
@@ -507,7 +506,13 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None):
             zid, url = row["zameen_id"], row["url"]
             phone_data = await fetch_phone_via_api(zid, url, client, ua)
 
-            if phone_data and phone_data.get("call_phone"):
+            if phone_data:
+                call_phone = phone_data.get("call_phone") or row["call_phone"]
+                whatsapp_phone = (
+                    phone_data.get("whatsapp_phone")
+                    if "whatsapp_phone" in phone_data
+                    else row["whatsapp_phone"]
+                )
                 conn.execute("""
                     UPDATE listings
                     SET phone = ?, call_phone = ?, whatsapp_phone = ?,
@@ -515,7 +520,7 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None):
                         agent_agency = COALESCE(?, agent_agency)
                     WHERE zameen_id = ?
                 """, (
-                    phone_data["call_phone"], phone_data["call_phone"], phone_data.get("whatsapp_phone"),
+                    call_phone, call_phone, whatsapp_phone,
                     json.dumps(phone_data.get("contact_payload")) if phone_data.get("contact_payload") else None,
                     now, phone_data.get("contact_source"), phone_data.get("agent_agency"), zid,
                 ))

@@ -21,15 +21,28 @@ logger = logging.getLogger("zameenrentals")
 router = APIRouter()
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_MAX_VIEWPORT_AREAS = 500
+
+
+def _normalize_area_names(areas, *, limit=_MAX_VIEWPORT_AREAS):
+    names, seen = [], set()
+    for area in areas:
+        name = (area or "").strip()
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        names.append(name)
+        if len(names) > limit:
+            raise HTTPException(status_code=400, detail=f"Too many areas. Maximum is {limit}.")
+    return names
 
 
 def _contact_response_from_listing(listing):
     call_phone = listing.get("call_phone") or listing.get("phone")
-    whatsapp_phone = listing.get("whatsapp_phone") or call_phone
     return {
         "phone": call_phone,
         "call_phone": call_phone,
-        "whatsapp_phone": whatsapp_phone,
+        "whatsapp_phone": listing.get("whatsapp_phone"),
         "agent_agency": listing.get("agent_agency"),
         "source": "local",
     }
@@ -179,7 +192,7 @@ async def map_search(
     center_lat: Optional[float] = Query(None, ge=-90, le=90),
     center_lng: Optional[float] = Query(None, ge=-180, le=180),
 ):
-    area_names = [a for a in areas if a]
+    area_names = _normalize_area_names(areas)
     if not area_names:
         return {
             "total": 0,
@@ -232,7 +245,7 @@ async def listing_detail(request: Request, url: str = Query(...)):
                 local_detail = {
                     "phone": listing.get("phone"),
                     "call_phone": listing.get("call_phone") or listing.get("phone"),
-                    "whatsapp_phone": listing.get("whatsapp_phone") or listing.get("call_phone") or listing.get("phone"),
+                    "whatsapp_phone": listing.get("whatsapp_phone"),
                     "description": listing.get("description"),
                     "features": json.loads(listing["features_json"]) if listing.get("features_json") else [],
                     "amenities": json.loads(listing["amenities_json"]) if listing.get("amenities_json") else [],
@@ -273,6 +286,7 @@ async def listing_contact(request: Request, url: str = Query(...)):
         raise HTTPException(status_code=400, detail="Invalid Zameen.com URL")
     try:
         zid = extract_zameen_id(url)
+        listing = None
         if zid:
             listing = get_listing_by_zameen_id(zid)
             if listing and (listing.get("call_phone") or listing.get("phone") or listing.get("whatsapp_phone")):
@@ -280,9 +294,9 @@ async def listing_contact(request: Request, url: str = Query(...)):
         contact = await fetch_listing_contact(url)
         if not contact:
             return {"phone": None, "call_phone": None, "whatsapp_phone": None}
-        if zid:
+        if zid and listing:
             upsert_listing(
-                zameen_id=zid, url=url, city="",
+                zameen_id=zid, url=url, city=listing.get("city") or "",
                 detail_data={
                     "phone": contact.get("phone"),
                     "call_phone": contact.get("call_phone"),

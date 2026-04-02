@@ -63,7 +63,7 @@ export function renderCard(item, idx) {
 
   const typeLabel = item.property_type ? `<span class="text-[10px] font-semibold uppercase tracking-wide text-brand-500 bg-brand-50 px-2 py-0.5 rounded-full">${esc(item.property_type)}</span>` : '';
   const callPhone = item.call_phone || item.phone || '';
-  const whatsappPhone = item.whatsapp_phone || item.call_phone || item.phone || '';
+  const whatsappPhone = item.whatsapp_phone || '';
   const contactAttrs = [
     callPhone ? `data-call-phone="${escA(callPhone)}"` : '',
     whatsappPhone ? `data-whatsapp-phone="${escA(whatsappPhone)}"` : '',
@@ -93,6 +93,7 @@ export function renderCard(item, idx) {
 
 export function initCarousels() {
   $$('[data-carousel]').forEach(el => {
+    if (el.dataset.carouselReady === '1') return;
     let idx = 0;
     const slides = el.querySelector('[data-slides]');
     const dots = el.querySelectorAll('.carousel-dot');
@@ -105,6 +106,7 @@ export function initCarousels() {
     }
     el.querySelector('[data-prev]')?.addEventListener('click', e => { e.stopPropagation(); go(idx - 1); });
     el.querySelector('[data-next]')?.addEventListener('click', e => { e.stopPropagation(); go(idx + 1); });
+    el.dataset.carouselReady = '1';
   });
 }
 
@@ -113,7 +115,7 @@ export function initCarousels() {
 function getDatasetContact(btn) {
   return {
     callPhone: btn.dataset.callPhone || btn.dataset.phone || '',
-    whatsappPhone: btn.dataset.whatsappPhone || btn.dataset.phone || btn.dataset.callPhone || '',
+    whatsappPhone: btn.dataset.whatsappPhone || '',
   };
 }
 
@@ -125,15 +127,17 @@ function syncContactButtons(listingUrl, data) {
       el.dataset.callPhone = data.call_phone || data.phone;
       el.dataset.phone = data.call_phone || data.phone;
     }
-    if (data.whatsapp_phone || data.call_phone || data.phone) {
-      el.dataset.whatsappPhone = data.whatsapp_phone || data.call_phone || data.phone;
+    if (data.whatsapp_phone) {
+      el.dataset.whatsappPhone = data.whatsapp_phone;
+    } else {
+      delete el.dataset.whatsappPhone;
     }
   });
 }
 
 function openContact(action, listingUrl, contact) {
   const callPhone = contact.callPhone;
-  const whatsappPhone = contact.whatsappPhone || callPhone;
+  const whatsappPhone = contact.whatsappPhone;
   if (action === 'call' && callPhone) {
     window.open(`tel:${callPhone}`, '_self');
     return true;

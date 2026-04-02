@@ -11,6 +11,8 @@ const EXACT_PREFETCH_CONCURRENCY = 3;
 const EXACT_PREFETCH_COOLDOWN_MS = 30000;
 
 let exactPrefetchTimer = null;
+let exactPrefetchController = null;
+let exactPrefetchSession = 0;
 const exactPrefetchPending = new Set();
 const exactPrefetchMissing = new Set();
 const exactPrefetchCooldown = new Map();
@@ -47,6 +49,20 @@ function showAreaPreview(areaName) {
   refs.hoveredArea = null;
 }
 
+function isMobileOverlayVisible() {
+  const overlay = $('#mapOverlay');
+  return Boolean(overlay && !overlay.classList.contains('hidden'));
+}
+
+function cancelExactLocationPrefetch() {
+  clearTimeout(exactPrefetchTimer);
+  if (exactPrefetchController) {
+    exactPrefetchController.abort();
+    exactPrefetchController = null;
+  }
+  exactPrefetchSession += 1;
+}
+
 function canPrefetchExactLocation(item) {
   if (!item?.url || hasExactLocation(item)) return false;
   if (exactPrefetchPending.has(item.url) || exactPrefetchMissing.has(item.url)) return false;
@@ -54,13 +70,13 @@ function canPrefetchExactLocation(item) {
   return Date.now() - lastAttempt > EXACT_PREFETCH_COOLDOWN_MS;
 }
 
-async function hydrateExactLocation(item) {
+async function hydrateExactLocation(item, signal) {
   if (!canPrefetchExactLocation(item)) return false;
 
   exactPrefetchPending.add(item.url);
   exactPrefetchCooldown.set(item.url, Date.now());
   try {
-    const resp = await fetch(`/api/listing-detail?url=${encodeURIComponent(item.url)}`);
+    const resp = await fetch(`/api/listing-detail?url=${encodeURIComponent(item.url)}`, { signal });
     if (!resp.ok) return false;
     const data = await resp.json();
     if (data?.has_exact_geography && Number.isFinite(Number(data.latitude)) && Number.isFinite(Number(data.longitude))) {
@@ -74,7 +90,8 @@ async function hydrateExactLocation(item) {
     }
     if (data?.source === 'live') exactPrefetchMissing.add(item.url);
     return false;
-  } catch {
+  } catch (error) {
+    if (error?.name === 'AbortError') return false;
     return false;
   } finally {
     exactPrefetchPending.delete(item.url);
@@ -82,8 +99,9 @@ async function hydrateExactLocation(item) {
 }
 
 function scheduleExactLocationPrefetch(mapInstance = refs.map, { mobile = false } = {}) {
-  clearTimeout(exactPrefetchTimer);
+  cancelExactLocationPrefetch();
   if (!mapInstance || refs.isLoading) return;
+  if (mobile && !isMobileOverlayVisible()) return;
 
   const minZoom = mobile ? EXACT_MARKER_MIN_ZOOM_MOBILE : EXACT_MARKER_MIN_ZOOM;
   if (mapInstance.getZoom() < minZoom || !refs.currentResults.length) return;
@@ -94,16 +112,26 @@ function scheduleExactLocationPrefetch(mapInstance = refs.map, { mobile = false 
       .slice(0, EXACT_PREFETCH_LIMIT);
     if (!candidates.length) return;
 
+    const controller = new AbortController();
+    const session = exactPrefetchSession;
+    const resultSet = refs.currentResults;
+    exactPrefetchController = controller;
     let anyUpdated = false;
-    for (let i = 0; i < candidates.length; i += EXACT_PREFETCH_CONCURRENCY) {
-      const batch = candidates.slice(i, i + EXACT_PREFETCH_CONCURRENCY);
-      const results = await Promise.all(batch.map(hydrateExactLocation));
-      if (results.some(Boolean)) anyUpdated = true;
-    }
+    try {
+      for (let i = 0; i < candidates.length; i += EXACT_PREFETCH_CONCURRENCY) {
+        const batch = candidates.slice(i, i + EXACT_PREFETCH_CONCURRENCY);
+        const results = await Promise.all(batch.map(item => hydrateExactLocation(item, controller.signal)));
+        if (controller.signal.aborted || refs.currentResults !== resultSet || session !== exactPrefetchSession) return;
+        if (results.some(Boolean)) anyUpdated = true;
+      }
 
-    if (anyUpdated) {
-      updateMapMarkers();
-      if (refs.mobileMap) updateMobileMarkers(refs._selectAreaFull);
+      if (anyUpdated && refs.currentResults === resultSet && session === exactPrefetchSession) {
+        if (exactPrefetchController === controller) exactPrefetchController = null;
+        updateMapMarkers();
+        if (refs.mobileMap) updateMobileMarkers(refs._selectAreaFull);
+      }
+    } finally {
+      if (exactPrefetchController === controller) exactPrefetchController = null;
     }
   }, 250);
 }
@@ -197,7 +225,10 @@ function updateListingMarkers(mapInstance = refs.map, { mobile = false } = {}) {
     });
 
     marker.on('click', () => {
-      if (mobile) $('#mapOverlay').classList.add('hidden');
+      if (mobile) {
+        cancelExactLocationPrefetch();
+        $('#mapOverlay').classList.add('hidden');
+      }
       refs._openDrawer?.(item);
     });
     marker.on('mouseover', () => {
@@ -472,10 +503,13 @@ export function initMobileMap(selectAreaFull, openDrawer, onViewportChange) {
         maxZoom: 18,
       }).addTo(refs.mobileMap);
       fitCityOverview(refs.mobileMap);
-      refs.mobileMap.on('moveend', () => refs._onMobileViewportChange?.());
+      refs.mobileMap.on('moveend', () => {
+        if (!isMobileOverlayVisible()) return;
+        refs._onMobileViewportChange?.();
+      });
       refs.mobileMap.on('zoomend', () => {
         updateMobileMarkers(selectAreaFull);
-        refs._onMobileViewportChange?.();
+        if (isMobileOverlayVisible()) refs._onMobileViewportChange?.();
       });
     }
 
@@ -483,7 +517,7 @@ export function initMobileMap(selectAreaFull, openDrawer, onViewportChange) {
     if (S.area && refs.markers[S.area]) refs.mobileMap.setView(refs.markers[S.area].getLatLng(), 14);
     updateMobileMarkers(selectAreaFull);
     updateMobileCarousel(refs.currentResults);
-    if (!S.area) refs._onMobileViewportChange?.();
+    if (!S.area && isMobileOverlayVisible()) refs._onMobileViewportChange?.();
   });
 
   $('#mapCarousel').addEventListener('click', e => {
@@ -491,12 +525,16 @@ export function initMobileMap(selectAreaFull, openDrawer, onViewportChange) {
     if (!card) return;
     const idx = [...$('#mapCarousel').children].indexOf(card);
     if (refs.currentResults[idx]) {
+      cancelExactLocationPrefetch();
       $('#mapOverlay').classList.add('hidden');
       openDrawer(refs.currentResults[idx]);
     }
   });
 
-  $('#mapOverlayClose').addEventListener('click', () => $('#mapOverlay').classList.add('hidden'));
+  $('#mapOverlayClose').addEventListener('click', () => {
+    cancelExactLocationPrefetch();
+    $('#mapOverlay').classList.add('hidden');
+  });
 }
 
 export function initHoverSync() {

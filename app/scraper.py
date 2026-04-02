@@ -60,6 +60,22 @@ def _normalize_phone(raw):
     return phone
 
 
+def _is_mobile_phone(raw):
+    digits = re.sub(r"\D", "", str(raw or ""))
+    return digits.startswith("923") or digits.startswith("03") or digits.startswith("3")
+
+
+def _sanitize_contact_payload(*, phones, mobile, agency):
+    payload = {}
+    if phones:
+        payload["phone"] = phones
+    if mobile:
+        payload["mobile"] = mobile
+    if agency:
+        payload["agency_name"] = agency
+    return payload or None
+
+
 def _parse_contact_payload(data):
     if not isinstance(data, dict) or not data.get("success"):
         return None
@@ -69,12 +85,21 @@ def _parse_contact_payload(data):
     if not isinstance(phones, list):
         phones = [phones] if phones else []
 
-    call_phone = next((_normalize_phone(p) for p in phones if _normalize_phone(p)), None)
+    normalized_phones = []
+    for phone in phones:
+        normalized = _normalize_phone(phone)
+        if normalized and normalized not in normalized_phones:
+            normalized_phones.append(normalized)
+
+    call_phone = normalized_phones[0] if normalized_phones else None
     mobile = _normalize_phone(contact.get("mobile"))
     if not call_phone:
         call_phone = mobile
 
-    whatsapp_phone = mobile or call_phone
+    whatsapp_phone = next(
+        (phone for phone in ([mobile] + normalized_phones) if phone and _is_mobile_phone(phone)),
+        None,
+    )
     agency = contact.get("agency_name")
 
     return {
@@ -83,7 +108,11 @@ def _parse_contact_payload(data):
         "whatsapp_phone": whatsapp_phone,
         "agent_agency": agency,
         "contact_source": "showNumbers",
-        "contact_payload": contact,
+        "contact_payload": _sanitize_contact_payload(
+            phones=normalized_phones,
+            mobile=mobile,
+            agency=agency,
+        ),
     }
 
 
@@ -364,9 +393,11 @@ def parse_listings(html):
                 for item in items:
                     l = {"title": item.get("name",""), "url": item.get("url","")}
                     if "offers" in item:
-                        offer = item["offers"] if isinstance(item["offers"], dict) else item["offers"][0]
-                        l["price"] = parse_price(str(offer.get("price","")))
-                        l["price_text"] = str(offer.get("price",""))
+                        offers = item["offers"]
+                        offer = offers if isinstance(offers, dict) else offers[0] if isinstance(offers, list) and offers else None
+                        if isinstance(offer, dict):
+                            l["price"] = parse_price(str(offer.get("price","")))
+                            l["price_text"] = str(offer.get("price",""))
                     # Try to get images from structured data
                     img = item.get("image", "")
                     if isinstance(img, list):

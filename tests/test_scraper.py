@@ -3,6 +3,7 @@ import pytest
 from app.scraper import (
     extract_zameen_id, parse_listings, _is_property_photo_url,
     _extract_property_type, _extract_images, _extract_listing_geography,
+    _normalize_phone, _parse_contact_payload,
 )
 from app.parsing import parse_price, build_url, match_area
 from app.cache import RateLimiter
@@ -159,6 +160,60 @@ class TestParseListings:
     def test_returns_list(self):
         result = parse_listings("<html><body></body></html>")
         assert isinstance(result, list)
+
+    def test_json_ld_empty_offers_does_not_crash(self):
+        html = """
+        <script type="application/ld+json">
+        {
+          "@type": "Product",
+          "name": "Listing with empty offers",
+          "url": "https://www.zameen.com/Property/test-50001121-1-1.html",
+          "offers": []
+        }
+        </script>
+        """
+        listings = parse_listings(html)
+        assert len(listings) == 1
+        assert listings[0]["title"] == "Listing with empty offers"
+        assert "price" not in listings[0]
+
+
+class TestContactParsing:
+    def test_normalize_phone_adds_plus_for_country_code(self):
+        assert _normalize_phone("923001234567") == "+923001234567"
+
+    def test_parse_contact_payload_keeps_whatsapp_only_for_mobile(self):
+        payload = {
+            "success": True,
+            "contact_details": {
+                "phone": ["021-34567890"],
+                "mobile": None,
+                "agency_name": "Example Realty",
+            },
+        }
+
+        result = _parse_contact_payload(payload)
+
+        assert result["call_phone"] == "02134567890"
+        assert result["whatsapp_phone"] is None
+        assert result["contact_payload"] == {
+            "phone": ["02134567890"],
+            "agency_name": "Example Realty",
+        }
+
+    def test_parse_contact_payload_uses_mobile_for_whatsapp(self):
+        payload = {
+            "success": True,
+            "contact_details": {
+                "phone": ["021-34567890"],
+                "mobile": "0300-1234567",
+            },
+        }
+
+        result = _parse_contact_payload(payload)
+
+        assert result["call_phone"] == "02134567890"
+        assert result["whatsapp_phone"] == "03001234567"
 
 
 class TestExtractListingGeography:

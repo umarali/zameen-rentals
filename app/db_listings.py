@@ -132,11 +132,10 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             or existing["call_phone"]
             or existing["phone"]
         )
-        whatsapp_phone = (
-            detail_data.get("whatsapp_phone")
-            or existing["whatsapp_phone"]
-            or call_phone
-        )
+        if "whatsapp_phone" in detail_data:
+            whatsapp_phone = detail_data.get("whatsapp_phone")
+        else:
+            whatsapp_phone = existing["whatsapp_phone"]
         description = _value_or_existing(detail_data, "description", existing["description"])
         features_json = _json_value(detail_data, "features", existing["features_json"])
         amenities_json = _json_value(detail_data, "amenities", existing["amenities_json"])

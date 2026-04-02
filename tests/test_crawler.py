@@ -2,7 +2,9 @@
 import pytest
 from app.crawler_worker import (
     _build_browser_profile, _api_headers, _get_empty_types, _update_type_state,
+    refresh_phones_batch,
 )
+from app.db_listings import upsert_listing, get_listing_by_zameen_id
 from app.data import USER_AGENTS, CRAWL_PROPERTY_TYPES
 
 
@@ -120,3 +122,37 @@ class TestEmptyTypesTracking:
         assert "Rentals_Rooms" in _get_empty_types("karachi", "Karachi_Test4")
         _update_type_state("karachi", "Karachi_Test4", "Rentals_Rooms", 5)
         assert "Rentals_Rooms" not in _get_empty_types("karachi", "Karachi_Test4")
+
+
+class TestRefreshPhonesBatch:
+    @pytest.mark.asyncio
+    async def test_uses_contact_fetched_at_and_persists_whatsapp_without_call_phone(self, monkeypatch):
+        upsert_listing(
+            zameen_id="810001",
+            url="https://www.zameen.com/Property/test-810001-1-1.html",
+            city="karachi",
+            card_data={"title": "Needs contact refresh", "price": 70000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"},
+        )
+
+        async def fake_fetch_phone_via_api(zameen_id, listing_url, client, ua):
+            return {
+                "call_phone": None,
+                "whatsapp_phone": "+923001112233",
+                "contact_source": "showNumbers",
+                "contact_payload": {"mobile": "+923001112233"},
+                "agent_agency": "Refresh Realty",
+            }
+
+        async def fake_sleep(*args, **kwargs):
+            return None
+
+        monkeypatch.setattr("app.crawler_worker.fetch_phone_via_api", fake_fetch_phone_via_api)
+        monkeypatch.setattr("app.crawler_worker.asyncio.sleep", fake_sleep)
+
+        updated = await refresh_phones_batch(limit=5)
+
+        listing = get_listing_by_zameen_id("810001")
+        assert updated == 1
+        assert listing["call_phone"] is None
+        assert listing["whatsapp_phone"] == "+923001112233"
+        assert listing["contact_fetched_at"] is not None

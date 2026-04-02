@@ -158,6 +158,25 @@ class TestUpsertListing:
         assert listing["contact_fetched_at"] is not None
         assert listing["detail_scraped_at"] is None
 
+    def test_contact_only_update_does_not_backfill_whatsapp_from_call_phone(self):
+        upsert_listing(
+            zameen_id="100009",
+            url="https://www.zameen.com/Property/t-100009-1-1.html",
+            city="karachi",
+            card_data={"title": "Call Only", "price": 65000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"},
+        )
+
+        upsert_listing(
+            zameen_id="100009",
+            url="https://www.zameen.com/Property/t-100009-1-1.html",
+            city="karachi",
+            detail_data={"call_phone": "+922134567890", "whatsapp_phone": None, "contact_source": "showNumbers"},
+        )
+
+        listing = get_listing_by_zameen_id("100009")
+        assert listing["call_phone"] == "+922134567890"
+        assert listing["whatsapp_phone"] is None
+
 
 class TestSearchListings:
     def _seed(self, n=5):
