@@ -22,6 +22,32 @@ test.describe("Desktop Map", () => {
     ).toBeVisible();
   });
 
+  test("top-right controls align cleanly alongside the coverage badge", async ({ page }) => {
+    await expect(page.locator("#mapCoverageBadge")).toBeVisible();
+    const layerControl = page.locator("#mapContainer .map-layer-control").first();
+    const gpsControl = page.locator("#mapContainer .map-gps-btn").first();
+    const zoomControl = page.locator("#mapContainer .leaflet-control-zoom").first();
+
+    await expect(layerControl).toBeVisible();
+    await expect(gpsControl).toBeVisible();
+    await expect(zoomControl).toBeVisible();
+
+    const badgeBox = await page.locator("#mapCoverageBadge").boundingBox();
+    const layerBox = await layerControl.boundingBox();
+    const gpsBox = await gpsControl.boundingBox();
+    const zoomBox = await zoomControl.boundingBox();
+
+    expect(badgeBox).toBeTruthy();
+    expect(layerBox).toBeTruthy();
+    expect(gpsBox).toBeTruthy();
+    expect(zoomBox).toBeTruthy();
+    expect(gpsBox.x).toBeGreaterThan(badgeBox.x + badgeBox.width - 8);
+    expect(Math.abs((layerBox.x + layerBox.width) - (gpsBox.x + gpsBox.width))).toBeLessThanOrEqual(2);
+    expect(Math.abs((layerBox.x + layerBox.width) - (zoomBox.x + zoomBox.width))).toBeLessThanOrEqual(2);
+    expect(gpsBox.y).toBeGreaterThan(layerBox.y + layerBox.height - 2);
+    expect(zoomBox.y).toBeGreaterThan(gpsBox.y + gpsBox.height - 2);
+  });
+
   test("map layer toggle switches to satellite and persists after reload", async ({ page }) => {
     const satelliteBtn = page.locator('#mapContainer [data-map-layer="satellite"]').first();
     await satelliteBtn.click();
@@ -78,6 +104,17 @@ test.describe("Desktop Map", () => {
     }
   });
 
+  test("area mode hides exact listing pins so the map does not imply viewport filtering", async ({ page }) => {
+    await page.locator('.city-tab[data-city="karachi"]').click();
+    await page.locator("#areaChip").click();
+    await page.locator("#areaInput").fill("Clifton");
+    await page.waitForTimeout(400);
+    await page.locator(".area-opt", { hasText: "Clifton" }).first().click();
+    await page.waitForTimeout(2500);
+    await expect(page.locator("#listingsTitle")).toContainText("Clifton");
+    await expect(page.locator("#mapContainer .listing-exact-marker")).toHaveCount(0);
+  });
+
   test("city change keeps the map in viewport mode", async ({ page }) => {
     await page.locator('.city-tab[data-city="karachi"]').click();
     await page.waitForTimeout(1500);
@@ -123,7 +160,7 @@ test.describe("Desktop Map", () => {
     await page.locator('.city-tab[data-city="karachi"]').click();
     await page.waitForTimeout(2000);
     await expect(page.locator("#resultsCount")).toContainText("shown");
-    await expect(page.locator("#resultsMeta")).toContainText(/available in|available across|No local listings|Move the map/);
+    await expect(page.locator("#resultsMeta")).toContainText(/exact-pin rentals currently visible|available in|available across|No local listings|Move the map/);
     await expect(page.locator("#dataSource")).toContainText(/Nearest first|Instant/);
   });
 

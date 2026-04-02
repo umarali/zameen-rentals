@@ -240,6 +240,7 @@ function updateHeader({
   visibleAreas = 0,
   coveredAreas = 0,
   ranking = refs.viewportRanking,
+  scope = refs.viewportScope,
 } = {}) {
   const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
   const shown = refs.currentResults.length;
@@ -257,14 +258,17 @@ function updateHeader({
   } else if (mode === 'viewport') {
     titleEl.textContent = 'Rentals in this map view';
     countEl.textContent = `${shown} shown`;
-    if (total && coveredAreas > 0) {
-      metaEl.textContent = coveredAreas === visibleAreas
-        ? `${total} available across ${coveredAreas} visible areas`
-        : `${total} available in ${coveredAreas} covered areas within ${visibleAreas} visible areas`;
-    } else if (visibleAreas > 0) {
-      metaEl.textContent = `No local listings in ${visibleAreas} visible areas yet`;
+    const coverageMessage = getViewportCoverageMessage({ total, visibleAreas, coveredAreas });
+    if (scope === 'exact_bounds') {
+      metaEl.textContent = total
+        ? `${total} exact-pin rentals currently visible on the map`
+        : 'No exact-pin rentals are visible in this map view';
+    } else if (isEmptyExactBoundsFallback(scope)) {
+      metaEl.textContent = total
+        ? `No exact-pin rentals visible here. ${coverageMessage}`
+        : `No exact-pin rentals are visible in this map view. ${coverageMessage}`;
     } else {
-      metaEl.textContent = 'Move the map to explore nearby areas';
+      metaEl.textContent = coverageMessage;
     }
   } else if (S.area) {
     titleEl.textContent = 'Rentals in ' + S.area;
@@ -295,6 +299,34 @@ function updateHeader({
   } else {
     sourceEl.classList.add('hidden');
   }
+}
+
+function getViewportCoverageMessage({ total = 0, visibleAreas = 0, coveredAreas = 0 } = {}) {
+  if (total && coveredAreas > 0) {
+    return coveredAreas === visibleAreas
+      ? `${total} available across ${coveredAreas} visible areas`
+      : `${total} available in ${coveredAreas} covered areas within ${visibleAreas} visible areas`;
+  }
+  if (visibleAreas > 0) return `No local listings in ${visibleAreas} visible areas yet`;
+  return 'Move the map to explore nearby areas';
+}
+
+function isEmptyExactBoundsFallback(scope = refs.viewportScope) {
+  return scope !== 'exact_bounds'
+    && refs.viewportAttemptedExactBounds
+    && refs.viewportExactBoundsTotal === 0;
+}
+
+function getViewportEmptyStateMessage({ visibleAreas = refs.viewportAreaNames.length, scope = refs.viewportScope } = {}) {
+  if (scope === 'exact_bounds') {
+    return 'No exact-pin rentals are visible here right now. Zoom out to broaden the map view.';
+  }
+  if (isEmptyExactBoundsFallback(scope)) {
+    return visibleAreas > 0
+      ? 'No exact-pin rentals are visible here right now. Pan or zoom the map to discover nearby covered areas.'
+      : 'No exact-pin rentals are visible in this map view.';
+  }
+  return 'Pan or zoom the map to discover other areas';
 }
 
 function updateCoverageBadge() {
@@ -385,31 +417,40 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
     refs.viewportTotal = data.total || 0;
     refs.viewportShown = append ? refs.currentResults.length : (data.results || []).length;
     refs.viewportRanking = data.ranking || 'default';
+    refs.viewportScope = data.scope || 'area_coverage';
+    refs.viewportAttemptedExactBounds = Boolean(data.attempted_exact_bounds);
+    refs.viewportExactBoundsTotal = Number.isFinite(data.exact_bounds_total) ? data.exact_bounds_total : null;
   } else {
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
     refs.viewportRanking = 'default';
+    refs.viewportScope = 'area_coverage';
+    refs.viewportAttemptedExactBounds = false;
+    refs.viewportExactBoundsTotal = null;
   }
 
   if (!append) {
     refs.currentResults = data.results || [];
     if (!refs.currentResults.length) {
+      const visibleAreas = data.visible_areas || refs.viewportAreaNames.length;
       updateHeader({
         total: data.total || 0,
         source: data.source,
         mode,
-        visibleAreas: data.visible_areas || refs.viewportAreaNames.length,
+        visibleAreas,
         coveredAreas: Object.keys(data.area_totals || {}).length,
         ranking: data.ranking,
+        scope: data.scope,
       });
       renderNoResults(
         mode === 'nearby'
           ? `No exact-pin rentals were found within ${refs.nearbyRadiusKm} km.`
           : mode === 'viewport'
-          ? 'Pan or zoom the map to discover other areas'
+          ? getViewportEmptyStateMessage({ visibleAreas, scope: refs.viewportScope })
           : 'Try removing a filter to see more results'
       );
       updateMapMarkers();
+      updateCoverageBadge();
       if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
       updateMobileCarousel(refs.currentResults);
       return;
@@ -429,6 +470,7 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
     visibleAreas: data.visible_areas || refs.viewportAreaNames.length,
     coveredAreas: Object.keys(data.area_totals || {}).length,
     ranking: data.ranking,
+    scope: data.scope,
   });
   $('#reportBtn').classList.remove('hidden');
   initCarousels();
@@ -447,7 +489,8 @@ function shouldUseViewportSearch({ mobile = false } = {}) {
   return window.innerWidth > 768 && !!refs.map;
 }
 
-function buildViewportSearchKey({ visibleAreaNames, center, mobile = false, page = 1 }) {
+function buildViewportSearchKey({ visibleAreaNames, center, bounds, mobile = false, page = 1 }) {
+  const currentBounds = bounds || (mobile ? refs.mobileMap : refs.map)?.getBounds?.();
   return JSON.stringify({
     city: S.city,
     type: S.type || '',
@@ -460,6 +503,10 @@ function buildViewportSearchKey({ visibleAreaNames, center, mobile = false, page
     page,
     centerLat: center.lat.toFixed(4),
     centerLng: center.lng.toFixed(4),
+    south: currentBounds ? currentBounds.getSouth().toFixed(4) : '',
+    west: currentBounds ? currentBounds.getWest().toFixed(4) : '',
+    north: currentBounds ? currentBounds.getNorth().toFixed(4) : '',
+    east: currentBounds ? currentBounds.getEast().toFixed(4) : '',
     areas: [...visibleAreaNames].sort(),
   });
 }
@@ -471,9 +518,10 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
   const append = page > 1;
   const visibleAreaNames = getVisibleAreaNames(mapInstance);
   const center = mapInstance.getCenter();
+  const bounds = mapInstance.getBounds();
   const viewportKey = append
     ? ''
-    : buildViewportSearchKey({ visibleAreaNames, center, mobile, page });
+    : buildViewportSearchKey({ visibleAreaNames, center, bounds, mobile, page });
   if (!append && viewportKey === refs.lastViewportSearchKey) return;
 
   if (!append) {
@@ -493,6 +541,10 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     refs.viewportAreaNames.forEach(name => params.append('areas', name));
     params.set('center_lat', center.lat.toFixed(6));
     params.set('center_lng', center.lng.toFixed(6));
+    params.set('south', bounds.getSouth().toFixed(6));
+    params.set('west', bounds.getWest().toFixed(6));
+    params.set('north', bounds.getNorth().toFixed(6));
+    params.set('east', bounds.getEast().toFixed(6));
 
     const r = await fetch('/api/map-search?' + params.toString(), { signal: controller.signal });
     if (!r.ok) {

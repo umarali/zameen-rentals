@@ -95,6 +95,15 @@ function syncLayerToggleButtons() {
   });
 }
 
+function syncGpsButtons() {
+  document.querySelectorAll('.map-gps-btn').forEach(btn => {
+    const active = Boolean(refs.userLocation);
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+    btn.title = active ? 'Center on my location' : 'Use my location';
+  });
+}
+
 export function setActiveMapLayer(layerKey) {
   refs.mapLayer = persistMapLayer(layerKey);
   if (refs.map) applyBaseLayer(refs.map, 'mapBaseLayer', refs.mapLayer);
@@ -201,6 +210,7 @@ export function refreshUserLocationOverlays({ recenter = false, mapInstance = nu
     const targetZoom = Math.max(mapInstance.getZoom?.() || 0, 14);
     mapInstance.flyTo([refs.userLocation.lat, refs.userLocation.lng], targetZoom, { duration: 0.8 });
   }
+  syncGpsButtons();
 }
 
 export function clearNearbyRadiusOverlays() {
@@ -246,7 +256,7 @@ export async function requestUserLocation({ mapInstance = refs.map || refs.mobil
 
 function createGpsControl(mapInstance) {
   return L.Control.extend({
-    options: { position: 'topleft' },
+    options: { position: 'topright' },
     onAdd() {
       const container = L.DomUtil.create('div', 'map-gps-control');
       const button = L.DomUtil.create('button', 'map-gps-btn', container);
@@ -255,7 +265,9 @@ function createGpsControl(mapInstance) {
       button.setAttribute('aria-label', 'Use my location');
       button.innerHTML = `
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2v3m0 14v3m10-10h-3M5 12H2m15.364-7.364l-2.121 2.121M8.757 15.243l-2.121 2.121m10.728 0l-2.121-2.121M8.757 8.757 6.636 6.636M12 8a4 4 0 100 8 4 4 0 000-8z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.15" d="M12 2.75V5.25M12 18.75v2.5M21.25 12h-2.5M5.25 12h-2.5"/>
+          <circle cx="12" cy="12" r="6.6" stroke-width="2.15"/>
+          <circle cx="12" cy="12" r="2.8" fill="currentColor" stroke="none"/>
         </svg>
       `;
       L.DomEvent.disableClickPropagation(container);
@@ -272,6 +284,7 @@ function createGpsControl(mapInstance) {
           button.classList.remove('is-loading');
         }
       });
+      window.setTimeout(syncGpsButtons, 0);
       return container;
     },
   });
@@ -452,6 +465,7 @@ function updateListingMarkers(mapInstance = refs.map, { mobile = false } = {}) {
   const layerKey = mobile ? 'mobileListingMarkerLayer' : 'listingMarkerLayer';
   clearListingLayer(layerKey);
   if (!mapInstance) return;
+  if (!['viewport', 'nearby'].includes(refs.searchMode)) return;
 
   const minZoom = mobile ? EXACT_MARKER_MIN_ZOOM_MOBILE : EXACT_MARKER_MIN_ZOOM;
   if (mapInstance.getZoom() < minZoom) return;
@@ -476,6 +490,7 @@ function updateListingMarkers(mapInstance = refs.map, { mobile = false } = {}) {
     const radius = mobile ? 5.5 : 6.5;
     const marker = L.circleMarker([markerLat, markerLng], {
       radius,
+      className: 'listing-exact-marker',
       color: '#ffffff',
       weight: 2,
       opacity: 1,
@@ -673,10 +688,11 @@ export function initMap(selectAreaFull, onViewportChange, openDrawer) {
 
   const cd = CITY_DEFAULTS[S.city];
   ensureMapLayerState();
-  refs.map = L.map('mapContainer', { zoomControl: true }).setView([cd.lat, cd.lng], cd.zoom);
+  refs.map = L.map('mapContainer', { zoomControl: false }).setView([cd.lat, cd.lng], cd.zoom);
   applyBaseLayer(refs.map, 'mapBaseLayer', refs.mapLayer);
   refs.map.addControl(new (createLayerToggleControl())());
   refs.map.addControl(new (createGpsControl(refs.map))());
+  L.control.zoom({ position: 'topright' }).addTo(refs.map);
 
   setTimeout(() => refs.map?.invalidateSize(), 100);
   fitCityOverview(refs.map);
@@ -762,10 +778,11 @@ export function initMobileMap(selectAreaFull, openDrawer, onViewportChange) {
     if (!refs.mobileMap) {
       const cd = CITY_DEFAULTS[S.city];
       ensureMapLayerState();
-      refs.mobileMap = L.map('mapContainerMobile', { zoomControl: true }).setView([cd.lat, cd.lng], cd.zoom);
+      refs.mobileMap = L.map('mapContainerMobile', { zoomControl: false }).setView([cd.lat, cd.lng], cd.zoom);
       applyBaseLayer(refs.mobileMap, 'mobileMapBaseLayer', refs.mapLayer);
       refs.mobileMap.addControl(new (createLayerToggleControl())());
       refs.mobileMap.addControl(new (createGpsControl(refs.mobileMap))());
+      L.control.zoom({ position: 'topright' }).addTo(refs.mobileMap);
       fitCityOverview(refs.mobileMap);
       refreshUserLocationOverlays();
       syncLayerToggleButtons();

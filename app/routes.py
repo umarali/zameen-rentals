@@ -15,7 +15,8 @@ from app.parsing import parse_query_with_claude
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
 from app.db_listings import (
     search_listings, count_listings_by_area, get_listing_by_zameen_id,
-    get_crawl_stats, get_nearby_enrichment_candidates, search_nearby_listings,
+    get_crawl_stats, get_nearby_enrichment_candidates, search_exact_listings_in_bounds,
+    search_nearby_listings,
     upsert_listing,
 )
 
@@ -247,38 +248,67 @@ async def map_search(
     sort: Optional[str] = Query(None),
     center_lat: Optional[float] = Query(None, ge=-90, le=90),
     center_lng: Optional[float] = Query(None, ge=-180, le=180),
+    south: Optional[float] = Query(None, ge=-90, le=90),
+    west: Optional[float] = Query(None, ge=-180, le=180),
+    north: Optional[float] = Query(None, ge=-90, le=90),
+    east: Optional[float] = Query(None, ge=-180, le=180),
 ):
     area_names = _normalize_area_names(areas)
-    if not area_names:
-        return {
-            "total": 0,
-            "page": page,
-            "per_page": 25,
-            "results": [],
-            "source": "local",
-            "mode": "viewport",
-            "visible_areas": 0,
-            "area_totals": {},
-        }
+    has_bounds = None not in {south, west, north, east}
+    result = None
+    exact_bounds_total = None
 
-    result = search_listings(
-        city=city, area_names=area_names, property_type=property_type,
-        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
-        furnished=furnished, sort=sort, page=page,
-        center_lat=center_lat, center_lng=center_lng,
-    )
+    if has_bounds:
+        exact_result = search_exact_listings_in_bounds(
+            city=city, south=south, west=west, north=north, east=east,
+            property_type=property_type, bedrooms=bedrooms,
+            price_min=price_min, price_max=price_max, furnished=furnished,
+            sort=sort, page=page, center_lat=center_lat, center_lng=center_lng,
+        )
+        exact_bounds_total = exact_result["total"]
+        if exact_result["total"] > 0 or not area_names:
+            result = exact_result
+            result["scope"] = "exact_bounds"
+            result["visible_areas"] = max(len(area_names), len(result["area_totals"]))
+
+    if result is None:
+        if not area_names:
+            return {
+                "total": 0,
+                "page": page,
+                "per_page": 25,
+                "results": [],
+                "source": "local",
+                "mode": "viewport",
+                "scope": "area_coverage",
+                "visible_areas": 0,
+                "area_totals": {},
+            }
+
+        result = search_listings(
+            city=city, area_names=area_names, property_type=property_type,
+            bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+            furnished=furnished, sort=sort, page=page,
+            center_lat=center_lat, center_lng=center_lng,
+        )
+        result["scope"] = "area_coverage"
+        result["visible_areas"] = len(area_names)
+        result["area_totals"] = count_listings_by_area(
+            city=city, area_names=area_names, property_type=property_type,
+            bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+            furnished=furnished,
+        )
+
+    if has_bounds:
+        result["attempted_exact_bounds"] = True
+        result["exact_bounds_total"] = exact_bounds_total or 0
+
     result["source"] = "local"
     result["mode"] = "viewport"
-    result["visible_areas"] = len(area_names)
     result["focus_center"] = (
         {"lat": center_lat, "lng": center_lng}
         if center_lat is not None and center_lng is not None
         else None
-    )
-    result["area_totals"] = count_listings_by_area(
-        city=city, area_names=area_names, property_type=property_type,
-        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
-        furnished=furnished,
     )
     return result
 

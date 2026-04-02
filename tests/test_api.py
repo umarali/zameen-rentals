@@ -333,6 +333,82 @@ class TestMapSearchEndpoint:
         assert res.status_code == 400
         assert "Too many areas" in res.json()["detail"]
 
+    def test_map_search_uses_exact_bounds_results_even_without_visible_area_centroids(self, client):
+        upsert_listing(
+            zameen_id="910010",
+            url="https://www.zameen.com/Property/test-910010-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0280,
+            card_data={"title": "Exact in bounds", "price": 125000, "bedrooms": 4, "bathrooms": 3, "area_size": "5 Marla", "property_type": "House"},
+        )
+        upsert_listing(
+            zameen_id="910010",
+            url="https://www.zameen.com/Property/test-910010-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Exact in bounds",
+                "latitude": 24.826625,
+                "longitude": 67.037923,
+                "location_source": "listing_exact",
+            },
+        )
+
+        res = client.get(
+            "/api/map-search?city=karachi&property_type=house&center_lat=24.828&center_lng=67.038&south=24.824&west=67.034&north=24.833&east=67.040"
+        )
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["mode"] == "viewport"
+        assert data["scope"] == "exact_bounds"
+        assert data["total"] == 1
+        assert data["results"][0]["title"] == "Exact in bounds"
+        assert data["area_totals"] == {"Clifton": 1}
+        assert data["attempted_exact_bounds"] is True
+        assert data["exact_bounds_total"] == 1
+
+    def test_map_search_reports_empty_exact_bounds_before_falling_back_to_area_coverage(self, client):
+        upsert_listing(
+            zameen_id="910020",
+            url="https://www.zameen.com/Property/test-910020-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8100,
+            lng=67.0200,
+            card_data={"title": "Area coverage fallback", "price": 95000, "bedrooms": 3, "bathrooms": 2, "area_size": "5 Marla", "property_type": "House"},
+        )
+
+        res = client.get(
+            "/api/map-search?city=karachi&areas=Clifton&property_type=house&center_lat=24.828&center_lng=67.038&south=24.824&west=67.034&north=24.833&east=67.040"
+        )
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["mode"] == "viewport"
+        assert data["scope"] == "area_coverage"
+        assert data["attempted_exact_bounds"] is True
+        assert data["exact_bounds_total"] == 0
+        assert data["total"] == 1
+        assert data["results"][0]["title"] == "Area coverage fallback"
+
+    def test_map_search_returns_empty_exact_bounds_scope_when_no_visible_areas_exist(self, client):
+        res = client.get(
+            "/api/map-search?city=karachi&center_lat=24.828&center_lng=67.038&south=24.824&west=67.034&north=24.833&east=67.040"
+        )
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["mode"] == "viewport"
+        assert data["scope"] == "exact_bounds"
+        assert data["attempted_exact_bounds"] is True
+        assert data["exact_bounds_total"] == 0
+        assert data["total"] == 0
+        assert data["area_totals"] == {}
+
 
 class TestNearbySearchEndpoint:
     def test_nearby_search_returns_exact_only_results(self, client):

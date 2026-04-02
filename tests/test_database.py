@@ -5,7 +5,7 @@ from app.database import _get_conn, init_db
 from app.db_listings import (
     upsert_listing, search_listings, get_listing_by_zameen_id,
     get_listings_needing_detail, mark_stale_listings, get_crawl_stats,
-    content_hash, detail_hash, search_nearby_listings,
+    content_hash, detail_hash, search_exact_listings_in_bounds, search_nearby_listings,
     get_nearby_enrichment_candidates,
 )
 
@@ -490,6 +490,126 @@ class TestNearbySearchListings:
         conn = _get_conn()
         indexes = conn.execute("PRAGMA index_list(listings)").fetchall()
         assert any(index["name"] == "idx_listings_geo_active" for index in indexes)
+
+
+class TestViewportBoundsSearch:
+    def test_exact_bounds_search_orders_results_using_latitude_corrected_center_distance(self):
+        upsert_listing(
+            zameen_id="360010",
+            url="https://zameen.com/Property/t-360010-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0280,
+            card_data={"title": "North of center", "price": 125000, "bedrooms": 4, "bathrooms": 3, "area_size": "500 sqft", "property_type": "House"},
+        )
+        upsert_listing(
+            zameen_id="360010",
+            url="https://zameen.com/Property/t-360010-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "North of center",
+                "latitude": 24.830000,
+                "longitude": 67.030000,
+                "location_source": "listing_exact",
+            },
+        )
+        upsert_listing(
+            zameen_id="360011",
+            url="https://zameen.com/Property/t-360011-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0280,
+            card_data={"title": "East but closer", "price": 125000, "bedrooms": 4, "bathrooms": 3, "area_size": "500 sqft", "property_type": "House"},
+        )
+        upsert_listing(
+            zameen_id="360011",
+            url="https://zameen.com/Property/t-360011-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "East but closer",
+                "latitude": 24.820000,
+                "longitude": 67.040500,
+                "location_source": "listing_exact",
+            },
+        )
+
+        result = search_exact_listings_in_bounds(
+            city="karachi",
+            south=24.818,
+            west=67.028,
+            north=24.832,
+            east=67.041,
+            property_type="house",
+            center_lat=24.820,
+            center_lng=67.030,
+        )
+
+        assert result["total"] == 2
+        assert result["results"][0]["title"] == "East but closer"
+        assert result["results"][0]["distance_to_center"] < result["results"][1]["distance_to_center"]
+
+    def test_exact_bounds_search_returns_visible_exact_listings(self):
+        upsert_listing(
+            zameen_id="360001",
+            url="https://zameen.com/Property/t-360001-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0280,
+            card_data={"title": "Visible exact house", "price": 125000, "bedrooms": 4, "bathrooms": 3, "area_size": "500 sqft", "property_type": "House"},
+        )
+        upsert_listing(
+            zameen_id="360001",
+            url="https://zameen.com/Property/t-360001-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Visible exact house",
+                "latitude": 24.826625,
+                "longitude": 67.037923,
+                "location_source": "listing_exact",
+            },
+        )
+        upsert_listing(
+            zameen_id="360002",
+            url="https://zameen.com/Property/t-360002-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0280,
+            card_data={"title": "Outside bounds", "price": 110000, "bedrooms": 4, "bathrooms": 3, "area_size": "500 sqft", "property_type": "House"},
+        )
+        upsert_listing(
+            zameen_id="360002",
+            url="https://zameen.com/Property/t-360002-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Outside bounds",
+                "latitude": 24.840000,
+                "longitude": 67.060000,
+                "location_source": "listing_exact",
+            },
+        )
+
+        result = search_exact_listings_in_bounds(
+            city="karachi",
+            south=24.824,
+            west=67.034,
+            north=24.833,
+            east=67.040,
+            property_type="house",
+            center_lat=24.828,
+            center_lng=67.038,
+        )
+
+        assert result["total"] == 1
+        assert result["results"][0]["title"] == "Visible exact house"
+        assert result["area_totals"] == {"Clifton": 1}
 
 
 class TestGetListingByZameenId:

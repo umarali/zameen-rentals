@@ -70,6 +70,23 @@ def _haversine_km(lat1, lng1, lat2, lng2):
     return 6371.0 * (2 * math.asin(math.sqrt(a)))
 
 
+def _center_distance_expr(center_lat, center_lng, *, require_coordinates=True):
+    lng_weight = max(math.cos(math.radians(center_lat)), 0.01) ** 2
+    base_expr = """
+        ((latitude - ?) * (latitude - ?)
+         + ((longitude - ?) * (longitude - ?)) * ?)
+    """
+    params = [center_lat, center_lat, center_lng, center_lng, lng_weight]
+    if not require_coordinates:
+        return base_expr, params
+    return f"""
+        CASE
+            WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN {base_expr}
+            ELSE 999999999
+        END
+    """, params
+
+
 def _datetime_sort_value(value):
     if not value:
         return 0.0
@@ -319,15 +336,11 @@ def search_listings(*, city="karachi", area=None, area_names=None, property_type
     where = " AND ".join(conditions)
 
     map_focus = center_lat is not None and center_lng is not None
-    focus_params = [center_lat, center_lat, center_lng, center_lng] if map_focus else []
-
-    proximity_expr = """
-        CASE
-            WHEN latitude IS NOT NULL AND longitude IS NOT NULL THEN
-                ((latitude - ?) * (latitude - ?) + (longitude - ?) * (longitude - ?))
-            ELSE 999999999
-        END
-    """
+    distance_expr, distance_params = (
+        _center_distance_expr(center_lat, center_lng)
+        if map_focus
+        else ("NULL", [])
+    )
 
     if sort == "price_low":
         order = "price ASC NULLS LAST"
@@ -336,19 +349,19 @@ def search_listings(*, city="karachi", area=None, area_names=None, property_type
     elif sort == "newest":
         order = "first_seen_at DESC"
     elif map_focus:
-        order = f"{proximity_expr} ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC, last_seen_at DESC"
+        order = "distance_to_center ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC, last_seen_at DESC"
     else:
         order = "last_seen_at DESC"
 
     if map_focus and sort in {"price_low", "price_high", "newest"}:
-        order = f"{order}, {proximity_expr} ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC"
+        order = f"{order}, distance_to_center ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC"
 
     total = conn.execute(f"SELECT COUNT(*) FROM listings WHERE {where}", params).fetchone()[0]
 
     offset = (page - 1) * per_page
-    query_params = focus_params + params + focus_params + [per_page, offset]
+    query_params = distance_params + params + [per_page, offset]
     rows = conn.execute(
-        f"SELECT *, {proximity_expr if map_focus else 'NULL'} AS distance_to_center FROM listings WHERE {where} ORDER BY {order} LIMIT ? OFFSET ?",
+        f"SELECT *, {distance_expr} AS distance_to_center FROM listings WHERE {where} ORDER BY {order} LIMIT ? OFFSET ?",
         query_params
     ).fetchall()
 
@@ -437,6 +450,81 @@ def search_nearby_listings(*, city="karachi", lat, lng, radius_km=5,
         "per_page": per_page,
         "results": results,
         "ranking": "nearby_distance" if sort not in {"price_low", "price_high", "newest"} else "nearby_sort",
+    }
+
+
+def search_exact_listings_in_bounds(*, city="karachi", south, west, north, east,
+                                    property_type=None, bedrooms=None,
+                                    price_min=None, price_max=None,
+                                    furnished=None, sort=None, q=None,
+                                    page=1, per_page=25, center_lat=None,
+                                    center_lng=None):
+    """Search exact-coordinate listings currently inside the viewport bounds."""
+    conn = _get_conn()
+    conditions, params = _listing_filter_clauses(
+        city=city, property_type=property_type,
+        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        furnished=furnished, q=q, exact_only=True, geocoded_only=True,
+    )
+    conditions.extend([
+        "latitude BETWEEN ? AND ?",
+        "longitude BETWEEN ? AND ?",
+    ])
+    params.extend([south, north, west, east])
+    where = " AND ".join(conditions)
+
+    map_focus = center_lat is not None and center_lng is not None
+    distance_expr, distance_params = (
+        _center_distance_expr(center_lat, center_lng, require_coordinates=False)
+        if map_focus
+        else ("NULL", [])
+    )
+
+    if sort == "price_low":
+        order = "price ASC NULLS LAST"
+    elif sort == "price_high":
+        order = "price DESC NULLS LAST"
+    elif sort == "newest":
+        order = "first_seen_at DESC"
+    elif map_focus:
+        order = "distance_to_center ASC, last_seen_at DESC"
+    else:
+        order = "last_seen_at DESC"
+
+    if sort in {"price_low", "price_high", "newest"}:
+        if map_focus:
+            order = f"{order}, distance_to_center ASC"
+        order = f"{order}, last_seen_at DESC"
+
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM listings WHERE {where}",
+        params,
+    ).fetchone()[0]
+    offset = (page - 1) * per_page
+    rows = conn.execute(
+        f"SELECT *, {distance_expr} AS distance_to_center FROM listings WHERE {where} ORDER BY {order} LIMIT ? OFFSET ?",
+        distance_params + params + [per_page, offset],
+    ).fetchall()
+
+    area_rows = conn.execute(
+        f"""
+        SELECT area_name, COUNT(*) AS total
+        FROM listings
+        WHERE {where} AND area_name IS NOT NULL
+        GROUP BY area_name
+        ORDER BY total DESC, area_name ASC
+        """,
+        params,
+    ).fetchall()
+    area_totals = {row["area_name"]: row["total"] for row in area_rows}
+
+    return {
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "results": [_row_to_listing(row) for row in rows],
+        "ranking": "map_focus" if map_focus else "default",
+        "area_totals": area_totals,
     }
 
 
