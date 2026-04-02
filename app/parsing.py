@@ -232,7 +232,13 @@ AVAILABLE AREAS: {areas}
 
 Price shorthand: 50k=50000, 1.5lac=150000, 2lakh=200000, 50hazar=50000.
 Roman Urdu: ghar=house, flat/apartment=apartment, bala hissa=upper_portion, nichla hissa=lower_portion, kamra=room, sasta=price_low, mehenga=price_high, naya=newest.
+Directional Roman Urdu cues: ooper/upar/uper ka portion => upper_portion. neechay/neeche/nichay ka portion and nichla hissa => lower_portion.
 Urdu: گھر=house, فلیٹ=apartment, بالا حصہ=upper_portion, نچلا حصہ=lower_portion, کمرہ=room, فرنشڈ=furnished.
+Prefer the most specific available area. If the query mentions a block or sub-area that is not in AVAILABLE AREAS, return the nearest supported parent area.
+
+Examples:
+- "gulshan e iqbal block 13 main ooper ka portion 150k tak ka portion" => {"area":"Gulshan-e-Iqbal","property_type":"upper_portion","price_max":150000}
+- "dha phase 8 main 250 se 300k tak ka neechay ka portion" => {"area":"DHA Phase 8","property_type":"lower_portion","price_min":250000,"price_max":300000}
 
 Only include fields you are confident about. Omit anything not mentioned."""
 

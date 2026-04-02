@@ -89,11 +89,18 @@ function finalizeSearch(token, controller) {
   return true;
 }
 
+function resetViewportSearchMeta({ clearVisibleAreas = false } = {}) {
+  refs.mapAreaTotals = {};
+  if (clearVisibleAreas) refs.viewportAreaNames = [];
+  refs.viewportRanking = 'default';
+  refs.viewportScope = 'area_coverage';
+  refs.viewportAttemptedExactBounds = false;
+  refs.viewportExactBoundsTotal = null;
+}
+
 function selectAreaFull(name, fromMap) {
   if (refs.searchMode !== 'nearby') refs.searchMode = 'area';
-  refs.mapAreaTotals = {};
-  refs.viewportAreaNames = [];
-  refs.viewportRanking = 'default';
+  resetViewportSearchMeta({ clearVisibleAreas: true });
   refs.lastViewportSearchKey = '';
   refs.previewArea = null;
   refs.hoveredArea = null;
@@ -104,9 +111,7 @@ function selectAreaFull(name, fromMap) {
 function clearFilterFull(f) {
   if (f === 'area') {
     refs.searchMode = refs.searchMode === 'nearby' ? 'nearby' : getBrowseMode();
-    refs.mapAreaTotals = {};
-    refs.viewportAreaNames = [];
-    refs.viewportRanking = 'default';
+    resetViewportSearchMeta({ clearVisibleAreas: true });
     refs.lastViewportSearchKey = '';
     refs.previewArea = null;
     refs.hoveredArea = null;
@@ -421,12 +426,7 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
     refs.viewportAttemptedExactBounds = Boolean(data.attempted_exact_bounds);
     refs.viewportExactBoundsTotal = Number.isFinite(data.exact_bounds_total) ? data.exact_bounds_total : null;
   } else {
-    refs.mapAreaTotals = {};
-    refs.viewportAreaNames = [];
-    refs.viewportRanking = 'default';
-    refs.viewportScope = 'area_coverage';
-    refs.viewportAttemptedExactBounds = false;
-    refs.viewportExactBoundsTotal = null;
+    resetViewportSearchMeta({ clearVisibleAreas: true });
   }
 
   if (!append) {
@@ -560,8 +560,7 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
     refs.currentResults = [];
-    refs.mapAreaTotals = {};
-    refs.viewportRanking = 'default';
+    resetViewportSearchMeta();
     updateHeader({ total: 0, source: 'unavailable', mode: 'viewport', visibleAreas: refs.viewportAreaNames.length, coveredAreas: 0, ranking: 'default' });
     renderNoResults(e.message || 'Could not update the map view right now');
     updateMapMarkers();
@@ -739,9 +738,7 @@ function initCityTabs() {
     S.city = tab.dataset.city;
     S.area = ''; S.type = ''; S.beds = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
     refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
-    refs.mapAreaTotals = {};
-    refs.viewportAreaNames = [];
-    refs.viewportRanking = 'default';
+    resetViewportSearchMeta({ clearVisibleAreas: true });
     refs.lastViewportSearchKey = '';
     refs.previewArea = null;
     refs.hoveredArea = null;
@@ -894,11 +891,9 @@ async function loadCityData() {
 
   Object.values(refs.markers).forEach(m => { if (refs.map) refs.map.removeLayer(m); });
   refs.markers = {};
-  refs.mapAreaTotals = {};
-  refs.viewportAreaNames = [];
+  resetViewportSearchMeta({ clearVisibleAreas: true });
   refs.viewportTotal = 0;
   refs.viewportShown = 0;
-  refs.viewportRanking = 'default';
   refs.lastViewportSearchKey = '';
   refs.previewArea = null;
   refs.hoveredArea = null;

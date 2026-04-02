@@ -1,7 +1,9 @@
 """API endpoint tests using FastAPI TestClient."""
+import asyncio
 import pytest
 from fastapi.testclient import TestClient
 from app import app
+from app.database import _get_conn
 from app.db_listings import upsert_listing, get_listing_by_zameen_id
 
 
@@ -79,6 +81,23 @@ class TestPropertyTypesEndpoint:
         assert "flat" not in keys  # Alias excluded
 
 
+class TestParseQueryEndpoint:
+    def test_parse_query_timeout_falls_back_to_regex(self, client, monkeypatch):
+        async def slow_parse(*args, **kwargs):
+            await asyncio.sleep(0.05)
+            return {"area": "Should not win"}
+
+        monkeypatch.setattr("app.routes.parse_query_with_claude", slow_parse)
+        monkeypatch.setattr("app.routes._PARSE_QUERY_TIMEOUT_SECONDS", 0.01)
+
+        res = client.get("/api/parse-query?q=2+bed+in+Clifton&city=karachi")
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["filters"]["bedrooms"] == 2
+        assert data["filters"]["area"] == "Clifton"
+
+
 class TestSearchEndpoint:
     def _seed_listings(self):
         for i in range(5):
@@ -112,6 +131,12 @@ class TestSearchEndpoint:
         data = res.json()
         # Either local empty → falls back to live, or returns empty local results
         assert "total" in data or "results" in data
+
+    def test_search_rejects_inverted_price_range(self, client):
+        res = client.get("/api/search?city=karachi&price_min=100000&price_max=50000")
+
+        assert res.status_code == 400
+        assert "price_min" in res.json()["detail"]
 
 
 class TestCrawlStatusEndpoint:
@@ -155,6 +180,34 @@ class TestListingDetailEndpoint:
         assert data.get("source") == "local"
         assert data["phone"] == "+923001234567"
 
+    def test_local_detail_preserves_distinct_phone_and_call_phone(self, client):
+        upsert_listing(
+            zameen_id="900007",
+            url="https://www.zameen.com/Property/test-900007-1-1.html",
+            city="karachi",
+            card_data={"title": "Distinct contact", "price": 51000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"},
+        )
+        upsert_listing(
+            zameen_id="900007",
+            url="https://www.zameen.com/Property/test-900007-1-1.html",
+            city="karachi",
+            detail_data={
+                "phone": "+923001234567",
+                "call_phone": "+922134567890",
+                "description": "Distinct contact",
+                "latitude": 24.8112,
+                "longitude": 67.0445,
+                "location_source": "listing_exact",
+            },
+        )
+
+        res = client.get("/api/listing-detail?url=https://www.zameen.com/Property/test-900007-1-1.html")
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["phone"] == "+923001234567"
+        assert data["call_phone"] == "+922134567890"
+
     def test_local_detail_does_not_fallback_whatsapp_to_call_phone(self, client):
         upsert_listing(
             zameen_id="900005",
@@ -175,6 +228,46 @@ class TestListingDetailEndpoint:
         data = res.json()
         assert data["call_phone"] == "+922134567890"
         assert data["whatsapp_phone"] is None
+
+    def test_local_detail_ignores_corrupt_json_payloads(self, client):
+        upsert_listing(
+            zameen_id="900008",
+            url="https://www.zameen.com/Property/test-900008-1-1.html",
+            city="karachi",
+            card_data={"title": "Corrupt detail JSON", "price": 52000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"},
+        )
+        upsert_listing(
+            zameen_id="900008",
+            url="https://www.zameen.com/Property/test-900008-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Stored locally",
+                "latitude": 24.8113,
+                "longitude": 67.0446,
+                "location_source": "listing_exact",
+            },
+        )
+        conn = _get_conn()
+        conn.execute(
+            """
+            UPDATE listings
+            SET features_json = '[broken-json',
+                amenities_json = '[broken-json',
+                details_json = '{broken-json',
+                detail_images_json = '[broken-json'
+            WHERE zameen_id = '900008'
+            """
+        )
+        conn.commit()
+
+        res = client.get("/api/listing-detail?url=https://www.zameen.com/Property/test-900008-1-1.html")
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["features"] == []
+        assert data["amenities"] == []
+        assert data["details"] == {}
+        assert data["images"] == []
 
     def test_local_detail_includes_exact_geography(self, client):
         upsert_listing(
@@ -291,6 +384,31 @@ class TestListingContactEndpoint:
         assert data["call_phone"] == "+922134567891"
         assert data["whatsapp_phone"] is None
 
+    def test_local_contact_preserves_distinct_phone_and_call_phone(self, client):
+        upsert_listing(
+            zameen_id="900009",
+            url="https://www.zameen.com/Property/test-900009-1-1.html",
+            city="karachi",
+            card_data={"title": "Distinct contact", "price": 62000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"},
+        )
+        upsert_listing(
+            zameen_id="900009",
+            url="https://www.zameen.com/Property/test-900009-1-1.html",
+            city="karachi",
+            detail_data={
+                "phone": "+923009876543",
+                "call_phone": "+922134567892",
+                "contact_source": "showNumbers",
+            },
+        )
+
+        res = client.get("/api/listing-contact?url=https://www.zameen.com/Property/test-900009-1-1.html")
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["phone"] == "+923009876543"
+        assert data["call_phone"] == "+922134567892"
+
 
 class TestMapSearchEndpoint:
     def test_map_search_orders_results_near_viewport_center(self, client):
@@ -332,6 +450,18 @@ class TestMapSearchEndpoint:
 
         assert res.status_code == 400
         assert "Too many areas" in res.json()["detail"]
+
+    def test_map_search_rejects_partial_bounds(self, client):
+        res = client.get("/api/map-search?city=karachi&south=24.82&north=24.83")
+
+        assert res.status_code == 400
+        assert "required together" in res.json()["detail"]
+
+    def test_map_search_rejects_inverted_bounds(self, client):
+        res = client.get("/api/map-search?city=karachi&south=24.83&west=67.03&north=24.82&east=67.04")
+
+        assert res.status_code == 400
+        assert "south must be less than north" in res.json()["detail"]
 
     def test_map_search_uses_exact_bounds_results_even_without_visible_area_centroids(self, client):
         upsert_listing(
@@ -496,6 +626,12 @@ class TestNearbySearchEndpoint:
 
         assert res.status_code == 400
         assert "Latitude" in res.json()["detail"]
+
+    def test_nearby_search_rejects_inverted_price_range(self, client):
+        res = client.get("/api/nearby-search?city=karachi&lat=24.82&lng=67.03&radius_km=5&price_min=100000&price_max=50000")
+
+        assert res.status_code == 400
+        assert "price_min" in res.json()["detail"]
 
     def test_nearby_search_enriches_sparse_exact_results(self, client, monkeypatch):
         upsert_listing(

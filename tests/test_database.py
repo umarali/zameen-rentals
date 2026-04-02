@@ -1,5 +1,4 @@
 """Integration tests for database CRUD, upsert logic, FTS, and crawl state."""
-import json
 import pytest
 from app.database import _get_conn, init_db
 from app.db_listings import (
@@ -178,6 +177,39 @@ class TestUpsertListing:
         assert listing["call_phone"] == "+922134567890"
         assert listing["whatsapp_phone"] is None
 
+    def test_contact_update_keeps_distinct_phone_when_call_phone_changes(self):
+        upsert_listing(
+            zameen_id="100010",
+            url="https://www.zameen.com/Property/t-100010-1-1.html",
+            city="karachi",
+            card_data={"title": "Distinct numbers", "price": 66000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"},
+        )
+        upsert_listing(
+            zameen_id="100010",
+            url="https://www.zameen.com/Property/t-100010-1-1.html",
+            city="karachi",
+            detail_data={
+                "phone": "+923001234560",
+                "call_phone": "+922134567890",
+                "whatsapp_phone": "+923331234560",
+                "contact_source": "showNumbers",
+            },
+        )
+        upsert_listing(
+            zameen_id="100010",
+            url="https://www.zameen.com/Property/t-100010-1-1.html",
+            city="karachi",
+            detail_data={
+                "call_phone": "+922134567891",
+                "contact_source": "showNumbers",
+            },
+        )
+
+        listing = get_listing_by_zameen_id("100010")
+        assert listing["phone"] == "+923001234560"
+        assert listing["call_phone"] == "+922134567891"
+        assert listing["whatsapp_phone"] == "+923331234560"
+
 
 class TestSearchListings:
     def _seed(self, n=5):
@@ -324,6 +356,25 @@ class TestSearchListings:
         result = search_listings(city="karachi", q="sea facing")
         assert result["total"] >= 1
         assert "sea" in result["results"][0]["title"].lower()
+
+    def test_search_logs_and_skips_corrupt_listing_json(self, caplog):
+        upsert_listing(
+            zameen_id="300002",
+            url="https://zameen.com/Property/t-300002-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            card_data={"title": "Corrupt JSON", "price": 70000, "bedrooms": 2, "bathrooms": 2, "area_size": "900 sqft"},
+        )
+        conn = _get_conn()
+        conn.execute("UPDATE listings SET features_json = '[broken-json' WHERE zameen_id = '300002'")
+        conn.commit()
+
+        with caplog.at_level("WARNING", logger="zameenrentals"):
+            result = search_listings(city="karachi")
+
+        assert result["total"] == 1
+        assert result["results"][0]["features"] == []
+        assert "Failed to decode features_json for listing 300002" in caplog.text
 
 
 class TestNearbySearchListings:

@@ -117,9 +117,10 @@ def content_hash(price, title, bedrooms, bathrooms, area_size):
     return hashlib.md5(raw.encode()).hexdigest()
 
 
-def detail_hash(phone, description, whatsapp_phone=None, latitude=None, longitude=None, location_source=None):
+def detail_hash(phone, description, whatsapp_phone=None, latitude=None, longitude=None,
+                location_source=None, call_phone=None):
     """Hash detail-level fields to detect changes."""
-    raw = f"{phone}|{whatsapp_phone}|{description}|{latitude}|{longitude}|{location_source}"
+    raw = f"{phone}|{call_phone}|{whatsapp_phone}|{description}|{latitude}|{longitude}|{location_source}"
     return hashlib.md5(raw.encode()).hexdigest()
 
 
@@ -128,6 +129,32 @@ def _json_value(data, key, existing_json):
         return existing_json
     value = data.get(key)
     return json.dumps(value) if value else None
+
+
+def decode_listing_json_field(raw, *, field_name, zameen_id=None, default=None, expected_type=None):
+    """Decode stored JSON safely and log corrupt payloads instead of failing silently."""
+    if not raw:
+        return default
+    try:
+        value = json.loads(raw)
+    except (json.JSONDecodeError, TypeError) as exc:
+        logger.warning(
+            "Failed to decode %s for listing %s: %s",
+            field_name,
+            zameen_id or "unknown",
+            exc,
+        )
+        return default
+    if expected_type and not isinstance(value, expected_type):
+        logger.warning(
+            "Unexpected JSON type for %s on listing %s: expected %s, got %s",
+            field_name,
+            zameen_id or "unknown",
+            expected_type.__name__,
+            type(value).__name__,
+        )
+        return default
+    return value
 
 
 def _value_or_existing(data, key, existing_value):
@@ -229,12 +256,16 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
         return "updated"
 
     if detail_data and existing:
-        call_phone = (
-            detail_data.get("call_phone")
-            or detail_data.get("phone")
-            or existing["call_phone"]
-            or existing["phone"]
-        )
+        phone = existing["phone"]
+        if "phone" in detail_data:
+            phone = detail_data.get("phone")
+
+        call_phone = existing["call_phone"]
+        if "call_phone" in detail_data:
+            call_phone = detail_data.get("call_phone")
+        elif "phone" in detail_data and existing["call_phone"] is None:
+            call_phone = detail_data.get("phone")
+
         if "whatsapp_phone" in detail_data:
             whatsapp_phone = detail_data.get("whatsapp_phone")
         else:
@@ -275,10 +306,18 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             for key in ("description", "features", "amenities", "details", "agent_name", "agent_agency", "images", "latitude", "longitude", "location_source")
         )
         detail_scraped_at = now if detail_requested else existing["detail_scraped_at"]
-        d_hash = detail_hash(call_phone, description, whatsapp_phone, latitude, longitude, location_source)
+        d_hash = detail_hash(
+            phone,
+            description,
+            whatsapp_phone,
+            latitude,
+            longitude,
+            location_source,
+            call_phone=call_phone,
+        )
 
         if (
-            existing["phone"] == call_phone
+            existing["phone"] == phone
             and existing["call_phone"] == call_phone
             and existing["whatsapp_phone"] == whatsapp_phone
             and existing["contact_payload_json"] == contact_payload_json
@@ -309,7 +348,7 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                 detail_scraped_at = ?, detail_hash = ?
             WHERE zameen_id = ?
         """, (
-            call_phone, call_phone, whatsapp_phone,
+            phone, call_phone, whatsapp_phone,
             contact_payload_json, contact_fetched_at, contact_source,
             description, features_json, amenities_json, details_json,
             agent_name, agent_agency, detail_images_json,
@@ -570,6 +609,7 @@ def get_nearby_enrichment_candidates(*, city="karachi", lat, lng, radius_km=5,
 
 def _row_to_listing(row):
     """Convert a DB row to the JSON shape the frontend expects."""
+    zameen_id = row["zameen_id"] if "zameen_id" in row.keys() else None
     d = {
         "title": row["title"],
         "url": row["url"],
@@ -584,19 +624,22 @@ def _row_to_listing(row):
         "added": row["added_text"],
     }
     if row["images_json"]:
-        try:
-            imgs = json.loads(row["images_json"])
-            if len(imgs) > 1:
-                d["images"] = imgs
-        except (json.JSONDecodeError, TypeError):
-            pass
+        imgs = decode_listing_json_field(
+            row["images_json"],
+            field_name="images_json",
+            zameen_id=zameen_id,
+            default=[],
+            expected_type=list,
+        )
+        if len(imgs) > 1:
+            d["images"] = imgs
     # Include detail fields if available
-    if row["phone"]:
-        d["phone"] = row["call_phone"] or row["phone"]
-    if row["call_phone"]:
-        d["call_phone"] = row["call_phone"]
-    elif row["phone"]:
-        d["call_phone"] = row["phone"]
+    phone = row["phone"] or row["call_phone"]
+    if phone:
+        d["phone"] = phone
+    call_phone = row["call_phone"] or row["phone"]
+    if call_phone:
+        d["call_phone"] = call_phone
     if row["whatsapp_phone"]:
         d["whatsapp_phone"] = row["whatsapp_phone"]
     if row["latitude"] is not None and row["longitude"] is not None:
@@ -615,15 +658,21 @@ def _row_to_listing(row):
     if row["description"]:
         d["description"] = row["description"]
     if row["features_json"]:
-        try:
-            d["features"] = json.loads(row["features_json"])
-        except (json.JSONDecodeError, TypeError):
-            pass
+        d["features"] = decode_listing_json_field(
+            row["features_json"],
+            field_name="features_json",
+            zameen_id=zameen_id,
+            default=[],
+            expected_type=list,
+        )
     if row["amenities_json"]:
-        try:
-            d["amenities"] = json.loads(row["amenities_json"])
-        except (json.JSONDecodeError, TypeError):
-            pass
+        d["amenities"] = decode_listing_json_field(
+            row["amenities_json"],
+            field_name="amenities_json",
+            zameen_id=zameen_id,
+            default=[],
+            expected_type=list,
+        )
     if row["agent_name"]:
         d["agent_name"] = row["agent_name"]
     if row["agent_agency"]:

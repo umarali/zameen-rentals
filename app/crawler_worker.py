@@ -507,6 +507,9 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None):
             phone_data = await fetch_phone_via_api(zid, url, client, ua)
 
             if phone_data:
+                phone = row["phone"]
+                if "phone" in phone_data:
+                    phone = phone_data.get("phone")
                 call_phone = phone_data.get("call_phone") or row["call_phone"]
                 whatsapp_phone = (
                     phone_data.get("whatsapp_phone")
@@ -520,7 +523,7 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None):
                         agent_agency = COALESCE(?, agent_agency)
                     WHERE zameen_id = ?
                 """, (
-                    call_phone, call_phone, whatsapp_phone,
+                    phone, call_phone, whatsapp_phone,
                     json.dumps(phone_data.get("contact_payload")) if phone_data.get("contact_payload") else None,
                     now, phone_data.get("contact_source"), phone_data.get("agent_agency"), zid,
                 ))

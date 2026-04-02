@@ -12,8 +12,10 @@ from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_area
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches
 from app.parsing import parse_query_with_claude
+from app.parsing import parse_natural_query
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
 from app.db_listings import (
+    decode_listing_json_field,
     search_listings, count_listings_by_area, get_listing_by_zameen_id,
     get_crawl_stats, get_nearby_enrichment_candidates, search_exact_listings_in_bounds,
     search_nearby_listings,
@@ -28,6 +30,7 @@ _MAX_VIEWPORT_AREAS = 500
 _NEARBY_SUPPORTED_CITIES = {"karachi"}
 _NEARBY_ENRICHMENT_LIMIT = 12
 _NEARBY_ENRICHMENT_CONCURRENCY = 3
+_PARSE_QUERY_TIMEOUT_SECONDS = 8
 
 
 def _normalize_area_names(areas, *, limit=_MAX_VIEWPORT_AREAS):
@@ -44,9 +47,10 @@ def _normalize_area_names(areas, *, limit=_MAX_VIEWPORT_AREAS):
 
 
 def _contact_response_from_listing(listing):
+    phone = listing.get("phone") or listing.get("call_phone")
     call_phone = listing.get("call_phone") or listing.get("phone")
     return {
-        "phone": call_phone,
+        "phone": phone,
         "call_phone": call_phone,
         "whatsapp_phone": listing.get("whatsapp_phone"),
         "agent_agency": listing.get("agent_agency"),
@@ -63,6 +67,45 @@ def _validate_nearby_request(city, lat, lng, radius_km):
         raise HTTPException(status_code=400, detail="Longitude must be between -180 and 180.")
     if not (1 <= radius_km <= 20):
         raise HTTPException(status_code=400, detail="Radius must be between 1 and 20 km.")
+
+
+def _validate_price_range(price_min, price_max):
+    if (
+        price_min is not None
+        and price_max is not None
+        and price_min > price_max
+    ):
+        raise HTTPException(status_code=400, detail="price_min must be less than or equal to price_max.")
+
+
+def _validate_viewport_bounds(south, west, north, east):
+    provided = [south, west, north, east]
+    if all(value is None for value in provided):
+        return False
+    if any(value is None for value in provided):
+        raise HTTPException(status_code=400, detail="south, west, north, and east are required together.")
+    if south >= north:
+        raise HTTPException(status_code=400, detail="south must be less than north.")
+    if west >= east:
+        raise HTTPException(status_code=400, detail="west must be less than east.")
+    return True
+
+
+def _build_parse_query_response(q, city, result):
+    # Flag when the matched area differs from what the user typed
+    areas = get_areas(city)
+    if result.get("area") and result["area"] in areas:
+        ql = q.lower()
+        query_tokens = set(ql.replace("-", " ").split()) - {"in", "for", "rent", "rental", "ke", "ka", "ki", "mein", "me"}
+        area_tokens = set(result["area"].lower().replace("-", " ").split())
+        unmatched = query_tokens - area_tokens
+        noise = {"house", "flat", "apartment", "portion", "upper", "lower", "room", "bed", "bedroom", "furnished", "full", "ghar", "makan", "bala", "nichla", "kamra"}
+        unmatched -= noise
+        unmatched = {t for t in unmatched if not t.isdigit()}
+        if unmatched:
+            result["area_approximate"] = True
+            result["area_query"] = " ".join(unmatched)
+    return {"query": q, "filters": result}
 
 
 async def _refresh_exact_location_candidate(candidate):
@@ -177,21 +220,18 @@ async def get_property_types():
 @limiter.limit("15/minute")
 async def api_parse_query(request: Request, q: str = Query(..., min_length=1), city: str = Query("karachi")):
     try:
-        result = await parse_query_with_claude(q, city=city)
-        # Flag when the matched area differs from what the user typed
-        areas = get_areas(city)
-        if result.get("area") and result["area"] in areas:
-            ql = q.lower()
-            query_tokens = set(ql.replace("-", " ").split()) - {"in", "for", "rent", "rental", "ke", "ka", "ki", "mein", "me"}
-            area_tokens = set(result["area"].lower().replace("-", " ").split())
-            unmatched = query_tokens - area_tokens
-            noise = {"house", "flat", "apartment", "portion", "upper", "lower", "room", "bed", "bedroom", "furnished", "full", "ghar", "makan", "bala", "nichla", "kamra"}
-            unmatched -= noise
-            unmatched = {t for t in unmatched if not t.isdigit()}
-            if unmatched:
-                result["area_approximate"] = True
-                result["area_query"] = " ".join(unmatched)
-        return {"query": q, "filters": result}
+        try:
+            result = await asyncio.wait_for(
+                parse_query_with_claude(q, city=city),
+                timeout=_PARSE_QUERY_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Parse query timed out after %ss, falling back to regex parser",
+                _PARSE_QUERY_TIMEOUT_SECONDS,
+            )
+            result = parse_natural_query(q, city=city)
+        return _build_parse_query_response(q, city, result)
     except Exception:
         logger.exception("Parse query error")
         raise HTTPException(status_code=500, detail="Failed to parse query. Please try again.")
@@ -201,6 +241,7 @@ async def api_parse_query(request: Request, q: str = Query(..., min_length=1), c
 @limiter.limit("10/minute")
 async def search(request: Request, city: str = Query("karachi"), area: Optional[str]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
     try:
+        _validate_price_range(price_min, price_max)
         # Try local DB first (instant results from crawler data)
         local_result = search_listings(
             city=city, area=area, property_type=property_type,
@@ -253,8 +294,9 @@ async def map_search(
     north: Optional[float] = Query(None, ge=-90, le=90),
     east: Optional[float] = Query(None, ge=-180, le=180),
 ):
+    _validate_price_range(price_min, price_max)
     area_names = _normalize_area_names(areas)
-    has_bounds = None not in {south, west, north, east}
+    has_bounds = _validate_viewport_bounds(south, west, north, east)
     result = None
     exact_bounds_total = None
 
@@ -331,6 +373,7 @@ async def nearby_search(
     sort: Optional[str] = Query(None),
 ):
     _validate_nearby_request(city, lat, lng, radius_km)
+    _validate_price_range(price_min, price_max)
 
     result = search_nearby_listings(
         city=city, lat=lat, lng=lng, radius_km=radius_km, area=area,
@@ -375,18 +418,41 @@ async def listing_detail(request: Request, url: str = Query(...)):
         if zid:
             listing = get_listing_by_zameen_id(zid)
             if listing and listing.get("detail_scraped_at"):
-                import json
                 local_detail = {
-                    "phone": listing.get("phone"),
+                    "phone": listing.get("phone") or listing.get("call_phone"),
                     "call_phone": listing.get("call_phone") or listing.get("phone"),
                     "whatsapp_phone": listing.get("whatsapp_phone"),
                     "description": listing.get("description"),
-                    "features": json.loads(listing["features_json"]) if listing.get("features_json") else [],
-                    "amenities": json.loads(listing["amenities_json"]) if listing.get("amenities_json") else [],
-                    "details": json.loads(listing["details_json"]) if listing.get("details_json") else {},
+                    "features": decode_listing_json_field(
+                        listing.get("features_json"),
+                        field_name="features_json",
+                        zameen_id=listing.get("zameen_id"),
+                        default=[],
+                        expected_type=list,
+                    ),
+                    "amenities": decode_listing_json_field(
+                        listing.get("amenities_json"),
+                        field_name="amenities_json",
+                        zameen_id=listing.get("zameen_id"),
+                        default=[],
+                        expected_type=list,
+                    ),
+                    "details": decode_listing_json_field(
+                        listing.get("details_json"),
+                        field_name="details_json",
+                        zameen_id=listing.get("zameen_id"),
+                        default={},
+                        expected_type=dict,
+                    ),
                     "agent_name": listing.get("agent_name"),
                     "agent_agency": listing.get("agent_agency"),
-                    "images": json.loads(listing["detail_images_json"]) if listing.get("detail_images_json") else [],
+                    "images": decode_listing_json_field(
+                        listing.get("detail_images_json"),
+                        field_name="detail_images_json",
+                        zameen_id=listing.get("zameen_id"),
+                        default=[],
+                        expected_type=list,
+                    ),
                     "latitude": listing.get("latitude"),
                     "longitude": listing.get("longitude"),
                     "location_source": listing.get("location_source"),
