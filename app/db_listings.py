@@ -14,10 +14,23 @@ def content_hash(price, title, bedrooms, bathrooms, area_size):
     return hashlib.md5(raw.encode()).hexdigest()
 
 
-def detail_hash(phone, description):
+def detail_hash(phone, description, whatsapp_phone=None, latitude=None, longitude=None, location_source=None):
     """Hash detail-level fields to detect changes."""
-    raw = f"{phone}|{description}"
+    raw = f"{phone}|{whatsapp_phone}|{description}|{latitude}|{longitude}|{location_source}"
     return hashlib.md5(raw.encode()).hexdigest()
+
+
+def _json_value(data, key, existing_json):
+    if key not in data:
+        return existing_json
+    value = data.get(key)
+    return json.dumps(value) if value else None
+
+
+def _value_or_existing(data, key, existing_value):
+    if key in data and data.get(key) is not None:
+        return data.get(key)
+    return existing_value
 
 
 def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
@@ -27,7 +40,7 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
     now = datetime.utcnow().isoformat()
 
     existing = conn.execute(
-        "SELECT id, content_hash, detail_hash FROM listings WHERE zameen_id = ?",
+        "SELECT * FROM listings WHERE zameen_id = ?",
         (zameen_id,)
     ).fetchone()
 
@@ -42,13 +55,14 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             images = card_data.get("images", [])
             if not images and card_data.get("image_url"):
                 images = [card_data["image_url"]]
+            location_source = "area_centroid" if lat is not None and lng is not None else None
             conn.execute("""
                 INSERT INTO listings (
                     zameen_id, url, title, price, price_text, bedrooms, bathrooms,
                     area_size, location, image_url, images_json, property_type,
-                    added_text, city, area_name, area_slug, latitude, longitude,
+                    added_text, city, area_name, area_slug, latitude, longitude, location_source,
                     card_scraped_at, last_seen_at, content_hash, is_active
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             """, (
                 zameen_id, url, card_data.get("title"), card_data.get("price"),
                 card_data.get("price_text"), card_data.get("bedrooms"),
@@ -56,16 +70,27 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                 card_data.get("location"), card_data.get("image_url"),
                 json.dumps(images) if images else None,
                 card_data.get("property_type"), card_data.get("added"),
-                city, area_name, area_slug, lat, lng, now, now, c_hash
+                city, area_name, area_slug, lat, lng, location_source, now, now, c_hash
             ))
             conn.commit()
             return "inserted"
 
         if existing["content_hash"] == c_hash:
-            conn.execute(
-                "UPDATE listings SET last_seen_at = ?, is_active = 1 WHERE zameen_id = ?",
-                (now, zameen_id)
-            )
+            next_lat = existing["latitude"]
+            next_lng = existing["longitude"]
+            next_location_source = existing["location_source"]
+            if existing["location_source"] != "listing_exact" and lat is not None and lng is not None:
+                next_lat = lat
+                next_lng = lng
+                next_location_source = "area_centroid"
+            conn.execute("""
+                UPDATE listings SET
+                    area_name = COALESCE(?, area_name),
+                    area_slug = COALESCE(?, area_slug),
+                    latitude = ?, longitude = ?, location_source = ?,
+                    last_seen_at = ?, is_active = 1
+                WHERE zameen_id = ?
+            """, (area_name, area_slug, next_lat, next_lng, next_location_source, now, zameen_id))
             conn.commit()
             return "unchanged"
 
@@ -73,12 +98,19 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
         images = card_data.get("images", [])
         if not images and card_data.get("image_url"):
             images = [card_data["image_url"]]
+        next_lat = existing["latitude"]
+        next_lng = existing["longitude"]
+        next_location_source = existing["location_source"]
+        if existing["location_source"] != "listing_exact" and lat is not None and lng is not None:
+            next_lat = lat
+            next_lng = lng
+            next_location_source = "area_centroid"
         conn.execute("""
             UPDATE listings SET
                 title = ?, price = ?, price_text = ?, bedrooms = ?, bathrooms = ?,
                 area_size = ?, location = ?, image_url = ?, images_json = ?,
                 property_type = ?, added_text = ?, area_name = ?, area_slug = ?,
-                latitude = ?, longitude = ?,
+                latitude = ?, longitude = ?, location_source = ?,
                 card_scraped_at = ?, last_seen_at = ?, content_hash = ?, is_active = 1
             WHERE zameen_id = ?
         """, (
@@ -88,35 +120,99 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             card_data.get("location"), card_data.get("image_url"),
             json.dumps(images) if images else None,
             card_data.get("property_type"), card_data.get("added"),
-            area_name, area_slug, lat, lng, now, now, c_hash, zameen_id
+            area_name, area_slug, next_lat, next_lng, next_location_source, now, now, c_hash, zameen_id
         ))
         conn.commit()
         return "updated"
 
     if detail_data and existing:
-        d_hash = detail_hash(detail_data.get("phone"), detail_data.get("description"))
-        if existing["detail_hash"] == d_hash:
-            return "unchanged"
+        call_phone = (
+            detail_data.get("call_phone")
+            or detail_data.get("phone")
+            or existing["call_phone"]
+            or existing["phone"]
+        )
+        whatsapp_phone = (
+            detail_data.get("whatsapp_phone")
+            or existing["whatsapp_phone"]
+            or call_phone
+        )
+        description = _value_or_existing(detail_data, "description", existing["description"])
+        features_json = _json_value(detail_data, "features", existing["features_json"])
+        amenities_json = _json_value(detail_data, "amenities", existing["amenities_json"])
+        details_json = _json_value(detail_data, "details", existing["details_json"])
+        detail_images_json = _json_value(detail_data, "images", existing["detail_images_json"])
+        agent_name = _value_or_existing(detail_data, "agent_name", existing["agent_name"])
+        agent_agency = _value_or_existing(detail_data, "agent_agency", existing["agent_agency"])
 
-        features = detail_data.get("features", [])
-        amenities = detail_data.get("amenities", [])
-        details = detail_data.get("details", {})
-        detail_images = detail_data.get("images", [])
+        contact_payload_json = existing["contact_payload_json"]
+        if "contact_payload" in detail_data:
+            contact_payload = detail_data.get("contact_payload")
+            contact_payload_json = json.dumps(contact_payload) if contact_payload else None
+
+        contact_source = _value_or_existing(detail_data, "contact_source", existing["contact_source"])
+        contact_requested = any(
+            key in detail_data
+            for key in ("phone", "call_phone", "whatsapp_phone", "contact_payload", "contact_source")
+        )
+        contact_fetched_at = (
+            now if contact_requested and (call_phone or whatsapp_phone or contact_payload_json or contact_source)
+            else existing["contact_fetched_at"]
+        )
+
+        latitude = existing["latitude"]
+        longitude = existing["longitude"]
+        location_source = existing["location_source"]
+        if detail_data.get("latitude") is not None and detail_data.get("longitude") is not None:
+            latitude = detail_data.get("latitude")
+            longitude = detail_data.get("longitude")
+            location_source = detail_data.get("location_source") or "listing_exact"
+
+        detail_requested = any(
+            key in detail_data
+            for key in ("description", "features", "amenities", "details", "agent_name", "agent_agency", "images", "latitude", "longitude", "location_source")
+        )
+        detail_scraped_at = now if detail_requested else existing["detail_scraped_at"]
+        d_hash = detail_hash(call_phone, description, whatsapp_phone, latitude, longitude, location_source)
+
+        if (
+            existing["phone"] == call_phone
+            and existing["call_phone"] == call_phone
+            and existing["whatsapp_phone"] == whatsapp_phone
+            and existing["contact_payload_json"] == contact_payload_json
+            and existing["contact_fetched_at"] == contact_fetched_at
+            and existing["contact_source"] == contact_source
+            and existing["description"] == description
+            and existing["features_json"] == features_json
+            and existing["amenities_json"] == amenities_json
+            and existing["details_json"] == details_json
+            and existing["agent_name"] == agent_name
+            and existing["agent_agency"] == agent_agency
+            and existing["detail_images_json"] == detail_images_json
+            and existing["latitude"] == latitude
+            and existing["longitude"] == longitude
+            and existing["location_source"] == location_source
+            and existing["detail_scraped_at"] == detail_scraped_at
+            and existing["detail_hash"] == d_hash
+        ):
+            return "unchanged"
 
         conn.execute("""
             UPDATE listings SET
-                phone = ?, description = ?, features_json = ?, amenities_json = ?,
+                phone = ?, call_phone = ?, whatsapp_phone = ?,
+                contact_payload_json = ?, contact_fetched_at = ?, contact_source = ?,
+                description = ?, features_json = ?, amenities_json = ?,
                 details_json = ?, agent_name = ?, agent_agency = ?,
-                detail_images_json = ?, detail_scraped_at = ?, detail_hash = ?
+                detail_images_json = ?, latitude = ?, longitude = ?, location_source = ?,
+                detail_scraped_at = ?, detail_hash = ?
             WHERE zameen_id = ?
         """, (
-            detail_data.get("phone"), detail_data.get("description"),
-            json.dumps(features) if features else None,
-            json.dumps(amenities) if amenities else None,
-            json.dumps(details) if details else None,
-            detail_data.get("agent_name"), detail_data.get("agent_agency"),
-            json.dumps(detail_images) if detail_images else None,
-            now, d_hash, zameen_id
+            call_phone, call_phone, whatsapp_phone,
+            contact_payload_json, contact_fetched_at, contact_source,
+            description, features_json, amenities_json, details_json,
+            agent_name, agent_agency, detail_images_json,
+            latitude, longitude, location_source,
+            detail_scraped_at, d_hash, zameen_id
         ))
         conn.commit()
         return "updated"
@@ -124,7 +220,7 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
     return "unchanged"
 
 
-def search_listings(*, city="karachi", area=None, property_type=None,
+def search_listings(*, city="karachi", area=None, area_names=None, property_type=None,
                     bedrooms=None, price_min=None, price_max=None,
                     furnished=None, sort=None, q=None, page=1, per_page=25):
     """Search listings from local DB. Returns dict matching current API shape."""
@@ -132,7 +228,11 @@ def search_listings(*, city="karachi", area=None, property_type=None,
     conditions = ["is_active = 1", "city = ?"]
     params = [city]
 
-    if area:
+    if area_names:
+        placeholders = ",".join("?" for _ in area_names)
+        conditions.append(f"area_name IN ({placeholders})")
+        params.extend(area_names)
+    elif area:
         conditions.append("area_name = ?")
         params.append(area)
     if property_type:
@@ -177,6 +277,52 @@ def search_listings(*, city="karachi", area=None, property_type=None,
     return {"total": total, "page": page, "per_page": per_page, "results": results}
 
 
+def count_listings_by_area(*, city="karachi", area_names=None, property_type=None,
+                           bedrooms=None, price_min=None, price_max=None,
+                           furnished=None, q=None):
+    """Return listing counts grouped by area for the current filter set."""
+    conn = _get_conn()
+    conditions = ["is_active = 1", "city = ?"]
+    params = [city]
+
+    if area_names:
+        placeholders = ",".join("?" for _ in area_names)
+        conditions.append(f"area_name IN ({placeholders})")
+        params.extend(area_names)
+    if property_type:
+        info = PROPERTY_TYPES.get(property_type.lower())
+        if info:
+            conditions.append("property_type = ?")
+            params.append(info["label"])
+    if bedrooms:
+        conditions.append("bedrooms = ?")
+        params.append(bedrooms)
+    if price_min:
+        conditions.append("price >= ?")
+        params.append(price_min)
+    if price_max:
+        conditions.append("price <= ?")
+        params.append(price_max)
+    if furnished:
+        conditions.append("(amenities_json LIKE '%furnished%' OR details_json LIKE '%furnished%')")
+    if q:
+        conditions.append("id IN (SELECT rowid FROM listings_fts WHERE listings_fts MATCH ?)")
+        params.append(q)
+
+    where = " AND ".join(conditions)
+    rows = conn.execute(
+        f"""
+        SELECT area_name, COUNT(*) AS total
+        FROM listings
+        WHERE {where} AND area_name IS NOT NULL
+        GROUP BY area_name
+        ORDER BY total DESC, area_name ASC
+        """,
+        params,
+    ).fetchall()
+    return {row["area_name"]: row["total"] for row in rows}
+
+
 def _row_to_listing(row):
     """Convert a DB row to the JSON shape the frontend expects."""
     d = {
@@ -201,7 +347,18 @@ def _row_to_listing(row):
             pass
     # Include detail fields if available
     if row["phone"]:
-        d["phone"] = row["phone"]
+        d["phone"] = row["call_phone"] or row["phone"]
+    if row["call_phone"]:
+        d["call_phone"] = row["call_phone"]
+    elif row["phone"]:
+        d["call_phone"] = row["phone"]
+    if row["whatsapp_phone"]:
+        d["whatsapp_phone"] = row["whatsapp_phone"]
+    if row["latitude"] is not None and row["longitude"] is not None:
+        d["latitude"] = row["latitude"]
+        d["longitude"] = row["longitude"]
+        d["location_source"] = row["location_source"] or "area_centroid"
+    d["has_exact_geography"] = row["location_source"] == "listing_exact"
     if row["description"]:
         d["description"] = row["description"]
     if row["features_json"]:
@@ -237,6 +394,8 @@ def get_listings_needing_detail(limit=10):
             detail_scraped_at IS NULL
             OR detail_scraped_at < datetime('now', '-7 days')
             OR (card_scraped_at > detail_scraped_at)
+            OR location_source IS NULL
+            OR location_source != 'listing_exact'
         )
         ORDER BY detail_scraped_at ASC NULLS FIRST
         LIMIT ?

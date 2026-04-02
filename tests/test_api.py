@@ -2,7 +2,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from app import app
-from app.db_listings import upsert_listing
+from app.db_listings import upsert_listing, get_listing_by_zameen_id
 
 
 @pytest.fixture
@@ -154,6 +154,74 @@ class TestListingDetailEndpoint:
         data = res.json()
         assert data.get("source") == "local"
         assert data["phone"] == "+923001234567"
+
+    def test_local_detail_includes_exact_geography(self, client):
+        upsert_listing(
+            zameen_id="900003",
+            url="https://www.zameen.com/Property/test-900003-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.82,
+            lng=67.03,
+            card_data={"title": "Pinned", "price": 90000, "bedrooms": 3, "bathrooms": 2, "area_size": "8 Marla"},
+        )
+        upsert_listing(
+            zameen_id="900003",
+            url="https://www.zameen.com/Property/test-900003-1-1.html",
+            city="karachi",
+            detail_data={
+                "phone": "+923001111111",
+                "description": "Exact detail",
+                "latitude": 24.8111,
+                "longitude": 67.0444,
+                "location_source": "listing_exact",
+            },
+        )
+        res = client.get("/api/listing-detail?url=https://www.zameen.com/Property/test-900003-1-1.html")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["has_exact_geography"] is True
+        assert data["latitude"] == pytest.approx(24.8111)
+        assert data["longitude"] == pytest.approx(67.0444)
+
+    def test_live_detail_persists_exact_geography_when_local_detail_is_only_area_level(self, client, monkeypatch):
+        upsert_listing(
+            zameen_id="900004",
+            url="https://www.zameen.com/Property/test-900004-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.82,
+            lng=67.03,
+            card_data={"title": "Needs refresh", "price": 91000, "bedrooms": 3, "bathrooms": 2, "area_size": "8 Marla"},
+        )
+        upsert_listing(
+            zameen_id="900004",
+            url="https://www.zameen.com/Property/test-900004-1-1.html",
+            city="karachi",
+            detail_data={"description": "Old detail"},
+        )
+
+        async def fake_fetch_listing_detail(url):
+            return {
+                "description": "Fresh detail",
+                "latitude": 24.8222,
+                "longitude": 67.0555,
+                "location_source": "listing_exact",
+                "has_exact_geography": True,
+            }
+
+        monkeypatch.setattr("app.routes.fetch_listing_detail", fake_fetch_listing_detail)
+
+        res = client.get("/api/listing-detail?url=https://www.zameen.com/Property/test-900004-1-1.html")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["has_exact_geography"] is True
+        listing = get_listing_by_zameen_id("900004")
+        assert listing["location_source"] == "listing_exact"
+        assert listing["latitude"] == pytest.approx(24.8222)
+        assert listing["longitude"] == pytest.approx(67.0555)
 
 
 class TestListingPhoneEndpoint:

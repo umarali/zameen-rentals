@@ -37,10 +37,56 @@ function renderDrawerImages(imgs) {
   }
 }
 
+function getDrawerMapTarget(item, area) {
+  if (
+    item?.has_exact_geography
+    && Number.isFinite(Number(item.latitude))
+    && Number.isFinite(Number(item.longitude))
+  ) {
+    return {
+      lat: Number(item.latitude),
+      lng: Number(item.longitude),
+      zoom: 16,
+      exact: true,
+    };
+  }
+  if (area?.lat && area?.lng) {
+    return {
+      lat: area.lat,
+      lng: area.lng,
+      zoom: 14,
+      exact: false,
+    };
+  }
+  return null;
+}
+
+function renderDrawerMiniMap(target) {
+  const el = document.getElementById('drawerMiniMap');
+  if (!el || !target) return;
+  if (refs.miniMap) { refs.miniMap.remove(); refs.miniMap = null; }
+  refs.miniMap = L.map(el, {
+    zoomControl: false,
+    dragging: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    touchZoom: false,
+    attributionControl: false,
+  }).setView([target.lat, target.lng], target.zoom);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(refs.miniMap);
+  L.marker([target.lat, target.lng]).addTo(refs.miniMap);
+}
+
 // ===== OPEN DRAWER =====
 
 export function openDrawer(item, selectAreaFull) {
   const imgs = item.images || (item.image_url ? [item.image_url] : []);
+  const callPhone = item.call_phone || item.phone || '';
+  const whatsappPhone = item.whatsapp_phone || item.call_phone || item.phone || '';
+  const contactAttrs = [
+    callPhone ? `data-call-phone="${escA(callPhone)}"` : '',
+    whatsappPhone ? `data-whatsapp-phone="${escA(whatsappPhone)}"` : '',
+  ].filter(Boolean).join(' ');
   // Show shimmer placeholder while detail fetch may return more images
   if (item.url && imgs.length <= 1) {
     $('#drawerImgArea').innerHTML = `<div class="drawer-img-single skeleton"></div>`;
@@ -56,6 +102,7 @@ export function openDrawer(item, selectAreaFull) {
   if (item.property_type) highlights.push(`<div class="flex items-center gap-2"><svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2 22h20M3 22V9l9-7 9 7v13M9 22v-6h6v6"/></svg><span class="text-sm font-medium text-brand-600">${esc(item.property_type)}</span></div>`);
 
   const area = getAreaForListing(item);
+  const mapTarget = getDrawerMapTarget(item, area);
   let nearbyHtml = '';
   if (area) {
     const nb = getNearby(area.name, 5);
@@ -84,7 +131,7 @@ export function openDrawer(item, selectAreaFull) {
         <div class="skeleton h-10 w-full mt-4"></div>
       </div>
     </div>
-    ${area && area.lat ? `<div class="drawer-divider"></div><div class="text-sm font-semibold text-gray-800 mb-3">Location</div><div id="drawerMiniMap" class="w-full h-44 rounded-xl overflow-hidden mb-1"></div>` : ''}
+    ${mapTarget ? `<div class="drawer-divider"></div><div class="mb-3"><div class="text-sm font-semibold text-gray-800">Location</div><div id="drawerLocationMeta" class="text-xs text-gray-400 mt-1">${mapTarget.exact ? 'Exact listing pin' : 'Approximate area location'}</div></div><div id="drawerMiniMap" class="w-full h-44 rounded-xl overflow-hidden mb-1"></div>` : ''}
     ${nearbyHtml ? `<div class="drawer-divider"></div>${nearbyHtml}` : ''}
     <div class="h-20"></div>
     <div class="drawer-contact-bar">
@@ -94,22 +141,15 @@ export function openDrawer(item, selectAreaFull) {
       </div>
       ${item.url ? `
       <a href="${escA(item.url)}" target="_blank" rel="noopener" class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:text-brand-500 hover:border-brand-200 transition-colors" title="View on Zameen.com"><svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg></a>
-      <button data-contact="call" data-url="${escA(item.url)}" class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:text-brand-500 hover:border-brand-200 transition-colors" title="Call"><svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg></button>
-      <button data-contact="whatsapp" data-url="${escA(item.url)}" class="w-10 h-10 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white transition-colors shadow-sm" title="WhatsApp"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
+      <button data-contact="call" data-url="${escA(item.url)}" ${contactAttrs} class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:text-brand-500 hover:border-brand-200 transition-colors" title="Call"><svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg></button>
+      <button data-contact="whatsapp" data-url="${escA(item.url)}" ${contactAttrs} class="w-10 h-10 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white transition-colors shadow-sm" title="WhatsApp"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>
       ` : ''}
     </div>
   `;
 
   // Mini map
-  if (area && area.lat) {
-    setTimeout(() => {
-      const el = document.getElementById('drawerMiniMap');
-      if (!el) return;
-      if (refs.miniMap) { refs.miniMap.remove(); refs.miniMap = null; }
-      refs.miniMap = L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false, attributionControl: false }).setView([area.lat, area.lng], 14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(refs.miniMap);
-      L.marker([area.lat, area.lng]).addTo(refs.miniMap);
-    }, 150);
+  if (mapTarget) {
+    setTimeout(() => renderDrawerMiniMap(mapTarget), 150);
   }
 
   // Show drawer
@@ -120,53 +160,43 @@ export function openDrawer(item, selectAreaFull) {
   try { refs._drawerHistoryPushed = true; history.pushState({ drawer: true }, '', ''); } catch { refs._drawerHistoryPushed = false; }
 
   // Progressive enrichment
-  if (item.url) fetchDrawerDetail(item.url, imgs);
+  if (item.url) fetchDrawerDetail(item, imgs);
 
-  // Nearby area clicks
-  $('#drawerContent').addEventListener('click', e => {
-    const c = e.target.closest('[data-nearby]');
-    if (c) { closeDrawer(); selectAreaFull?.(c.dataset.nearby); }
-  });
-
-  // Contact buttons in drawer
-  $('#drawerContent').addEventListener('click', e => {
-    const btn = e.target.closest('[data-contact]');
-    if (!btn) return;
-    e.preventDefault();
-    const action = btn.dataset.contact;
-    const url = btn.dataset.url;
-    const phone = btn.dataset.phone;
-    if (phone) {
-      if (action === 'call') { window.open(`tel:${phone}`, '_self'); }
-      else {
-        const waNum = phone.replace(/^0/, '92').replace(/[^0-9]/g, '');
-        window.open(`https://wa.me/${waNum}?text=${encodeURIComponent('Hi, I am interested in this property: ' + url)}`, '_blank');
-      }
-    } else {
-      handleContactAction(action, url, btn);
-    }
-  });
-
-  // Gallery click
-  $('#drawerImgArea').addEventListener('click', e => {
-    if (e.target.closest('[data-gallery]') && refs.drawerImages.length) openGallery(0);
-  });
 }
 
 // ===== FETCH DETAIL =====
 
-async function fetchDrawerDetail(listingUrl, existingImgs) {
+async function fetchDrawerDetail(item, existingImgs) {
   const el = $('#drawerEnriched');
   if (!el) return;
+  const listingUrl = item.url;
   try {
     const resp = await fetch(`/api/listing-detail?url=${encodeURIComponent(listingUrl)}`);
     const d = await resp.json();
     if (!d || !Object.keys(d).length) { el.innerHTML = ''; return; }
 
+    const resolvedItem = { ...item, ...d };
+    const area = getAreaForListing(resolvedItem);
+    const mapTarget = getDrawerMapTarget(resolvedItem, area);
+
     // Always render images from detail (replaces shimmer or updates with more photos)
     if (d.images && d.images.length) renderDrawerImages(d.images);
     else if (existingImgs.length) renderDrawerImages(existingImgs);
-    if (d.phone) document.querySelectorAll('[data-contact]').forEach(btn => { btn.dataset.phone = d.phone; });
+    const contactBtns = $('#drawerContent')?.querySelectorAll('[data-contact]') || [];
+    contactBtns.forEach(btn => {
+      if (d.call_phone || d.phone) {
+        btn.dataset.callPhone = d.call_phone || d.phone;
+        btn.dataset.phone = d.call_phone || d.phone;
+      }
+      if (d.whatsapp_phone || d.call_phone || d.phone) {
+        btn.dataset.whatsappPhone = d.whatsapp_phone || d.call_phone || d.phone;
+      }
+    });
+    const locationMeta = document.getElementById('drawerLocationMeta');
+    if (locationMeta && mapTarget) {
+      locationMeta.textContent = mapTarget.exact ? 'Exact listing pin' : 'Approximate area location';
+      setTimeout(() => renderDrawerMiniMap(mapTarget), 60);
+    }
 
     let html = '';
     if (d.description) {
@@ -260,6 +290,22 @@ function updateGalleryImg() {
 export function initDrawerListeners(selectAreaFull) {
   $('#drawerClose').addEventListener('click', () => closeDrawer());
   $('#drawerOverlay').addEventListener('click', () => closeDrawer());
+  $('#drawerContent').addEventListener('click', e => {
+    const nearby = e.target.closest('[data-nearby]');
+    if (nearby) {
+      closeDrawer();
+      selectAreaFull?.(nearby.dataset.nearby);
+      return;
+    }
+
+    const btn = e.target.closest('[data-contact]');
+    if (!btn) return;
+    e.preventDefault();
+    handleContactAction(btn.dataset.contact, btn.dataset.url, btn);
+  });
+  $('#drawerImgArea').addEventListener('click', e => {
+    if (e.target.closest('[data-gallery]') && refs.drawerImages.length) openGallery(0);
+  });
 
   // Back button closes drawer
   window.addEventListener('popstate', () => {

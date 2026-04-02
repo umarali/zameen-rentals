@@ -4,7 +4,8 @@ const { test, expect } = require("@playwright/test");
 test.describe("Desktop Map", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    await page.waitForSelector("#mapContainer", { timeout: 30000 });
+    await expect(page.locator("#mapContainer")).toHaveClass(/leaflet-container/);
   });
 
   test("map container renders with Leaflet tiles", async ({ page }) => {
@@ -22,14 +23,14 @@ test.describe("Desktop Map", () => {
   });
 
   test("area markers appear on map after search", async ({ page }) => {
-    // Markers are area-marker divIcon elements
+    await page.locator('.city-tab[data-city="karachi"]').click();
     await page.waitForTimeout(2000);
     const markers = page.locator("#mapContainer .area-marker");
-    // At least one marker should exist (active area or results)
-    expect(await markers.count()).toBeGreaterThanOrEqual(0);
+    expect(await markers.count()).toBeGreaterThan(0);
   });
 
-  test("active area marker has special styling", async ({ page }) => {
+  test("street zoom keeps only the focused area label visible", async ({ page }) => {
+    await page.locator('.city-tab[data-city="karachi"]').click();
     // Select an area to make it active
     await page.locator("#areaChip").click();
     await page.locator("#areaInput").fill("DHA");
@@ -40,9 +41,11 @@ test.describe("Desktop Map", () => {
       "#mapContainer .area-label-active"
     );
     expect(await activeLabel.count()).toBeGreaterThanOrEqual(1);
+    expect(await page.locator("#mapContainer .area-label").count()).toBeLessThanOrEqual(1);
   });
 
   test("active area badge shows total count", async ({ page }) => {
+    await page.locator('.city-tab[data-city="karachi"]').click();
     await page.locator("#areaChip").click();
     await page.locator("#areaInput").fill("DHA");
     await page.waitForTimeout(400);
@@ -57,27 +60,32 @@ test.describe("Desktop Map", () => {
     }
   });
 
-  test("map re-centers when city changes", async ({ page }) => {
-    // Get initial center (approximate via map bounds)
+  test("city change keeps the map in viewport mode", async ({ page }) => {
+    await page.locator('.city-tab[data-city="karachi"]').click();
+    await page.waitForTimeout(1500);
     await page.locator('.city-tab[data-city="lahore"]').click();
-    await page.waitForSelector(".card-wrap", { timeout: 30000 });
-    // Map should still have Leaflet container
+    await page.waitForTimeout(1500);
     await expect(page.locator("#mapContainer")).toHaveClass(
       /leaflet-container/
     );
+    await expect(page.locator('.city-tab[data-city="lahore"]')).toHaveClass(/active/);
+    await expect(page.locator("#listingsTitle")).toContainText("map view");
   });
 
-  test("clicking marker selects area", async ({ page }) => {
+  test("covered areas render as green dots", async ({ page }) => {
+    await page.locator('.city-tab[data-city="karachi"]').click();
     await page.waitForTimeout(2000);
-    const markers = page.locator("#mapContainer .area-label");
-    if ((await markers.count()) > 0) {
-      await markers.first().click();
-      await page.waitForTimeout(2000);
-      await expect(page.locator("#areaChip")).toHaveClass(/has-value/);
-    }
+    expect(await page.locator("#mapContainer .area-dot-live").count()).toBeGreaterThan(0);
+  });
+
+  test("uncovered areas render as gray coverage dots", async ({ page }) => {
+    await page.locator('.city-tab[data-city="karachi"]').click();
+    await page.waitForTimeout(2000);
+    expect(await page.locator("#mapContainer .coverage-dot").count()).toBeGreaterThan(0);
   });
 
   test("sub-area markers appear when parent selected", async ({ page }) => {
+    await page.locator('.city-tab[data-city="karachi"]').click();
     // Select an area known to have sub-areas
     await page.locator("#areaChip").click();
     await page.locator("#areaInput").fill("North Nazimabad");
@@ -86,13 +94,18 @@ test.describe("Desktop Map", () => {
     if ((await opt.count()) > 0) {
       await opt.click();
       await page.waitForTimeout(3000);
-      // Check if sub-area markers like "North Nazimabad Block A" appear
       const subMarkers = page.locator(
         '#mapContainer .area-label:text-matches("North Nazimabad Block|North Nazimabad -")'
       );
-      // May or may not have sub-areas visible depending on zoom
       expect(await subMarkers.count()).toBeGreaterThanOrEqual(0);
     }
+  });
+
+  test("viewport mode explains shown vs available counts", async ({ page }) => {
+    await page.locator('.city-tab[data-city="karachi"]').click();
+    await page.waitForTimeout(2000);
+    await expect(page.locator("#resultsCount")).toContainText("shown");
+    await expect(page.locator("#resultsMeta")).toContainText(/available in|available across|No local listings|Move the map/);
   });
 });
 
@@ -101,7 +114,7 @@ test.describe("Mobile Map", () => {
 
   test("map FAB opens overlay", async ({ page }) => {
     await page.goto("/");
-    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    await page.waitForSelector("#mapFab", { timeout: 30000 });
     await expect(page.locator("#mapFab")).toBeVisible();
     await page.locator("#mapFab").click();
     await expect(page.locator("#mapOverlay")).toBeVisible();
@@ -110,7 +123,7 @@ test.describe("Mobile Map", () => {
 
   test("mobile map close button works", async ({ page }) => {
     await page.goto("/");
-    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    await page.waitForSelector("#mapFab", { timeout: 30000 });
     await page.locator("#mapFab").click();
     await expect(page.locator("#mapOverlay")).toBeVisible();
     await page.locator("#mapOverlayClose").click();

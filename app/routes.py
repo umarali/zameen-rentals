@@ -11,13 +11,28 @@ from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_area
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches
 from app.parsing import parse_query_with_claude
-from app.scraper import search_zameen, fetch_phone_number, fetch_listing_detail, extract_zameen_id
-from app.db_listings import search_listings, get_listing_by_zameen_id, get_crawl_stats
+from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
+from app.db_listings import (
+    search_listings, count_listings_by_area, get_listing_by_zameen_id,
+    get_crawl_stats, upsert_listing,
+)
 
 logger = logging.getLogger("zameenrentals")
 router = APIRouter()
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _contact_response_from_listing(listing):
+    call_phone = listing.get("call_phone") or listing.get("phone")
+    whatsapp_phone = listing.get("whatsapp_phone") or call_phone
+    return {
+        "phone": call_phone,
+        "call_phone": call_phone,
+        "whatsapp_phone": whatsapp_phone,
+        "agent_agency": listing.get("agent_agency"),
+        "source": "local",
+    }
 
 
 @router.get("/api/health")
@@ -130,17 +145,65 @@ async def search(request: Request, city: str = Query("karachi"), area: Optional[
             return local_result
 
         # Fallback to live scraping if local DB has no results for this query
-        result = await search_zameen(area=area, property_type=property_type, bedrooms=bedrooms, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort, city=city)
-        result["source"] = "live"
-        log_search(city=city, area=area, property_type=property_type, bedrooms=bedrooms,
-                   price_min=price_min, price_max=price_max, furnished=furnished,
-                   sort=sort, result_count=result.get("total", 0))
-        return result
+        try:
+            result = await search_zameen(area=area, property_type=property_type, bedrooms=bedrooms, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort, city=city)
+            result["source"] = "live"
+            log_search(city=city, area=area, property_type=property_type, bedrooms=bedrooms,
+                       price_min=price_min, price_max=price_max, furnished=furnished,
+                       sort=sort, result_count=result.get("total", 0))
+            return result
+        except HTTPException as exc:
+            if exc.status_code == 502:
+                return {"total": 0, "page": page, "per_page": 25, "results": [], "source": "unavailable"}
+            raise
     except HTTPException:
         raise
     except Exception:
         logger.exception("Search error")
         raise HTTPException(status_code=500, detail="An internal error occurred. Please try again later.")
+
+
+@router.get("/api/map-search")
+@limiter.limit("20/minute")
+async def map_search(
+    request: Request,
+    city: str = Query("karachi"),
+    areas: list[str] = Query([]),
+    property_type: Optional[str] = Query(None),
+    bedrooms: Optional[int] = Query(None, ge=1, le=10),
+    price_min: Optional[int] = Query(None, ge=0),
+    price_max: Optional[int] = Query(None, ge=0),
+    furnished: Optional[bool] = Query(None),
+    page: int = Query(1, ge=1),
+    sort: Optional[str] = Query(None),
+):
+    area_names = [a for a in areas if a]
+    if not area_names:
+        return {
+            "total": 0,
+            "page": page,
+            "per_page": 25,
+            "results": [],
+            "source": "local",
+            "mode": "viewport",
+            "visible_areas": 0,
+            "area_totals": {},
+        }
+
+    result = search_listings(
+        city=city, area_names=area_names, property_type=property_type,
+        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        furnished=furnished, sort=sort, page=page,
+    )
+    result["source"] = "local"
+    result["mode"] = "viewport"
+    result["visible_areas"] = len(area_names)
+    result["area_totals"] = count_listings_by_area(
+        city=city, area_names=area_names, property_type=property_type,
+        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        furnished=furnished,
+    )
+    return result
 
 
 @router.get("/api/listing-detail")
@@ -152,12 +215,16 @@ async def listing_detail(request: Request, url: str = Query(...)):
     try:
         # Try local DB first
         zid = extract_zameen_id(url)
+        listing = None
+        local_detail = None
         if zid:
             listing = get_listing_by_zameen_id(zid)
             if listing and listing.get("detail_scraped_at"):
                 import json
-                return {
+                local_detail = {
                     "phone": listing.get("phone"),
+                    "call_phone": listing.get("call_phone") or listing.get("phone"),
+                    "whatsapp_phone": listing.get("whatsapp_phone") or listing.get("call_phone") or listing.get("phone"),
                     "description": listing.get("description"),
                     "features": json.loads(listing["features_json"]) if listing.get("features_json") else [],
                     "amenities": json.loads(listing["amenities_json"]) if listing.get("amenities_json") else [],
@@ -165,33 +232,81 @@ async def listing_detail(request: Request, url: str = Query(...)):
                     "agent_name": listing.get("agent_name"),
                     "agent_agency": listing.get("agent_agency"),
                     "images": json.loads(listing["detail_images_json"]) if listing.get("detail_images_json") else [],
+                    "latitude": listing.get("latitude"),
+                    "longitude": listing.get("longitude"),
+                    "location_source": listing.get("location_source"),
+                    "has_exact_geography": listing.get("location_source") == "listing_exact",
+                    "contact_source": listing.get("contact_source"),
                     "source": "local",
                 }
+                if local_detail["has_exact_geography"]:
+                    return local_detail
         # Fallback to live scrape
         detail = await fetch_listing_detail(url)
-        return detail or {}
+        if detail and zid and listing:
+            upsert_listing(
+                zameen_id=zid,
+                url=url,
+                city=listing.get("city") or "",
+                detail_data=detail,
+            )
+            detail["source"] = "live"
+        return detail or local_detail or {}
     except Exception:
         logger.exception("Detail fetch error")
         return {}
 
 
-@router.get("/api/listing-phone")
+@router.get("/api/listing-contact")
 @limiter.limit("20/minute")
-async def listing_phone(request: Request, url: str = Query(...)):
-    """Fetch phone number — from local DB if available, else live scrape."""
+async def listing_contact(request: Request, url: str = Query(...)):
+    """Fetch contact data — from local DB if available, else live via showNumbers."""
     if not url.startswith("https://www.zameen.com/"):
         raise HTTPException(status_code=400, detail="Invalid Zameen.com URL")
     try:
         zid = extract_zameen_id(url)
         if zid:
             listing = get_listing_by_zameen_id(zid)
-            if listing and listing.get("phone"):
-                return {"phone": listing["phone"]}
-        phone = await fetch_phone_number(url)
-        return {"phone": phone}
+            if listing and (listing.get("call_phone") or listing.get("phone") or listing.get("whatsapp_phone")):
+                return _contact_response_from_listing(listing)
+        contact = await fetch_listing_contact(url)
+        if not contact:
+            return {"phone": None, "call_phone": None, "whatsapp_phone": None}
+        if zid:
+            upsert_listing(
+                zameen_id=zid, url=url, city="",
+                detail_data={
+                    "phone": contact.get("phone"),
+                    "call_phone": contact.get("call_phone"),
+                    "whatsapp_phone": contact.get("whatsapp_phone"),
+                    "agent_agency": contact.get("agent_agency"),
+                    "contact_payload": contact.get("contact_payload"),
+                    "contact_source": contact.get("contact_source"),
+                },
+            )
+        return {
+            "phone": contact.get("phone"),
+            "call_phone": contact.get("call_phone"),
+            "whatsapp_phone": contact.get("whatsapp_phone"),
+            "agent_agency": contact.get("agent_agency"),
+            "source": "live",
+        }
+    except Exception:
+        logger.exception("Contact fetch error")
+        return {"phone": None, "call_phone": None, "whatsapp_phone": None}
+
+
+@router.get("/api/listing-phone")
+@limiter.limit("20/minute")
+async def listing_phone(request: Request, url: str = Query(...)):
+    """Legacy contact endpoint kept for card actions."""
+    if not url.startswith("https://www.zameen.com/"):
+        raise HTTPException(status_code=400, detail="Invalid Zameen.com URL")
+    try:
+        return await listing_contact(request, url)
     except Exception:
         logger.exception("Phone fetch error")
-        return {"phone": None}
+        return {"phone": None, "call_phone": None, "whatsapp_phone": None}
 
 
 @router.get("/api/crawl-status")

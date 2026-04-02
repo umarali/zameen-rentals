@@ -2,7 +2,7 @@
 import pytest
 from app.scraper import (
     extract_zameen_id, parse_listings, _is_property_photo_url,
-    _extract_property_type, _extract_images,
+    _extract_property_type, _extract_images, _extract_listing_geography,
 )
 from app.parsing import parse_price, build_url, match_area
 from app.cache import RateLimiter
@@ -159,6 +159,37 @@ class TestParseListings:
     def test_returns_list(self):
         result = parse_listings("<html><body></body></html>")
         assert isinstance(result, list)
+
+
+class TestExtractListingGeography:
+    def test_extracts_from_location_endpoints(self):
+        html = """
+        <div>https://www.zameen.com/api/plotFinder/parcel/?coordinates=24.954818,67.11663</div>
+        <div>https://www.zameen.com/api/places?latitude=24.954818&longitude=67.11663&radius=1500</div>
+        """
+        result = _extract_listing_geography(html, "50001121")
+        assert result is not None
+        assert result["latitude"] == pytest.approx(24.954818)
+        assert result["longitude"] == pytest.approx(67.11663)
+        assert result["location_source"] == "listing_exact"
+        assert result["has_exact_geography"] is True
+
+    def test_extracts_from_data_layer_near_listing_id(self):
+        html = """
+        <script>
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+          "listing_id": 50001121,
+          "title": "Sample",
+          "latitude": 24.954818,
+          "longitude": 67.11663
+        });
+        </script>
+        """
+        result = _extract_listing_geography(html, "50001121")
+        assert result is not None
+        assert result["latitude"] == pytest.approx(24.954818)
+        assert result["longitude"] == pytest.approx(67.11663)
 
 
 class TestRateLimiter:

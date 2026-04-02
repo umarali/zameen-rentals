@@ -17,8 +17,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script type="module" crossorigin src="/static/assets/index-B39PLB61.js"></script>
-  <link rel="stylesheet" crossorigin href="/static/assets/index-D-2ulLKQ.css">
+  <script type="module" crossorigin src="/static/assets/index-79gLTrRf.js"></script>
+  <link rel="stylesheet" crossorigin href="/static/assets/index-C1Eh1QUF.css">
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
@@ -66,7 +66,7 @@
 </div>
 
   <!-- Dropdowns -->
-  <div id="dd-area" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
+  <div id="dd-area" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
     <div class="text-sm font-semibold text-gray-700 mb-3">Select Area</div>
     <div class="flex items-center border border-gray-200 rounded-lg px-3 focus-within:border-brand-500 transition-colors">
       <input id="areaInput" type="text" class="flex-1 py-2.5 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Type area name..." autocomplete="off">
@@ -74,7 +74,7 @@
     </div>
     <div id="areaList" class="mt-2 max-h-52 overflow-y-auto scroll-thin"></div>
   </div>
-  <div id="dd-type" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
+  <div id="dd-type" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
     <div class="text-sm font-semibold text-gray-700 mb-3">Property Type</div>
     <div class="flex flex-wrap gap-2" id="typeGrid">
       <span class="chip" data-type="house">House</span>
@@ -86,7 +86,7 @@
       <span class="chip" data-type="farm_house">Farm House</span>
     </div>
   </div>
-  <div id="dd-beds" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
+  <div id="dd-beds" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
     <div class="text-sm font-semibold text-gray-700 mb-3">Bedrooms</div>
     <div class="flex gap-2" id="bedRow">
       <span class="chip active" data-beds="">Any</span>
@@ -97,7 +97,7 @@
       <span class="chip" data-beds="5">5+</span>
     </div>
   </div>
-  <div id="dd-price" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
+  <div id="dd-price" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
     <div class="text-sm font-semibold text-gray-700 mb-3">Price Range</div>
     <div class="flex flex-wrap gap-2" id="priceGrid">
       <span class="chip" data-pmin="0" data-pmax="30000">Under 30K</span>
@@ -115,7 +115,7 @@
       <button id="priceApply" class="w-full mt-2 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors">Apply</button>
     </div>
   </div>
-  <div id="dd-more" class="filter-dd absolute top-full left-0 mt-1 ml-4 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
+  <div id="dd-more" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
     <div class="text-sm font-semibold text-gray-700 mb-2">More Filters</div>
     <div class="flex items-center justify-between py-2">
       <span class="text-sm text-gray-600">Furnished Only</span>
@@ -149,7 +149,10 @@
 <main class="grid grid-cols-1 lg:grid-cols-[55fr_45fr] overflow-hidden">
   <section id="listingsPanel" class="overflow-y-auto overscroll-contain p-4 lg:p-6 scroll-thin">
     <div class="flex items-center justify-between mb-4">
-      <h2 id="listingsTitle" class="text-base font-bold text-gray-700">Rentals in Karachi</h2>
+      <div>
+        <h2 id="listingsTitle" class="text-base font-bold text-gray-700">Rentals in Karachi</h2>
+        <p id="resultsMeta" class="mt-1 text-xs text-gray-400">Browse the map or use filters to refine results</p>
+      </div>
       <div class="flex items-center gap-2">
         <span id="resultsCount" class="text-xs text-gray-400"></span>
         <span id="dataSource" class="text-xs text-gray-300 hidden"></span>
@@ -163,6 +166,7 @@
     <div class="text-center py-6 text-xs text-gray-400">Powered by Zameen.com data</div>
   </section>
   <section id="mapPanel" class="relative border-l border-gray-200 hidden lg:block z-0">
+    <div id="mapCoverageBadge" class="hidden absolute top-4 left-4 z-[500] max-w-[280px] rounded-2xl bg-white/92 backdrop-blur border border-gray-200 shadow-sm px-4 py-3"></div>
     <div id="mapContainer" class="absolute inset-0"></div>
   </section>
 </main>
@@ -175,6 +179,7 @@
 
 <!-- Mobile map overlay -->
 <div id="mapOverlay" class="fixed inset-0 bg-white z-[60] hidden">
+  <div id="mapCoverageBadgeMobile" class="hidden absolute top-14 left-3 right-3 z-[61] rounded-2xl bg-white/92 backdrop-blur border border-gray-200 shadow-sm px-4 py-3"></div>
   <div class="absolute top-3 left-3 z-[61]">
     <button id="mapOverlayClose" class="flex items-center gap-1 px-4 py-2 rounded-full bg-white border border-gray-200 text-sm font-semibold text-gray-700 shadow-md hover:bg-gray-50 transition-colors">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>

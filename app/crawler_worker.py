@@ -9,7 +9,10 @@ from app.cache import RateLimiter
 from app.data import USER_AGENTS, PROPERTY_TYPES, CITY_AREAS, CRAWL_PROPERTY_TYPES
 from app.database import _get_conn
 from app.db_listings import upsert_listing, get_listings_needing_detail
-from app.scraper import parse_listings, extract_zameen_id, _is_property_photo_url
+from app.scraper import (
+    parse_listings, extract_zameen_id, _is_property_photo_url, fetch_listing_contact,
+    _extract_listing_geography,
+)
 
 logger = logging.getLogger("zameenrentals")
 
@@ -289,38 +292,16 @@ async def crawl_area_cards(city, area_name, area_slug, area_id, lat, lng, client
 async def fetch_phone_via_api(zameen_id, listing_url, client, ua):
     """Fetch phone number using Zameen.com's internal showNumbers API.
     This is the same API the browser calls when you click 'Call'."""
-    api_url = f"https://www.zameen.com/api/showNumbers?listingExternalID={zameen_id}&isProject=false"
-    headers = _api_headers(ua, listing_url)
-
-    await crawler_rate_limiter.acquire()
     try:
-        resp = await client.get(api_url, headers=headers, timeout=15)
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get("success"):
-                contact = data.get("contact_details", {})
-                phones = contact.get("phone", [])
-                mobile = contact.get("mobile")
-                agency = contact.get("agency_name")
-                phone = phones[0] if phones else mobile
-                return {
-                    "phone": phone,
-                    "agent_agency": agency,
-                }
-        elif resp.status_code == 429:
-            logger.warning("429 on showNumbers for %s", zameen_id)
-            await asyncio.sleep(5 + random.uniform(2, 8))
-        else:
-            logger.debug("showNumbers returned %d for %s", resp.status_code, zameen_id)
+        return await fetch_listing_contact(listing_url, client=client, user_agent=ua)
     except Exception as e:
         logger.error("showNumbers error for %s: %s", zameen_id, e)
-
-    return None
+        return None
 
 
 # ── Detail page scraping (description, features, amenities — NOT phone) ──
 
-def _parse_detail_html(soup):
+def _parse_detail_html(soup, html=None, zameen_id=None):
     """Parse detail page HTML for everything EXCEPT phone (which comes from API)."""
     result = {"description": None, "features": [], "amenities": [],
               "agent_name": None, "agent_agency": None, "images": [], "details": {}}
@@ -414,14 +395,17 @@ def _parse_detail_html(soup):
                 if data.get("image"):
                     imgs = data["image"] if isinstance(data["image"], list) else [data["image"]]
                     for img_url in imgs:
-                        if isinstance(img_url, str) and img_url not in seen:
-                            seen.add(img_url)
-                            result["images"].append(img_url)
+                        if isinstance(img_url, str):
+                            _add_image(img_url)
                 seller = data.get("offeredBy") or data.get("seller") or {}
                 if isinstance(seller, dict) and not result["agent_name"] and seller.get("name"):
                     result["agent_name"] = seller["name"]
         except Exception:
             continue
+
+    geography = _extract_listing_geography(html or "", zameen_id)
+    if geography:
+        result.update(geography)
 
     return result
 
@@ -458,13 +442,17 @@ async def crawl_detail_batch(limit=10, client=None, session_ua=None):
             detail_data = {}
             if html:
                 soup = BeautifulSoup(html, "html.parser")
-                detail_data = _parse_detail_html(soup)
+                detail_data = _parse_detail_html(soup, html=html, zameen_id=zid)
 
             # 2. Fetch phone via showNumbers API (separate call, like a real browser click)
             await asyncio.sleep(random.uniform(0.3, 1.0))  # Simulate user reading page before clicking
             phone_data = await fetch_phone_via_api(zid, url, client, ua)
             if phone_data:
                 detail_data["phone"] = phone_data.get("phone")
+                detail_data["call_phone"] = phone_data.get("call_phone")
+                detail_data["whatsapp_phone"] = phone_data.get("whatsapp_phone")
+                detail_data["contact_payload"] = phone_data.get("contact_payload")
+                detail_data["contact_source"] = phone_data.get("contact_source")
                 if phone_data.get("agent_agency") and not detail_data.get("agent_agency"):
                     detail_data["agent_agency"] = phone_data["agent_agency"]
 
@@ -495,7 +483,8 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None):
     rows = conn.execute("""
         SELECT zameen_id, url FROM listings
         WHERE is_active = 1 AND (
-            phone IS NULL
+            call_phone IS NULL
+            OR whatsapp_phone IS NULL
             OR detail_scraped_at < datetime('now', '-3 days')
         )
         ORDER BY detail_scraped_at ASC NULLS FIRST
@@ -518,11 +507,18 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None):
             zid, url = row["zameen_id"], row["url"]
             phone_data = await fetch_phone_via_api(zid, url, client, ua)
 
-            if phone_data and phone_data.get("phone"):
+            if phone_data and phone_data.get("call_phone"):
                 conn.execute("""
-                    UPDATE listings SET phone = ?, agent_agency = COALESCE(?, agent_agency),
-                    detail_scraped_at = ? WHERE zameen_id = ?
-                """, (phone_data["phone"], phone_data.get("agent_agency"), now, zid))
+                    UPDATE listings
+                    SET phone = ?, call_phone = ?, whatsapp_phone = ?,
+                        contact_payload_json = ?, contact_fetched_at = ?, contact_source = ?,
+                        agent_agency = COALESCE(?, agent_agency)
+                    WHERE zameen_id = ?
+                """, (
+                    phone_data["call_phone"], phone_data["call_phone"], phone_data.get("whatsapp_phone"),
+                    json.dumps(phone_data.get("contact_payload")) if phone_data.get("contact_payload") else None,
+                    now, phone_data.get("contact_source"), phone_data.get("agent_agency"), zid,
+                ))
                 conn.commit()
                 updated += 1
 

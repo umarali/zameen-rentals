@@ -7,11 +7,12 @@ Architecture:
 - Adaptive rate limiting (backs off on 429s, recovers when clear)
 - Session rotation (new browser profile each cycle)
 - Smart area prioritization (popular areas first, failing areas deprioritized)
+- Optional resumable backfill mode for draining current listings
 - Graceful shutdown on SIGTERM/SIGINT
 
 Run: python -m app.crawler
 """
-import asyncio, logging, random, signal, sys, time
+import argparse, asyncio, logging, random, signal, sys, time
 from datetime import datetime
 
 import httpx
@@ -183,6 +184,76 @@ def all_areas_crawled_recently(hours=4):
         (f'-{hours} hours',)
     ).fetchone()[0]
     return stale == 0
+
+
+async def run_backfill_worker(*, detail_batch=DETAIL_BATCH_SIZE, phone_batch=PHONE_BATCH_SIZE,
+                              watch=False, poll_seconds=300):
+    """Drain detail/contact enrichment for existing listings.
+
+    When `watch` is False this runs once until no more work remains.
+    When `watch` is True it keeps polling for new listings to enrich.
+    """
+    init_db()
+    init_crawl_state()
+
+    cycle_count = 0
+    total_detail, total_phone = 0, 0
+
+    logger.info("=== Backfill worker starting ===")
+    stats = get_crawl_stats()
+    logger.info("DB: %d listings, %d/%d areas crawled, %.1f%% with detail",
+                stats["total_listings"], stats["areas_crawled"],
+                stats["areas_total"], stats["detail_coverage"])
+
+    while not _shutdown:
+        cycle_count += 1
+        cycle_start = time.monotonic()
+
+        session_ua, _ = _build_browser_profile()
+        logger.info("=== Backfill cycle %d | UA: %s... ===", cycle_count, session_ua[:60])
+
+        async with httpx.AsyncClient() as client:
+            robots = await check_robots_txt(client, session_ua)
+            if robots is None:
+                logger.error("Backfill blocked by robots.txt — sleeping 1 hour")
+                await asyncio.sleep(3600)
+                continue
+
+            crawler_rate_limiter.rate = min(1.0, max(crawler_rate_limiter.rate, 0.2))
+
+            detail_total = 0
+            while not _shutdown:
+                count = await crawl_detail_batch(limit=detail_batch, client=client, session_ua=session_ua)
+                if count == 0:
+                    break
+                detail_total += count
+                await asyncio.sleep(random.uniform(0.5, 2.0))
+
+            phone_total = 0
+            while not _shutdown:
+                count = await refresh_phones_batch(limit=phone_batch, client=client, session_ua=session_ua)
+                if count == 0:
+                    break
+                phone_total += count
+                await asyncio.sleep(random.uniform(1.0, 3.0))
+
+        total_detail += detail_total
+        total_phone += phone_total
+        cycle_minutes = (time.monotonic() - cycle_start) / 60
+        stats = get_crawl_stats()
+        logger.info(
+            "=== Backfill cycle %d complete (%.0f min) | +%d detail, +%d phones | DB: %d listings, %.1f%% with detail ===",
+            cycle_count, cycle_minutes, detail_total, phone_total,
+            stats["total_listings"], stats["detail_coverage"]
+        )
+
+        if not watch or _shutdown:
+            break
+
+        await asyncio.sleep(poll_seconds)
+
+    logger.info("=== Backfill worker stopped. Session total: %d detail, %d phones ===",
+                total_detail, total_phone)
 
 
 # ── Main crawl loop ──
@@ -380,8 +451,26 @@ async def run_crawler():
                 total_new, total_updated)
 
 
-def main():
-    asyncio.run(run_crawler())
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="ZameenRentals crawler/backfill worker")
+    parser.add_argument("--backfill", action="store_true", help="Run the resumable enrichment worker instead of the full crawler")
+    parser.add_argument("--watch", action="store_true", help="Keep polling for new listings after the initial backfill completes")
+    parser.add_argument("--poll-seconds", type=int, default=300, help="Sleep between watch cycles when --watch is enabled")
+    parser.add_argument("--detail-batch", type=int, default=DETAIL_BATCH_SIZE, help="Detail rows per backfill batch")
+    parser.add_argument("--phone-batch", type=int, default=PHONE_BATCH_SIZE, help="Phone rows per refresh batch")
+    args = parser.parse_args(argv)
+
+    if args.backfill:
+        asyncio.run(
+            run_backfill_worker(
+                detail_batch=args.detail_batch,
+                phone_batch=args.phone_batch,
+                watch=args.watch,
+                poll_seconds=args.poll_seconds,
+            )
+        )
+    else:
+        asyncio.run(run_crawler())
 
 
 if __name__ == "__main__":

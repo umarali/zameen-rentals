@@ -73,6 +73,91 @@ class TestUpsertListing:
         row = conn.execute("SELECT is_active FROM listings WHERE zameen_id = '100005'").fetchone()
         assert row["is_active"] == 1
 
+    def test_detail_exact_coords_override_area_centroid(self):
+        upsert_listing(
+            zameen_id="100006",
+            url="https://www.zameen.com/Property/t-100006-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0300,
+            card_data={"title": "Geo Test", "price": 80000, "bedrooms": 2, "bathrooms": 2, "area_size": "900 sqft"},
+        )
+        result = upsert_listing(
+            zameen_id="100006",
+            url="https://www.zameen.com/Property/t-100006-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Exact map point available",
+                "latitude": 24.812345,
+                "longitude": 67.045678,
+                "location_source": "listing_exact",
+            },
+        )
+        assert result == "updated"
+        listing = get_listing_by_zameen_id("100006")
+        assert listing["latitude"] == pytest.approx(24.812345)
+        assert listing["longitude"] == pytest.approx(67.045678)
+        assert listing["location_source"] == "listing_exact"
+
+    def test_card_refresh_does_not_overwrite_exact_coords(self):
+        upsert_listing(
+            zameen_id="100007",
+            url="https://www.zameen.com/Property/t-100007-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0300,
+            card_data={"title": "Geo Stable", "price": 70000, "bedrooms": 2, "bathrooms": 2, "area_size": "950 sqft"},
+        )
+        upsert_listing(
+            zameen_id="100007",
+            url="https://www.zameen.com/Property/t-100007-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Now exact",
+                "latitude": 24.856789,
+                "longitude": 67.098765,
+                "location_source": "listing_exact",
+            },
+        )
+        upsert_listing(
+            zameen_id="100007",
+            url="https://www.zameen.com/Property/t-100007-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0300,
+            card_data={"title": "Geo Stable", "price": 72000, "bedrooms": 2, "bathrooms": 2, "area_size": "950 sqft"},
+        )
+        listing = get_listing_by_zameen_id("100007")
+        assert listing["latitude"] == pytest.approx(24.856789)
+        assert listing["longitude"] == pytest.approx(67.098765)
+        assert listing["location_source"] == "listing_exact"
+
+    def test_contact_only_update_keeps_detail_stale_until_real_detail(self):
+        upsert_listing(
+            zameen_id="100008",
+            url="https://www.zameen.com/Property/t-100008-1-1.html",
+            city="karachi",
+            card_data={"title": "Contact Only", "price": 60000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"},
+        )
+        result = upsert_listing(
+            zameen_id="100008",
+            url="https://www.zameen.com/Property/t-100008-1-1.html",
+            city="karachi",
+            detail_data={"call_phone": "+923001234567", "whatsapp_phone": "+923331234567", "contact_source": "showNumbers"},
+        )
+        assert result == "updated"
+        listing = get_listing_by_zameen_id("100008")
+        assert listing["call_phone"] == "+923001234567"
+        assert listing["whatsapp_phone"] == "+923331234567"
+        assert listing["contact_fetched_at"] is not None
+        assert listing["detail_scraped_at"] is None
+
 
 class TestSearchListings:
     def _seed(self, n=5):
@@ -172,6 +257,26 @@ class TestGetListingsNeedingDetail:
         listings = get_listings_needing_detail(limit=10)
         assert len(listings) >= 1
         assert listings[0]["zameen_id"] == "500001"
+
+    def test_returns_listings_without_exact_location(self):
+        upsert_listing(
+            zameen_id="500002",
+            url="https://www.zameen.com/Property/t-500002-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0300,
+            card_data={"title": "Needs exact pin", "price": 65000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"},
+        )
+        upsert_listing(
+            zameen_id="500002",
+            url="https://www.zameen.com/Property/t-500002-1-1.html",
+            city="karachi",
+            detail_data={"description": "Scraped detail but no exact point yet"},
+        )
+        listings = get_listings_needing_detail(limit=10)
+        assert any(item["zameen_id"] == "500002" for item in listings)
 
 
 class TestMarkStaleListings:

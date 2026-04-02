@@ -38,6 +38,51 @@ body { display: grid; grid-template-rows: 60px auto 1fr; }
   font-size: 10px; font-weight: 700; margin-left: 4px; line-height: 1;
 }
 .area-label-active .area-badge { background: #fff; color: #0a8f3c; }
+.area-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  border: 2px solid rgba(255,255,255,0.96);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+}
+.area-dot-live {
+  background: #0a8f3c;
+}
+.area-dot-active {
+  background: #067a2f;
+  box-shadow: 0 0 0 3px rgba(10,143,60,0.18), 0 1px 2px rgba(0,0,0,0.18);
+}
+.coverage-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(156, 163, 175, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.coverage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 11px;
+  font-weight: 600;
+}
+.coverage-chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.8;
+}
+.coverage-chip.live {
+  background: #ecfdf3;
+  color: #0a8f3c;
+}
 
 /* ===== Scrollbar ===== */
 .scroll-thin { scrollbar-width: thin; scrollbar-color: #dee2e6 transparent; }

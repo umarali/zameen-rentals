@@ -21,6 +21,191 @@ def extract_zameen_id(url: str) -> str | None:
     return m.group(1) if m else None
 
 
+def _contact_api_headers(user_agent, referer_url):
+    headers = {
+        "User-Agent": user_agent,
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Accept-Language": "en",
+        "DNT": "1",
+        "Referer": referer_url,
+        "X-Requested-With": "XMLHttpRequest",
+    }
+    if "Chrome/" in user_agent:
+        m = re.search(r"Chrome/(\d+)", user_agent)
+        version = m.group(1) if m else "145"
+        headers["sec-ch-ua"] = f'"Not:A-Brand";v="99", "Google Chrome";v="{version}", "Chromium";v="{version}"'
+        headers["sec-ch-ua-mobile"] = "?1" if "Mobile" in user_agent else "?0"
+        headers["sec-ch-ua-platform"] = (
+            '"Android"' if "Android" in user_agent else
+            '"macOS"' if "Mac" in user_agent else
+            '"Windows"'
+        )
+        headers["sec-fetch-dest"] = "empty"
+        headers["sec-fetch-mode"] = "cors"
+        headers["sec-fetch-site"] = "same-origin"
+    return headers
+
+
+def _normalize_phone(raw):
+    if not raw:
+        return None
+    phone = re.sub(r"[^\d+]", "", str(raw).strip())
+    if not phone:
+        return None
+    if phone.startswith("00"):
+        phone = "+" + phone[2:]
+    elif phone.startswith("92") and not phone.startswith("+"):
+        phone = "+" + phone
+    return phone
+
+
+def _parse_contact_payload(data):
+    if not isinstance(data, dict) or not data.get("success"):
+        return None
+
+    contact = data.get("contact_details", {}) or {}
+    phones = contact.get("phone", [])
+    if not isinstance(phones, list):
+        phones = [phones] if phones else []
+
+    call_phone = next((_normalize_phone(p) for p in phones if _normalize_phone(p)), None)
+    mobile = _normalize_phone(contact.get("mobile"))
+    if not call_phone:
+        call_phone = mobile
+
+    whatsapp_phone = mobile or call_phone
+    agency = contact.get("agency_name")
+
+    return {
+        "phone": call_phone,
+        "call_phone": call_phone,
+        "whatsapp_phone": whatsapp_phone,
+        "agent_agency": agency,
+        "contact_source": "showNumbers",
+        "contact_payload": contact,
+    }
+
+
+def _parse_coordinate_pair(lat_raw, lng_raw):
+    try:
+        lat = float(str(lat_raw).strip())
+        lng = float(str(lng_raw).strip())
+    except (TypeError, ValueError):
+        return None
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return None
+    return lat, lng
+
+
+def _extract_listing_geography(html, zameen_id=None):
+    """Extract exact listing coordinates from a detail page when available."""
+    if not html:
+        return None
+
+    # Most reliable signals found on live pages / HAR captures.
+    endpoint_patterns = (
+        re.compile(r"plotFinder/parcel/\?coordinates=([0-9.+-]+),([0-9.+-]+)", re.I),
+        re.compile(r"api/places\?latitude=([0-9.+-]+)&longitude=([0-9.+-]+)", re.I),
+    )
+    for pattern in endpoint_patterns:
+        match = pattern.search(html)
+        if not match:
+            continue
+        coords = _parse_coordinate_pair(match.group(1), match.group(2))
+        if coords:
+            lat, lng = coords
+            return {
+                "latitude": lat,
+                "longitude": lng,
+                "location_source": "listing_exact",
+                "has_exact_geography": True,
+            }
+
+    key_patterns = (
+        re.compile(r'["\']latitude["\']\s*[:=]\s*([0-9.+-]+)', re.I),
+        re.compile(r'["\']longitude["\']\s*[:=]\s*([0-9.+-]+)', re.I),
+    )
+    if zameen_id:
+        for match in re.finditer(re.escape(str(zameen_id)), html):
+            start = max(0, match.start() - 600)
+            end = min(len(html), match.end() + 1800)
+            snippet = html[start:end]
+            lat_match = key_patterns[0].search(snippet)
+            lng_match = key_patterns[1].search(snippet)
+            if not lat_match or not lng_match:
+                continue
+            coords = _parse_coordinate_pair(lat_match.group(1), lng_match.group(1))
+            if coords:
+                lat, lng = coords
+                return {
+                    "latitude": lat,
+                    "longitude": lng,
+                    "location_source": "listing_exact",
+                    "has_exact_geography": True,
+                }
+
+    # Fallback for pages that only expose one obvious latitude/longitude pair.
+    lat_match = key_patterns[0].search(html)
+    lng_match = key_patterns[1].search(html)
+    if lat_match and lng_match:
+        coords = _parse_coordinate_pair(lat_match.group(1), lng_match.group(1))
+        if coords:
+            lat, lng = coords
+            return {
+                "latitude": lat,
+                "longitude": lng,
+                "location_source": "listing_exact",
+                "has_exact_geography": True,
+            }
+
+    return None
+
+
+async def fetch_listing_contact(listing_url, client=None, user_agent=None):
+    """Fetch contact info using Zameen.com's showNumbers endpoint."""
+    ck = cache_key(contact_url=listing_url)
+    cached = cache_get(ck)
+    if cached is not None:
+        return cached
+
+    zid = extract_zameen_id(listing_url)
+    if not zid:
+        return None
+
+    own_client = client is None
+    if own_client:
+        client = httpx.AsyncClient()
+
+    ua = user_agent or random.choice(USER_AGENTS)
+    api_url = f"https://www.zameen.com/api/showNumbers?listingExternalID={zid}&isProject=false"
+    headers = _contact_api_headers(ua, listing_url)
+
+    try:
+        for attempt in range(3):
+            try:
+                await rate_limiter.acquire()
+                resp = await client.get(api_url, headers=headers, timeout=15)
+                if resp.status_code == 200:
+                    parsed = _parse_contact_payload(resp.json())
+                    if parsed is not None:
+                        cache_set(ck, parsed)
+                    return parsed
+                if resp.status_code == 429:
+                    await asyncio.sleep((2 ** attempt) + random.uniform(1, 3))
+                    continue
+                logger.warning("showNumbers returned %s for %s", resp.status_code, zid)
+                break
+            except Exception as exc:
+                logger.warning("showNumbers fetch failed for %s: %s", zid, exc)
+                await asyncio.sleep(2 ** attempt)
+    finally:
+        if own_client:
+            await client.aclose()
+
+    return None
+
+
 async def fetch_page(url, client):
     for attempt in range(3):
         try:
@@ -202,50 +387,81 @@ async def fetch_listing_detail(listing_url):
     if cached is not None:
         return cached
 
+    zid = extract_zameen_id(listing_url)
+
     async with httpx.AsyncClient() as client:
         html = await fetch_page(listing_url, client)
+        contact = await fetch_listing_contact(listing_url, client=client)
     if not html:
         return None
 
     soup = BeautifulSoup(html, "html.parser")
-    result = {"phone": None, "description": None, "features": [], "amenities": [],
-              "agent_name": None, "agent_agency": None, "images": [], "details": {}}
+    geography = _extract_listing_geography(html, zid)
+    result = {
+        "phone": contact.get("phone") if contact else None,
+        "call_phone": contact.get("call_phone") if contact else None,
+        "whatsapp_phone": contact.get("whatsapp_phone") if contact else None,
+        "contact_source": contact.get("contact_source") if contact else None,
+        "contact_payload": contact.get("contact_payload") if contact else None,
+        "description": None,
+        "features": [],
+        "amenities": [],
+        "agent_name": None,
+        "agent_agency": contact.get("agent_agency") if contact else None,
+        "images": [],
+        "details": {},
+        "latitude": geography.get("latitude") if geography else None,
+        "longitude": geography.get("longitude") if geography else None,
+        "location_source": geography.get("location_source") if geography else None,
+        "has_exact_geography": bool(geography),
+    }
 
-    # --- Phone extraction ---
-    phone = None
-    tel_link = soup.select_one('a[href^="tel:"]')
-    if tel_link:
-        phone = tel_link["href"].replace("tel:", "").strip()
-    if not phone:
-        for script in soup.select('script[type="application/ld+json"]'):
-            try:
-                data = json.loads(script.string or "")
-                items = [data] if isinstance(data, dict) else data if isinstance(data, list) else []
-                for item in items:
-                    t = item.get("telephone") or item.get("phone")
-                    if t: phone = str(t).strip(); break
-                    for key in ("seller", "agent", "broker", "offeredBy"):
-                        nested = item.get(key, {})
-                        if isinstance(nested, dict):
-                            t = nested.get("telephone") or nested.get("phone")
-                            if t: phone = str(t).strip(); break
-                    if phone: break
-            except Exception:
-                continue
-    if not phone:
-        for el in soup.select('[aria-label*="phone" i], [aria-label*="call" i], [aria-label*="mobile" i], [class*="phone"], [class*="contact-number"]'):
-            text = el.get_text(strip=True)
-            m = re.search(r'(\+?92[\d\s-]{9,13}|0\d{2,3}[\s-]?\d{7,8})', text)
-            if m: phone = m.group(1).strip(); break
-    if not phone:
-        body = soup.select_one("body")
-        if body:
-            text = body.get_text(" ", strip=True)
-            m = re.search(r'(\+92[\d\s-]{9,13}|03\d{2}[\s-]?\d{7})', text)
-            if m: phone = m.group(1).strip()
-    if phone:
-        phone = re.sub(r'[\s-]', '', phone)
-    result["phone"] = phone
+    # --- Legacy HTML phone fallback if the contact API does not return data ---
+    if not result["call_phone"]:
+        phone = None
+        tel_link = soup.select_one('a[href^="tel:"]')
+        if tel_link:
+            phone = tel_link["href"].replace("tel:", "").strip()
+        if not phone:
+            for script in soup.select('script[type="application/ld+json"]'):
+                try:
+                    data = json.loads(script.string or "")
+                    items = [data] if isinstance(data, dict) else data if isinstance(data, list) else []
+                    for item in items:
+                        t = item.get("telephone") or item.get("phone")
+                        if t:
+                            phone = str(t).strip()
+                            break
+                        for key in ("seller", "agent", "broker", "offeredBy"):
+                            nested = item.get(key, {})
+                            if isinstance(nested, dict):
+                                t = nested.get("telephone") or nested.get("phone")
+                                if t:
+                                    phone = str(t).strip()
+                                    break
+                        if phone:
+                            break
+                except Exception:
+                    continue
+        if not phone:
+            for el in soup.select('[aria-label*="phone" i], [aria-label*="call" i], [aria-label*="mobile" i], [class*="phone"], [class*="contact-number"]'):
+                text = el.get_text(strip=True)
+                m = re.search(r'(\+?92[\d\s-]{9,13}|0\d{2,3}[\s-]?\d{7,8})', text)
+                if m:
+                    phone = m.group(1).strip()
+                    break
+        if not phone:
+            body = soup.select_one("body")
+            if body:
+                text = body.get_text(" ", strip=True)
+                m = re.search(r'(\+92[\d\s-]{9,13}|03\d{2}[\s-]?\d{7})', text)
+                if m:
+                    phone = m.group(1).strip()
+        phone = _normalize_phone(phone)
+        result["phone"] = phone
+        result["call_phone"] = phone
+        result["whatsapp_phone"] = phone
+        result["contact_source"] = "html_fallback" if phone else result["contact_source"]
 
     # --- Description ---
     desc_el = soup.select_one('[aria-label="Description"] div, [class*="description"] p, [class*="body"] p')
@@ -329,14 +545,18 @@ async def fetch_listing_detail(listing_url):
         except Exception:
             continue
 
+    result.pop("contact_payload", None)
     cache_set(ck, result)
     return result
 
 
 async def fetch_phone_number(listing_url):
     """Fetch phone number from an individual Zameen.com listing page (uses detail cache)."""
+    contact = await fetch_listing_contact(listing_url)
+    if contact and contact.get("call_phone"):
+        return contact["call_phone"]
     detail = await fetch_listing_detail(listing_url)
-    return detail.get("phone") if detail else None
+    return detail.get("call_phone") if detail else None
 
 
 async def search_zameen(area=None, property_type=None, bedrooms=None, price_min=None, price_max=None, furnished=None, page=1, sort=None, city="karachi"):

@@ -73,6 +73,11 @@ def init_db():
                 property_type      TEXT,
                 added_text         TEXT,
                 phone              TEXT,
+                call_phone         TEXT,
+                whatsapp_phone     TEXT,
+                contact_payload_json TEXT,
+                contact_fetched_at TEXT,
+                contact_source     TEXT,
                 description        TEXT,
                 features_json      TEXT,
                 amenities_json     TEXT,
@@ -85,6 +90,7 @@ def init_db():
                 area_slug          TEXT,
                 latitude           REAL,
                 longitude          REAL,
+                location_source    TEXT,
                 first_seen_at      TEXT NOT NULL DEFAULT (datetime('now')),
                 card_scraped_at    TEXT,
                 detail_scraped_at  TEXT,
@@ -148,7 +154,32 @@ def init_db():
                 errors           INTEGER DEFAULT 0,
                 status           TEXT DEFAULT 'running'
             );
-        """)
+            """)
+
+        # Add newer contact fields for existing databases.
+        existing_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(listings)").fetchall()
+        }
+        contact_columns = {
+            "call_phone": "ALTER TABLE listings ADD COLUMN call_phone TEXT",
+            "whatsapp_phone": "ALTER TABLE listings ADD COLUMN whatsapp_phone TEXT",
+            "contact_payload_json": "ALTER TABLE listings ADD COLUMN contact_payload_json TEXT",
+            "contact_fetched_at": "ALTER TABLE listings ADD COLUMN contact_fetched_at TEXT",
+            "contact_source": "ALTER TABLE listings ADD COLUMN contact_source TEXT",
+            "location_source": "ALTER TABLE listings ADD COLUMN location_source TEXT",
+        }
+        for name, ddl in contact_columns.items():
+            if name not in existing_columns:
+                conn.execute(ddl)
+
+        if "location_source" in {row["name"] for row in conn.execute("PRAGMA table_info(listings)").fetchall()}:
+            conn.execute("""
+                UPDATE listings
+                SET location_source = 'area_centroid'
+                WHERE location_source IS NULL
+                  AND latitude IS NOT NULL
+                  AND longitude IS NOT NULL
+            """)
 
         # Set up FTS5 for full-text search on listings
         # Check if FTS table exists first (CREATE VIRTUAL TABLE doesn't support IF NOT EXISTS in all SQLite versions)

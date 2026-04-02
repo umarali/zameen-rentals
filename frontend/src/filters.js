@@ -231,7 +231,12 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
   });
   areaClear.addEventListener('click', () => {
     S.area = ''; areaInput.value = ''; areaClear.classList.add('hidden');
-    resetMapView(); updateChips(); renderAreaList(refs.allAreas.slice(0, 20));
+    refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+    refs.mapAreaTotals = {};
+    refs.viewportAreaNames = [];
+    refs.previewArea = null;
+    refs.hoveredArea = null;
+    resetMapView(); updateChips(); renderAreaList(refs.allAreas.slice(0, 20)); doSearch();
   });
 
   // Type

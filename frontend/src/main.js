@@ -3,19 +3,35 @@
 import '../src/style.css';
 import { $, $$, esc, TYPE_L } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
-import { updateCityTabs, updateNlExamples, updateChips, closeDD, clearFilter, selectArea, syncPriceChips, setToggle, initFilterListeners } from './filters.js';
+import {
+  updateCityTabs, updateNlExamples, updateChips, clearFilter, selectArea,
+  syncPriceChips, setToggle, initFilterListeners,
+} from './filters.js';
 import { renderCard, initCarousels, handleContactAction, skeletonCard } from './cards.js';
-import { initMap, ensureMarkers, updateMapMarkers, highlightMarker, resetMapView, initMobileMap, updateMobileCarousel, initHoverSync } from './map.js';
-import { openDrawer, closeDrawer, initDrawerListeners } from './drawer.js';
-
-// ===== WIRED HELPERS =====
-// These close over module functions so we can pass them as callbacks
+import {
+  initMap, ensureMarkers, updateMapMarkers, highlightMarker, resetMapView,
+  initMobileMap, updateMobileCarousel, updateMobileMarkers, initHoverSync,
+  getVisibleAreaNames, fitCityOverview,
+} from './map.js';
+import { openDrawer, initDrawerListeners } from './drawer.js';
 
 function selectAreaFull(name, fromMap) {
+  refs.searchMode = 'area';
+  refs.mapAreaTotals = {};
+  refs.viewportAreaNames = [];
+  refs.previewArea = null;
+  refs.hoveredArea = null;
   selectArea(name, fromMap, { highlightMarker, doSearch });
 }
 
 function clearFilterFull(f) {
+  if (f === 'area') {
+    refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+    refs.mapAreaTotals = {};
+    refs.viewportAreaNames = [];
+    refs.previewArea = null;
+    refs.hoveredArea = null;
+  }
   clearFilter(f, { resetMapView, doSearch });
 }
 
@@ -23,12 +39,10 @@ function openDrawerFull(item) {
   openDrawer(item, selectAreaFull);
 }
 
-// ===== SEARCH ENGINE =====
-
-function getParams(pg) {
+function getParams(pg, { omitArea = false } = {}) {
   const p = new URLSearchParams();
   p.set('city', S.city);
-  if (S.area) p.set('area', S.area);
+  if (!omitArea && S.area) p.set('area', S.area);
   if (S.type) p.set('property_type', S.type);
   if (S.beds) p.set('bedrooms', S.beds);
   if (S.priceMin) p.set('price_min', S.priceMin);
@@ -88,6 +102,39 @@ function loadSearch() {
   updateChips();
 }
 
+function getStoredCityPreference() {
+  const urlParams = new URLSearchParams(location.search);
+  const urlCity = urlParams.get('city');
+  if (urlCity && CITY_DEFAULTS[urlCity]) return urlCity;
+
+  try {
+    const saved = JSON.parse(localStorage.getItem('rk_s') || '{}');
+    if (saved.city && CITY_DEFAULTS[saved.city]) return saved.city;
+  } catch {}
+
+  return '';
+}
+
+async function chooseInitialCity() {
+  const storedCity = getStoredCityPreference();
+  if (storedCity) {
+    S.city = storedCity;
+    return;
+  }
+
+  try {
+    const cities = Object.keys(CITY_DEFAULTS);
+    const stats = await Promise.all(cities.map(async city => {
+      const r = await fetch('/api/crawl-status?city=' + city);
+      if (!r.ok) return { city, total_listings: 0 };
+      const d = await r.json();
+      return { city, total_listings: d.total_listings || 0 };
+    }));
+    const best = stats.sort((a, b) => b.total_listings - a.total_listings)[0];
+    if (best?.total_listings > 0) S.city = best.city;
+  } catch {}
+}
+
 function showLoading(append) {
   if (!append) {
     $('#listingsGrid').innerHTML = Array(6).fill(skeletonCard()).join('');
@@ -101,100 +148,310 @@ function showLoading(append) {
   }
 }
 
-function hideLoading() { const s = $('#spinner'); if (s) s.remove(); }
+function hideLoading() {
+  const s = $('#spinner');
+  if (s) s.remove();
+}
 
-async function doSearch(page) {
-  if (refs.isLoading) return;
-  const append = page && page > 1;
-  if (!append) { refs.currentPage = 1; refs.currentResults = []; }
-  else refs.currentPage = page;
+function updateHeader({ total = 0, source = '', mode = refs.searchMode, visibleAreas = 0, coveredAreas = 0 } = {}) {
+  const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
+  const shown = refs.currentResults.length;
+  const titleEl = $('#listingsTitle');
+  const countEl = $('#resultsCount');
+  const metaEl = $('#resultsMeta');
+  const sourceEl = $('#dataSource');
 
-  refs.isLoading = true; showLoading(append); saveSearch();
+  if (mode === 'viewport') {
+    titleEl.textContent = 'Rentals in this map view';
+    countEl.textContent = `${shown} shown`;
+    if (total && coveredAreas > 0) {
+      metaEl.textContent = coveredAreas === visibleAreas
+        ? `${total} available across ${coveredAreas} visible areas`
+        : `${total} available in ${coveredAreas} covered areas within ${visibleAreas} visible areas`;
+    } else if (visibleAreas > 0) {
+      metaEl.textContent = `No local listings in ${visibleAreas} visible areas yet`;
+    } else {
+      metaEl.textContent = 'Move the map to explore nearby areas';
+    }
+  } else if (S.area) {
+    titleEl.textContent = 'Rentals in ' + S.area;
+    countEl.textContent = `${shown} shown`;
+    metaEl.textContent = total ? `${total} total in this area` : 'No rentals match this area right now';
+  } else {
+    titleEl.textContent = 'Rentals in ' + cityName;
+    countEl.textContent = `${shown} shown`;
+    metaEl.textContent = total ? `${total} total across current filters` : `No rentals match your filters in ${cityName}`;
+  }
+
+  if (source === 'local') {
+    sourceEl.textContent = 'Instant';
+    sourceEl.className = 'text-xs text-brand-500 font-medium';
+    sourceEl.classList.remove('hidden');
+  } else if (source === 'live') {
+    sourceEl.textContent = 'Live';
+    sourceEl.className = 'text-xs text-amber-500 font-medium';
+    sourceEl.classList.remove('hidden');
+  } else if (source === 'unavailable') {
+    sourceEl.textContent = 'Local only';
+    sourceEl.className = 'text-xs text-gray-400 font-medium';
+    sourceEl.classList.remove('hidden');
+  } else {
+    sourceEl.classList.add('hidden');
+  }
+}
+
+function updateCoverageBadge() {
+  const desktop = $('#mapCoverageBadge');
+  const mobile = $('#mapCoverageBadgeMobile');
+  const badges = [desktop, mobile].filter(Boolean);
+  if (!badges.length) return;
+
+  const visibleAreas = refs.viewportAreaNames.length;
+  const coveredEntries = Object.entries(refs.mapAreaTotals || {}).sort((a, b) => b[1] - a[1]);
+  const coveredAreas = coveredEntries.length;
+
+  badges.forEach(el => {
+    if (refs.searchMode !== 'viewport') {
+      el.classList.add('hidden');
+      el.innerHTML = '';
+      return;
+    }
+
+    const topAreas = coveredEntries.slice(0, 3);
+    const coveredHtml = topAreas.length
+      ? topAreas.map(([name]) => `<span class="coverage-chip live">${esc(name)}</span>`).join('')
+      : '<span class="coverage-chip">No covered areas here yet</span>';
+    const summary = coveredAreas > 0
+      ? `${coveredAreas} covered / ${visibleAreas || 0} visible`
+      : `${visibleAreas || 0} visible areas, no local coverage`;
+    const previewingEmpty = refs.previewArea && !coveredEntries.some(([name]) => name === refs.previewArea);
+    const detail = previewingEmpty
+      ? `Previewing ${refs.previewArea}. No local listings there yet.`
+      : coveredAreas > 0
+      ? 'Green labels are areas with local listings right now.'
+      : 'This part of the map has no crawled local listings yet.';
+
+    el.innerHTML = `
+      <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Map Coverage</div>
+      <div class="mt-1 text-sm font-semibold text-gray-800">${summary}</div>
+      <div class="mt-1 text-xs text-gray-500">${detail}</div>
+      <div class="mt-2 flex flex-wrap gap-2">${coveredHtml}</div>
+    `;
+    el.classList.remove('hidden');
+  });
+}
+
+refs._refreshCoverageUI = updateCoverageBadge;
+
+function renderNoResults(message) {
+  refs.lastSearchTotal = 0;
+  refs.viewportTotal = 0;
+  refs.currentResults = [];
+  $('#resultsCount').textContent = '0 shown';
+  $('#resultsMeta').textContent = message;
+
+  const activeFilters = [];
+  if (S.area) activeFilters.push({ label: 'Area: ' + S.area, filter: 'area' });
+  if (S.type) activeFilters.push({ label: 'Type: ' + (TYPE_L[S.type] || S.type), filter: 'type' });
+  if (S.beds) activeFilters.push({ label: S.beds + ' Bed', filter: 'beds' });
+  if (S.priceMin || S.priceMax) activeFilters.push({ label: 'Price range', filter: 'price' });
+  if (S.furnished) activeFilters.push({ label: 'Furnished', filter: 'more' });
+  const filterHtml = activeFilters.length
+    ? `<div class="flex flex-wrap justify-center gap-2 mt-4">${activeFilters.map(f => `<button class="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 transition-colors" data-remove-filter="${f.filter}">Remove ${esc(f.label)} &times;</button>`).join('')}</div>`
+    : '';
+
+  $('#listingsGrid').innerHTML = `<div class="col-span-full text-center py-12"><div class="text-5xl mb-3">&#x1f3e0;</div><h3 class="text-base font-semibold text-gray-600">No rentals found</h3><p class="text-sm text-gray-400 mt-1">${esc(message)}</p>${filterHtml}</div>`;
+  $$('[data-remove-filter]').forEach(btn => btn.addEventListener('click', () => clearFilterFull(btn.dataset.removeFilter)));
+}
+
+function renderFooter(total) {
+  const footer = $('#listingsFooter');
+  footer.innerHTML = '';
+  if (total > refs.currentResults.length) {
+    const btn = document.createElement('button');
+    btn.className = 'w-full py-3 mt-4 border-2 border-brand-500 rounded-lg text-brand-500 text-sm font-semibold hover:bg-brand-50 transition-colors';
+    btn.textContent = refs.searchMode === 'viewport' ? 'Load More From This View' : 'Load More Results';
+    btn.addEventListener('click', () => doSearch(refs.currentPage + 1));
+    footer.appendChild(btn);
+  }
+}
+
+function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
+  refs.lastSearchTotal = data.total || 0;
+  if (mode === 'viewport') {
+    refs.mapAreaTotals = data.area_totals || {};
+    refs.viewportTotal = data.total || 0;
+    refs.viewportShown = append ? refs.currentResults.length : (data.results || []).length;
+  } else {
+    refs.mapAreaTotals = {};
+    refs.viewportAreaNames = [];
+  }
+
+  if (!append) {
+    refs.currentResults = data.results || [];
+    if (!refs.currentResults.length) {
+      updateHeader({
+        total: data.total || 0,
+        source: data.source,
+        mode,
+        visibleAreas: data.visible_areas || refs.viewportAreaNames.length,
+        coveredAreas: Object.keys(data.area_totals || {}).length,
+      });
+      renderNoResults(mode === 'viewport' ? 'Pan or zoom the map to discover other areas' : 'Try removing a filter to see more results');
+      updateMapMarkers();
+      if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+      updateMobileCarousel(refs.currentResults);
+      return;
+    }
+    $('#listingsGrid').innerHTML = refs.currentResults.map((it, i) => renderCard(it, i)).join('');
+  } else {
+    const next = data.results || [];
+    const start = refs.currentResults.length;
+    refs.currentResults = refs.currentResults.concat(next);
+    next.forEach((it, i) => $('#listingsGrid').insertAdjacentHTML('beforeend', renderCard(it, start + i)));
+  }
+
+  updateHeader({
+    total: data.total || 0,
+    source: data.source,
+    mode,
+    visibleAreas: data.visible_areas || refs.viewportAreaNames.length,
+    coveredAreas: Object.keys(data.area_totals || {}).length,
+  });
+  $('#reportBtn').classList.remove('hidden');
+  initCarousels();
+  updateMapMarkers();
+  updateCoverageBadge();
+  if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+  updateMobileCarousel(refs.currentResults);
+  renderFooter(data.total || 0);
+  if (!append) $('#listingsPanel').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function shouldUseViewportSearch({ mobile = false } = {}) {
+  if (S.area) return false;
+  if (mobile) return !!refs.mobileMap;
+  return window.innerWidth > 768 && !!refs.map;
+}
+
+async function doViewportSearch(page = 1, { mobile = false } = {}) {
+  const mapInstance = mobile ? refs.mobileMap : refs.map;
+  if (!mapInstance || refs.isLoading) return;
+
+  const append = page > 1;
+  if (!append) {
+    refs.currentPage = 1;
+    refs.currentResults = [];
+  } else {
+    refs.currentPage = page;
+  }
+
+  refs.isLoading = true;
+  showLoading(append);
+  saveSearch();
 
   try {
-    const r = await fetch('/api/search?' + getParams(refs.currentPage).toString());
-    if (!r.ok) { const e = await r.json().catch(() => ({ detail: 'Search failed' })); throw new Error(e.detail || 'Search failed'); }
-    const d = await r.json();
+    refs.searchMode = 'viewport';
+    refs.viewportAreaNames = getVisibleAreaNames(mapInstance);
+    const params = getParams(refs.currentPage, { omitArea: true });
+    refs.viewportAreaNames.forEach(name => params.append('areas', name));
+
+    const r = await fetch('/api/map-search?' + params.toString());
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({ detail: 'Map search failed' }));
+      throw new Error(e.detail || 'Map search failed');
+    }
+    const data = await r.json();
     hideLoading();
-
-    const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
-    $('#listingsTitle').textContent = S.area ? 'Rentals in ' + S.area : 'Rentals in ' + cityName;
-
-    refs.lastSearchTotal = d.total || 0;
-    if (!append) {
-      refs.currentResults = d.results || [];
-      if (!refs.currentResults.length) {
-        refs.lastSearchTotal = 0;
-        $('#resultsCount').textContent = '0 results';
-        const activeFilters = [];
-        if (S.area) activeFilters.push({ label: 'Area: ' + S.area, filter: 'area' });
-        if (S.type) activeFilters.push({ label: 'Type: ' + (TYPE_L[S.type] || S.type), filter: 'type' });
-        if (S.beds) activeFilters.push({ label: S.beds + ' Bed', filter: 'beds' });
-        if (S.priceMin || S.priceMax) activeFilters.push({ label: 'Price range', filter: 'price' });
-        if (S.furnished) activeFilters.push({ label: 'Furnished', filter: 'more' });
-        const filterHtml = activeFilters.length ? `<div class="flex flex-wrap justify-center gap-2 mt-4">${activeFilters.map(f => `<button class="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 transition-colors" data-remove-filter="${f.filter}">Remove ${esc(f.label)} &times;</button>`).join('')}</div>` : '';
-        $('#listingsGrid').innerHTML = `<div class="col-span-full text-center py-12"><div class="text-5xl mb-3">&#x1f3e0;</div><h3 class="text-base font-semibold text-gray-600">No rentals found</h3><p class="text-sm text-gray-400 mt-1">Try removing a filter to see more results</p>${filterHtml}</div>`;
-        $$('[data-remove-filter]').forEach(btn => btn.addEventListener('click', () => clearFilterFull(btn.dataset.removeFilter)));
-        updateMapMarkers(); return;
-      }
-      $('#listingsGrid').innerHTML = refs.currentResults.map((it, i) => renderCard(it, i)).join('');
-    } else {
-      const nr = d.results || [], si = refs.currentResults.length;
-      refs.currentResults = refs.currentResults.concat(nr);
-      nr.forEach((it, i) => $('#listingsGrid').insertAdjacentHTML('beforeend', renderCard(it, si + i)));
-    }
-    $('#reportBtn').classList.remove('hidden');
-    if (d.total && d.total > refs.currentResults.length) {
-      $('#resultsCount').textContent = 'Showing ' + refs.currentResults.length + ' of ' + d.total + ' results';
-    } else {
-      $('#resultsCount').textContent = refs.currentResults.length + ' results';
-    }
-    const srcEl = $('#dataSource');
-    if (d.source === 'local') {
-      srcEl.textContent = 'Instant'; srcEl.className = 'text-xs text-brand-500 font-medium'; srcEl.classList.remove('hidden');
-    } else if (d.source === 'live') {
-      srcEl.textContent = 'Live'; srcEl.className = 'text-xs text-amber-500 font-medium'; srcEl.classList.remove('hidden');
-    } else { srcEl.classList.add('hidden'); }
-
-    initCarousels();
-    updateMapMarkers();
-
-    const ft = $('#listingsFooter'); ft.innerHTML = '';
-    if ((d.results || []).length >= 15) {
-      const b = document.createElement('button');
-      b.className = 'w-full py-3 mt-4 border-2 border-brand-500 rounded-lg text-brand-500 text-sm font-semibold hover:bg-brand-50 transition-colors';
-      b.textContent = 'Load More Results';
-      b.addEventListener('click', () => doSearch(refs.currentPage + 1));
-      ft.appendChild(b);
-    }
-    if (!append) $('#listingsPanel').scrollTo({ top: 0, behavior: 'smooth' });
+    applyResults(data, { append, mode: 'viewport' });
   } catch (e) {
     hideLoading();
     refs.currentResults = [];
+    refs.mapAreaTotals = {};
+    updateHeader({ total: 0, source: 'unavailable', mode: 'viewport', visibleAreas: refs.viewportAreaNames.length, coveredAreas: 0 });
+    renderNoResults(e.message || 'Could not update the map view right now');
     updateMapMarkers();
-    $('#listingsFooter').innerHTML = `<div class="text-center py-6 bg-red-50 rounded-lg mt-4"><p class="text-sm text-red-600">${esc(e.message)}</p></div>`;
-  } finally { refs.isLoading = false; refs.mapDriven = false; }
+    updateCoverageBadge();
+    if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+  } finally {
+    refs.isLoading = false;
+    refs.mapDriven = false;
+  }
 }
 
-// ===== NL SEARCH =====
+async function doAreaSearch(page = 1) {
+  const append = page > 1;
+  if (!append) {
+    refs.currentPage = 1;
+    refs.currentResults = [];
+  } else {
+    refs.currentPage = page;
+  }
+
+  refs.isLoading = true;
+  showLoading(append);
+  saveSearch();
+
+  try {
+    refs.searchMode = S.area ? 'area' : 'city';
+    const r = await fetch('/api/search?' + getParams(refs.currentPage).toString());
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({ detail: 'Search failed' }));
+      throw new Error(e.detail || 'Search failed');
+    }
+    const data = await r.json();
+    hideLoading();
+    applyResults(data, { append, mode: refs.searchMode });
+  } catch (e) {
+    hideLoading();
+    refs.currentResults = [];
+    updateHeader({ total: 0, source: 'unavailable', mode: refs.searchMode });
+    renderNoResults(e.message || 'Search failed');
+    updateMapMarkers();
+    updateCoverageBadge();
+    if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+  } finally {
+    refs.isLoading = false;
+    refs.mapDriven = false;
+  }
+}
+
+async function doSearch(page = 1, opts = {}) {
+  if (shouldUseViewportSearch(opts)) return doViewportSearch(page, opts);
+  return doAreaSearch(page);
+}
+
+function scheduleViewportSearch(opts = {}) {
+  if (S.area) return;
+  clearTimeout(refs.mapTimer);
+  refs.mapTimer = setTimeout(() => {
+    if (!refs.isLoading) doSearch(1, opts);
+  }, 250);
+}
 
 async function doNlSearch() {
   const q = $('#nlInput').value.trim();
   if (!q || refs.isLoading) return;
   $('#nlSearchBtn').disabled = true;
   const parsed = $('#nlParsed');
-  parsed.classList.remove('hidden'); parsed.classList.add('flex');
+  parsed.classList.remove('hidden');
+  parsed.classList.add('flex');
   parsed.innerHTML = '<span class="inline-flex items-center gap-1.5 text-gray-400"><svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Parsing filters...</span>';
   try {
     const r = await fetch('/api/parse-query?q=' + encodeURIComponent(q) + '&city=' + S.city);
     if (!r.ok) throw 0;
-    const d = await r.json(), f = d.filters || {};
+    const d = await r.json();
+    const f = d.filters || {};
     if (!Object.keys(f).length) { parsed.innerHTML = 'Could not understand. Try "2 bed flat in DHA under 50k"'; return; }
     const parts = [];
     if (f.area) parts.push('<b class="text-brand-500">' + esc(f.area) + '</b>');
     if (f.property_type) parts.push('<b class="text-brand-500">' + (TYPE_L[f.property_type] || f.property_type) + '</b>');
     if (f.bedrooms) parts.push('<b class="text-brand-500">' + f.bedrooms + ' bed</b>');
-    if (f.price_min || f.price_max) { const mn = f.price_min ? (f.price_min / 1e3 | 0) + 'K' : '', mx = f.price_max ? (f.price_max / 1e3 | 0) + 'K' : ''; parts.push('<b class="text-brand-500">' + (mn && mx ? mn + '-' + mx : mx ? '<' + mx : mn + '+') + '</b>'); }
+    if (f.price_min || f.price_max) {
+      const mn = f.price_min ? (f.price_min / 1e3 | 0) + 'K' : '';
+      const mx = f.price_max ? (f.price_max / 1e3 | 0) + 'K' : '';
+      parts.push('<b class="text-brand-500">' + (mn && mx ? mn + '-' + mx : mx ? '<' + mx : mn + '+') + '</b>');
+    }
     if (f.furnished) parts.push('<b class="text-brand-500">Furnished</b>');
     parsed.innerHTML = parts.join(' &middot; ');
     if (f.area) selectAreaFull(f.area);
@@ -205,22 +462,32 @@ async function doNlSearch() {
     if (f.price_min || f.price_max) syncPriceChips();
     if (f.furnished) setToggle(true);
     if (f.sort) { S.sort = f.sort; $('#sortSelect').value = f.sort; }
-    updateChips(); doSearch();
+    updateChips();
+    doSearch();
     if (f.area_approximate) {
       parsed.innerHTML = '<span class="text-amber-600">Couldn\'t find "' + esc(f.area_query) + '" specifically — showing results for <b>' + esc(f.area) + '</b></span>';
       setTimeout(() => { parsed.classList.add('hidden'); parsed.classList.remove('flex'); }, 6000);
-    } else { parsed.classList.add('hidden'); parsed.classList.remove('flex'); }
-  } catch { parsed.innerHTML = 'Something went wrong.'; }
-  finally { $('#nlSearchBtn').disabled = false; }
+    } else {
+      parsed.classList.add('hidden');
+      parsed.classList.remove('flex');
+    }
+  } catch {
+    parsed.innerHTML = 'Something went wrong.';
+  } finally {
+    $('#nlSearchBtn').disabled = false;
+  }
 }
-
-// ===== CITY TAB SWITCHING =====
 
 function initCityTabs() {
   $$('.city-tab').forEach(tab => tab.addEventListener('click', () => {
     if (tab.dataset.city === S.city) return;
     S.city = tab.dataset.city;
     S.area = ''; S.type = ''; S.beds = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
+    refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+    refs.mapAreaTotals = {};
+    refs.viewportAreaNames = [];
+    refs.previewArea = null;
+    refs.hoveredArea = null;
     $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
     $$('#typeGrid .chip').forEach(c => c.classList.remove('active'));
     $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === ''));
@@ -232,12 +499,9 @@ function initCityTabs() {
   }));
 }
 
-// ===== CARD CLICK HANDLERS =====
-
 function initCardListeners() {
   const grid = $('#listingsGrid');
 
-  // Card click → drawer
   grid.addEventListener('click', e => {
     if (e.target.closest('[data-prev]') || e.target.closest('[data-next]')) return;
     if (e.target.closest('[data-action]')) return;
@@ -247,22 +511,14 @@ function initCardListeners() {
     if (!isNaN(idx) && refs.currentResults[idx]) openDrawerFull(refs.currentResults[idx]);
   });
 
-  // Action buttons (call/whatsapp)
   grid.addEventListener('click', e => {
     const btn = e.target.closest('[data-action]');
     if (!btn || btn.dataset.action === 'open') return;
-    e.preventDefault(); e.stopPropagation();
-    if (btn.dataset.phone) {
-      const phone = btn.dataset.phone;
-      if (btn.dataset.action === 'call') { window.open(`tel:${phone}`, '_self'); }
-      else { const waNum = phone.replace(/^0/, '92').replace(/[^0-9]/g, ''); window.open(`https://wa.me/${waNum}?text=${encodeURIComponent('Hi, I am interested in this property: ' + btn.dataset.url)}`, '_blank'); }
-    } else {
-      handleContactAction(btn.dataset.action, btn.dataset.url, btn);
-    }
+    e.preventDefault();
+    e.stopPropagation();
+    handleContactAction(btn.dataset.action, btn.dataset.url, btn);
   });
 }
-
-// ===== NL SEARCH LISTENERS =====
 
 function initNlListeners() {
   $('#nlSearchBtn').addEventListener('click', doNlSearch);
@@ -272,23 +528,54 @@ function initNlListeners() {
   $('#nlSuggestions').addEventListener('click', e => {
     const pop = e.target.closest('.pop-search');
     if (pop) {
-      S.area = pop.dataset.area || ''; S.type = pop.dataset.type || ''; S.beds = pop.dataset.beds || '';
-      S.priceMin = ''; S.priceMax = ''; S.furnished = false;
-      $('#nlInput').value = ''; $('#nlSuggestions').classList.add('hidden');
-      updateChips(); doSearch(); return;
+      S.area = pop.dataset.area || '';
+      S.type = pop.dataset.type || '';
+      S.beds = pop.dataset.beds || '';
+      S.priceMin = '';
+      S.priceMax = '';
+      S.furnished = false;
+      refs.searchMode = S.area ? 'area' : refs.searchMode;
+      $('#nlInput').value = '';
+      $('#nlSuggestions').classList.add('hidden');
+      updateChips();
+      doSearch();
+      return;
     }
     const ex = e.target.closest('.nl-ex');
-    if (ex) { $('#nlInput').value = ex.textContent; $('#nlSuggestions').classList.add('hidden'); doNlSearch(); }
+    if (ex) {
+      $('#nlInput').value = ex.textContent;
+      $('#nlSuggestions').classList.add('hidden');
+      doNlSearch();
+    }
   });
   document.addEventListener('click', e => { if (!e.target.closest('#nlSuggestions') && !e.target.closest('#nlInput')) $('#nlSuggestions').classList.add('hidden'); });
 }
 
-// ===== REPORT ISSUE =====
-
 function initReportBtn() {
   $('#reportBtn').addEventListener('click', () => {
     const params = new URLSearchParams();
-    const body = ['**What went wrong?**\n', '<!-- Describe the issue briefly -->\n', '**Search context** (auto-filled):', `- Area: ${S.area || 'Any'}`, `- Type: ${S.type || 'Any'}`, `- Beds: ${S.beds || 'Any'}`, `- Query: ${$('#nlInput').value || '(none)'}`, `- Results shown: ${refs.currentResults.length}`].join('\n');
+    const center = refs.map ? refs.map.getCenter() : null;
+    const zoom = refs.map ? refs.map.getZoom() : null;
+    const bounds = refs.map ? refs.map.getBounds() : null;
+    const body = [
+      '**What went wrong?**\n',
+      '<!-- Describe the issue briefly -->\n',
+      '**Search context** (auto-filled):',
+      `- Mode: ${refs.searchMode}`,
+      `- City: ${S.city}`,
+      `- Area: ${S.area || 'Any'}`,
+      `- Type: ${S.type || 'Any'}`,
+      `- Beds: ${S.beds || 'Any'}`,
+      `- Query: ${$('#nlInput').value || '(none)'}`,
+      `- Results shown: ${refs.currentResults.length}`,
+      `- Total available: ${refs.lastSearchTotal || 0}`,
+      `- Exact pins in shown results: ${refs.currentResults.filter(item => item.has_exact_geography).length}`,
+      `- Visible areas: ${refs.viewportAreaNames.length || 0}`,
+      `- Map center: ${center ? `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}` : 'n/a'}`,
+      `- Map bounds: ${bounds ? `${bounds.getSouth().toFixed(4)}, ${bounds.getWest().toFixed(4)} -> ${bounds.getNorth().toFixed(4)}, ${bounds.getEast().toFixed(4)}` : 'n/a'}`,
+      `- Map zoom: ${zoom ?? 'n/a'}`,
+      `- URL: ${location.href}`,
+    ].join('\n');
     params.set('title', '[Feedback] ');
     params.set('body', body);
     params.set('labels', 'feedback');
@@ -296,28 +583,44 @@ function initReportBtn() {
   });
 }
 
-// ===== LOAD CITY DATA =====
-
 async function loadCityData() {
-  try { const r = await fetch('/api/areas?city=' + S.city); refs.allAreas = await r.json(); } catch (e) { console.error(e); }
+  try {
+    const r = await fetch('/api/areas?city=' + S.city);
+    refs.allAreas = await r.json();
+  } catch (e) {
+    console.error(e);
+  }
+
   Object.values(refs.markers).forEach(m => { if (refs.map) refs.map.removeLayer(m); });
   refs.markers = {};
+  refs.mapAreaTotals = {};
+  refs.viewportAreaNames = [];
+  refs.viewportTotal = 0;
+  refs.viewportShown = 0;
+  refs.previewArea = null;
+  refs.hoveredArea = null;
   const cd = CITY_DEFAULTS[S.city];
-  if (refs.map) refs.map.setView([cd.lat, cd.lng], cd.zoom);
-  if (refs.mobileMap) { refs.mobileMap.remove(); refs.mobileMap = null; }
+  if (refs.map) fitCityOverview(refs.map);
+  if (refs.listingMarkerLayer) { refs.listingMarkerLayer.remove(); refs.listingMarkerLayer = null; }
+  if (refs.mobileMap) { refs.mobileMap.remove(); refs.mobileMap = null; refs.mobileMarkerLayer = null; refs.mobileListingMarkerLayer = null; }
   ensureMarkers(selectAreaFull);
   updateMapMarkers();
+  updateCoverageBadge();
   doSearch();
 }
 
-// ===== INIT =====
-
 async function init() {
-  try { const saved = JSON.parse(localStorage.getItem('rk_s') || '{}'); if (saved.city) S.city = saved.city; } catch {}
-  updateCityTabs(); updateNlExamples();
-  try { const r = await fetch('/api/areas?city=' + S.city); refs.allAreas = await r.json(); } catch (e) { console.error(e); }
+  await chooseInitialCity();
 
-  // Load popular searches
+  updateCityTabs();
+  updateNlExamples();
+  try {
+    const r = await fetch('/api/areas?city=' + S.city);
+    refs.allAreas = await r.json();
+  } catch (e) {
+    console.error(e);
+  }
+
   try {
     const r = await fetch('/api/popular-searches?city=' + S.city + '&limit=5');
     const popular = await r.json();
@@ -336,7 +639,6 @@ async function init() {
     }
   } catch {}
 
-  // Init all listeners
   initCityTabs();
   initFilterListeners({ doSearch, selectAreaFull, clearFilterFull, resetMapView });
   initCardListeners();
@@ -346,8 +648,12 @@ async function init() {
   initHoverSync();
 
   loadSearch();
-  if (window.innerWidth > 768) initMap(selectAreaFull);
-  initMobileMap(selectAreaFull, openDrawerFull);
+  if (window.innerWidth > 768) {
+    refs.searchMode = S.area ? 'area' : 'viewport';
+    initMap(selectAreaFull, () => scheduleViewportSearch(), openDrawerFull);
+    if (S.area) highlightMarker(S.area, true);
+  }
+  initMobileMap(selectAreaFull, openDrawerFull, () => scheduleViewportSearch({ mobile: true }));
   doSearch();
 }
 
