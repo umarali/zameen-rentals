@@ -19,3 +19,18 @@ export function fmtPrice(p, t) {
   if (p >= 1e3) return 'Rs ' + (p / 1e3).toFixed(0) + 'K';
   return 'Rs ' + p.toLocaleString();
 }
+
+export function showToast(message, { tone = 'default', duration = 3200 } = {}) {
+  const stack = $('#toastStack');
+  if (!stack || !message) return;
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${tone}`;
+  toast.textContent = message;
+  stack.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('toast-visible'));
+
+  window.setTimeout(() => {
+    toast.classList.remove('toast-visible');
+    window.setTimeout(() => toast.remove(), 220);
+  }, duration);
+}

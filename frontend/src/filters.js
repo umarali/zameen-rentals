@@ -61,7 +61,7 @@ export function updateChips() {
 
 // ===== DROPDOWNS =====
 
-const ddMap = { area: 'dd-area', type: 'dd-type', beds: 'dd-beds', price: 'dd-price', more: 'dd-more' };
+const ddMap = { area: 'dd-area', type: 'dd-type', beds: 'dd-beds', price: 'dd-price', more: 'dd-more', radius: 'dd-radius' };
 
 export function openDD(name) {
   if (refs.activeDD === name) { closeDD(); return; }
@@ -158,7 +158,12 @@ export function setToggle(on) {
 // ===== CLEAR FILTER =====
 
 export function clearFilter(f, { resetMapView, doSearch } = {}) {
-  if (f === 'area') { S.area = ''; $('#areaInput').value = ''; $('#areaClear').classList.add('hidden'); resetMapView?.(); }
+  if (f === 'area') {
+    S.area = '';
+    $('#areaInput').value = '';
+    $('#areaClear').classList.add('hidden');
+    if (refs.searchMode !== 'nearby') resetMapView?.();
+  }
   if (f === 'type') { S.type = ''; $$('#typeGrid .chip').forEach(c => c.classList.remove('active')); }
   if (f === 'beds') { S.beds = ''; $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === '')); }
   if (f === 'price') { S.priceMin = ''; S.priceMax = ''; $$('#priceGrid .chip').forEach(c => c.classList.remove('active')); $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = ''; }
@@ -204,7 +209,9 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = '';
     setToggle(false); $('#sortSelect').value = '';
     $$('#presetRow .chip').forEach(c => c.classList.remove('active'));
-    updateChips(); resetMapView(); doSearch();
+    updateChips();
+    if (refs.searchMode !== 'nearby') resetMapView();
+    doSearch();
   });
 
   // Area autocomplete
@@ -231,13 +238,14 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
   });
   areaClear.addEventListener('click', () => {
     S.area = ''; areaInput.value = ''; areaClear.classList.add('hidden');
-    refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+    if (refs.searchMode !== 'nearby') refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
     refs.viewportRanking = 'default';
     refs.previewArea = null;
     refs.hoveredArea = null;
-    resetMapView(); updateChips(); renderAreaList(refs.allAreas.slice(0, 20)); doSearch();
+    if (refs.searchMode !== 'nearby') resetMapView();
+    updateChips(); renderAreaList(refs.allAreas.slice(0, 20)); doSearch();
   });
 
   // Type

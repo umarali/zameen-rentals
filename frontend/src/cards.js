@@ -31,6 +31,16 @@ export function getAreaForListing(item) {
   return null;
 }
 
+export function formatDistance(distanceKm) {
+  const distance = Number(distanceKm);
+  if (!Number.isFinite(distance)) return '';
+  if (distance < 1) {
+    const meters = Math.max(50, Math.round((distance * 1000) / 50) * 50);
+    return `${meters} m away`;
+  }
+  return `${distance.toFixed(distance < 10 ? 1 : 0)} km away`;
+}
+
 // ===== RENDER CARD =====
 
 export function renderCard(item, idx) {
@@ -64,6 +74,7 @@ export function renderCard(item, idx) {
   const typeLabel = item.property_type ? `<span class="text-[10px] font-semibold uppercase tracking-wide text-brand-500 bg-brand-50 px-2 py-0.5 rounded-full">${esc(item.property_type)}</span>` : '';
   const callPhone = item.call_phone || item.phone || '';
   const whatsappPhone = item.whatsapp_phone || '';
+  const distanceLabel = formatDistance(item.distance_km);
   const contactAttrs = [
     callPhone ? `data-call-phone="${escA(callPhone)}"` : '',
     whatsappPhone ? `data-whatsapp-phone="${escA(whatsappPhone)}"` : '',
@@ -78,6 +89,7 @@ export function renderCard(item, idx) {
       </div>
       <div class="text-sm text-gray-600 line-clamp-1 mb-1">${esc(item.title || 'Rental Property')}</div>
       ${item.location ? `<div class="flex items-center gap-1 text-xs text-gray-400 mb-2"><svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${esc(item.location)}</div>` : ''}
+      ${distanceLabel ? `<div class="text-xs font-semibold text-brand-600 mb-2">${esc(distanceLabel)}</div>` : ''}
       ${badges.length ? `<div class="flex flex-wrap gap-3 text-xs text-gray-500">${badges.join('')}</div>` : ''}
       ${item.added ? `<div class="text-[11px] text-gray-400 mt-2">${esc(item.added)}</div>` : ''}
       ${item.url ? `<div class="flex items-center justify-end gap-1 pt-2 mt-2 border-t border-gray-100">

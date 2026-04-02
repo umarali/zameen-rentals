@@ -3,6 +3,7 @@
 import { $, $$, esc, escA, fmtPrice } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import { getAreaForListing, handleContactAction } from './cards.js';
+import { createBaseLayer } from './map-layers.js';
 
 let drawerDetailController = null;
 let drawerDetailRequestId = 0;
@@ -67,7 +68,7 @@ function getDrawerMapTarget(item, area) {
 function renderDrawerMiniMap(target) {
   const el = document.getElementById('drawerMiniMap');
   if (!el || !target) return;
-  if (refs.miniMap) { refs.miniMap.remove(); refs.miniMap = null; }
+  if (refs.miniMap) { refs.miniMap.remove(); refs.miniMap = null; refs.miniMapBaseLayer = null; }
   refs.miniMap = L.map(el, {
     zoomControl: false,
     dragging: false,
@@ -76,7 +77,7 @@ function renderDrawerMiniMap(target) {
     touchZoom: false,
     attributionControl: false,
   }).setView([target.lat, target.lng], target.zoom);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(refs.miniMap);
+  refs.miniMapBaseLayer = createBaseLayer(refs.mapLayer).addTo(refs.miniMap);
   L.marker([target.lat, target.lng]).addTo(refs.miniMap);
 }
 
@@ -278,7 +279,7 @@ export function closeDrawer(fromPopState) {
   $('#drawer').classList.remove('drawer-open');
   $('#drawerOverlay').classList.remove('overlay-open');
   document.body.style.overflow = '';
-  if (refs.miniMap) { refs.miniMap.remove(); refs.miniMap = null; }
+  if (refs.miniMap) { refs.miniMap.remove(); refs.miniMap = null; refs.miniMapBaseLayer = null; }
   refs.drawerImages = [];
   if (!fromPopState && refs._drawerHistoryPushed) {
     refs._drawerHistoryPushed = false;

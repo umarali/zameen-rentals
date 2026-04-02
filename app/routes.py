@@ -1,4 +1,5 @@
 """API route handlers."""
+import asyncio
 import logging
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -14,7 +15,8 @@ from app.parsing import parse_query_with_claude
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
 from app.db_listings import (
     search_listings, count_listings_by_area, get_listing_by_zameen_id,
-    get_crawl_stats, upsert_listing,
+    get_crawl_stats, get_nearby_enrichment_candidates, search_nearby_listings,
+    upsert_listing,
 )
 
 logger = logging.getLogger("zameenrentals")
@@ -22,6 +24,9 @@ router = APIRouter()
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _MAX_VIEWPORT_AREAS = 500
+_NEARBY_SUPPORTED_CITIES = {"karachi"}
+_NEARBY_ENRICHMENT_LIMIT = 12
+_NEARBY_ENRICHMENT_CONCURRENCY = 3
 
 
 def _normalize_area_names(areas, *, limit=_MAX_VIEWPORT_AREAS):
@@ -46,6 +51,57 @@ def _contact_response_from_listing(listing):
         "agent_agency": listing.get("agent_agency"),
         "source": "local",
     }
+
+
+def _validate_nearby_request(city, lat, lng, radius_km):
+    if city not in _NEARBY_SUPPORTED_CITIES:
+        raise HTTPException(status_code=400, detail="Nearby search is available in Karachi for now.")
+    if not (-90 <= lat <= 90):
+        raise HTTPException(status_code=400, detail="Latitude must be between -90 and 90.")
+    if not (-180 <= lng <= 180):
+        raise HTTPException(status_code=400, detail="Longitude must be between -180 and 180.")
+    if not (1 <= radius_km <= 20):
+        raise HTTPException(status_code=400, detail="Radius must be between 1 and 20 km.")
+
+
+async def _refresh_exact_location_candidate(candidate):
+    try:
+        detail = await fetch_listing_detail(candidate["url"])
+    except Exception:
+        logger.exception("Nearby enrichment failed for %s", candidate["url"])
+        return False
+
+    if not detail:
+        return False
+
+    upsert_listing(
+        zameen_id=candidate["zameen_id"],
+        url=candidate["url"],
+        city=candidate["city"],
+        detail_data=detail,
+    )
+    return bool(detail.get("has_exact_geography"))
+
+
+async def _maybe_enrich_nearby_exact_locations(*, city, lat, lng, radius_km, area,
+                                               property_type, bedrooms, price_min,
+                                               price_max, furnished, q=None):
+    candidates = get_nearby_enrichment_candidates(
+        city=city, lat=lat, lng=lng, radius_km=radius_km, area=area,
+        property_type=property_type, bedrooms=bedrooms, price_min=price_min,
+        price_max=price_max, furnished=furnished, q=q, limit=_NEARBY_ENRICHMENT_LIMIT,
+    )
+    if not candidates:
+        return False
+
+    semaphore = asyncio.Semaphore(_NEARBY_ENRICHMENT_CONCURRENCY)
+
+    async def run(candidate):
+        async with semaphore:
+            return await _refresh_exact_location_candidate(candidate)
+
+    results = await asyncio.gather(*(run(candidate) for candidate in candidates), return_exceptions=True)
+    return any(result is True for result in results)
 
 
 @router.get("/api/health")
@@ -224,6 +280,54 @@ async def map_search(
         bedrooms=bedrooms, price_min=price_min, price_max=price_max,
         furnished=furnished,
     )
+    return result
+
+
+@router.get("/api/nearby-search")
+@limiter.limit("10/minute")
+async def nearby_search(
+    request: Request,
+    city: str = Query("karachi"),
+    lat: float = Query(...),
+    lng: float = Query(...),
+    radius_km: float = Query(5),
+    area: Optional[str] = Query(None),
+    property_type: Optional[str] = Query(None),
+    bedrooms: Optional[int] = Query(None, ge=1, le=10),
+    price_min: Optional[int] = Query(None, ge=0),
+    price_max: Optional[int] = Query(None, ge=0),
+    furnished: Optional[bool] = Query(None),
+    page: int = Query(1, ge=1),
+    sort: Optional[str] = Query(None),
+):
+    _validate_nearby_request(city, lat, lng, radius_km)
+
+    result = search_nearby_listings(
+        city=city, lat=lat, lng=lng, radius_km=radius_km, area=area,
+        property_type=property_type, bedrooms=bedrooms, price_min=price_min,
+        price_max=price_max, furnished=furnished, sort=sort, page=page,
+    )
+
+    if page == 1 and result["total"] < result["per_page"]:
+        upgraded = await _maybe_enrich_nearby_exact_locations(
+            city=city, lat=lat, lng=lng, radius_km=radius_km, area=area,
+            property_type=property_type, bedrooms=bedrooms, price_min=price_min,
+            price_max=price_max, furnished=furnished,
+        )
+        if upgraded:
+            result = search_nearby_listings(
+                city=city, lat=lat, lng=lng, radius_km=radius_km, area=area,
+                property_type=property_type, bedrooms=bedrooms, price_min=price_min,
+                price_max=price_max, furnished=furnished, sort=sort, page=page,
+            )
+
+    result["source"] = "local"
+    result["mode"] = "nearby"
+    result["radius_km"] = radius_km
+    result["focus_center"] = {"lat": lat, "lng": lng}
+    log_search(city=city, area=area, property_type=property_type, bedrooms=bedrooms,
+               price_min=price_min, price_max=price_max, furnished=furnished,
+               sort=sort, result_count=result["total"])
     return result
 
 

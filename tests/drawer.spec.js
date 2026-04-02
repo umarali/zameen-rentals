@@ -1,6 +1,46 @@
 // @ts-check
 const { test, expect } = require("@playwright/test");
 
+async function stubDrawerMapSearch(page) {
+  const payload = {
+    total: 1,
+    page: 1,
+    per_page: 25,
+    source: "local",
+    mode: "viewport",
+    visible_areas: 1,
+    area_totals: { Clifton: 1 },
+    ranking: "map_focus",
+    focus_center: { lat: 24.82, lng: 67.03 },
+    results: [
+      {
+        title: "Drawer map listing",
+        url: "https://www.zameen.com/Property/test-drawer-map-1.html",
+        price: 95000,
+        bedrooms: 2,
+        bathrooms: 2,
+        area_size: "1000 sqft",
+        location: "Clifton, Karachi",
+        property_type: "Apartment",
+        latitude: 24.821,
+        longitude: 67.031,
+        location_source: "listing_exact",
+        has_exact_geography: true,
+      },
+    ],
+  };
+
+  await page.route("**/api/map-search**", async (route) => {
+    await route.fulfill({ json: payload });
+  });
+  await page.route("**/api/search**", async (route) => {
+    await route.fulfill({ json: payload });
+  });
+
+  await page.reload();
+  await page.waitForSelector(".card-wrap", { timeout: 30000 });
+}
+
 test.describe("Detail Drawer", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
@@ -89,7 +129,7 @@ test.describe("Detail Drawer", () => {
     });
     // Nearby areas section may or may not appear depending on area data
     await page.waitForTimeout(500);
-    const nearbyChips = page.locator("#drawerContent .chip[data-nearby]");
+    const nearbyChips = page.locator("#drawerContent [data-nearby]");
     // Just verify no crash — nearby may not always be present
     const count = await nearbyChips.count();
     expect(count).toBeGreaterThanOrEqual(0);
@@ -103,7 +143,7 @@ test.describe("Detail Drawer", () => {
       timeout: 3000,
     });
     await page.waitForTimeout(500);
-    const nearbyChips = page.locator("#drawerContent .chip[data-nearby]");
+    const nearbyChips = page.locator("#drawerContent [data-nearby]");
     if ((await nearbyChips.count()) > 0) {
       await nearbyChips.first().click();
       await expect(page.locator("#drawer")).not.toHaveClass(/drawer-open/);
@@ -112,12 +152,25 @@ test.describe("Detail Drawer", () => {
   });
 
   test("drawer mini map renders", async ({ page }) => {
+    await stubDrawerMapSearch(page);
     await page.locator(".card-wrap").first().click();
     await expect(page.locator("#drawer")).toHaveClass(/drawer-open/, {
       timeout: 3000,
     });
-    // Mini map div exists
     await expect(page.locator("#drawerMiniMap")).toBeAttached();
+  });
+
+  test("drawer mini map inherits the active satellite layer", async ({ page }) => {
+    await stubDrawerMapSearch(page);
+    await page.locator('#mapContainer [data-map-layer="satellite"]').first().click();
+    await page.locator(".card-wrap").first().click();
+    await expect(page.locator("#drawer")).toHaveClass(/drawer-open/, {
+      timeout: 3000,
+    });
+    await expect(page.locator("#drawerMiniMap .leaflet-tile").first()).toHaveAttribute(
+      "src",
+      /World_Imagery|ArcGIS\/rest\/services\/World_Imagery/
+    );
   });
 });
 

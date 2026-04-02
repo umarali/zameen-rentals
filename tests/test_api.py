@@ -334,6 +334,129 @@ class TestMapSearchEndpoint:
         assert "Too many areas" in res.json()["detail"]
 
 
+class TestNearbySearchEndpoint:
+    def test_nearby_search_returns_exact_only_results(self, client):
+        upsert_listing(
+            zameen_id="920001",
+            url="https://www.zameen.com/Property/test-920001-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0300,
+            card_data={"title": "Near me exact", "price": 88000, "bedrooms": 2, "bathrooms": 2, "area_size": "5 Marla", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="920001",
+            url="https://www.zameen.com/Property/test-920001-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Exact nearby detail",
+                "latitude": 24.8210,
+                "longitude": 67.0310,
+                "location_source": "listing_exact",
+            },
+        )
+        upsert_listing(
+            zameen_id="920002",
+            url="https://www.zameen.com/Property/test-920002-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8205,
+            lng=67.0305,
+            card_data={"title": "Centroid only", "price": 76000, "bedrooms": 2, "bathrooms": 1, "area_size": "4 Marla", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="920003",
+            url="https://www.zameen.com/Property/test-920003-1-1.html",
+            city="karachi",
+            area_name="DHA Phase 5",
+            area_slug="Karachi_DHA_Phase_5",
+            lat=24.7900,
+            lng=67.1000,
+            card_data={"title": "Far away exact", "price": 120000, "bedrooms": 3, "bathrooms": 2, "area_size": "8 Marla", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="920003",
+            url="https://www.zameen.com/Property/test-920003-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Far detail",
+                "latitude": 24.7900,
+                "longitude": 67.1000,
+                "location_source": "listing_exact",
+            },
+        )
+
+        res = client.get("/api/nearby-search?city=karachi&lat=24.82&lng=67.03&radius_km=5")
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["source"] == "local"
+        assert data["mode"] == "nearby"
+        assert data["radius_km"] == 5
+        assert data["focus_center"] == {"lat": 24.82, "lng": 67.03}
+        assert data["total"] == 1
+        assert data["results"][0]["title"] == "Near me exact"
+        assert data["results"][0]["distance_source"] == "listing_exact"
+        assert data["results"][0]["is_distance_approximate"] is False
+        assert data["results"][0]["distance_km"] < 1
+
+    def test_nearby_search_rejects_unsupported_city(self, client):
+        res = client.get("/api/nearby-search?city=lahore&lat=31.52&lng=74.35&radius_km=5")
+
+        assert res.status_code == 400
+        assert "Karachi" in res.json()["detail"]
+
+    def test_nearby_search_rejects_invalid_radius(self, client):
+        res = client.get("/api/nearby-search?city=karachi&lat=24.82&lng=67.03&radius_km=25")
+
+        assert res.status_code == 400
+        assert "between 1 and 20 km" in res.json()["detail"]
+
+    def test_nearby_search_rejects_invalid_latitude(self, client):
+        res = client.get("/api/nearby-search?city=karachi&lat=124.82&lng=67.03&radius_km=5")
+
+        assert res.status_code == 400
+        assert "Latitude" in res.json()["detail"]
+
+    def test_nearby_search_enriches_sparse_exact_results(self, client, monkeypatch):
+        upsert_listing(
+            zameen_id="920010",
+            url="https://www.zameen.com/Property/test-920010-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8204,
+            lng=67.0304,
+            card_data={"title": "Upgradeable nearby", "price": 84000, "bedrooms": 2, "bathrooms": 2, "area_size": "5 Marla", "property_type": "Apartment"},
+        )
+
+        async def fake_fetch_listing_detail(url):
+            assert "test-920010" in url
+            return {
+                "description": "Fresh exact detail",
+                "latitude": 24.8208,
+                "longitude": 67.0309,
+                "location_source": "listing_exact",
+                "has_exact_geography": True,
+            }
+
+        monkeypatch.setattr("app.routes.fetch_listing_detail", fake_fetch_listing_detail)
+
+        res = client.get("/api/nearby-search?city=karachi&lat=24.82&lng=67.03&radius_km=5")
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["total"] == 1
+        assert data["results"][0]["title"] == "Upgradeable nearby"
+        listing = get_listing_by_zameen_id("920010")
+        assert listing["location_source"] == "listing_exact"
+        assert listing["latitude"] == pytest.approx(24.8208)
+        assert listing["longitude"] == pytest.approx(67.0309)
+
+
 class TestFrontendServing:
     def test_serves_html(self, client):
         res = client.get("/")

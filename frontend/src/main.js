@@ -1,34 +1,109 @@
 /** App entry point — wires modules together, search engine, init. */
 
 import '../src/style.css';
-import { $, $$, esc, TYPE_L } from './utils.js';
+import { $, $$, esc, TYPE_L, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import {
   updateCityTabs, updateNlExamples, updateChips, clearFilter, selectArea,
-  syncPriceChips, setToggle, initFilterListeners,
+  syncPriceChips, setToggle, initFilterListeners, closeDD,
 } from './filters.js';
 import { renderCard, initCarousels, handleContactAction, skeletonCard } from './cards.js';
 import {
   initMap, ensureMarkers, updateMapMarkers, highlightMarker, resetMapView,
   initMobileMap, updateMobileCarousel, updateMobileMarkers, initHoverSync,
   getVisibleAreaNames, fitCityOverview,
+  clearNearbyRadiusOverlays, hydrateStoredUserLocation, refreshUserLocationOverlays,
+  requestUserLocation,
 } from './map.js';
 import { openDrawer, initDrawerListeners } from './drawer.js';
+import { getStoredMapLayer } from './map-layers.js';
+
+function isNearbySupportedCity() {
+  return S.city === 'karachi';
+}
+
+function getBrowseMode() {
+  if (S.area) return 'area';
+  return window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+}
+
+function getActiveMapInstance() {
+  const overlay = $('#mapOverlay');
+  if (overlay && !overlay.classList.contains('hidden') && refs.mobileMap) return refs.mobileMap;
+  return refs.map || refs.mobileMap || null;
+}
+
+function updateNearbyControls() {
+  const nearbyChip = $('#nearbyChip');
+  const radiusChip = $('#radiusChip');
+  if (!nearbyChip || !radiusChip) return;
+
+  if (refs.searchMode === 'nearby') {
+    nearbyChip.innerHTML = `Near Me<span class="chip-clear" data-nearby-clear="1">&times;</span>`;
+    nearbyChip.classList.add('has-value');
+    radiusChip.classList.remove('hidden');
+    radiusChip.innerHTML = `${refs.nearbyRadiusKm} km <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>`;
+  } else {
+    nearbyChip.textContent = 'Near Me';
+    nearbyChip.classList.remove('has-value');
+    radiusChip.classList.add('hidden');
+  }
+
+  nearbyChip.classList.toggle('chip-disabled', !isNearbySupportedCity() && refs.searchMode !== 'nearby');
+}
+
+function exitNearbyMode({ silent = false } = {}) {
+  if (refs.searchMode !== 'nearby') {
+    updateNearbyControls();
+    clearNearbyRadiusOverlays();
+    return false;
+  }
+  refs.searchMode = getBrowseMode();
+  clearNearbyRadiusOverlays();
+  refreshUserLocationOverlays();
+  updateNearbyControls();
+  if (!silent) showToast('Returned to browse mode.');
+  return true;
+}
+
+function beginSearchRequest(append) {
+  const token = ++refs.searchToken;
+  refs.searchController?.abort();
+  const controller = new AbortController();
+  refs.searchController = controller;
+  refs.isLoading = true;
+  showLoading(append);
+  saveSearch();
+  return { token, controller };
+}
+
+function isActiveSearch(token, controller) {
+  return refs.searchToken === token && refs.searchController === controller;
+}
+
+function finalizeSearch(token, controller) {
+  if (!isActiveSearch(token, controller)) return false;
+  refs.searchController = null;
+  refs.isLoading = false;
+  refs.mapDriven = false;
+  return true;
+}
 
 function selectAreaFull(name, fromMap) {
-  refs.searchMode = 'area';
+  if (refs.searchMode !== 'nearby') refs.searchMode = 'area';
   refs.mapAreaTotals = {};
   refs.viewportAreaNames = [];
   refs.viewportRanking = 'default';
   refs.lastViewportSearchKey = '';
   refs.previewArea = null;
   refs.hoveredArea = null;
+  updateNearbyControls();
   selectArea(name, fromMap, { highlightMarker, doSearch });
 }
 
 function clearFilterFull(f) {
   if (f === 'area') {
-    refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+    refs.searchMode = refs.searchMode === 'nearby' ? 'nearby' : getBrowseMode();
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
     refs.viewportRanking = 'default';
@@ -36,6 +111,7 @@ function clearFilterFull(f) {
     refs.previewArea = null;
     refs.hoveredArea = null;
   }
+  updateNearbyControls();
   clearFilter(f, { resetMapView, doSearch });
 }
 
@@ -172,7 +248,13 @@ function updateHeader({
   const metaEl = $('#resultsMeta');
   const sourceEl = $('#dataSource');
 
-  if (mode === 'viewport') {
+  if (mode === 'nearby') {
+    titleEl.textContent = 'Rentals near you';
+    countEl.textContent = `${shown} shown`;
+    metaEl.textContent = total
+      ? `${total} exact-pin rentals within ${refs.nearbyRadiusKm} km`
+      : `No exact-pin rentals found within ${refs.nearbyRadiusKm} km`;
+  } else if (mode === 'viewport') {
     titleEl.textContent = 'Rentals in this map view';
     countEl.textContent = `${shown} shown`;
     if (total && coveredAreas > 0) {
@@ -195,7 +277,11 @@ function updateHeader({
   }
 
   if (source === 'local') {
-    sourceEl.textContent = mode === 'viewport' && ranking === 'map_focus' ? 'Instant / Nearest first' : 'Instant';
+    sourceEl.textContent = mode === 'nearby'
+      ? 'Instant / Nearby'
+      : mode === 'viewport' && ranking === 'map_focus'
+      ? 'Instant / Nearest first'
+      : 'Instant';
     sourceEl.className = 'text-xs text-brand-500 font-medium';
     sourceEl.classList.remove('hidden');
   } else if (source === 'live') {
@@ -282,7 +368,11 @@ function renderFooter(total) {
   if (total > refs.currentResults.length) {
     const btn = document.createElement('button');
     btn.className = 'w-full py-3 mt-4 border-2 border-brand-500 rounded-lg text-brand-500 text-sm font-semibold hover:bg-brand-50 transition-colors';
-    btn.textContent = refs.searchMode === 'viewport' ? 'Load More From This View' : 'Load More Results';
+    btn.textContent = refs.searchMode === 'nearby'
+      ? 'Load More Nearby Results'
+      : refs.searchMode === 'viewport'
+      ? 'Load More From This View'
+      : 'Load More Results';
     btn.addEventListener('click', () => doSearch(refs.currentPage + 1));
     footer.appendChild(btn);
   }
@@ -312,7 +402,13 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
         coveredAreas: Object.keys(data.area_totals || {}).length,
         ranking: data.ranking,
       });
-      renderNoResults(mode === 'viewport' ? 'Pan or zoom the map to discover other areas' : 'Try removing a filter to see more results');
+      renderNoResults(
+        mode === 'nearby'
+          ? `No exact-pin rentals were found within ${refs.nearbyRadiusKm} km.`
+          : mode === 'viewport'
+          ? 'Pan or zoom the map to discover other areas'
+          : 'Try removing a filter to see more results'
+      );
       updateMapMarkers();
       if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
       updateMobileCarousel(refs.currentResults);
@@ -345,6 +441,7 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
 }
 
 function shouldUseViewportSearch({ mobile = false } = {}) {
+  if (refs.searchMode === 'nearby') return false;
   if (S.area) return false;
   if (mobile) return !!refs.mobileMap;
   return window.innerWidth > 768 && !!refs.map;
@@ -369,7 +466,7 @@ function buildViewportSearchKey({ visibleAreaNames, center, mobile = false, page
 
 async function doViewportSearch(page = 1, { mobile = false } = {}) {
   const mapInstance = mobile ? refs.mobileMap : refs.map;
-  if (!mapInstance || refs.isLoading) return;
+  if (!mapInstance) return;
 
   const append = page > 1;
   const visibleAreaNames = getVisibleAreaNames(mapInstance);
@@ -386,28 +483,29 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     refs.currentPage = page;
   }
 
-  refs.isLoading = true;
-  showLoading(append);
-  saveSearch();
+  const { token, controller } = beginSearchRequest(append);
 
   try {
     refs.searchMode = 'viewport';
+    updateNearbyControls();
     refs.viewportAreaNames = visibleAreaNames;
     const params = getParams(refs.currentPage, { omitArea: true });
     refs.viewportAreaNames.forEach(name => params.append('areas', name));
     params.set('center_lat', center.lat.toFixed(6));
     params.set('center_lng', center.lng.toFixed(6));
 
-    const r = await fetch('/api/map-search?' + params.toString());
+    const r = await fetch('/api/map-search?' + params.toString(), { signal: controller.signal });
     if (!r.ok) {
       const e = await r.json().catch(() => ({ detail: 'Map search failed' }));
       throw new Error(e.detail || 'Map search failed');
     }
     const data = await r.json();
+    if (!isActiveSearch(token, controller)) return;
     hideLoading();
     applyResults(data, { append, mode: 'viewport' });
     if (!append) refs.lastViewportSearchKey = viewportKey;
   } catch (e) {
+    if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
     refs.currentResults = [];
     refs.mapAreaTotals = {};
@@ -418,8 +516,7 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     updateCoverageBadge();
     if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
   } finally {
-    refs.isLoading = false;
-    refs.mapDriven = false;
+    finalizeSearch(token, controller);
   }
 }
 
@@ -433,21 +530,22 @@ async function doAreaSearch(page = 1) {
     refs.currentPage = page;
   }
 
-  refs.isLoading = true;
-  showLoading(append);
-  saveSearch();
+  const { token, controller } = beginSearchRequest(append);
 
   try {
     refs.searchMode = S.area ? 'area' : 'city';
-    const r = await fetch('/api/search?' + getParams(refs.currentPage).toString());
+    updateNearbyControls();
+    const r = await fetch('/api/search?' + getParams(refs.currentPage).toString(), { signal: controller.signal });
     if (!r.ok) {
       const e = await r.json().catch(() => ({ detail: 'Search failed' }));
       throw new Error(e.detail || 'Search failed');
     }
     const data = await r.json();
+    if (!isActiveSearch(token, controller)) return;
     hideLoading();
     applyResults(data, { append, mode: refs.searchMode });
   } catch (e) {
+    if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
     refs.currentResults = [];
     updateHeader({ total: 0, source: 'unavailable', mode: refs.searchMode });
@@ -456,21 +554,81 @@ async function doAreaSearch(page = 1) {
     updateCoverageBadge();
     if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
   } finally {
-    refs.isLoading = false;
-    refs.mapDriven = false;
+    finalizeSearch(token, controller);
+  }
+}
+
+async function doNearbySearch(page = 1) {
+  const append = page > 1;
+  refs.lastViewportSearchKey = '';
+
+  if (!refs.userLocation) {
+    showToast('Set your location first to search nearby.', { tone: 'error' });
+    refs.searchMode = getBrowseMode();
+    updateNearbyControls();
+    clearNearbyRadiusOverlays();
+    return doAreaSearch(1);
+  }
+  if (!isNearbySupportedCity()) {
+    showToast('Nearby search is available in Karachi for now.', { tone: 'warning' });
+    refs.searchMode = getBrowseMode();
+    updateNearbyControls();
+    clearNearbyRadiusOverlays();
+    return doAreaSearch(1);
+  }
+
+  if (!append) {
+    refs.currentPage = 1;
+    refs.currentResults = [];
+  } else {
+    refs.currentPage = page;
+  }
+
+  const { token, controller } = beginSearchRequest(append);
+
+  try {
+    refs.searchMode = 'nearby';
+    updateNearbyControls();
+    refreshUserLocationOverlays();
+    const params = getParams(refs.currentPage);
+    params.set('lat', refs.userLocation.lat.toFixed(6));
+    params.set('lng', refs.userLocation.lng.toFixed(6));
+    params.set('radius_km', refs.nearbyRadiusKm);
+
+    const r = await fetch('/api/nearby-search?' + params.toString(), { signal: controller.signal });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({ detail: 'Nearby search failed' }));
+      throw new Error(e.detail || 'Nearby search failed');
+    }
+    const data = await r.json();
+    if (!isActiveSearch(token, controller)) return;
+    hideLoading();
+    applyResults(data, { append, mode: 'nearby' });
+  } catch (e) {
+    if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
+    hideLoading();
+    refs.currentResults = [];
+    updateHeader({ total: 0, source: 'unavailable', mode: 'nearby' });
+    renderNoResults(e.message || `No exact-pin rentals were found within ${refs.nearbyRadiusKm} km.`);
+    updateMapMarkers();
+    updateCoverageBadge();
+    if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+  } finally {
+    finalizeSearch(token, controller);
   }
 }
 
 async function doSearch(page = 1, opts = {}) {
+  if (refs.searchMode === 'nearby') return doNearbySearch(page);
   if (shouldUseViewportSearch(opts)) return doViewportSearch(page, opts);
   return doAreaSearch(page);
 }
 
 function scheduleViewportSearch(opts = {}) {
-  if (S.area) return;
+  if (S.area || refs.searchMode === 'nearby') return;
   clearTimeout(refs.mapTimer);
   refs.mapTimer = setTimeout(() => {
-    if (!refs.isLoading) doSearch(1, opts);
+    doSearch(1, opts);
   }, 250);
 }
 
@@ -532,15 +690,18 @@ function initCityTabs() {
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
     refs.viewportRanking = 'default';
+    refs.lastViewportSearchKey = '';
     refs.previewArea = null;
     refs.hoveredArea = null;
+    clearNearbyRadiusOverlays();
+    refreshUserLocationOverlays();
     $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
     $$('#typeGrid .chip').forEach(c => c.classList.remove('active'));
     $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === ''));
     $$('#priceGrid .chip').forEach(c => c.classList.remove('active'));
     $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = '';
     setToggle(false); $('#sortSelect').value = '';
-    updateCityTabs(); updateChips(); updateNlExamples();
+    updateCityTabs(); updateChips(); updateNlExamples(); updateNearbyControls();
     loadCityData();
   }));
 }
@@ -580,10 +741,10 @@ function initNlListeners() {
       S.priceMin = '';
       S.priceMax = '';
       S.furnished = false;
-      refs.searchMode = S.area ? 'area' : refs.searchMode;
+      if (refs.searchMode !== 'nearby') refs.searchMode = S.area ? 'area' : refs.searchMode;
       $('#nlInput').value = '';
       $('#nlSuggestions').classList.add('hidden');
-      updateChips();
+      updateChips(); updateNearbyControls();
       doSearch();
       return;
     }
@@ -595,6 +756,47 @@ function initNlListeners() {
     }
   });
   document.addEventListener('click', e => { if (!e.target.closest('#nlSuggestions') && !e.target.closest('#nlInput')) $('#nlSuggestions').classList.add('hidden'); });
+}
+
+function initNearbyControls() {
+  $('#nearbyChip').addEventListener('click', async e => {
+    if (e.target.closest('[data-nearby-clear]')) {
+      e.preventDefault();
+      exitNearbyMode({ silent: true });
+      doSearch(1);
+      return;
+    }
+
+    if (!isNearbySupportedCity()) {
+      showToast('Nearby search is available in Karachi for now.', { tone: 'warning' });
+      return;
+    }
+
+    try {
+      if (!refs.userLocation) {
+        await requestUserLocation({ mapInstance: getActiveMapInstance(), recenter: true });
+      } else {
+        refreshUserLocationOverlays();
+      }
+    } catch {
+      return;
+    }
+
+    refs.searchMode = 'nearby';
+    updateNearbyControls();
+    doSearch(1);
+  });
+
+  $('#dd-radius').addEventListener('click', e => {
+    const chip = e.target.closest('[data-radius-km]');
+    if (!chip) return;
+    refs.nearbyRadiusKm = Number(chip.dataset.radiusKm) || 5;
+    $$('#radiusOptions .chip').forEach(el => el.classList.toggle('active', el === chip));
+    updateNearbyControls();
+    closeDD();
+    refreshUserLocationOverlays();
+    if (refs.searchMode === 'nearby') doSearch(1);
+  });
 }
 
 function initReportBtn() {
@@ -651,7 +853,17 @@ async function loadCityData() {
   const cd = CITY_DEFAULTS[S.city];
   if (refs.map) fitCityOverview(refs.map);
   if (refs.listingMarkerLayer) { refs.listingMarkerLayer.remove(); refs.listingMarkerLayer = null; }
-  if (refs.mobileMap) { refs.mobileMap.remove(); refs.mobileMap = null; refs.mobileMarkerLayer = null; refs.mobileListingMarkerLayer = null; }
+  if (refs.mobileMap) {
+    refs.mobileMap.remove();
+    refs.mobileMap = null;
+    refs.mobileMapBaseLayer = null;
+    refs.mobileMarkerLayer = null;
+    refs.mobileListingMarkerLayer = null;
+    refs.mobileUserLocationMarker = null;
+    refs.mobileUserLocationCircle = null;
+    refs.mobileNearbyRadiusLayer = null;
+  }
+  updateNearbyControls();
   ensureMarkers(selectAreaFull);
   updateMapMarkers();
   updateCoverageBadge();
@@ -660,6 +872,9 @@ async function loadCityData() {
 
 async function init() {
   await chooseInitialCity();
+  refs._notify = showToast;
+  refs.mapLayer = getStoredMapLayer();
+  hydrateStoredUserLocation();
 
   updateCityTabs();
   updateNlExamples();
@@ -690,6 +905,7 @@ async function init() {
 
   initCityTabs();
   initFilterListeners({ doSearch, selectAreaFull, clearFilterFull, resetMapView });
+  initNearbyControls();
   initCardListeners();
   initNlListeners();
   initDrawerListeners(selectAreaFull);
@@ -697,6 +913,7 @@ async function init() {
   initHoverSync();
 
   loadSearch();
+  updateNearbyControls();
   if (window.innerWidth > 768) {
     refs.searchMode = S.area ? 'area' : 'viewport';
     initMap(selectAreaFull, () => scheduleViewportSearch(), openDrawerFull);

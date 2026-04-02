@@ -1,14 +1,22 @@
 /** Leaflet map: desktop viewport browsing, markers, and mobile map overlay. */
 
-import { $, $$, esc, escA, fmtPrice } from './utils.js';
+import { $, $$, esc, escA, fmtPrice, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
-import { getAreaForListing } from './cards.js';
+import { formatDistance, getAreaForListing } from './cards.js';
+import {
+  createBaseLayer,
+  getStoredMapLayer,
+  persistMapLayer,
+  sanitizeMapLayerKey,
+} from './map-layers.js';
 
 const EXACT_MARKER_MIN_ZOOM = 11;
 const EXACT_MARKER_MIN_ZOOM_MOBILE = 12;
 const EXACT_PREFETCH_LIMIT = 10;
 const EXACT_PREFETCH_CONCURRENCY = 3;
 const EXACT_PREFETCH_COOLDOWN_MS = 30000;
+const USER_LOCATION_STORAGE_KEY = 'rk_userLocation';
+const USER_LOCATION_TTL_MS = 30 * 60 * 1000;
 
 let exactPrefetchTimer = null;
 let exactPrefetchController = null;
@@ -16,6 +24,258 @@ let exactPrefetchSession = 0;
 const exactPrefetchPending = new Set();
 const exactPrefetchMissing = new Set();
 const exactPrefetchCooldown = new Map();
+
+function notify(message, options) {
+  if (refs._notify) refs._notify(message, options);
+  else showToast(message, options);
+}
+
+function ensureMapLayerState() {
+  refs.mapLayer = sanitizeMapLayerKey(refs.mapLayer || getStoredMapLayer());
+  return refs.mapLayer;
+}
+
+function createUserLocationIcon() {
+  return L.divIcon({
+    className: 'user-location-icon',
+    html: `
+      <div class="user-location-marker">
+        <span class="user-location-pulse"></span>
+        <span class="user-location-dot"></span>
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+}
+
+function persistUserLocation(location) {
+  try { sessionStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(location)); } catch {}
+}
+
+export function hydrateStoredUserLocation() {
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(USER_LOCATION_STORAGE_KEY) || 'null');
+    if (!raw?.ts || Date.now() - raw.ts > USER_LOCATION_TTL_MS) {
+      sessionStorage.removeItem(USER_LOCATION_STORAGE_KEY);
+      refs.userLocation = null;
+      return null;
+    }
+    if (!Number.isFinite(Number(raw.lat)) || !Number.isFinite(Number(raw.lng))) return null;
+    refs.userLocation = {
+      lat: Number(raw.lat),
+      lng: Number(raw.lng),
+      accuracy: Number(raw.accuracy) || 0,
+      ts: Number(raw.ts),
+    };
+    return refs.userLocation;
+  } catch {
+    refs.userLocation = null;
+    return null;
+  }
+}
+
+function clearLayerRef(key) {
+  if (!refs[key]) return;
+  refs[key].remove();
+  refs[key] = null;
+}
+
+function applyBaseLayer(mapInstance, layerRefKey, layerKey = refs.mapLayer) {
+  if (!mapInstance) return;
+  clearLayerRef(layerRefKey);
+  refs[layerRefKey] = createBaseLayer(layerKey).addTo(mapInstance);
+}
+
+function syncLayerToggleButtons() {
+  document.querySelectorAll('[data-map-layer]').forEach(btn => {
+    const active = btn.dataset.mapLayer === refs.mapLayer;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+}
+
+export function setActiveMapLayer(layerKey) {
+  refs.mapLayer = persistMapLayer(layerKey);
+  if (refs.map) applyBaseLayer(refs.map, 'mapBaseLayer', refs.mapLayer);
+  if (refs.mobileMap) applyBaseLayer(refs.mobileMap, 'mobileMapBaseLayer', refs.mapLayer);
+  if (refs.miniMap) applyBaseLayer(refs.miniMap, 'miniMapBaseLayer', refs.mapLayer);
+  syncLayerToggleButtons();
+}
+
+function createLayerToggleControl() {
+  return L.Control.extend({
+    options: { position: 'topright' },
+    onAdd() {
+      const container = L.DomUtil.create('div', 'map-layer-control');
+      container.innerHTML = `
+        <button type="button" class="map-layer-btn" data-map-layer="osm" aria-pressed="false">Map</button>
+        <button type="button" class="map-layer-btn" data-map-layer="satellite" aria-pressed="false">Satellite</button>
+      `;
+      L.DomEvent.disableClickPropagation(container);
+      L.DomEvent.disableScrollPropagation(container);
+      container.querySelectorAll('[data-map-layer]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.preventDefault();
+          setActiveMapLayer(btn.dataset.mapLayer);
+        });
+      });
+      window.setTimeout(syncLayerToggleButtons, 0);
+      return container;
+    },
+  });
+}
+
+function updateLocationOverlay(mapInstance, markerKey, circleKey) {
+  if (!mapInstance) return;
+  if (!refs.userLocation) {
+    clearLayerRef(markerKey);
+    clearLayerRef(circleKey);
+    return;
+  }
+
+  const point = [refs.userLocation.lat, refs.userLocation.lng];
+  if (!refs[markerKey]) {
+    refs[markerKey] = L.marker(point, {
+      icon: createUserLocationIcon(),
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: 900,
+    }).addTo(mapInstance);
+  } else {
+    refs[markerKey].setLatLng(point);
+  }
+
+  const accuracy = Math.max(refs.userLocation.accuracy || 0, 0);
+  if (!refs[circleKey]) {
+    refs[circleKey] = L.circle(point, {
+      radius: accuracy,
+      color: '#2563eb',
+      weight: 1,
+      opacity: 0.5,
+      fillColor: '#60a5fa',
+      fillOpacity: 0.14,
+      interactive: false,
+    }).addTo(mapInstance);
+  } else {
+    refs[circleKey].setLatLng(point);
+    refs[circleKey].setRadius(accuracy);
+  }
+}
+
+function updateNearbyRadiusOverlay(mapInstance, layerKey) {
+  if (!mapInstance) return;
+  if (refs.searchMode !== 'nearby' || !refs.userLocation) {
+    clearLayerRef(layerKey);
+    return;
+  }
+
+  const point = [refs.userLocation.lat, refs.userLocation.lng];
+  const radiusMeters = refs.nearbyRadiusKm * 1000;
+  if (!refs[layerKey]) {
+    refs[layerKey] = L.circle(point, {
+      radius: radiusMeters,
+      color: '#0a8f3c',
+      weight: 1.5,
+      opacity: 0.75,
+      fillColor: '#0a8f3c',
+      fillOpacity: 0.06,
+      interactive: false,
+    }).addTo(mapInstance);
+  } else {
+    refs[layerKey].setLatLng(point);
+    refs[layerKey].setRadius(radiusMeters);
+  }
+}
+
+export function refreshUserLocationOverlays({ recenter = false, mapInstance = null } = {}) {
+  if (refs.map) {
+    updateLocationOverlay(refs.map, 'userLocationMarker', 'userLocationCircle');
+    updateNearbyRadiusOverlay(refs.map, 'nearbyRadiusLayer');
+  }
+  if (refs.mobileMap) {
+    updateLocationOverlay(refs.mobileMap, 'mobileUserLocationMarker', 'mobileUserLocationCircle');
+    updateNearbyRadiusOverlay(refs.mobileMap, 'mobileNearbyRadiusLayer');
+  }
+  if (recenter && refs.userLocation && mapInstance) {
+    const targetZoom = Math.max(mapInstance.getZoom?.() || 0, 14);
+    mapInstance.flyTo([refs.userLocation.lat, refs.userLocation.lng], targetZoom, { duration: 0.8 });
+  }
+}
+
+export function clearNearbyRadiusOverlays() {
+  clearLayerRef('nearbyRadiusLayer');
+  clearLayerRef('mobileNearbyRadiusLayer');
+}
+
+function geolocationErrorMessage(error) {
+  if (!error) return 'Could not get your location right now.';
+  if (error.code === 1) return 'Location permission was denied.';
+  if (error.code === 2) return 'Your location is unavailable right now.';
+  if (error.code === 3) return 'Getting your location timed out.';
+  return 'Could not get your location right now.';
+}
+
+export async function requestUserLocation({ mapInstance = refs.map || refs.mobileMap, recenter = true } = {}) {
+  if (!navigator.geolocation) {
+    notify('Your browser does not support location services.', { tone: 'error' });
+    throw new Error('unsupported');
+  }
+
+  const location = await new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy || 0,
+        ts: Date.now(),
+      }),
+      err => reject(err),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 },
+    );
+  }).catch(error => {
+    notify(geolocationErrorMessage(error), { tone: 'error' });
+    throw error;
+  });
+
+  refs.userLocation = location;
+  persistUserLocation(location);
+  refreshUserLocationOverlays({ recenter, mapInstance });
+  return location;
+}
+
+function createGpsControl(mapInstance) {
+  return L.Control.extend({
+    options: { position: 'topleft' },
+    onAdd() {
+      const container = L.DomUtil.create('div', 'map-gps-control');
+      const button = L.DomUtil.create('button', 'map-gps-btn', container);
+      button.type = 'button';
+      button.title = 'Use my location';
+      button.setAttribute('aria-label', 'Use my location');
+      button.innerHTML = `
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2v3m0 14v3m10-10h-3M5 12H2m15.364-7.364l-2.121 2.121M8.757 15.243l-2.121 2.121m10.728 0l-2.121-2.121M8.757 8.757 6.636 6.636M12 8a4 4 0 100 8 4 4 0 000-8z"/>
+        </svg>
+      `;
+      L.DomEvent.disableClickPropagation(container);
+      L.DomEvent.disableScrollPropagation(container);
+      button.addEventListener('click', async e => {
+        e.preventDefault();
+        if (button.disabled) return;
+        button.disabled = true;
+        button.classList.add('is-loading');
+        try {
+          await requestUserLocation({ mapInstance, recenter: true });
+        } finally {
+          button.disabled = false;
+          button.classList.remove('is-loading');
+        }
+      });
+      return container;
+    },
+  });
+}
 
 function getAreaCounts() {
   if (refs.searchMode === 'viewport' && refs.mapAreaTotals && Object.keys(refs.mapAreaTotals).length) {
@@ -412,15 +672,17 @@ export function initMap(selectAreaFull, onViewportChange, openDrawer) {
   refs._openDrawer = openDrawer;
 
   const cd = CITY_DEFAULTS[S.city];
+  ensureMapLayerState();
   refs.map = L.map('mapContainer', { zoomControl: true }).setView([cd.lat, cd.lng], cd.zoom);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap',
-    maxZoom: 18,
-  }).addTo(refs.map);
+  applyBaseLayer(refs.map, 'mapBaseLayer', refs.mapLayer);
+  refs.map.addControl(new (createLayerToggleControl())());
+  refs.map.addControl(new (createGpsControl(refs.map))());
 
   setTimeout(() => refs.map?.invalidateSize(), 100);
   fitCityOverview(refs.map);
   ensureMarkers(selectAreaFull);
+  refreshUserLocationOverlays();
+  syncLayerToggleButtons();
 
   refs.map.on('moveend', syncDesktopViewport);
   refs.map.on('zoomend', syncDesktopViewport);
@@ -432,11 +694,13 @@ export function initMap(selectAreaFull, onViewportChange, openDrawer) {
 
 function renderMobileMapCard(item) {
   const img = item.image_url;
+  const distanceLabel = formatDistance(item.distance_km);
   return `<div class="shrink-0 w-64 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden cursor-pointer" style="scroll-snap-align:start" data-mobile-card-url="${escA(item.url || '')}">
     ${img ? `<img class="w-full h-32 object-cover" src="${escA(img)}" alt="" loading="lazy">` : `<div class="w-full h-32 bg-gray-100 flex items-center justify-center text-3xl text-gray-300">&#x1f3e0;</div>`}
     <div class="p-2.5">
       <div class="text-sm font-bold text-gray-800">${esc(fmtPrice(item.price, item.price_text))}</div>
       <div class="text-xs text-gray-500 line-clamp-1">${esc(item.title || 'Rental')}</div>
+      ${distanceLabel ? `<div class="mt-1 text-[11px] font-semibold text-brand-600">${esc(distanceLabel)}</div>` : ''}
       <div class="flex gap-2 mt-1 text-[11px] text-gray-400">
         ${item.bedrooms ? `<span>${item.bedrooms} bed</span>` : ''}
         ${item.bathrooms ? `<span>${item.bathrooms} bath</span>` : ''}
@@ -497,12 +761,14 @@ export function initMobileMap(selectAreaFull, openDrawer, onViewportChange) {
 
     if (!refs.mobileMap) {
       const cd = CITY_DEFAULTS[S.city];
+      ensureMapLayerState();
       refs.mobileMap = L.map('mapContainerMobile', { zoomControl: true }).setView([cd.lat, cd.lng], cd.zoom);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
-        maxZoom: 18,
-      }).addTo(refs.mobileMap);
+      applyBaseLayer(refs.mobileMap, 'mobileMapBaseLayer', refs.mapLayer);
+      refs.mobileMap.addControl(new (createLayerToggleControl())());
+      refs.mobileMap.addControl(new (createGpsControl(refs.mobileMap))());
       fitCityOverview(refs.mobileMap);
+      refreshUserLocationOverlays();
+      syncLayerToggleButtons();
       refs.mobileMap.on('moveend', () => {
         if (!isMobileOverlayVisible()) return;
         refs._onMobileViewportChange?.();

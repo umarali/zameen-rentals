@@ -1,11 +1,97 @@
 """Listing CRUD operations and local search queries."""
-import hashlib, json, logging
+import hashlib, json, logging, math
 from datetime import datetime
 
 from app.database import _get_conn
 from app.data import PROPERTY_TYPES
 
 logger = logging.getLogger("zameenrentals")
+
+
+def _listing_filter_clauses(*, city="karachi", area=None, area_names=None, property_type=None,
+                            bedrooms=None, price_min=None, price_max=None,
+                            furnished=None, q=None, exact_only=False, geocoded_only=False):
+    conditions = ["is_active = 1", "city = ?"]
+    params = [city]
+
+    if exact_only:
+        conditions.append("location_source = 'listing_exact'")
+    if geocoded_only:
+        conditions.append("latitude IS NOT NULL AND longitude IS NOT NULL")
+
+    if area_names:
+        placeholders = ",".join("?" for _ in area_names)
+        conditions.append(f"area_name IN ({placeholders})")
+        params.extend(area_names)
+    elif area:
+        conditions.append("area_name = ?")
+        params.append(area)
+    if property_type:
+        info = PROPERTY_TYPES.get(property_type.lower())
+        if info:
+            conditions.append("property_type = ?")
+            params.append(info["label"])
+    if bedrooms:
+        conditions.append("bedrooms = ?")
+        params.append(bedrooms)
+    if price_min:
+        conditions.append("price >= ?")
+        params.append(price_min)
+    if price_max:
+        conditions.append("price <= ?")
+        params.append(price_max)
+    if furnished:
+        conditions.append("(amenities_json LIKE '%furnished%' OR details_json LIKE '%furnished%')")
+    if q:
+        conditions.append("id IN (SELECT rowid FROM listings_fts WHERE listings_fts MATCH ?)")
+        params.append(q)
+
+    return conditions, params
+
+
+def _bounding_box(lat, lng, radius_km):
+    radius_km = max(radius_km, 0.001)
+    lat_delta = radius_km / 111.0
+    cos_lat = max(math.cos(math.radians(lat)), 0.01)
+    lng_delta = radius_km / (111.320 * cos_lat)
+    return (
+        lat - lat_delta,
+        lat + lat_delta,
+        lng - lng_delta,
+        lng + lng_delta,
+    )
+
+
+def _haversine_km(lat1, lng1, lat2, lng2):
+    lat1, lng1, lat2, lng2 = map(math.radians, [lat1, lng1, lat2, lng2])
+    dlat = lat2 - lat1
+    dlng = lng2 - lng1
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlng / 2) ** 2
+    return 6371.0 * (2 * math.asin(math.sqrt(a)))
+
+
+def _datetime_sort_value(value):
+    if not value:
+        return 0.0
+    try:
+        return datetime.fromisoformat(value).timestamp()
+    except ValueError:
+        return 0.0
+
+
+def _nearby_sort_key(row, sort):
+    distance_km = row["_distance_km"]
+    price = row["price"]
+    first_seen_at = _datetime_sort_value(row["first_seen_at"])
+    last_seen_at = _datetime_sort_value(row["last_seen_at"])
+
+    if sort == "price_low":
+        return (price is None, price if price is not None else float("inf"), distance_km, -last_seen_at)
+    if sort == "price_high":
+        return (price is None, -(price if price is not None else 0), distance_km, -last_seen_at)
+    if sort == "newest":
+        return (-first_seen_at, distance_km, -last_seen_at)
+    return (distance_km, -last_seen_at)
 
 
 def content_hash(price, title, bedrooms, bathrooms, area_size):
@@ -225,36 +311,11 @@ def search_listings(*, city="karachi", area=None, area_names=None, property_type
                     center_lat=None, center_lng=None):
     """Search listings from local DB. Returns dict matching current API shape."""
     conn = _get_conn()
-    conditions = ["is_active = 1", "city = ?"]
-    params = [city]
-
-    if area_names:
-        placeholders = ",".join("?" for _ in area_names)
-        conditions.append(f"area_name IN ({placeholders})")
-        params.extend(area_names)
-    elif area:
-        conditions.append("area_name = ?")
-        params.append(area)
-    if property_type:
-        info = PROPERTY_TYPES.get(property_type.lower())
-        if info:
-            conditions.append("property_type = ?")
-            params.append(info["label"])
-    if bedrooms:
-        conditions.append("bedrooms = ?")
-        params.append(bedrooms)
-    if price_min:
-        conditions.append("price >= ?")
-        params.append(price_min)
-    if price_max:
-        conditions.append("price <= ?")
-        params.append(price_max)
-    if furnished:
-        conditions.append("(amenities_json LIKE '%furnished%' OR details_json LIKE '%furnished%')")
-    if q:
-        conditions.append("id IN (SELECT rowid FROM listings_fts WHERE listings_fts MATCH ?)")
-        params.append(q)
-
+    conditions, params = _listing_filter_clauses(
+        city=city, area=area, area_names=area_names, property_type=property_type,
+        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        furnished=furnished, q=q,
+    )
     where = " AND ".join(conditions)
 
     map_focus = center_lat is not None and center_lng is not None
@@ -306,33 +367,11 @@ def count_listings_by_area(*, city="karachi", area_names=None, property_type=Non
                            furnished=None, q=None):
     """Return listing counts grouped by area for the current filter set."""
     conn = _get_conn()
-    conditions = ["is_active = 1", "city = ?"]
-    params = [city]
-
-    if area_names:
-        placeholders = ",".join("?" for _ in area_names)
-        conditions.append(f"area_name IN ({placeholders})")
-        params.extend(area_names)
-    if property_type:
-        info = PROPERTY_TYPES.get(property_type.lower())
-        if info:
-            conditions.append("property_type = ?")
-            params.append(info["label"])
-    if bedrooms:
-        conditions.append("bedrooms = ?")
-        params.append(bedrooms)
-    if price_min:
-        conditions.append("price >= ?")
-        params.append(price_min)
-    if price_max:
-        conditions.append("price <= ?")
-        params.append(price_max)
-    if furnished:
-        conditions.append("(amenities_json LIKE '%furnished%' OR details_json LIKE '%furnished%')")
-    if q:
-        conditions.append("id IN (SELECT rowid FROM listings_fts WHERE listings_fts MATCH ?)")
-        params.append(q)
-
+    conditions, params = _listing_filter_clauses(
+        city=city, area_names=area_names, property_type=property_type,
+        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        furnished=furnished, q=q,
+    )
     where = " AND ".join(conditions)
     rows = conn.execute(
         f"""
@@ -345,6 +384,100 @@ def count_listings_by_area(*, city="karachi", area_names=None, property_type=Non
         params,
     ).fetchall()
     return {row["area_name"]: row["total"] for row in rows}
+
+
+def search_nearby_listings(*, city="karachi", lat, lng, radius_km=5,
+                           area=None, property_type=None, bedrooms=None,
+                           price_min=None, price_max=None, furnished=None,
+                           sort=None, q=None, page=1, per_page=25):
+    """Search nearby listings using exact coordinates only."""
+    conn = _get_conn()
+    conditions, params = _listing_filter_clauses(
+        city=city, area=area, property_type=property_type,
+        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        furnished=furnished, q=q, exact_only=True, geocoded_only=True,
+    )
+    south, north, west, east = _bounding_box(lat, lng, radius_km)
+    conditions.extend([
+        "latitude BETWEEN ? AND ?",
+        "longitude BETWEEN ? AND ?",
+    ])
+    params.extend([south, north, west, east])
+    where = " AND ".join(conditions)
+
+    rows = conn.execute(
+        f"SELECT * FROM listings WHERE {where}",
+        params,
+    ).fetchall()
+
+    nearby_rows = []
+    for row in rows:
+        distance_km = _haversine_km(lat, lng, row["latitude"], row["longitude"])
+        if distance_km > radius_km:
+            continue
+        row_data = dict(row)
+        row_data["_distance_km"] = distance_km
+        nearby_rows.append(row_data)
+
+    nearby_rows.sort(key=lambda row: _nearby_sort_key(row, sort))
+    total = len(nearby_rows)
+    offset = (page - 1) * per_page
+    paginated_rows = nearby_rows[offset:offset + per_page]
+
+    results = []
+    for row in paginated_rows:
+        row["distance_km"] = row["_distance_km"]
+        row["distance_source"] = "listing_exact"
+        row["is_distance_approximate"] = False
+        results.append(_row_to_listing(row))
+
+    return {
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "results": results,
+        "ranking": "nearby_distance" if sort not in {"price_low", "price_high", "newest"} else "nearby_sort",
+    }
+
+
+def get_nearby_enrichment_candidates(*, city="karachi", lat, lng, radius_km=5,
+                                     area=None, property_type=None, bedrooms=None,
+                                     price_min=None, price_max=None, furnished=None,
+                                     q=None, limit=12):
+    """Return centroid-backed candidates worth upgrading to exact coordinates."""
+    conn = _get_conn()
+    conditions, params = _listing_filter_clauses(
+        city=city, area=area, property_type=property_type,
+        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        furnished=furnished, q=q, geocoded_only=True,
+    )
+    conditions.append("location_source IS NOT NULL")
+    conditions.append("location_source != 'listing_exact'")
+    south, north, west, east = _bounding_box(lat, lng, radius_km)
+    conditions.extend([
+        "latitude BETWEEN ? AND ?",
+        "longitude BETWEEN ? AND ?",
+    ])
+    params.extend([south, north, west, east])
+    where = " AND ".join(conditions)
+
+    rows = conn.execute(
+        f"SELECT zameen_id, url, city, latitude, longitude FROM listings WHERE {where}",
+        params,
+    ).fetchall()
+    candidates = []
+    for row in rows:
+        distance_km = _haversine_km(lat, lng, row["latitude"], row["longitude"])
+        if distance_km > radius_km:
+            continue
+        candidates.append({
+            "zameen_id": row["zameen_id"],
+            "url": row["url"],
+            "city": row["city"],
+            "distance_km": distance_km,
+        })
+    candidates.sort(key=lambda row: row["distance_km"])
+    return candidates[:limit]
 
 
 def _row_to_listing(row):
@@ -385,6 +518,12 @@ def _row_to_listing(row):
     d["has_exact_geography"] = row["location_source"] == "listing_exact"
     if "distance_to_center" in row.keys() and row["distance_to_center"] is not None:
         d["distance_to_center"] = row["distance_to_center"]
+    if "distance_km" in row.keys() and row["distance_km"] is not None:
+        d["distance_km"] = row["distance_km"]
+    if "distance_source" in row.keys() and row["distance_source"] is not None:
+        d["distance_source"] = row["distance_source"]
+    if "is_distance_approximate" in row.keys():
+        d["is_distance_approximate"] = bool(row["is_distance_approximate"])
     if row["description"]:
         d["description"] = row["description"]
     if row["features_json"]:

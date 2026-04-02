@@ -5,7 +5,8 @@ from app.database import _get_conn, init_db
 from app.db_listings import (
     upsert_listing, search_listings, get_listing_by_zameen_id,
     get_listings_needing_detail, mark_stale_listings, get_crawl_stats,
-    content_hash, detail_hash,
+    content_hash, detail_hash, search_nearby_listings,
+    get_nearby_enrichment_candidates,
 )
 
 
@@ -323,6 +324,172 @@ class TestSearchListings:
         result = search_listings(city="karachi", q="sea facing")
         assert result["total"] >= 1
         assert "sea" in result["results"][0]["title"].lower()
+
+
+class TestNearbySearchListings:
+    def test_nearby_search_returns_exact_only_results_with_distance_fields(self):
+        upsert_listing(
+            zameen_id="350001",
+            url="https://zameen.com/Property/t-350001-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0300,
+            card_data={"title": "Exact nearby", "price": 95000, "bedrooms": 2, "bathrooms": 2, "area_size": "1200 sqft", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="350001",
+            url="https://zameen.com/Property/t-350001-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Exact nearby detail",
+                "latitude": 24.8212,
+                "longitude": 67.0311,
+                "location_source": "listing_exact",
+            },
+        )
+        upsert_listing(
+            zameen_id="350002",
+            url="https://zameen.com/Property/t-350002-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0300,
+            card_data={"title": "Centroid only", "price": 85000, "bedrooms": 2, "bathrooms": 2, "area_size": "1100 sqft", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="350003",
+            url="https://zameen.com/Property/t-350003-1-1.html",
+            city="karachi",
+            area_name="DHA Phase 5",
+            area_slug="Karachi_DHA_Phase_5",
+            lat=24.7900,
+            lng=67.1000,
+            card_data={"title": "Exact but far", "price": 120000, "bedrooms": 3, "bathrooms": 2, "area_size": "1500 sqft", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="350003",
+            url="https://zameen.com/Property/t-350003-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Exact far detail",
+                "latitude": 24.7900,
+                "longitude": 67.1000,
+                "location_source": "listing_exact",
+            },
+        )
+
+        result = search_nearby_listings(
+            city="karachi",
+            lat=24.8200,
+            lng=67.0300,
+            radius_km=5,
+        )
+
+        assert result["total"] == 1
+        assert result["results"][0]["title"] == "Exact nearby"
+        assert result["results"][0]["distance_source"] == "listing_exact"
+        assert result["results"][0]["is_distance_approximate"] is False
+        assert result["results"][0]["distance_km"] < 1
+
+    def test_nearby_search_keeps_explicit_sort_and_uses_distance_tiebreaker(self):
+        for zameen_id, title, lat, lng in (
+            ("350010", "Cheaper and near", 24.8202, 67.0302),
+            ("350011", "Cheaper but farther", 24.8265, 67.0385),
+        ):
+            upsert_listing(
+                zameen_id=zameen_id,
+                url=f"https://zameen.com/Property/t-{zameen_id}-1-1.html",
+                city="karachi",
+                area_name="Clifton",
+                area_slug="Karachi_Clifton",
+                lat=24.8200,
+                lng=67.0300,
+                card_data={"title": title, "price": 80000, "bedrooms": 2, "bathrooms": 2, "area_size": "1000 sqft", "property_type": "Apartment"},
+            )
+            upsert_listing(
+                zameen_id=zameen_id,
+                url=f"https://zameen.com/Property/t-{zameen_id}-1-1.html",
+                city="karachi",
+                detail_data={
+                    "description": title,
+                    "latitude": lat,
+                    "longitude": lng,
+                    "location_source": "listing_exact",
+                },
+            )
+
+        result = search_nearby_listings(
+            city="karachi",
+            lat=24.8200,
+            lng=67.0300,
+            radius_km=5,
+            sort="price_low",
+        )
+
+        assert result["total"] == 2
+        assert result["results"][0]["title"] == "Cheaper and near"
+        assert result["results"][0]["distance_km"] < result["results"][1]["distance_km"]
+
+    def test_nearby_enrichment_candidates_only_return_centroid_backed_matches(self):
+        upsert_listing(
+            zameen_id="350020",
+            url="https://zameen.com/Property/t-350020-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8204,
+            lng=67.0304,
+            card_data={"title": "Centroid close", "price": 78000, "bedrooms": 2, "bathrooms": 1, "area_size": "900 sqft", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="350021",
+            url="https://zameen.com/Property/t-350021-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8230,
+            lng=67.0340,
+            card_data={"title": "Centroid farther", "price": 82000, "bedrooms": 2, "bathrooms": 1, "area_size": "950 sqft", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="350022",
+            url="https://zameen.com/Property/t-350022-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0300,
+            card_data={"title": "Already exact", "price": 90000, "bedrooms": 2, "bathrooms": 2, "area_size": "1000 sqft", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="350022",
+            url="https://zameen.com/Property/t-350022-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Exact pin",
+                "latitude": 24.8208,
+                "longitude": 67.0308,
+                "location_source": "listing_exact",
+            },
+        )
+
+        candidates = get_nearby_enrichment_candidates(
+            city="karachi",
+            lat=24.8200,
+            lng=67.0300,
+            radius_km=5,
+        )
+
+        assert [candidate["zameen_id"] for candidate in candidates] == ["350020", "350021"]
+        assert candidates[0]["distance_km"] <= candidates[1]["distance_km"]
+
+    def test_geo_index_exists_for_active_geocoded_listings(self):
+        conn = _get_conn()
+        indexes = conn.execute("PRAGMA index_list(listings)").fetchall()
+        assert any(index["name"] == "idx_listings_geo_active" for index in indexes)
 
 
 class TestGetListingByZameenId:

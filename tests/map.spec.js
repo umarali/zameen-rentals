@@ -22,6 +22,24 @@ test.describe("Desktop Map", () => {
     ).toBeVisible();
   });
 
+  test("map layer toggle switches to satellite and persists after reload", async ({ page }) => {
+    const satelliteBtn = page.locator('#mapContainer [data-map-layer="satellite"]').first();
+    await satelliteBtn.click();
+    await expect(satelliteBtn).toHaveClass(/active/);
+    await expect(page.locator("#mapContainer .leaflet-tile").first()).toHaveAttribute(
+      "src",
+      /World_Imagery|ArcGIS\/rest\/services\/World_Imagery/
+    );
+
+    await page.reload();
+    await page.waitForSelector("#mapContainer .leaflet-control-zoom", {
+      timeout: 30000,
+    });
+    await expect(
+      page.locator('#mapContainer [data-map-layer="satellite"]').first()
+    ).toHaveClass(/active/);
+  });
+
   test("area markers appear on map after search", async ({ page }) => {
     await page.locator('.city-tab[data-city="karachi"]').click();
     await page.waitForTimeout(2000);
@@ -107,6 +125,71 @@ test.describe("Desktop Map", () => {
     await expect(page.locator("#resultsCount")).toContainText("shown");
     await expect(page.locator("#resultsMeta")).toContainText(/available in|available across|No local listings|Move the map/);
     await expect(page.locator("#dataSource")).toContainText(/Nearest first|Instant/);
+  });
+
+  test("nearby chip warns when city is not supported yet", async ({ page }) => {
+    await page.locator('.city-tab[data-city="lahore"]').click();
+    await page.locator("#nearbyChip").click();
+    await expect(page.locator("#toastStack")).toContainText(
+      "Nearby search is available in Karachi for now."
+    );
+  });
+
+  test("nearby mode shows exact distance labels and radius controls", async ({
+    page,
+  }) => {
+    await page.context().grantPermissions(["geolocation"]);
+    await page.context().setGeolocation({ latitude: 24.82, longitude: 67.03 });
+
+    const nearbyRequests = [];
+    await page.route("**/api/nearby-search**", async (route) => {
+      nearbyRequests.push(route.request().url());
+      await route.fulfill({
+        json: {
+          total: 1,
+          page: 1,
+          per_page: 25,
+          results: [
+            {
+              title: "Nearby exact rental",
+              url: "https://www.zameen.com/Property/test-nearby-1.html",
+              price: 90000,
+              bedrooms: 2,
+              bathrooms: 2,
+              area_size: "1000 sqft",
+              location: "Clifton, Karachi",
+              property_type: "Apartment",
+              latitude: 24.821,
+              longitude: 67.031,
+              location_source: "listing_exact",
+              has_exact_geography: true,
+              distance_km: 1.2,
+              distance_source: "listing_exact",
+              is_distance_approximate: false,
+            },
+          ],
+          source: "local",
+          mode: "nearby",
+          radius_km: 5,
+          focus_center: { lat: 24.82, lng: 67.03 },
+        },
+      });
+    });
+
+    await page.locator('.city-tab[data-city="karachi"]').click();
+    await page.locator("#nearbyChip").click();
+
+    await expect(page.locator("#listingsTitle")).toHaveText("Rentals near you");
+    await expect(page.locator("#resultsMeta")).toContainText("within 5 km");
+    await expect(page.locator("#listingsGrid")).toContainText("1.2 km away");
+    await expect(page.locator("#radiusChip")).toBeVisible();
+    await expect(page.locator("#mapContainer .user-location-marker")).toBeVisible();
+
+    await page.locator("#radiusChip").click();
+    await page.locator('#radiusOptions [data-radius-km="10"]').click();
+
+    await expect.poll(() => nearbyRequests.length).toBeGreaterThan(1);
+    expect(nearbyRequests.some((url) => url.includes("radius_km=10"))).toBeTruthy();
   });
 });
 

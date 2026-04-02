@@ -1,8 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Outer diamond shape (two chevron strokes forming pin/diamond) -->
-  <path d="M32 6L6 34l26 26 26-26L32 6zm0 10l18 18-18 18L14 34 32 16z" fill="#0a8f3c"/>
-  <!-- Inner white diamond cutout -->
-  <path d="M32 22L18 34l14 16 14-16L32 22z" fill="white"/>
-  <!-- Small chimney accent -->
-  <rect x="28.5" y="1" width="7" height="7" rx="1.5" fill="#2ab556"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="favicon-bg" x1="11" y1="6" x2="53" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#159A6C"/>
+      <stop offset="1" stop-color="#0C4A36"/>
+    </linearGradient>
+    <linearGradient id="favicon-glow" x1="18" y1="12" x2="39" y2="33" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="18" fill="url(#favicon-bg)"/>
+  <path d="M32 14C22.611 14 15 21.611 15 31C15 42.198 25.098 50.346 30.145 53.956C31.253 54.749 32.747 54.749 33.855 53.956C38.902 50.346 49 42.198 49 31C49 21.611 41.389 14 32 14Z" fill="#FFFDF8"/>
+  <path d="M32 21.5L22.835 29.206C22.086 29.835 21.989 30.953 22.619 31.701C23.248 32.45 24.365 32.547 25.114 31.917L32 26.125L38.886 31.917C39.635 32.547 40.752 32.45 41.381 31.701C42.011 30.953 41.914 29.835 41.165 29.206L32 21.5Z" fill="#CFF3E1"/>
+  <path d="M25 29.5V37.5C25 39.433 26.567 41 28.5 41H35.5C37.433 41 39 39.433 39 37.5V29.5L32 23.625L25 29.5Z" fill="#127B5A"/>
+  <path d="M30 34.75C30 33.784 30.784 33 31.75 33H32.25C33.216 33 34 33.784 34 34.75V41H30V34.75Z" fill="#F1C86A"/>
+  <path d="M14 16C14 10.477 18.477 6 24 6H40C45.523 6 50 10.477 50 16V17.5C50 18.328 49.328 19 48.5 19H15.5C14.672 19 14 18.328 14 17.5V16Z" fill="url(#favicon-glow)" opacity=".7"/>
 </svg>

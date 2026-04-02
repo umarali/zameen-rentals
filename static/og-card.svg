@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="card-bg" x1="62" y1="42" x2="1112" y2="608" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FCFA"/>
+      <stop offset="1" stop-color="#EEF8F4"/>
+    </linearGradient>
+    <linearGradient id="card-panel" x1="760" y1="92" x2="1100" y2="556" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#159A6C"/>
+      <stop offset="1" stop-color="#0C4A36"/>
+    </linearGradient>
+    <linearGradient id="card-glow" x1="816" y1="122" x2="1014" y2="268" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity=".34"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" rx="36" fill="url(#card-bg)"/>
+  <circle cx="1086" cy="44" r="196" fill="#BDE5D4" opacity=".4"/>
+  <circle cx="1038" cy="598" r="166" fill="#DFF2E9" opacity=".9"/>
+  <path d="M652 78C773 146 816 252 779 396C758 480 800 542 932 582" stroke="#CFE9DB" stroke-width="16" stroke-linecap="round" opacity=".55"/>
+
+  <g style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+    <g transform="translate(96 86)">
+      <rect x="0" y="0" width="88" height="88" rx="28" fill="url(#card-panel)"/>
+      <path d="M44 15C29.299 15 17.375 26.924 17.375 41.625C17.375 59.152 33.188 71.898 41.087 77.55C42.822 78.792 45.178 78.792 46.913 77.55C54.812 71.898 70.625 59.152 70.625 41.625C70.625 26.924 58.701 15 44 15Z" fill="#FFFDF8"/>
+      <path d="M44 26.75L29.664 38.809C28.492 39.793 28.341 41.542 29.325 42.714C30.309 43.885 32.059 44.037 33.23 43.052L44 33.993L54.77 43.052C55.941 44.037 57.691 43.885 58.675 42.714C59.659 41.542 59.508 39.793 58.336 38.809L44 26.75Z" fill="#CFF3E1"/>
+      <path d="M33.062 39.27V51.779C33.062 54.8 35.512 57.25 38.533 57.25H49.467C52.488 57.25 54.938 54.8 54.938 51.779V39.27L44 30.087L33.062 39.27Z" fill="#127B5A"/>
+      <path d="M40.875 47.482C40.875 45.972 42.099 44.747 43.609 44.747H44.391C45.901 44.747 47.125 45.972 47.125 47.482V57.25H40.875V47.482Z" fill="#F1C86A"/>
+      <path d="M15.812 18.125C15.812 9.839 22.526 3.125 30.812 3.125H57.188C65.474 3.125 72.188 9.839 72.188 18.125V20.375C72.188 21.617 71.18 22.625 69.938 22.625H18.062C16.82 22.625 15.812 21.617 15.812 20.375V18.125Z" fill="url(#card-glow)" opacity=".76"/>
+    </g>
+
+    <text x="214" y="128" fill="#127B5A" font-size="26" font-weight="700" letter-spacing=".8">ZameenRentals</text>
+    <text x="96" y="256" fill="#0F172A" font-size="70" font-weight="800" letter-spacing="-2.4">Rental search,</text>
+    <text x="96" y="332" fill="#0F172A" font-size="70" font-weight="800" letter-spacing="-2.4">made local.</text>
+    <text x="96" y="404" fill="#435265" font-size="29" font-weight="500">Find houses, flats, and rooms across Pakistan.</text>
+
+    <g transform="translate(96 456)">
+      <rect width="164" height="46" rx="23" fill="#FFFFFF"/>
+      <rect width="164" height="46" rx="23" stroke="#D7EBDD" stroke-width="2"/>
+      <text x="82" y="29" fill="#127B5A" font-size="21" font-weight="700" text-anchor="middle">Map-first</text>
+    </g>
+    <g transform="translate(276 456)">
+      <rect width="202" height="46" rx="23" fill="#FFFFFF"/>
+      <rect width="202" height="46" rx="23" stroke="#D7EBDD" stroke-width="2"/>
+      <text x="101" y="29" fill="#127B5A" font-size="21" font-weight="700" text-anchor="middle">Area coverage</text>
+    </g>
+    <g transform="translate(494 456)">
+      <rect width="182" height="46" rx="23" fill="#FFFFFF"/>
+      <rect width="182" height="46" rx="23" stroke="#D7EBDD" stroke-width="2"/>
+      <text x="91" y="29" fill="#127B5A" font-size="21" font-weight="700" text-anchor="middle">Smart filters</text>
+    </g>
+
+    <g transform="translate(730 76)">
+      <rect x="0" y="16" width="382" height="478" rx="38" fill="#0C4735" opacity=".12"/>
+      <rect width="382" height="478" rx="38" fill="url(#card-panel)"/>
+      <path d="M36 54C36 34.118 52.118 18 72 18H310C329.882 18 346 34.118 346 54V76C346 78.209 344.209 80 342 80H40C37.791 80 36 78.209 36 76V54Z" fill="url(#card-glow)" opacity=".75"/>
+      <text x="48" y="142" fill="#DDF6EA" font-size="24" font-weight="700" letter-spacing=".8">Explore with confidence</text>
+      <text x="48" y="212" fill="#FFFFFF" font-size="42" font-weight="800" letter-spacing="-1.1">Search rentals by</text>
+      <text x="48" y="258" fill="#FFFFFF" font-size="42" font-weight="800" letter-spacing="-1.1">area, budget,</text>
+      <text x="48" y="304" fill="#FFFFFF" font-size="42" font-weight="800" letter-spacing="-1.1">and map view.</text>
+
+      <g transform="translate(48 356)">
+        <rect width="286" height="84" rx="24" fill="#FFFFFF" fill-opacity=".12"/>
+        <rect width="286" height="84" rx="24" stroke="#FFFFFF" stroke-opacity=".2" stroke-width="2"/>
+        <circle cx="34" cy="42" r="10" fill="#F1C86A"/>
+        <text x="62" y="34" fill="#FFFFFF" font-size="18" font-weight="700">Natural language</text>
+        <text x="62" y="58" fill="#DFF2E9" font-size="18">Try “2 bed flat DHA under 50k”</text>
+      </g>
+
+      <g transform="translate(48 436)">
+        <rect width="286" height="56" rx="20" fill="#FFFFFF" fill-opacity=".12"/>
+        <rect width="286" height="56" rx="20" stroke="#FFFFFF" stroke-opacity=".2" stroke-width="2"/>
+        <text x="24" y="35" fill="#FFFFFF" font-size="19" font-weight="700">Karachi, Lahore, Islamabad</text>
+      </g>
+    </g>
+  </g>
+</svg>

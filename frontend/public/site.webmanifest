@@ -1,0 +1,20 @@
+{
+  "name": "ZameenRentals",
+  "short_name": "ZRentals",
+  "description": "Search rental listings across Pakistan with map-first discovery and smart filters.",
+  "theme_color": "#127b5a",
+  "background_color": "#eef8f4",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
