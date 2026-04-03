@@ -1,4 +1,3 @@
-@import "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 @import "tailwindcss";
 
 /* ===== Theme ===== */
@@ -71,20 +70,42 @@ body { display: grid; grid-template-rows: 60px auto 1fr; }
 /* ===== Map markers ===== */
 .area-marker { font-family: 'Inter', system-ui, sans-serif; cursor: pointer; }
 .area-label {
-  display: inline-block; padding: 0.25rem 0.625rem; border-radius: 9999px;
+  --area-label-scale: 1;
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.25rem 0.625rem; border-radius: 9999px;
   border: 1px solid #d1d5db; background: #fff; color: #374151;
   font-size: 11px; font-weight: 600; white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0,0,0,.05); transition: all .15s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  position: relative;
+  transform: translate(-50%, calc(-100% - 14px)) scale(var(--area-label-scale));
+  transform-origin: 50% 100%;
+  transition: background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
-.area-label:hover { background: #1f2937; color: #fff; border-color: #1f2937; transform: translate(-50%,-50%) scale(1.05); }
+.area-label::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 1px);
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #fff;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.08));
+}
+.area-label:hover { --area-label-scale: 1.05; background: #1f2937; color: #fff; border-color: #1f2937; }
 .area-label:hover .area-badge { background: #fff; color: #1f2937; }
-.area-label-active { background: #127b5a; color: #fff; border-color: #0f654a; box-shadow: 0 4px 6px -1px rgba(18,123,90,.3); transform: translate(-50%,-50%) scale(1.1); }
+.area-label:hover::after { border-top-color: #1f2937; }
+.area-label-active { --area-label-scale: 1.08; background: #127b5a; color: #fff; border-color: #0f654a; box-shadow: 0 4px 6px -1px rgba(18,123,90,.3); }
 .area-label-active:hover { background: #127b5a; color: #fff; border-color: #0f654a; }
+.area-label-active::after { border-top-color: #127b5a; }
+.area-label-active:hover::after { border-top-color: #127b5a; }
 .area-badge {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 18px; height: 18px; padding: 0 4px;
   border-radius: 9px; background: #127b5a; color: #fff;
-  font-size: 10px; font-weight: 700; margin-left: 4px; line-height: 1;
+  font-size: 10px; font-weight: 700; margin-left: 0; line-height: 1;
 }
 .area-label-active .area-badge { background: #fff; color: #127b5a; }
 .area-dot {

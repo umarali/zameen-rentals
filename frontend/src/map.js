@@ -2,6 +2,7 @@
 
 import { $, $$, esc, escA, fmtPrice, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
+import { track } from './analytics.js';
 import { formatDistance, getAreaForListing } from './cards.js';
 import {
   createBaseLayer,
@@ -17,6 +18,7 @@ const EXACT_PREFETCH_CONCURRENCY = 3;
 const EXACT_PREFETCH_COOLDOWN_MS = 30000;
 const USER_LOCATION_STORAGE_KEY = 'rk_userLocation';
 const USER_LOCATION_TTL_MS = 30 * 60 * 1000;
+const AREA_LABEL_Z_INDEX = 1400;
 
 let exactPrefetchTimer = null;
 let exactPrefetchController = null;
@@ -228,6 +230,7 @@ function geolocationErrorMessage(error) {
 
 export async function requestUserLocation({ mapInstance = refs.map || refs.mobileMap, recenter = true } = {}) {
   if (!navigator.geolocation) {
+    track('location_permission_result', { outcome: 'error' });
     notify('Your browser does not support location services.', { tone: 'error' });
     throw new Error('unsupported');
   }
@@ -244,10 +247,12 @@ export async function requestUserLocation({ mapInstance = refs.map || refs.mobil
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 120000 },
     );
   }).catch(error => {
+    track('location_permission_result', { outcome: error?.code === 1 ? 'denied' : 'error' });
     notify(geolocationErrorMessage(error), { tone: 'error' });
     throw error;
   });
 
+  track('location_permission_result', { outcome: 'granted' });
   refs.userLocation = location;
   persistUserLocation(location);
   refreshUserLocationOverlays({ recenter, mapInstance });
@@ -605,6 +610,7 @@ export function updateMapMarkers() {
     const inView = bounds.contains(marker.getLatLng());
     const showLabel = isActive || isHovered || isPreview;
     const variant = hasResults || isActive ? 'covered' : 'coverage';
+    marker.setZIndexOffset(showLabel ? AREA_LABEL_Z_INDEX : 0);
 
     if (isActive) {
       const activeCount = refs.lastSearchTotal || count || 0;
@@ -710,7 +716,7 @@ export function initMap(selectAreaFull, onViewportChange, openDrawer) {
 
 function renderMobileMapCard(item) {
   const img = item.image_url;
-  const distanceLabel = formatDistance(item.distance_km);
+  const distanceLabel = formatDistance(item.distance_km, { approximate: item.is_distance_approximate });
   return `<div class="shrink-0 w-64 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden cursor-pointer" style="scroll-snap-align:start" data-mobile-card-url="${escA(item.url || '')}">
     ${img ? `<img class="w-full h-32 object-cover" src="${escA(img)}" alt="" loading="lazy">` : `<div class="w-full h-32 bg-gray-100 flex items-center justify-center text-3xl text-gray-300">&#x1f3e0;</div>`}
     <div class="p-2.5">
@@ -756,7 +762,7 @@ export function updateMobileMarkers(selectAreaFull) {
     const showLabel = isActive || refs.previewArea === area.name;
     const variant = count || isActive ? 'covered' : 'coverage';
     const icon = createIcon(area.name, isActive, showLabel ? count : 0, map, variant, showLabel);
-    L.marker([area.lat, area.lng], { icon }).on('click', () => {
+    L.marker([area.lat, area.lng], { icon, zIndexOffset: showLabel ? AREA_LABEL_Z_INDEX : 0 }).on('click', () => {
       handleAreaMarkerClick(area, selectAreaFull, map, { mobile: true });
     }).addTo(layer);
   });
