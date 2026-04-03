@@ -108,9 +108,6 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_listings_zameen_id ON listings(zameen_id);
             CREATE INDEX IF NOT EXISTS idx_listings_last_seen ON listings(last_seen_at);
             CREATE INDEX IF NOT EXISTS idx_listings_detail ON listings(detail_scraped_at);
-            CREATE INDEX IF NOT EXISTS idx_listings_geo_active ON listings(city, location_source, latitude, longitude)
-            WHERE is_active = 1 AND latitude IS NOT NULL AND longitude IS NOT NULL;
-
             -- ── Crawl state per area ──
             CREATE TABLE IF NOT EXISTS crawl_state (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -173,6 +170,12 @@ def init_db():
         for name, ddl in contact_columns.items():
             if name not in existing_columns:
                 conn.execute(ddl)
+
+        # Create geo index after location_source column is guaranteed to exist
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_listings_geo_active ON listings(city, location_source, latitude, longitude)
+            WHERE is_active = 1 AND latitude IS NOT NULL AND longitude IS NOT NULL
+        """)
 
         if "location_source" in {row["name"] for row in conn.execute("PRAGMA table_info(listings)").fetchall()}:
             conn.execute("""
