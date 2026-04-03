@@ -83,4 +83,6 @@ export const refs = {
   _openDrawer: null,
   _refreshCoverageUI: null,
   _notify: null,
+  _lastTriggeredBy: null,
+  _lastSearchSource: null,
 };

@@ -2,6 +2,7 @@
 
 import { $, $$, esc, escA, TYPE_L, fmtPrice } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
+import { trackContactIntent } from './analytics.js';
 
 // ===== AREA MATCHING FOR CARDS =====
 
@@ -31,14 +32,15 @@ export function getAreaForListing(item) {
   return null;
 }
 
-export function formatDistance(distanceKm) {
+export function formatDistance(distanceKm, { approximate = false } = {}) {
   const distance = Number(distanceKm);
   if (!Number.isFinite(distance)) return '';
+  const prefix = approximate ? '~' : '';
   if (distance < 1) {
     const meters = Math.max(50, Math.round((distance * 1000) / 50) * 50);
-    return `${meters} m away`;
+    return `${prefix}${meters} m away`;
   }
-  return `${distance.toFixed(distance < 10 ? 1 : 0)} km away`;
+  return `${prefix}${distance.toFixed(distance < 10 ? 1 : 0)} km away`;
 }
 
 // ===== RENDER CARD =====
@@ -74,7 +76,7 @@ export function renderCard(item, idx) {
   const typeLabel = item.property_type ? `<span class="text-[10px] font-semibold uppercase tracking-wide text-brand-500 bg-brand-50 px-2 py-0.5 rounded-full">${esc(item.property_type)}</span>` : '';
   const callPhone = item.call_phone || item.phone || '';
   const whatsappPhone = item.whatsapp_phone || '';
-  const distanceLabel = formatDistance(item.distance_km);
+  const distanceLabel = formatDistance(item.distance_km, { approximate: item.is_distance_approximate });
   const contactAttrs = [
     callPhone ? `data-call-phone="${escA(callPhone)}"` : '',
     whatsappPhone ? `data-whatsapp-phone="${escA(whatsappPhone)}"` : '',
@@ -163,6 +165,9 @@ function openContact(action, listingUrl, contact) {
 }
 
 export async function handleContactAction(action, listingUrl, btn) {
+  const card = btn.closest('.card-wrap');
+  const pos = card ? parseInt(card.dataset.idx, 10) : null;
+  trackContactIntent({ channel: action, listingUrl, position: Number.isFinite(pos) ? pos : null, mode: refs.searchMode, city: S.city, source: refs._lastSearchSource });
   if (openContact(action, listingUrl, getDatasetContact(btn))) return;
   btn.classList.add('animate-pulse');
   try {

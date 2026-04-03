@@ -1,6 +1,5 @@
 /** App entry point — wires modules together, search engine, init. */
 
-import '../src/style.css';
 import { $, $$, esc, TYPE_L, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import {
@@ -17,6 +16,7 @@ import {
 } from './map.js';
 import { openDrawer, initDrawerListeners } from './drawer.js';
 import { getStoredMapLayer } from './map-layers.js';
+import { initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen } from './analytics.js';
 
 function isNearbySupportedCity() {
   return S.city === 'karachi';
@@ -104,6 +104,7 @@ function selectAreaFull(name, fromMap) {
   refs.lastViewportSearchKey = '';
   refs.previewArea = null;
   refs.hoveredArea = null;
+  refs._lastTriggeredBy = 'area_select';
   updateNearbyControls();
   selectArea(name, fromMap, { highlightMarker, doSearch });
 }
@@ -116,11 +117,13 @@ function clearFilterFull(f) {
     refs.previewArea = null;
     refs.hoveredArea = null;
   }
+  refs._lastTriggeredBy = 'filter_change';
   updateNearbyControls();
   clearFilter(f, { resetMapView, doSearch });
 }
 
-function openDrawerFull(item) {
+function openDrawerFull(item, position) {
+  trackListingOpen({ item, position: position ?? null, mode: refs.searchMode, city: S.city, area: S.area, source: refs._lastSearchSource });
   openDrawer(item, selectAreaFull);
 }
 
@@ -410,7 +413,7 @@ function renderFooter(total) {
       : refs.searchMode === 'viewport'
       ? 'Load More From This View'
       : 'Load More Results';
-    btn.addEventListener('click', () => doSearch(refs.currentPage + 1));
+    btn.addEventListener('click', () => { refs._lastTriggeredBy = 'load_more'; doSearch(refs.currentPage + 1); });
     footer.appendChild(btn);
   }
 }
@@ -555,6 +558,8 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     if (!isActiveSearch(token, controller)) return;
     hideLoading();
     applyResults(data, { append, mode: 'viewport' });
+    refs._lastSearchSource = data.source || null;
+    trackSearchOutcome({ success: true, data, mode: 'viewport', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy, visibleAreasCount: refs.viewportAreaNames.length });
     if (!append) refs.lastViewportSearchKey = viewportKey;
   } catch (e) {
     if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
@@ -566,6 +571,7 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     updateMapMarkers();
     updateCoverageBadge();
     if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+    trackSearchOutcome({ success: false, data: e.message, mode: 'viewport', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy });
   } finally {
     finalizeSearch(token, controller);
   }
@@ -595,6 +601,8 @@ async function doAreaSearch(page = 1) {
     if (!isActiveSearch(token, controller)) return;
     hideLoading();
     applyResults(data, { append, mode: refs.searchMode });
+    refs._lastSearchSource = data.source || null;
+    trackSearchOutcome({ success: true, data, mode: refs.searchMode, page: refs.currentPage, triggeredBy: refs._lastTriggeredBy });
   } catch (e) {
     if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
@@ -604,6 +612,7 @@ async function doAreaSearch(page = 1) {
     updateMapMarkers();
     updateCoverageBadge();
     if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+    trackSearchOutcome({ success: false, data: e.message, mode: refs.searchMode, page: refs.currentPage, triggeredBy: refs._lastTriggeredBy });
   } finally {
     finalizeSearch(token, controller);
   }
@@ -655,6 +664,8 @@ async function doNearbySearch(page = 1) {
     if (!isActiveSearch(token, controller)) return;
     hideLoading();
     applyResults(data, { append, mode: 'nearby' });
+    refs._lastSearchSource = data.source || null;
+    trackSearchOutcome({ success: true, data, mode: 'nearby', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy, radiusKm: refs.nearbyRadiusKm });
   } catch (e) {
     if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
@@ -664,6 +675,7 @@ async function doNearbySearch(page = 1) {
     updateMapMarkers();
     updateCoverageBadge();
     if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+    trackSearchOutcome({ success: false, data: e.message, mode: 'nearby', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy, radiusKm: refs.nearbyRadiusKm });
   } finally {
     finalizeSearch(token, controller);
   }
@@ -679,6 +691,7 @@ function scheduleViewportSearch(opts = {}) {
   if (S.area || refs.searchMode === 'nearby') return;
   clearTimeout(refs.mapTimer);
   refs.mapTimer = setTimeout(() => {
+    refs._lastTriggeredBy = 'map_viewport';
     doSearch(1, opts);
   }, 250);
 }
@@ -691,12 +704,14 @@ async function doNlSearch() {
   parsed.classList.remove('hidden');
   parsed.classList.add('flex');
   parsed.innerHTML = '<span class="inline-flex items-center gap-1.5 text-gray-400"><svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Parsing filters...</span>';
+  const queryLength = q.length;
+  trackNlSearch({ phase: 'submitted', queryLength });
   try {
     const r = await fetch('/api/parse-query?q=' + encodeURIComponent(q) + '&city=' + S.city);
     if (!r.ok) throw 0;
     const d = await r.json();
     const f = d.filters || {};
-    if (!Object.keys(f).length) { parsed.innerHTML = 'Could not understand. Try "2 bed flat in DHA under 50k"'; return; }
+    if (!Object.keys(f).length) { trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: false, filters: f }); parsed.innerHTML = 'Could not understand. Try "2 bed flat in DHA under 50k"'; return; }
     const parts = [];
     if (f.area) parts.push('<b class="text-brand-500">' + esc(f.area) + '</b>');
     if (f.property_type) parts.push('<b class="text-brand-500">' + (TYPE_L[f.property_type] || f.property_type) + '</b>');
@@ -716,7 +731,9 @@ async function doNlSearch() {
     if (f.price_min || f.price_max) syncPriceChips();
     if (f.furnished) setToggle(true);
     if (f.sort) { S.sort = f.sort; $('#sortSelect').value = f.sort; }
+    trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: true, filters: f });
     updateChips();
+    refs._lastTriggeredBy = 'nl_search';
     doSearch();
     if (f.area_approximate) {
       parsed.innerHTML = '<span class="text-amber-600">Couldn\'t find "' + esc(f.area_query) + '" specifically — showing results for <b>' + esc(f.area) + '</b></span>';
@@ -751,6 +768,7 @@ function initCityTabs() {
     $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = '';
     setToggle(false); $('#sortSelect').value = '';
     updateCityTabs(); updateChips(); updateNlExamples(); updateNearbyControls();
+    refs._lastTriggeredBy = 'city_change';
     loadCityData();
   }));
 }
@@ -764,7 +782,7 @@ function initCardListeners() {
     const c = e.target.closest('.card-wrap');
     if (!c) return;
     const idx = parseInt(c.dataset.idx, 10);
-    if (!isNaN(idx) && refs.currentResults[idx]) openDrawerFull(refs.currentResults[idx]);
+    if (!isNaN(idx) && refs.currentResults[idx]) openDrawerFull(refs.currentResults[idx], idx);
   });
 
   grid.addEventListener('click', e => {
@@ -794,6 +812,7 @@ function initNlListeners() {
       $('#nlInput').value = '';
       $('#nlSuggestions').classList.add('hidden');
       updateChips(); updateNearbyControls();
+      refs._lastTriggeredBy = 'popular_search';
       doSearch();
       return;
     }
@@ -833,6 +852,7 @@ function initNearbyControls() {
 
     refs.searchMode = 'nearby';
     updateNearbyControls();
+    refs._lastTriggeredBy = 'nearby_chip';
     doSearch(1);
   });
 
@@ -844,7 +864,7 @@ function initNearbyControls() {
     updateNearbyControls();
     closeDD();
     refreshUserLocationOverlays();
-    if (refs.searchMode === 'nearby') doSearch(1);
+    if (refs.searchMode === 'nearby') { refs._lastTriggeredBy = 'radius_change'; doSearch(1); }
   });
 }
 
@@ -918,6 +938,8 @@ async function loadCityData() {
 }
 
 async function init() {
+  initAnalytics();
+  initMobileMap(selectAreaFull, openDrawerFull, () => scheduleViewportSearch({ mobile: true }));
   await chooseInitialCity();
   refs._notify = showToast;
   refs.mapLayer = getStoredMapLayer();
@@ -966,7 +988,7 @@ async function init() {
     initMap(selectAreaFull, () => scheduleViewportSearch(), openDrawerFull);
     if (S.area) highlightMarker(S.area, true);
   }
-  initMobileMap(selectAreaFull, openDrawerFull, () => scheduleViewportSearch({ mobile: true }));
+  refs._lastTriggeredBy = 'page_load';
   doSearch();
 }
 
