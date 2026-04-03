@@ -253,7 +253,7 @@ test.describe("More Filters", () => {
     const select = page.locator("#sortSelect");
     await expect(select).toBeVisible();
     const options = select.locator("option");
-    expect(await options.count()).toBe(4); // Default, Price Low, Price High, Newest
+    expect(await options.count()).toBe(5); // Default, Distance, Price Low, Price High, Newest
   });
 
   test("sort select updates chip", async ({ page }) => {

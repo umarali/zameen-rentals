@@ -6,6 +6,7 @@ from app.database import _get_conn
 from app.data import PROPERTY_TYPES
 
 logger = logging.getLogger("zameenrentals")
+_DISTANCE_SENTINEL = 999999999
 
 
 def _listing_filter_clauses(*, city="karachi", area=None, area_names=None, property_type=None,
@@ -102,6 +103,8 @@ def _nearby_sort_key(row, sort):
     first_seen_at = _datetime_sort_value(row["first_seen_at"])
     last_seen_at = _datetime_sort_value(row["last_seen_at"])
 
+    if sort == "distance":
+        return (distance_km, -last_seen_at)
     if sort == "price_low":
         return (price is None, price if price is not None else float("inf"), distance_km, -last_seen_at)
     if sort == "price_high":
@@ -109,6 +112,18 @@ def _nearby_sort_key(row, sort):
     if sort == "newest":
         return (-first_seen_at, distance_km, -last_seen_at)
     return (distance_km, -last_seen_at)
+
+
+def _distance_km_from_center(distance_to_center):
+    try:
+        distance = float(distance_to_center)
+    except (TypeError, ValueError):
+        return None
+
+    if not math.isfinite(distance) or distance < 0 or distance >= _DISTANCE_SENTINEL:
+        return None
+
+    return 111.0 * math.sqrt(distance)
 
 
 def content_hash(price, title, bedrooms, bathrooms, area_size):
@@ -387,6 +402,8 @@ def search_listings(*, city="karachi", area=None, area_names=None, property_type
         order = "price DESC NULLS LAST"
     elif sort == "newest":
         order = "first_seen_at DESC"
+    elif sort == "distance" and map_focus:
+        order = "distance_to_center ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC, last_seen_at DESC"
     elif map_focus:
         order = "distance_to_center ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC, last_seen_at DESC"
     else:
@@ -525,6 +542,8 @@ def search_exact_listings_in_bounds(*, city="karachi", south, west, north, east,
         order = "price DESC NULLS LAST"
     elif sort == "newest":
         order = "first_seen_at DESC"
+    elif sort == "distance" and map_focus:
+        order = "distance_to_center ASC, last_seen_at DESC"
     elif map_focus:
         order = "distance_to_center ASC, last_seen_at DESC"
     else:
@@ -610,6 +629,7 @@ def get_nearby_enrichment_candidates(*, city="karachi", lat, lng, radius_km=5,
 def _row_to_listing(row):
     """Convert a DB row to the JSON shape the frontend expects."""
     zameen_id = row["zameen_id"] if "zameen_id" in row.keys() else None
+    location_source = None
     d = {
         "title": row["title"],
         "url": row["url"],
@@ -643,10 +663,11 @@ def _row_to_listing(row):
     if row["whatsapp_phone"]:
         d["whatsapp_phone"] = row["whatsapp_phone"]
     if row["latitude"] is not None and row["longitude"] is not None:
+        location_source = row["location_source"] or "area_centroid"
         d["latitude"] = row["latitude"]
         d["longitude"] = row["longitude"]
-        d["location_source"] = row["location_source"] or "area_centroid"
-    d["has_exact_geography"] = row["location_source"] == "listing_exact"
+        d["location_source"] = location_source
+    d["has_exact_geography"] = (location_source or row["location_source"]) == "listing_exact"
     if "distance_to_center" in row.keys() and row["distance_to_center"] is not None:
         d["distance_to_center"] = row["distance_to_center"]
     if "distance_km" in row.keys() and row["distance_km"] is not None:
@@ -655,6 +676,18 @@ def _row_to_listing(row):
         d["distance_source"] = row["distance_source"]
     if "is_distance_approximate" in row.keys():
         d["is_distance_approximate"] = bool(row["is_distance_approximate"])
+    elif "distance_km" in d and location_source:
+        d["is_distance_approximate"] = location_source != "listing_exact"
+
+    if "distance_km" in d and "distance_source" not in d and location_source:
+        d["distance_source"] = location_source
+
+    if "distance_km" not in d and location_source and "distance_to_center" in d:
+        distance_km = _distance_km_from_center(d["distance_to_center"])
+        if distance_km is not None:
+            d["distance_km"] = distance_km
+            d["distance_source"] = location_source
+            d["is_distance_approximate"] = location_source != "listing_exact"
     if row["description"]:
         d["description"] = row["description"]
     if row["features_json"]:

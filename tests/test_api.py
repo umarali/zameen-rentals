@@ -443,6 +443,29 @@ class TestMapSearchEndpoint:
         assert data["focus_center"] == {"lat": 24.82, "lng": 67.03}
         assert data["results"][0]["title"] == "Near viewport"
 
+    def test_map_search_accepts_explicit_distance_sort_and_returns_distance_fields(self, client):
+        upsert_listing(
+            zameen_id="910003",
+            url="https://www.zameen.com/Property/test-910003-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8230,
+            lng=67.0340,
+            card_data={"title": "Approximate viewport distance", "price": 87000, "bedrooms": 2, "bathrooms": 2, "area_size": "5 Marla", "property_type": "Apartment"},
+        )
+
+        res = client.get(
+            "/api/map-search?city=karachi&areas=Clifton&center_lat=24.82&center_lng=67.03&sort=distance"
+        )
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["results"][0]["title"] == "Approximate viewport distance"
+        assert data["results"][0]["distance_source"] == "area_centroid"
+        assert data["results"][0]["is_distance_approximate"] is True
+        assert data["results"][0]["distance_km"] > 0
+
     def test_map_search_rejects_excessive_area_count(self, client):
         query = "&".join(f"areas=A{i}" for i in range(501))
 

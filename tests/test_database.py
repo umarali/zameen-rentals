@@ -1,4 +1,6 @@
 """Integration tests for database CRUD, upsert logic, FTS, and crawl state."""
+import math
+
 import pytest
 from app.database import _get_conn, init_db
 from app.db_listings import (
@@ -345,6 +347,86 @@ class TestSearchListings:
 
         assert result["results"][0]["title"] == "Cheaper and near"
 
+    def test_viewport_search_accepts_explicit_distance_sort(self):
+        upsert_listing(
+            zameen_id="300014",
+            url="https://zameen.com/Property/t-300014-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8201,
+            lng=67.0301,
+            card_data={"title": "Nearest explicit", "price": 92000, "bedrooms": 2, "bathrooms": 2, "area_size": "1100 sqft", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="300015",
+            url="https://zameen.com/Property/t-300015-1-1.html",
+            city="karachi",
+            area_name="DHA Phase 5",
+            area_slug="Karachi_DHA_Phase_5",
+            lat=24.7900,
+            lng=67.1000,
+            card_data={"title": "Far explicit", "price": 91000, "bedrooms": 2, "bathrooms": 2, "area_size": "1100 sqft", "property_type": "Apartment"},
+        )
+
+        result = search_listings(
+            city="karachi",
+            area_names=["Clifton", "DHA Phase 5"],
+            sort="distance",
+            center_lat=24.8200,
+            center_lng=67.0300,
+        )
+
+        assert result["results"][0]["title"] == "Nearest explicit"
+        assert result["results"][0]["distance_to_center"] < result["results"][1]["distance_to_center"]
+
+    def test_viewport_search_derives_distance_km_for_centroid_backed_results(self):
+        upsert_listing(
+            zameen_id="300016",
+            url="https://zameen.com/Property/t-300016-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8230,
+            lng=67.0340,
+            card_data={"title": "Centroid distance", "price": 88000, "bedrooms": 2, "bathrooms": 2, "area_size": "1000 sqft", "property_type": "Apartment"},
+        )
+
+        result = search_listings(
+            city="karachi",
+            area_names=["Clifton"],
+            center_lat=24.8200,
+            center_lng=67.0300,
+        )
+
+        listing = result["results"][0]
+        assert listing["distance_source"] == "area_centroid"
+        assert listing["is_distance_approximate"] is True
+        assert listing["distance_km"] > 0
+        assert math.isclose(listing["distance_km"], 111.0 * math.sqrt(listing["distance_to_center"]), rel_tol=1e-6)
+
+    def test_viewport_search_does_not_derive_distance_km_without_coordinates(self):
+        upsert_listing(
+            zameen_id="300017",
+            url="https://zameen.com/Property/t-300017-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            card_data={"title": "No coordinates", "price": 87000, "bedrooms": 2, "bathrooms": 1, "area_size": "900 sqft", "property_type": "Apartment"},
+        )
+
+        result = search_listings(
+            city="karachi",
+            area_names=["Clifton"],
+            center_lat=24.8200,
+            center_lng=67.0300,
+        )
+
+        listing = result["results"][0]
+        assert listing["distance_to_center"] > 1e8
+        assert "distance_km" not in listing
+        assert "is_distance_approximate" not in listing
+
     def test_fts_search(self):
         upsert_listing(
             zameen_id="300001", url="https://zameen.com/Property/t-300001-1-1.html",
@@ -484,6 +566,44 @@ class TestNearbySearchListings:
         assert result["results"][0]["title"] == "Cheaper and near"
         assert result["results"][0]["distance_km"] < result["results"][1]["distance_km"]
 
+    def test_nearby_search_accepts_explicit_distance_sort(self):
+        for zameen_id, title, lat, lng in (
+            ("350012", "Nearest exact", 24.8202, 67.0302),
+            ("350013", "Farther exact", 24.8265, 67.0385),
+        ):
+            upsert_listing(
+                zameen_id=zameen_id,
+                url=f"https://zameen.com/Property/t-{zameen_id}-1-1.html",
+                city="karachi",
+                area_name="Clifton",
+                area_slug="Karachi_Clifton",
+                lat=24.8200,
+                lng=67.0300,
+                card_data={"title": title, "price": 80000, "bedrooms": 2, "bathrooms": 2, "area_size": "1000 sqft", "property_type": "Apartment"},
+            )
+            upsert_listing(
+                zameen_id=zameen_id,
+                url=f"https://zameen.com/Property/t-{zameen_id}-1-1.html",
+                city="karachi",
+                detail_data={
+                    "description": title,
+                    "latitude": lat,
+                    "longitude": lng,
+                    "location_source": "listing_exact",
+                },
+            )
+
+        result = search_nearby_listings(
+            city="karachi",
+            lat=24.8200,
+            lng=67.0300,
+            radius_km=5,
+            sort="distance",
+        )
+
+        assert result["results"][0]["title"] == "Nearest exact"
+        assert result["results"][0]["distance_km"] < result["results"][1]["distance_km"]
+
     def test_nearby_enrichment_candidates_only_return_centroid_backed_matches(self):
         upsert_listing(
             zameen_id="350020",
@@ -602,6 +722,46 @@ class TestViewportBoundsSearch:
         assert result["total"] == 2
         assert result["results"][0]["title"] == "East but closer"
         assert result["results"][0]["distance_to_center"] < result["results"][1]["distance_to_center"]
+
+    def test_exact_bounds_search_derives_exact_distance_without_approximation(self):
+        upsert_listing(
+            zameen_id="360012",
+            url="https://zameen.com/Property/t-360012-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            lat=24.8200,
+            lng=67.0300,
+            card_data={"title": "Exact distance label", "price": 99000, "bedrooms": 3, "bathrooms": 2, "area_size": "1200 sqft", "property_type": "Apartment"},
+        )
+        upsert_listing(
+            zameen_id="360012",
+            url="https://zameen.com/Property/t-360012-1-1.html",
+            city="karachi",
+            detail_data={
+                "description": "Exact distance label",
+                "latitude": 24.8215,
+                "longitude": 67.0320,
+                "location_source": "listing_exact",
+            },
+        )
+
+        result = search_exact_listings_in_bounds(
+            city="karachi",
+            south=24.818,
+            west=67.028,
+            north=24.824,
+            east=67.035,
+            center_lat=24.820,
+            center_lng=67.030,
+            sort="distance",
+        )
+
+        listing = result["results"][0]
+        assert listing["distance_source"] == "listing_exact"
+        assert listing["is_distance_approximate"] is False
+        assert listing["distance_km"] > 0
+        assert math.isclose(listing["distance_km"], 111.0 * math.sqrt(listing["distance_to_center"]), rel_tol=1e-6)
 
     def test_exact_bounds_search_returns_visible_exact_listings(self):
         upsert_listing(
