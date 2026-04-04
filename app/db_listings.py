@@ -9,6 +9,17 @@ logger = logging.getLogger("zameenrentals")
 _DISTANCE_SENTINEL = 999999999
 
 
+def city_priority_sql(column="city"):
+    return f"""
+        CASE {column}
+            WHEN 'karachi' THEN 0
+            WHEN 'lahore' THEN 1
+            WHEN 'islamabad' THEN 2
+            ELSE 9
+        END
+    """
+
+
 def _listing_filter_clauses(*, city="karachi", area=None, area_names=None, property_type=None,
                             bedrooms=None, price_min=None, price_max=None,
                             furnished=None, q=None, exact_only=False, geocoded_only=False):
@@ -221,21 +232,26 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             return "inserted"
 
         if existing["content_hash"] == c_hash:
-            next_lat = existing["latitude"]
-            next_lng = existing["longitude"]
-            next_location_source = existing["location_source"]
-            if existing["location_source"] != "listing_exact" and lat is not None and lng is not None:
-                next_lat = lat
-                next_lng = lng
-                next_location_source = "area_centroid"
             conn.execute("""
                 UPDATE listings SET
                     area_name = COALESCE(?, area_name),
                     area_slug = COALESCE(?, area_slug),
-                    latitude = ?, longitude = ?, location_source = ?,
+                    latitude = CASE
+                        WHEN location_source = 'listing_exact' THEN latitude
+                        ELSE COALESCE(?, latitude)
+                    END,
+                    longitude = CASE
+                        WHEN location_source = 'listing_exact' THEN longitude
+                        ELSE COALESCE(?, longitude)
+                    END,
+                    location_source = CASE
+                        WHEN location_source = 'listing_exact' THEN location_source
+                        WHEN ? IS NOT NULL AND ? IS NOT NULL THEN 'area_centroid'
+                        ELSE location_source
+                    END,
                     last_seen_at = ?, is_active = 1
                 WHERE zameen_id = ?
-            """, (area_name, area_slug, next_lat, next_lng, next_location_source, now, zameen_id))
+            """, (area_name, area_slug, lat, lng, lat, lng, now, zameen_id))
             conn.commit()
             return "unchanged"
 
@@ -243,19 +259,24 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
         images = card_data.get("images", [])
         if not images and card_data.get("image_url"):
             images = [card_data["image_url"]]
-        next_lat = existing["latitude"]
-        next_lng = existing["longitude"]
-        next_location_source = existing["location_source"]
-        if existing["location_source"] != "listing_exact" and lat is not None and lng is not None:
-            next_lat = lat
-            next_lng = lng
-            next_location_source = "area_centroid"
         conn.execute("""
             UPDATE listings SET
                 title = ?, price = ?, price_text = ?, bedrooms = ?, bathrooms = ?,
                 area_size = ?, location = ?, image_url = ?, images_json = ?,
                 property_type = ?, added_text = ?, area_name = ?, area_slug = ?,
-                latitude = ?, longitude = ?, location_source = ?,
+                latitude = CASE
+                    WHEN location_source = 'listing_exact' THEN latitude
+                    ELSE COALESCE(?, latitude)
+                END,
+                longitude = CASE
+                    WHEN location_source = 'listing_exact' THEN longitude
+                    ELSE COALESCE(?, longitude)
+                END,
+                location_source = CASE
+                    WHEN location_source = 'listing_exact' THEN location_source
+                    WHEN ? IS NOT NULL AND ? IS NOT NULL THEN 'area_centroid'
+                    ELSE location_source
+                END,
                 card_scraped_at = ?, last_seen_at = ?, content_hash = ?, is_active = 1
             WHERE zameen_id = ?
         """, (
@@ -265,7 +286,7 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             card_data.get("location"), card_data.get("image_url"),
             json.dumps(images) if images else None,
             card_data.get("property_type"), card_data.get("added"),
-            area_name, area_slug, next_lat, next_lng, next_location_source, now, now, c_hash, zameen_id
+            area_name, area_slug, lat, lng, lat, lng, now, now, c_hash, zameen_id
         ))
         conn.commit()
         return "updated"
@@ -732,7 +753,10 @@ def get_listings_needing_detail(limit=10):
             OR location_source IS NULL
             OR location_source != 'listing_exact'
         )
-        ORDER BY detail_scraped_at ASC NULLS FIRST
+        ORDER BY
+            """ + city_priority_sql("city") + """,
+            CASE WHEN detail_scraped_at IS NULL THEN 0 ELSE 1 END,
+            detail_scraped_at ASC
         LIMIT ?
     """, (limit,)).fetchall()
     return [dict(r) for r in rows]

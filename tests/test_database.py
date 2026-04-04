@@ -865,6 +865,24 @@ class TestGetListingsNeedingDetail:
         listings = get_listings_needing_detail(limit=10)
         assert any(item["zameen_id"] == "500002" for item in listings)
 
+    def test_prioritizes_karachi_before_other_cities(self):
+        upsert_listing(
+            zameen_id="500010",
+            url="https://www.zameen.com/Property/t-500010-1-1.html",
+            city="karachi",
+            card_data={"title": "Karachi detail", "price": 70000, "bedrooms": 2, "bathrooms": 2, "area_size": "5 Marla"},
+        )
+        upsert_listing(
+            zameen_id="500011",
+            url="https://www.zameen.com/Property/t-500011-1-1.html",
+            city="lahore",
+            card_data={"title": "Lahore detail", "price": 72000, "bedrooms": 2, "bathrooms": 2, "area_size": "5 Marla"},
+        )
+
+        listings = get_listings_needing_detail(limit=2)
+
+        assert [item["zameen_id"] for item in listings] == ["500010", "500011"]
+
 
 class TestMarkStaleListings:
     def test_marks_old_listings_inactive(self):

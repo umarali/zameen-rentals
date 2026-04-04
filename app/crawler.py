@@ -19,7 +19,7 @@ import httpx
 
 from app.database import _get_conn, init_db
 from app.data import CITIES, CITY_AREAS
-from app.db_listings import mark_stale_listings, get_crawl_stats
+from app.db_listings import mark_stale_listings, get_crawl_stats, city_priority_sql
 from app.crawler_worker import (
     crawl_area_cards, crawl_detail_batch, refresh_phones_batch,
     _build_browser_profile, crawler_rate_limiter,
@@ -41,6 +41,7 @@ PHONE_BATCH_SIZE = 25            # Phone API calls per iteration
 INTER_AREA_DELAY = (1.0, 3.0)   # Random delay between areas (seconds)
 CYCLE_REST_MINUTES = 15          # Rest between full cycles
 MAX_CONSECUTIVE_ERRORS = 5       # Pause crawling after this many errors in a row
+CARD_SPEED_MULTIPLIER = 1.0
 
 
 def _handle_signal(sig, frame):
@@ -138,18 +139,26 @@ def update_area_priorities():
     # Boost frequently searched areas
     conn.execute("""
         UPDATE crawl_state SET priority = 10
-        WHERE area_name IN (
-            SELECT area FROM search_history
-            WHERE searched_at > datetime('now', '-7 days') AND area IS NOT NULL
-            GROUP BY area HAVING COUNT(*) >= 5
+        WHERE EXISTS (
+            SELECT 1 FROM search_history
+            WHERE search_history.city = crawl_state.city
+              AND search_history.area = crawl_state.area_name
+              AND search_history.searched_at > datetime('now', '-7 days')
+              AND search_history.area IS NOT NULL
+            GROUP BY search_history.city, search_history.area
+            HAVING COUNT(*) >= 5
         )
     """)
     conn.execute("""
         UPDATE crawl_state SET priority = 30
-        WHERE priority = 50 AND area_name IN (
-            SELECT area FROM search_history
-            WHERE searched_at > datetime('now', '-7 days') AND area IS NOT NULL
-            GROUP BY area HAVING COUNT(*) >= 1
+        WHERE priority = 50 AND EXISTS (
+            SELECT 1 FROM search_history
+            WHERE search_history.city = crawl_state.city
+              AND search_history.area = crawl_state.area_name
+              AND search_history.searched_at > datetime('now', '-7 days')
+              AND search_history.area IS NOT NULL
+            GROUP BY search_history.city, search_history.area
+            HAVING COUNT(*) >= 1
         )
     """)
     # Deprioritize areas that keep erroring
@@ -161,19 +170,47 @@ def update_area_priorities():
     logger.info("Area priorities updated")
 
 
-def pick_next_area():
-    """Pick the next area to crawl: never-crawled first, then by priority + staleness."""
+def _scale_delay_range(delay_range, speed_multiplier):
+    if speed_multiplier <= 0:
+        raise ValueError("speed_multiplier must be positive")
+    low, high = delay_range
+    min_delay = 0.1
+    return (max(min_delay, low / speed_multiplier), max(min_delay, high / speed_multiplier))
+
+
+def claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS):
+    """Atomically claim the next stale area, prioritizing Karachi before other cities."""
     conn = _get_conn()
-    row = conn.execute("""
-        SELECT * FROM crawl_state
-        WHERE crawl_status != 'in_progress'
-        ORDER BY
-            CASE WHEN last_crawl_at IS NULL THEN 0 ELSE 1 END,
-            priority ASC,
-            last_crawl_at ASC
-        LIMIT 1
-    """).fetchone()
-    return dict(row) if row else None
+    stale_window = f'-{max_age_hours} hours'
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        row = conn.execute("""
+            SELECT * FROM crawl_state
+            WHERE crawl_status != 'in_progress'
+              AND (last_crawl_at IS NULL OR last_crawl_at < datetime('now', ?))
+            ORDER BY
+                CASE WHEN last_crawl_at IS NULL THEN 0 ELSE 1 END,
+                """ + city_priority_sql("city") + """,
+                priority ASC,
+                last_crawl_at ASC
+            LIMIT 1
+        """, (stale_window,)).fetchone()
+        if row is None:
+            conn.commit()
+            return None
+
+        conn.execute(
+            "UPDATE crawl_state SET crawl_status = 'in_progress' WHERE id = ?",
+            (row["id"],)
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+
+    claimed = dict(row)
+    claimed["crawl_status"] = "in_progress"
+    return claimed
 
 
 def all_areas_crawled_recently(hours=4):
@@ -258,10 +295,21 @@ async def run_backfill_worker(*, detail_batch=DETAIL_BATCH_SIZE, phone_batch=PHO
 
 # ── Main crawl loop ──
 
-async def run_crawler():
+async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_SPEED_MULTIPLIER):
     """Main crawler loop with scheduled cycles and rest periods."""
     init_db()
     init_crawl_state()
+    inter_area_delay = _scale_delay_range(INTER_AREA_DELAY, card_speed)
+    page_delay = _scale_delay_range((0.5, 1.5), card_speed)
+    type_delay = _scale_delay_range((0.5, 2.0), card_speed)
+    if cards_only or card_speed != CARD_SPEED_MULTIPLIER:
+        logger.info(
+            "Card crawl mode: cards_only=%s, card_speed=%.2f, area_delay=%.1f-%.1fs",
+            cards_only,
+            card_speed,
+            inter_area_delay[0],
+            inter_area_delay[1],
+        )
 
     cycle_count = 0
     total_new, total_updated = 0, 0
@@ -304,28 +352,14 @@ async def run_crawler():
             phase_a_new, phase_a_updated = 0, 0
 
             while not _shutdown:
-                area = pick_next_area()
+                area = claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS)
                 if not area:
                     break
-
-                # Check if this area was already crawled recently
-                if area.get("last_crawl_at"):
-                    from datetime import datetime as dt
-                    try:
-                        last = dt.fromisoformat(area["last_crawl_at"])
-                        age_hours = (dt.utcnow() - last).total_seconds() / 3600
-                        if age_hours < CARD_CYCLE_INTERVAL_HOURS:
-                            break  # All remaining areas are fresh enough
-                    except (ValueError, TypeError):
-                        pass
-
-                conn = _get_conn()
-                conn.execute("UPDATE crawl_state SET crawl_status = 'in_progress' WHERE id = ?", (area["id"],))
-                conn.commit()
 
                 city = area["city"]
                 area_name = area["area_name"]
                 iteration += 1
+                conn = _get_conn()
 
                 try:
                     area_info = CITY_AREAS.get(city, {}).get(area_name)
@@ -334,7 +368,8 @@ async def run_crawler():
 
                     new, updated, unchanged, pages = await crawl_area_cards(
                         city, area_name, area["area_slug"], area["area_id"],
-                        lat, lng, client, session_headers
+                        lat, lng, client, session_headers,
+                        type_delay=type_delay, page_delay=page_delay
                     )
 
                     phase_a_new += new
@@ -371,7 +406,7 @@ async def run_crawler():
                     break
 
                 # Human-like delay between areas
-                await asyncio.sleep(random.uniform(*INTER_AREA_DELAY))
+                await asyncio.sleep(random.uniform(*inter_area_delay))
 
             total_new += phase_a_new
             total_updated += phase_a_updated
@@ -380,46 +415,49 @@ async def run_crawler():
             if _shutdown:
                 break
 
-            # ── Phase B: Detail backfill ──
-            logger.info("[Phase B] Detail backfill...")
-            detail_total = 0
-            for _ in range(20):  # Up to 20 batches per cycle
+            if cards_only:
+                logger.info("[Cards-only mode] Skipping detail, phone, and cleanup phases")
+            else:
+                # ── Phase B: Detail backfill ──
+                logger.info("[Phase B] Detail backfill...")
+                detail_total = 0
+                for _ in range(20):  # Up to 20 batches per cycle
+                    if _shutdown:
+                        break
+                    count = await crawl_detail_batch(
+                        limit=DETAIL_BATCH_SIZE, client=client, session_ua=session_ua
+                    )
+                    if count == 0:
+                        break
+                    detail_total += count
+                    await asyncio.sleep(random.uniform(1, 3))
+
+                logger.info("[Phase B complete] %d listings enriched with details", detail_total)
+
                 if _shutdown:
                     break
-                count = await crawl_detail_batch(
-                    limit=DETAIL_BATCH_SIZE, client=client, session_ua=session_ua
-                )
-                if count == 0:
-                    break
-                detail_total += count
-                await asyncio.sleep(random.uniform(1, 3))
 
-            logger.info("[Phase B complete] %d listings enriched with details", detail_total)
+                # ── Phase C: Phone refresh via API ──
+                logger.info("[Phase C] Phone number refresh...")
+                phone_total = 0
+                for _ in range(10):  # Up to 10 batches per cycle
+                    if _shutdown:
+                        break
+                    count = await refresh_phones_batch(
+                        limit=PHONE_BATCH_SIZE, client=client, session_ua=session_ua
+                    )
+                    if count == 0:
+                        break
+                    phone_total += count
+                    await asyncio.sleep(random.uniform(2, 5))
 
-            if _shutdown:
-                break
+                logger.info("[Phase C complete] %d phone numbers refreshed", phone_total)
 
-            # ── Phase C: Phone refresh via API ──
-            logger.info("[Phase C] Phone number refresh...")
-            phone_total = 0
-            for _ in range(10):  # Up to 10 batches per cycle
                 if _shutdown:
                     break
-                count = await refresh_phones_batch(
-                    limit=PHONE_BATCH_SIZE, client=client, session_ua=session_ua
-                )
-                if count == 0:
-                    break
-                phone_total += count
-                await asyncio.sleep(random.uniform(2, 5))
 
-            logger.info("[Phase C complete] %d phone numbers refreshed", phone_total)
-
-            if _shutdown:
-                break
-
-            # ── Phase D: Staleness cleanup ──
-            mark_stale_listings(days=7)
+                # ── Phase D: Staleness cleanup ──
+                mark_stale_listings(days=7)
 
         # ── Cycle summary ──
         cycle_duration = (time.monotonic() - cycle_start) / 60
@@ -432,6 +470,9 @@ async def run_crawler():
         )
 
         if _shutdown:
+            break
+
+        if single_cycle:
             break
 
         # ── Rest between cycles ──
@@ -455,10 +496,18 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="ZameenRentals crawler/backfill worker")
     parser.add_argument("--backfill", action="store_true", help="Run the resumable enrichment worker instead of the full crawler")
     parser.add_argument("--watch", action="store_true", help="Keep polling for new listings after the initial backfill completes")
+    parser.add_argument("--cards-only", action="store_true", help="Run only Phase A card crawling (useful for a temporary parallel worker)")
+    parser.add_argument("--single-cycle", action="store_true", help="Exit after one full crawl cycle instead of running forever")
+    parser.add_argument("--card-speed", type=float, default=CARD_SPEED_MULTIPLIER, help="Scale card-crawl pacing; values > 1.0 reduce card crawl sleeps")
     parser.add_argument("--poll-seconds", type=int, default=300, help="Sleep between watch cycles when --watch is enabled")
     parser.add_argument("--detail-batch", type=int, default=DETAIL_BATCH_SIZE, help="Detail rows per backfill batch")
     parser.add_argument("--phone-batch", type=int, default=PHONE_BATCH_SIZE, help="Phone rows per refresh batch")
     args = parser.parse_args(argv)
+
+    if args.card_speed <= 0 or args.card_speed > 5.0:
+        parser.error("--card-speed must be between 0 and 5.0")
+    if args.backfill and args.cards_only:
+        parser.error("--cards-only cannot be combined with --backfill")
 
     if args.backfill:
         asyncio.run(
@@ -470,7 +519,13 @@ def main(argv=None):
             )
         )
     else:
-        asyncio.run(run_crawler())
+        asyncio.run(
+            run_crawler(
+                cards_only=args.cards_only,
+                single_cycle=args.single_cycle,
+                card_speed=args.card_speed,
+            )
+        )
 
 
 if __name__ == "__main__":

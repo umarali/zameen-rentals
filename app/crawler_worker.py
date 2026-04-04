@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from app.cache import RateLimiter
 from app.data import USER_AGENTS, PROPERTY_TYPES, CITY_AREAS, CRAWL_PROPERTY_TYPES
 from app.database import _get_conn
-from app.db_listings import upsert_listing, get_listings_needing_detail
+from app.db_listings import upsert_listing, get_listings_needing_detail, city_priority_sql
 from app.scraper import (
     parse_listings, extract_zameen_id, _is_property_photo_url, fetch_listing_contact,
     _extract_listing_geography,
@@ -18,6 +18,8 @@ logger = logging.getLogger("zameenrentals")
 
 # Crawler rate limiter: adaptive, starts conservative
 crawler_rate_limiter = RateLimiter(rate=1.0, burst=2)
+CARD_TYPE_DELAY = (0.5, 2.0)
+CARD_PAGE_DELAY = (0.5, 1.5)
 
 # ── Browser profile simulation ──
 
@@ -151,7 +153,8 @@ def _extract_total_count(soup):
 # ── Card crawling ──
 
 async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
-                             client, session_headers, type_slug=None, type_label=None):
+                             client, session_headers, type_slug=None, type_label=None,
+                             page_delay=CARD_PAGE_DELAY):
     """Crawl pages for one area under one URL pattern. Returns (new, updated, unchanged, pages)."""
     new_count, updated_count, unchanged_count, pages_fetched = 0, 0, 0, 0
     base_slug = type_slug or "Rentals"
@@ -216,7 +219,7 @@ async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
         if len(listings) < 25 or page_num >= max_pages:
             break
 
-        await asyncio.sleep(random.uniform(0.5, 1.5))
+        await asyncio.sleep(random.uniform(*page_delay))
 
     return new_count, updated_count, unchanged_count, pages_fetched
 
@@ -245,7 +248,8 @@ def _update_type_state(city, area_slug, property_type, listings_found):
     conn.commit()
 
 
-async def crawl_area_cards(city, area_name, area_slug, area_id, lat, lng, client, session_headers):
+async def crawl_area_cards(city, area_name, area_slug, area_id, lat, lng, client, session_headers,
+                           type_delay=CARD_TYPE_DELAY, page_delay=CARD_PAGE_DELAY):
     """Crawl all search result pages for one area across all property types.
     Returns (new, updated, unchanged, pages)."""
     total_new, total_updated, total_unchanged, total_pages = 0, 0, 0, 0
@@ -253,7 +257,7 @@ async def crawl_area_cards(city, area_name, area_slug, area_id, lat, lng, client
     # 1. Crawl generic /Rentals/ first (catches everything, sets baseline)
     new, updated, unchanged, pages = await _crawl_single_type(
         city, area_name, area_slug, area_id, lat, lng,
-        client, session_headers
+        client, session_headers, page_delay=page_delay
     )
     total_new += new
     total_updated += updated
@@ -268,12 +272,12 @@ async def crawl_area_cards(city, area_name, area_slug, area_id, lat, lng, client
             continue  # Skip types that previously returned 0 for this area
 
         # Small delay between type crawls
-        await asyncio.sleep(random.uniform(0.5, 2.0))
+        await asyncio.sleep(random.uniform(*type_delay))
 
         new, updated, unchanged, pages = await _crawl_single_type(
             city, area_name, area_slug, area_id, lat, lng,
             client, session_headers,
-            type_slug=type_slug, type_label=type_label
+            type_slug=type_slug, type_label=type_label, page_delay=page_delay
         )
 
         # Track results for smart skipping
@@ -481,12 +485,15 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None):
     """Refresh phone numbers via API for listings with stale or missing phones."""
     conn = _get_conn()
     rows = conn.execute("""
-        SELECT zameen_id, url, call_phone, whatsapp_phone FROM listings
+        SELECT zameen_id, url, phone, call_phone, whatsapp_phone FROM listings
         WHERE is_active = 1 AND (
             contact_fetched_at IS NULL
             OR contact_fetched_at < datetime('now', '-3 days')
         )
-        ORDER BY contact_fetched_at ASC NULLS FIRST
+        ORDER BY
+            """ + city_priority_sql("city") + """,
+            CASE WHEN contact_fetched_at IS NULL THEN 0 ELSE 1 END,
+            contact_fetched_at ASC
         LIMIT ?
     """, (limit,)).fetchall()
 

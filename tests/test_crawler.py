@@ -1,9 +1,11 @@
 """Tests for crawler worker functions — browser profiles, API headers, phone extraction."""
 import pytest
+from app.crawler import claim_next_area, init_crawl_state, update_area_priorities
 from app.crawler_worker import (
     _build_browser_profile, _api_headers, _get_empty_types, _update_type_state,
     refresh_phones_batch,
 )
+from app.database import _get_conn, log_search
 from app.db_listings import upsert_listing, get_listing_by_zameen_id
 from app.data import USER_AGENTS, CRAWL_PROPERTY_TYPES
 
@@ -124,6 +126,70 @@ class TestEmptyTypesTracking:
         assert "Rentals_Rooms" not in _get_empty_types("karachi", "Karachi_Test4")
 
 
+class TestAreaScheduling:
+    def test_search_priority_stays_within_city(self):
+        init_crawl_state()
+
+        for _ in range(2):
+            log_search(city="karachi", area="DHA Defence")
+
+        update_area_priorities()
+
+        conn = _get_conn()
+        rows = conn.execute(
+            "SELECT city, priority FROM crawl_state WHERE area_name = 'DHA Defence' ORDER BY city"
+        ).fetchall()
+        priorities = {row["city"]: row["priority"] for row in rows}
+
+        assert priorities["karachi"] == 30
+        assert priorities["lahore"] == 50
+        assert priorities["islamabad"] == 50
+
+    def test_claim_next_area_skips_fresh_rows(self):
+        init_crawl_state()
+        conn = _get_conn()
+        conn.execute("UPDATE crawl_state SET last_crawl_at = datetime('now'), crawl_status = 'completed', priority = 50")
+        conn.execute("""
+            UPDATE crawl_state
+            SET priority = 1, last_crawl_at = datetime('now')
+            WHERE city = 'karachi' AND area_name = 'Clifton'
+        """)
+        conn.execute("""
+            UPDATE crawl_state
+            SET priority = 50, last_crawl_at = datetime('now', '-8 hours')
+            WHERE city = 'lahore' AND area_name = 'Gulberg'
+        """)
+        conn.commit()
+
+        area = claim_next_area(max_age_hours=4)
+
+        assert area["city"] == "lahore"
+        assert area["area_name"] == "Gulberg"
+        status = conn.execute("SELECT crawl_status FROM crawl_state WHERE id = ?", (area["id"],)).fetchone()
+        assert status["crawl_status"] == "in_progress"
+
+    def test_claim_next_area_prioritizes_karachi_within_stale_queue(self):
+        init_crawl_state()
+        conn = _get_conn()
+        conn.execute("UPDATE crawl_state SET last_crawl_at = datetime('now'), crawl_status = 'completed', priority = 50")
+        conn.execute("""
+            UPDATE crawl_state
+            SET priority = 10, last_crawl_at = datetime('now', '-8 hours')
+            WHERE city = 'lahore' AND area_name = 'Gulberg'
+        """)
+        conn.execute("""
+            UPDATE crawl_state
+            SET priority = 50, last_crawl_at = datetime('now', '-8 hours')
+            WHERE city = 'karachi' AND area_name = 'Clifton'
+        """)
+        conn.commit()
+
+        area = claim_next_area(max_age_hours=4)
+
+        assert area["city"] == "karachi"
+        assert area["area_name"] == "Clifton"
+
+
 class TestRefreshPhonesBatch:
     @pytest.mark.asyncio
     async def test_uses_contact_fetched_at_and_persists_whatsapp_without_call_phone(self, monkeypatch):
@@ -156,3 +222,38 @@ class TestRefreshPhonesBatch:
         assert listing["call_phone"] is None
         assert listing["whatsapp_phone"] == "+923001112233"
         assert listing["contact_fetched_at"] is not None
+
+    @pytest.mark.asyncio
+    async def test_prioritizes_karachi_refreshes_first(self, monkeypatch):
+        upsert_listing(
+            zameen_id="810010",
+            url="https://www.zameen.com/Property/test-810010-1-1.html",
+            city="karachi",
+            card_data={"title": "Karachi first", "price": 90000, "bedrooms": 3, "bathrooms": 2, "area_size": "8 Marla"},
+        )
+        upsert_listing(
+            zameen_id="810011",
+            url="https://www.zameen.com/Property/test-810011-1-1.html",
+            city="lahore",
+            card_data={"title": "Lahore second", "price": 85000, "bedrooms": 3, "bathrooms": 2, "area_size": "8 Marla"},
+        )
+
+        seen = []
+
+        async def fake_fetch_phone_via_api(zameen_id, listing_url, client, ua):
+            seen.append(zameen_id)
+            return {
+                "call_phone": f"+92{zameen_id}",
+                "contact_source": "showNumbers",
+            }
+
+        async def fake_sleep(*args, **kwargs):
+            return None
+
+        monkeypatch.setattr("app.crawler_worker.fetch_phone_via_api", fake_fetch_phone_via_api)
+        monkeypatch.setattr("app.crawler_worker.asyncio.sleep", fake_sleep)
+
+        updated = await refresh_phones_batch(limit=2)
+
+        assert updated == 2
+        assert seen == ["810010", "810011"]
