@@ -153,6 +153,42 @@ body { display: grid; grid-template-rows: 60px auto 1fr; }
   background: #eaf8f1;
   color: #127b5a;
 }
+.coverage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.9rem;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #eef2f7;
+}
+.coverage-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b5563;
+}
+.coverage-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  flex: none;
+}
+.coverage-legend-dot.live {
+  background: #127b5a;
+  box-shadow: 0 0 0 2px rgba(18, 123, 90, 0.14);
+}
+.coverage-legend-dot.preview {
+  background: rgba(156, 163, 175, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.coverage-legend-dot.exact {
+  background: #ef4444;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.22);
+}
 
 /* ===== Map controls ===== */
 .leaflet-top.leaflet-right {

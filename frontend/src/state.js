@@ -69,6 +69,7 @@ export const refs = {
   areaCounts: {},
   mapAreaTotals: {},
   viewportAreaNames: [],
+  viewportVisibleAreas: 0,
   viewportTotal: 0,
   viewportShown: 0,
   viewportRanking: 'default',

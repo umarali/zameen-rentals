@@ -92,10 +92,17 @@ function finalizeSearch(token, controller) {
 function resetViewportSearchMeta({ clearVisibleAreas = false } = {}) {
   refs.mapAreaTotals = {};
   if (clearVisibleAreas) refs.viewportAreaNames = [];
+  refs.viewportVisibleAreas = 0;
   refs.viewportRanking = 'default';
   refs.viewportScope = 'area_coverage';
   refs.viewportAttemptedExactBounds = false;
   refs.viewportExactBoundsTotal = null;
+}
+
+function getViewportVisibleAreaCount(fallback = refs.viewportAreaNames.length) {
+  return Number.isFinite(Number(refs.viewportVisibleAreas))
+    ? Math.max(Number(refs.viewportVisibleAreas), 0)
+    : fallback;
 }
 
 function selectAreaFull(name, fromMap) {
@@ -325,7 +332,7 @@ function isEmptyExactBoundsFallback(scope = refs.viewportScope) {
     && refs.viewportExactBoundsTotal === 0;
 }
 
-function getViewportEmptyStateMessage({ visibleAreas = refs.viewportAreaNames.length, scope = refs.viewportScope } = {}) {
+function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCount(), scope = refs.viewportScope } = {}) {
   if (scope === 'exact_bounds') {
     return 'No exact-pin rentals are visible here right now. Zoom out to broaden the map view.';
   }
@@ -343,7 +350,7 @@ function updateCoverageBadge() {
   const badges = [desktop, mobile].filter(Boolean);
   if (!badges.length) return;
 
-  const visibleAreas = refs.viewportAreaNames.length;
+  const visibleAreas = getViewportVisibleAreaCount();
   const coveredEntries = Object.entries(refs.mapAreaTotals || {}).sort((a, b) => b[1] - a[1]);
   const coveredAreas = coveredEntries.length;
 
@@ -367,12 +374,20 @@ function updateCoverageBadge() {
       : coveredAreas > 0
       ? 'Green dots have local listings. Gray dots are preview-only. Cards are ordered nearest to the map center.'
       : 'This part of the map has no crawled local listings yet. Gray dots are preview-only.';
+    const legendHtml = `
+      <div class="coverage-legend" aria-label="Map legend">
+        <span class="coverage-legend-item"><span class="coverage-legend-dot live" aria-hidden="true"></span>Green: covered area</span>
+        <span class="coverage-legend-item"><span class="coverage-legend-dot preview" aria-hidden="true"></span>Grey: preview only</span>
+        <span class="coverage-legend-item"><span class="coverage-legend-dot exact" aria-hidden="true"></span>Red: exact listing pin</span>
+      </div>
+    `;
 
     el.innerHTML = `
       <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Map Coverage</div>
       <div class="mt-1 text-sm font-semibold text-gray-800">${summary}</div>
       <div class="mt-1 text-xs text-gray-500">${detail}</div>
       <div class="mt-2 flex flex-wrap gap-2">${coveredHtml}</div>
+      ${legendHtml}
     `;
     el.classList.remove('hidden');
   });
@@ -422,6 +437,9 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
   refs.lastSearchTotal = data.total || 0;
   if (mode === 'viewport') {
     refs.mapAreaTotals = data.area_totals || {};
+    refs.viewportVisibleAreas = Number.isFinite(Number(data.visible_areas))
+      ? Math.max(Number(data.visible_areas), 0)
+      : refs.viewportAreaNames.length;
     refs.viewportTotal = data.total || 0;
     refs.viewportShown = append ? refs.currentResults.length : (data.results || []).length;
     refs.viewportRanking = data.ranking || 'default';
@@ -435,7 +453,9 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
   if (!append) {
     refs.currentResults = data.results || [];
     if (!refs.currentResults.length) {
-      const visibleAreas = data.visible_areas || refs.viewportAreaNames.length;
+      const visibleAreas = mode === 'viewport'
+        ? getViewportVisibleAreaCount()
+        : (data.visible_areas || refs.viewportAreaNames.length);
       updateHeader({
         total: data.total || 0,
         source: data.source,
@@ -470,7 +490,9 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
     total: data.total || 0,
     source: data.source,
     mode,
-    visibleAreas: data.visible_areas || refs.viewportAreaNames.length,
+    visibleAreas: mode === 'viewport'
+      ? getViewportVisibleAreaCount()
+      : (data.visible_areas || refs.viewportAreaNames.length),
     coveredAreas: Object.keys(data.area_totals || {}).length,
     ranking: data.ranking,
     scope: data.scope,

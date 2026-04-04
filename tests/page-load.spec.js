@@ -14,7 +14,7 @@ test.describe("Page Load & Layout", () => {
 
   test("navbar renders with logo and search bar", async ({ page }) => {
     await expect(page.locator("header")).toBeVisible();
-    await expect(page.locator("text=ZameenRentals")).toBeVisible();
+    await expect(page.locator('a[aria-label="ZameenRentals home"]')).toBeVisible();
     await expect(page.locator("#nlInput")).toBeVisible();
     await expect(page.locator("#nlSearchBtn")).toBeVisible();
   });
@@ -44,7 +44,7 @@ test.describe("Page Load & Layout", () => {
   }) => {
     await expect(page.locator("#listingsTitle")).toBeVisible();
     await expect(page.locator("#listingsTitle")).toContainText(
-      "Rentals in Lahore"
+      /Rentals in (this map view|Lahore)/
     );
     // Wait for search to complete
     await expect(page.locator("#resultsCount")).not.toHaveText("", {

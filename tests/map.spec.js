@@ -48,6 +48,58 @@ test.describe("Desktop Map", () => {
     expect(zoomBox.y).toBeGreaterThan(gpsBox.y + gpsBox.height - 2);
   });
 
+  test("coverage badge shows a legend for map markers", async ({ page }) => {
+    const badge = page.locator("#mapCoverageBadge");
+    await expect(badge).toBeVisible();
+    await expect(badge).toContainText("Green: covered area");
+    await expect(badge).toContainText("Grey: preview only");
+    await expect(badge).toContainText("Red: exact listing pin");
+  });
+
+  test("coverage badge uses normalized visible-area counts from viewport search", async ({ page }) => {
+    await page.route("**/api/map-search**", async route => {
+      await route.fulfill({
+        json: {
+          total: 2,
+          page: 1,
+          per_page: 25,
+          results: [
+            {
+              title: "Exact listing 1",
+              url: "https://www.zameen.com/Property/test-visible-1.html",
+              price: 65000,
+              property_type: "Apartment",
+              latitude: 24.861,
+              longitude: 67.002,
+              location_source: "listing_exact",
+              has_exact_geography: true,
+            },
+            {
+              title: "Exact listing 2",
+              url: "https://www.zameen.com/Property/test-visible-2.html",
+              price: 60000,
+              property_type: "Apartment",
+              latitude: 24.862,
+              longitude: 67.003,
+              location_source: "listing_exact",
+              has_exact_geography: true,
+            },
+          ],
+          source: "local",
+          mode: "viewport",
+          scope: "exact_bounds",
+          visible_areas: 2,
+          area_totals: { "Garden West": 1, "Saddar Town": 1 },
+          attempted_exact_bounds: true,
+          exact_bounds_total: 2,
+        },
+      });
+    });
+
+    await page.reload();
+    await expect(page.locator("#mapCoverageBadge")).toContainText("2 covered / 2 visible");
+  });
+
   test("map layer toggle switches to satellite and persists after reload", async ({ page }) => {
     const satelliteBtn = page.locator('#mapContainer [data-map-layer="satellite"]').first();
     await satelliteBtn.click();
@@ -73,7 +125,7 @@ test.describe("Desktop Map", () => {
     expect(await markers.count()).toBeGreaterThan(0);
   });
 
-  test("street zoom keeps only the focused area label visible", async ({ page }) => {
+  test("street zoom swaps the focused area label for an active dot", async ({ page }) => {
     await page.locator('.city-tab[data-city="karachi"]').click();
     // Select an area to make it active
     await page.locator("#areaChip").click();
@@ -81,11 +133,8 @@ test.describe("Desktop Map", () => {
     await page.waitForTimeout(400);
     await page.locator(".area-opt").first().click();
     await page.waitForTimeout(2000);
-    const activeLabel = page.locator(
-      "#mapContainer .area-label-active"
-    );
-    expect(await activeLabel.count()).toBeGreaterThanOrEqual(1);
-    expect(await page.locator("#mapContainer .area-label").count()).toBeLessThanOrEqual(1);
+    await expect(page.locator("#mapContainer .area-label")).toHaveCount(0);
+    expect(await page.locator("#mapContainer .area-dot-active").count()).toBeGreaterThanOrEqual(1);
   });
 
   test("active area badge shows total count", async ({ page }) => {

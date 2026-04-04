@@ -19,6 +19,7 @@ const EXACT_PREFETCH_COOLDOWN_MS = 30000;
 const USER_LOCATION_STORAGE_KEY = 'rk_userLocation';
 const USER_LOCATION_TTL_MS = 30 * 60 * 1000;
 const AREA_LABEL_Z_INDEX = 1400;
+const AREA_LABEL_HIDE_ZOOM = 13;
 
 let exactPrefetchTimer = null;
 let exactPrefetchController = null;
@@ -569,6 +570,12 @@ function isSubArea(childName, parentName) {
   return cl !== pl && (cl.startsWith(pl + ' ') || cl.startsWith(pl + ' - '));
 }
 
+function shouldShowAreaLabel(mapInstance, { active = false, hovered = false, preview = false } = {}) {
+  if (!active && !hovered && !preview) return false;
+  const zoom = mapInstance?.getZoom?.() ?? 0;
+  return zoom < AREA_LABEL_HIDE_ZOOM;
+}
+
 export function getVisibleAreaNames(mapInstance = refs.map) {
   if (!mapInstance || !refs.allAreas.length) return [];
   const bounds = mapInstance.getBounds();
@@ -608,13 +615,17 @@ export function updateMapMarkers() {
     const isHovered = refs.hoveredArea === name;
     const isPreview = refs.previewArea === name;
     const inView = bounds.contains(marker.getLatLng());
-    const showLabel = isActive || isHovered || isPreview;
+    const showLabel = shouldShowAreaLabel(map, {
+      active: isActive,
+      hovered: isHovered,
+      preview: isPreview,
+    });
     const variant = hasResults || isActive ? 'covered' : 'coverage';
     marker.setZIndexOffset(showLabel ? AREA_LABEL_Z_INDEX : 0);
 
     if (isActive) {
       const activeCount = refs.lastSearchTotal || count || 0;
-      marker.setIcon(createIcon(name, true, activeCount, map, 'covered', true));
+      marker.setIcon(createIcon(name, true, showLabel ? activeCount : 0, map, 'covered', showLabel));
       if (!map.hasLayer(marker)) marker.addTo(map);
       return;
     }
@@ -759,7 +770,10 @@ export function updateMobileMarkers(selectAreaFull) {
     if (!area.lat || !area.lng || area.name === cityName || !bounds.contains(L.latLng(area.lat, area.lng))) return;
     const count = counts[area.name] || 0;
     const isActive = area.name === S.area;
-    const showLabel = isActive || refs.previewArea === area.name;
+    const showLabel = shouldShowAreaLabel(map, {
+      active: isActive,
+      preview: refs.previewArea === area.name,
+    });
     const variant = count || isActive ? 'covered' : 'coverage';
     const icon = createIcon(area.name, isActive, showLabel ? count : 0, map, variant, showLabel);
     L.marker([area.lat, area.lng], { icon, zIndexOffset: showLabel ? AREA_LABEL_Z_INDEX : 0 }).on('click', () => {
