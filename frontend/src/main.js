@@ -382,13 +382,18 @@ function updateCoverageBadge() {
       </div>
     `;
 
-    el.innerHTML = `
-      <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Map Coverage</div>
-      <div class="mt-1 text-sm font-semibold text-gray-800">${summary}</div>
-      <div class="mt-1 text-xs text-gray-500">${detail}</div>
-      <div class="mt-2 flex flex-wrap gap-2">${coveredHtml}</div>
-      ${legendHtml}
-    `;
+    if (el === mobile) {
+      // Compact mobile version: single-line summary
+      el.innerHTML = `<span class="text-[11px] font-semibold text-gray-600">${coveredAreas} covered · ${visibleAreas || 0} visible</span>`;
+    } else {
+      el.innerHTML = `
+        <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Map Coverage</div>
+        <div class="mt-1 text-sm font-semibold text-gray-800">${summary}</div>
+        <div class="mt-1 text-xs text-gray-500">${detail}</div>
+        <div class="mt-2 flex flex-wrap gap-2">${coveredHtml}</div>
+        ${legendHtml}
+      `;
+    }
     el.classList.remove('hidden');
   });
 }
