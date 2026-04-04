@@ -728,13 +728,13 @@ export function initMap(selectAreaFull, onViewportChange, openDrawer) {
 function renderMobileMapCard(item) {
   const img = item.image_url;
   const distanceLabel = formatDistance(item.distance_km, { approximate: item.is_distance_approximate });
-  return `<div class="shrink-0 w-64 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden cursor-pointer" style="scroll-snap-align:start" data-mobile-card-url="${escA(item.url || '')}">
-    ${img ? `<img class="w-full h-32 object-cover" src="${escA(img)}" alt="" loading="lazy">` : `<div class="w-full h-32 bg-gray-100 flex items-center justify-center text-3xl text-gray-300">&#x1f3e0;</div>`}
-    <div class="p-2.5">
+  return `<div class="shrink-0 w-72 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" style="scroll-snap-align:start" data-mobile-card-url="${escA(item.url || '')}">
+    ${img ? `<img class="w-full h-36 object-cover" src="${escA(img)}" alt="" loading="lazy">` : `<div class="w-full h-36 bg-gray-100 flex items-center justify-center text-3xl text-gray-300">&#x1f3e0;</div>`}
+    <div class="p-3">
       <div class="text-sm font-bold text-gray-800">${esc(fmtPrice(item.price, item.price_text))}</div>
-      <div class="text-xs text-gray-500 line-clamp-1">${esc(item.title || 'Rental')}</div>
+      <div class="text-xs text-gray-500 line-clamp-1 mt-0.5">${esc(item.title || 'Rental')}</div>
       ${distanceLabel ? `<div class="mt-1 text-[11px] font-semibold text-brand-600">${esc(distanceLabel)}</div>` : ''}
-      <div class="flex gap-2 mt-1 text-[11px] text-gray-400">
+      <div class="flex gap-2.5 mt-1.5 text-[11px] text-gray-400">
         ${item.bedrooms ? `<span>${item.bedrooms} bed</span>` : ''}
         ${item.bathrooms ? `<span>${item.bathrooms} bath</span>` : ''}
         ${item.area_size ? `<span>${esc(item.area_size)}</span>` : ''}
