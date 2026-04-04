@@ -319,7 +319,7 @@ body { display: grid; grid-template-rows: 60px auto 1fr; }
 .scroll-thin::-webkit-scrollbar-track { background: transparent; }
 
 /* ===== Filter dropdowns ===== */
-.filter-dd { transform: translateY(-8px); opacity: 0; pointer-events: none; transition: transform .2s ease, opacity .2s ease; }
+.filter-dd { transform: translateY(-8px); opacity: 0; pointer-events: none; transition: transform .25s cubic-bezier(.32,.72,0,1), opacity .2s ease; }
 .filter-dd.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
 
 /* ===== Image carousel ===== */
@@ -403,19 +403,295 @@ body { display: grid; grid-template-rows: 60px auto 1fr; }
 
 /* ===== Mobile overrides ===== */
 @media (max-width: 768px) {
-  body { grid-template-rows: 56px auto 1fr; overflow: auto; }
+  body { grid-template-rows: auto auto 1fr; overflow: auto; }
   html, body { overflow: auto; }
+
+  /* --- Navbar --- */
+  header {
+    padding: 10px 12px;
+    gap: 8px;
+    min-height: 52px;
+  }
   .brand-mark {
-    width: 2rem;
-    height: 2rem;
+    width: 1.75rem;
+    height: 1.75rem;
   }
   .brand-wordmark {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
+    gap: 0.2rem;
+  }
+  /* Search bar: more compact on mobile */
+  header .flex-1 {
+    max-width: none;
+    margin: 0;
+  }
+  header .flex-1 .flex {
+    border-radius: 12px;
+    padding-left: 12px;
+    padding-right: 4px;
+  }
+  header .flex-1 input {
+    padding: 8px 8px;
+    font-size: 14px;
+  }
+  #nlParsed { display: none !important; }
+  #clearAllBtn { font-size: 11px; padding: 6px 10px; }
+
+  /* --- Filter bar --- */
+  #filterBar {
+    padding: 8px 12px;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chip-filter {
+    padding: 8px 14px;
+    font-size: 13px;
+    min-height: 36px;
+  }
+  .city-tab {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 34px;
+  }
+
+  /* --- Filter dropdowns → mobile bottom sheet --- */
+  .filter-dd {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+    max-height: 70vh;
+    overflow-y: auto;
+    width: 100% !important;
+    padding: 20px 16px;
+    padding-top: 28px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+  }
+  /* Bottom sheet drag handle indicator */
+  .filter-dd::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: #d1d5db;
+  }
+  .filter-dd .text-sm.font-semibold.text-gray-700 {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+  .filter-dd .chip {
+    padding: 10px 16px;
+    font-size: 14px;
+    min-height: 40px;
+  }
+  .filter-dd input[type="text"],
+  .filter-dd input[type="number"],
+  .filter-dd select {
+    font-size: 16px;
+    padding: 12px;
+    min-height: 44px;
+  }
+  #ddBackdrop { backdrop-filter: blur(4px); }
+
+  /* --- Listings panel --- */
+  #listingsPanel {
+    padding: 12px;
+    overflow: visible;
+  }
+  #listingsPanel > .flex {
+    margin-bottom: 12px;
+  }
+  #listingsTitle { font-size: 15px; }
+  #resultsMeta { font-size: 11px; }
+
+  /* --- Cards grid: single column, Airbnb card style --- */
+  #listingsGrid {
+    grid-template-columns: 1fr !important;
+    gap: 20px;
+  }
+  .card-wrap {
+    border-radius: 16px;
+    border-width: 1px;
+    box-shadow: none;
+  }
+  .card-wrap .aspect-\[4\/3\] {
+    aspect-ratio: 16/11;
+  }
+  .card-wrap .p-3 {
+    padding: 14px 14px 12px;
+  }
+  .card-wrap .text-base.font-bold {
+    font-size: 17px;
+  }
+  .card-wrap .text-sm.text-gray-600 {
+    font-size: 14px;
+  }
+
+  /* --- Action buttons: bigger tap targets --- */
+  .action-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .action-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* --- Map FAB: Airbnb style --- */
+  #mapFab {
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    padding: 14px 22px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  }
+  #mapFab svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* --- Map overlay: full screen --- */
+  #mapOverlay {
+    padding-top: 0;
+  }
+  #mapOverlayClose {
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    padding: 10px 16px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  }
+  #mapCarousel {
+    padding: 8px 12px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    gap: 10px;
+  }
+
+  /* --- Drawer: full-height bottom sheet --- */
+  #drawer {
+    border-radius: 20px 20px 0 0;
+    max-height: 95vh;
   }
   #drawer.drawer-open { --tw-translate-x: 0 !important; --tw-translate-y: 0 !important; transform: none !important; translate: none !important; }
-  .filter-dd {
-    position: fixed; top: auto; bottom: 0; left: 0; right: 0;
-    margin: 0; border-radius: 1rem 1rem 0 0;
-    max-height: 60vh; overflow-y: auto; width: 100% !important;
+  #drawerClose {
+    width: 36px;
+    height: 36px;
+    top: 12px;
+    right: 12px;
   }
+  .drawer-img-grid { height: 240px; max-height: 240px; }
+  .drawer-img-single { height: 240px; }
+  #drawerContent {
+    padding: 16px 16px 24px;
+  }
+  #drawerContent h2 { font-size: 18px; }
+  .drawer-contact-bar {
+    padding: 14px 16px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .drawer-contact-bar button,
+  .drawer-contact-bar a {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+  .amenity-pill {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  /* --- Gallery: safe area aware --- */
+  #galleryModal .absolute.top-4 {
+    top: calc(16px + env(safe-area-inset-top, 0px));
+  }
+  #galleryPrev, #galleryNext {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* --- Toast: mobile positioning --- */
+  #toastStack {
+    top: auto;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    right: 12px;
+    left: 12px;
+    width: auto;
+  }
+
+  /* --- Load more button --- */
+  #listingsFooter button {
+    padding: 14px;
+    font-size: 15px;
+    border-radius: 12px;
+    min-height: 48px;
+  }
+
+  /* --- Skeleton cards on mobile --- */
+  .skeleton { border-radius: 12px; }
+
+  /* --- No results state --- */
+  #listingsGrid .col-span-full {
+    padding: 40px 16px;
+  }
+
+  /* --- Area list: mobile tap targets --- */
+  .area-opt {
+    padding: 12px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+
+  /* --- NL suggestions: mobile sizing --- */
+  #nlSuggestions .nl-ex,
+  #nlSuggestions .pop-search {
+    padding: 12px 16px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+
+  /* --- Carousel prev/next: hidden on mobile (swipe instead) --- */
+  [data-carousel] [data-prev],
+  [data-carousel] [data-next] {
+    display: none !important;
+  }
+
+  /* --- Furnished toggle: bigger tap target --- */
+  #furnishedToggle {
+    width: 48px;
+    height: 28px;
+  }
+  #furnishedToggle .toggle-knob {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* ===== Small phone tweaks (< 375px) ===== */
+@media (max-width: 374px) {
+  .brand-wordmark { display: none; }
+  header { padding: 8px 10px; }
+  #listingsPanel { padding: 10px 8px; }
+  .card-wrap .p-3 { padding: 12px 10px 10px; }
+  .chip-filter { padding: 6px 10px; font-size: 12px; }
+}
+
+/* ===== Tablet tweaks ===== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  #listingsGrid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px;
+  }
+  #listingsPanel { padding: 16px; }
 }
