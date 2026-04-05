@@ -4,7 +4,7 @@ const STORAGE_KEY = 'rk_mapLayer';
 
 export const MAP_LAYER_DEFS = {
   osm: {
-    label: 'Map',
+    label: 'Street',
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     options: {
       attribution: '&copy; OpenStreetMap',
@@ -29,7 +29,7 @@ export function getStoredMapLayer() {
   try {
     return sanitizeMapLayerKey(localStorage.getItem(STORAGE_KEY));
   } catch {
-    return 'osm';
+    return 'satellite';
   }
 }
 

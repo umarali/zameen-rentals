@@ -174,12 +174,15 @@
       <div class="flex items-center gap-2">
         <span id="resultsCount" class="text-xs text-gray-400"></span>
         <span id="dataSource" class="text-xs text-gray-300 hidden"></span>
-        <button id="reportBtn" class="hidden text-xs text-gray-400 hover:text-brand-600 transition-colors cursor-pointer" title="Send feedback">Feedback</button>
       </div>
     </div>
     <div id="listingsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-5"></div>
     <div id="listingsFooter"></div>
-    <div class="text-center py-6 text-xs text-gray-400">Powered by Zameen.com data</div>
+    <div class="text-center py-6 text-xs text-gray-400">
+      Powered by Zameen.com data
+      <span class="mx-1.5 text-gray-300">&middot;</span>
+      <button id="reportBtn" class="text-gray-400 hover:text-brand-600 transition-colors cursor-pointer">Something wrong? Let us know</button>
+    </div>
   </section>
   <section id="mapPanel" class="relative border-l border-gray-200 hidden lg:block z-0">
     <div id="mapCoverageBadge" class="hidden absolute top-4 left-4 z-[500] max-w-[280px] rounded-2xl bg-white/92 backdrop-blur border border-gray-200 shadow-sm px-4 py-3"></div>

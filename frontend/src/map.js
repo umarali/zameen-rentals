@@ -121,7 +121,7 @@ function createLayerToggleControl() {
     onAdd() {
       const container = L.DomUtil.create('div', 'map-layer-control');
       container.innerHTML = `
-        <button type="button" class="map-layer-btn" data-map-layer="osm" aria-pressed="false">Map</button>
+        <button type="button" class="map-layer-btn" data-map-layer="osm" aria-pressed="false">Street</button>
         <button type="button" class="map-layer-btn" data-map-layer="satellite" aria-pressed="false">Satellite</button>
       `;
       L.DomEvent.disableClickPropagation(container);

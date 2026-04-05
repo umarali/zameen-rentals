@@ -510,7 +510,6 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
     ranking: data.ranking,
     scope: data.scope,
   });
-  $('#reportBtn').classList.remove('hidden');
   initCarousels();
   observeCards();
   updateMapMarkers();
