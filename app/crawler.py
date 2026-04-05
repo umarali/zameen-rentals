@@ -35,11 +35,11 @@ logger = logging.getLogger("zameenrentals.crawler")
 _shutdown = False
 
 # ── Crawl schedule configuration ──
-CARD_CYCLE_INTERVAL_HOURS = 4    # Full card re-crawl every 4 hours
+CARD_CYCLE_INTERVAL_HOURS = 1    # Re-crawl areas every 1 hour (was 4)
 DETAIL_BATCH_SIZE = 15           # Detail pages per iteration
 PHONE_BATCH_SIZE = 25            # Phone API calls per iteration
-INTER_AREA_DELAY = (1.0, 3.0)   # Random delay between areas (seconds)
-CYCLE_REST_MINUTES = 15          # Rest between full cycles
+INTER_AREA_DELAY = (0.5, 1.5)   # Random delay between areas (seconds) — tighter for faster cycles
+CYCLE_REST_MINUTES = 5           # Rest between full cycles (was 15)
 MAX_CONSECUTIVE_ERRORS = 5       # Pause crawling after this many errors in a row
 CARD_SPEED_MULTIPLIER = 1.0
 
