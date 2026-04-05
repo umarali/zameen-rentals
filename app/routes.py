@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 
 from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, _ENGLISH_TO_URDU
 from app.cache import limiter
-from app.database import log_search, get_popular_searches, get_recent_searches
+from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
 from app.parsing import parse_natural_query
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
@@ -545,6 +545,20 @@ async def popular_searches(city: str = Query("karachi"), limit: int = Query(8, g
 @router.get("/api/recent-searches")
 async def recent_searches(city: str = Query("karachi"), limit: int = Query(8, ge=1, le=20)):
     return get_recent_searches(city, limit)
+
+
+@router.post("/api/feedback")
+@limiter.limit("5/minute")
+async def submit_feedback(request: Request):
+    body = await request.json()
+    message = (body.get("message") or "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required")
+    if len(message) > 2000:
+        raise HTTPException(status_code=400, detail="Message too long")
+    context = body.get("context")
+    save_feedback(message, context)
+    return {"ok": True}
 
 
 @router.get("/")

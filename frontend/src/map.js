@@ -479,7 +479,7 @@ function updateListingMarkers(mapInstance = refs.map, { mobile = false } = {}) {
   const layerKey = mobile ? 'mobileListingMarkerLayer' : 'listingMarkerLayer';
   clearListingLayer(layerKey);
   if (!mapInstance) return;
-  if (!['viewport', 'nearby'].includes(refs.searchMode)) return;
+  if (!['viewport', 'nearby', 'area'].includes(refs.searchMode)) return;
 
   const minZoom = mobile ? EXACT_MARKER_MIN_ZOOM_MOBILE : EXACT_MARKER_MIN_ZOOM;
   if (mapInstance.getZoom() < minZoom) return;

@@ -946,36 +946,65 @@ function initNearbyControls() {
   });
 }
 
+function gatherFeedbackContext() {
+  const center = refs.map ? refs.map.getCenter() : null;
+  const zoom = refs.map ? refs.map.getZoom() : null;
+  return JSON.stringify({
+    mode: refs.searchMode, city: S.city, area: S.area || null,
+    type: S.type || null, beds: S.beds || null,
+    query: $('#nlInput').value || null,
+    results: refs.currentResults.length,
+    total: refs.lastSearchTotal || 0,
+    exactPins: refs.currentResults.filter(item => item.has_exact_geography).length,
+    zoom: zoom, center: center ? `${center.lat.toFixed(4)},${center.lng.toFixed(4)}` : null,
+  });
+}
+
 function initReportBtn() {
-  $('#reportBtn').addEventListener('click', () => {
-    const params = new URLSearchParams();
-    const center = refs.map ? refs.map.getCenter() : null;
-    const zoom = refs.map ? refs.map.getZoom() : null;
-    const bounds = refs.map ? refs.map.getBounds() : null;
-    const body = [
-      '**What went wrong?**\n',
-      '<!-- Describe the issue briefly -->\n',
-      '**Search context** (auto-filled):',
-      `- Mode: ${refs.searchMode}`,
-      `- City: ${S.city}`,
-      `- Area: ${S.area || 'Any'}`,
-      `- Type: ${S.type || 'Any'}`,
-      `- Beds: ${S.beds || 'Any'}`,
-      `- Query: ${$('#nlInput').value || '(none)'}`,
-      `- Results shown: ${refs.currentResults.length}`,
-      `- Total available: ${refs.lastSearchTotal || 0}`,
-      `- Exact pins in shown results: ${refs.currentResults.filter(item => item.has_exact_geography).length}`,
-      `- Visible areas: ${refs.viewportAreaNames.length || 0}`,
-      `- View ordering: ${refs.viewportRanking === 'map_focus' ? 'nearest to map center' : 'default'}`,
-      `- Map center: ${center ? `${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}` : 'n/a'}`,
-      `- Map bounds: ${bounds ? `${bounds.getSouth().toFixed(4)}, ${bounds.getWest().toFixed(4)} -> ${bounds.getNorth().toFixed(4)}, ${bounds.getEast().toFixed(4)}` : 'n/a'}`,
-      `- Map zoom: ${zoom ?? 'n/a'}`,
-      `- URL: ${location.href}`,
-    ].join('\n');
-    params.set('title', '[Feedback] ');
-    params.set('body', body);
-    params.set('labels', 'feedback');
-    window.open('https://github.com/umarali/zameen-rentals/issues/new?' + params.toString(), '_blank');
+  const overlay = $('#feedbackOverlay');
+  const modal = $('#feedbackModal');
+  const msg = $('#feedbackMsg');
+  const submitBtn = $('#feedbackSubmit');
+
+  function openFeedback() {
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    msg.value = '';
+    submitBtn.disabled = true;
+    msg.focus();
+  }
+  function closeFeedback() {
+    overlay.classList.add('hidden');
+    modal.classList.add('hidden');
+  }
+
+  $('#reportBtn').addEventListener('click', openFeedback);
+  $('#feedbackClose').addEventListener('click', closeFeedback);
+  $('#feedbackCancel').addEventListener('click', closeFeedback);
+  overlay.addEventListener('click', closeFeedback);
+
+  msg.addEventListener('input', () => { submitBtn.disabled = !msg.value.trim(); });
+
+  submitBtn.addEventListener('click', async () => {
+    const text = msg.value.trim();
+    if (!text) return;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+    try {
+      const resp = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, context: gatherFeedbackContext() }),
+      });
+      if (!resp.ok) throw new Error();
+      closeFeedback();
+      showToast('Thanks for your feedback!');
+    } catch {
+      showToast('Could not send feedback. Please try again.', { tone: 'error' });
+      submitBtn.disabled = false;
+    } finally {
+      submitBtn.textContent = 'Send';
+    }
   });
 }
 

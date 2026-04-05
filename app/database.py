@@ -153,6 +153,13 @@ def init_db():
                 errors           INTEGER DEFAULT 0,
                 status           TEXT DEFAULT 'running'
             );
+
+            CREATE TABLE IF NOT EXISTS feedback (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+                message     TEXT NOT NULL,
+                context     TEXT
+            );
             """)
 
         # Add newer contact fields for existing databases.
@@ -304,3 +311,11 @@ def get_recent_searches(city: str = "lahore", limit: int = 8):
         (city, limit)
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ── Feedback ──
+
+def save_feedback(message: str, context: str | None = None):
+    conn = _get_conn()
+    conn.execute("INSERT INTO feedback (message, context) VALUES (?, ?)", (message, context))
+    conn.commit()
