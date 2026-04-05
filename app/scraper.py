@@ -406,7 +406,9 @@ def parse_listings(html):
                     elif img:
                         l["image_url"] = img
                     if l.get("title"): listings.append(l)
-            except: continue
+            except Exception:
+                logger.debug("JSON-LD parse skip", exc_info=True)
+                continue
     return listings
 
 
@@ -610,6 +612,6 @@ async def search_zameen(area=None, property_type=None, bedrooms=None, price_min=
     if count_el:
         m = re.search(r'(\d[\d,]*)\s+(?:Flats?|Homes?|Houses?|Properties|Rooms?|Portions?|Penthouses?)', count_el.get_text())
         if m: total = int(m.group(1).replace(",",""))
-    result = {"total": total, "page": page, "url": url, "results": listings}
+    result = {"total": total, "page": page, "per_page": 25, "url": url, "results": listings}
     cache_set(ck, result)
     return result

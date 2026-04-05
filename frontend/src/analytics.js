@@ -132,3 +132,45 @@ export function trackContactIntent({ channel, listingUrl, position, mode, city, 
     source: source || null,
   });
 }
+
+export function trackCitySwitch({ from, to }) {
+  track('city_switched', { from_city: from, to_city: to });
+}
+
+export function trackFilterChange({ filter, value, previousValue, mode, city }) {
+  track('filter_changed', {
+    filter,
+    value: value || null,
+    previous_value: previousValue || null,
+    mode,
+    city,
+  });
+}
+
+export function trackMapMarkerClick({ areaName, markerType, city, mode }) {
+  track('map_marker_clicked', {
+    area_name: areaName || null,
+    marker_type: markerType,
+    city,
+    mode,
+  });
+}
+
+export function trackApiError({ endpoint, statusCode, errorMessage, mode, city }) {
+  track('api_error', {
+    endpoint,
+    status_code: statusCode ?? null,
+    error_message: errorMessage || null,
+    mode,
+    city,
+  });
+}
+
+export function trackScrollDepth({ maxPosition, totalResults, mode, city }) {
+  track('results_scroll_depth', {
+    max_position_seen: maxPosition,
+    total_results: totalResults,
+    mode,
+    city,
+  });
+}

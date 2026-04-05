@@ -2,6 +2,7 @@
 
 import { $, $$, esc, escA, TYPE_L } from './utils.js';
 import { S, refs, CITY_DEFAULTS, POPULAR_AREAS_BY_CITY, NL_EXAMPLES } from './state.js';
+import { trackFilterChange } from './analytics.js';
 
 // ===== NL EXAMPLES (city-aware) =====
 
@@ -254,16 +255,20 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
   // Type
   $('#typeGrid').addEventListener('click', e => {
     const c = e.target.closest('.chip'); if (!c) return;
+    const prev = S.type;
     if (c.classList.contains('active')) { c.classList.remove('active'); S.type = ''; }
     else { $$('#typeGrid .chip').forEach(x => x.classList.remove('active')); c.classList.add('active'); S.type = c.dataset.type; }
+    if (prev !== S.type) trackFilterChange({ filter: 'type', value: S.type, previousValue: prev, mode: refs.searchMode, city: S.city });
     updateChips(); closeDD(); doSearch();
   });
 
   // Beds
   $('#bedRow').addEventListener('click', e => {
     const c = e.target.closest('.chip'); if (!c) return;
+    const prev = S.beds;
     $$('#bedRow .chip').forEach(x => x.classList.remove('active'));
     c.classList.add('active'); S.beds = c.dataset.beds;
+    if (prev !== S.beds) trackFilterChange({ filter: 'beds', value: S.beds, previousValue: prev, mode: refs.searchMode, city: S.city });
     updateChips(); closeDD(); doSearch();
   });
 
@@ -277,8 +282,11 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
       updateChips(); return;
     }
     $('#customPrice').classList.add('hidden');
+    const prevPrice = `${S.priceMin}-${S.priceMax}`;
     if (c.classList.contains('active')) { c.classList.remove('active'); S.priceMin = ''; S.priceMax = ''; }
     else { $$('#priceGrid .chip').forEach(x => x.classList.remove('active')); c.classList.add('active'); S.priceMin = c.dataset.pmin; S.priceMax = c.dataset.pmax; }
+    const newPrice = `${S.priceMin}-${S.priceMax}`;
+    if (prevPrice !== newPrice) trackFilterChange({ filter: 'price', value: newPrice, previousValue: prevPrice, mode: refs.searchMode, city: S.city });
     updateChips(); closeDD(); doSearch();
   });
   $('#priceMin').addEventListener('input', () => { S.priceMin = $('#priceMin').value; updateChips(); });
@@ -287,10 +295,20 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
   $('#priceApply').addEventListener('click', () => { S.priceMin = $('#priceMin').value; S.priceMax = $('#priceMax').value; updateChips(); closeDD(); doSearch(); });
 
   // Furnished
-  $('#furnishedToggle').addEventListener('click', () => { setToggle(!S.furnished); updateChips(); doSearch(); });
+  $('#furnishedToggle').addEventListener('click', () => {
+    const prev = S.furnished;
+    setToggle(!S.furnished);
+    trackFilterChange({ filter: 'furnished', value: String(S.furnished), previousValue: String(prev), mode: refs.searchMode, city: S.city });
+    updateChips(); doSearch();
+  });
 
   // Sort
-  $('#sortSelect').addEventListener('change', () => { S.sort = $('#sortSelect').value; updateChips(); closeDD(); doSearch(); });
+  $('#sortSelect').addEventListener('change', () => {
+    const prev = S.sort;
+    S.sort = $('#sortSelect').value;
+    if (prev !== S.sort) trackFilterChange({ filter: 'sort', value: S.sort, previousValue: prev, mode: refs.searchMode, city: S.city });
+    updateChips(); closeDD(); doSearch();
+  });
 
   // Presets
   $('#presetRow').addEventListener('click', e => {

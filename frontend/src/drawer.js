@@ -180,6 +180,7 @@ async function fetchDrawerDetail(item, existingImgs) {
   drawerDetailController = controller;
   try {
     const resp = await fetch(`/api/listing-detail?url=${encodeURIComponent(listingUrl)}`, { signal: controller.signal });
+    if (!resp.ok) throw new Error('detail-fetch-failed');
     const d = await resp.json();
     if (controller.signal.aborted || requestId !== drawerDetailRequestId) return;
     if (!d || !Object.keys(d).length) { el.innerHTML = ''; return; }
@@ -263,7 +264,7 @@ async function fetchDrawerDetail(item, existingImgs) {
     });
   } catch (error) {
     if (error?.name === 'AbortError' || requestId !== drawerDetailRequestId) return;
-    el.innerHTML = '';
+    el.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">Could not load details</p>';
   } finally {
     if (drawerDetailController === controller) drawerDetailController = null;
   }

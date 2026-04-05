@@ -12,11 +12,14 @@ import {
   initMobileMap, updateMobileCarousel, updateMobileMarkers, initHoverSync,
   getVisibleAreaNames, fitCityOverview,
   clearNearbyRadiusOverlays, hydrateStoredUserLocation, refreshUserLocationOverlays,
-  requestUserLocation,
+  requestUserLocation, resetExactPrefetchState,
 } from './map.js';
 import { openDrawer, initDrawerListeners } from './drawer.js';
 import { getStoredMapLayer } from './map-layers.js';
-import { initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen } from './analytics.js';
+import {
+  initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen,
+  trackCitySwitch, trackFilterChange, trackMapMarkerClick, trackApiError, trackScrollDepth,
+} from './analytics.js';
 
 function isNearbySupportedCity() {
   return S.city === 'karachi';
@@ -72,6 +75,7 @@ function beginSearchRequest(append) {
   const controller = new AbortController();
   refs.searchController = controller;
   refs.isLoading = true;
+  if (!append) resetScrollTracking();
   showLoading(append);
   saveSearch();
   return { token, controller };
@@ -106,6 +110,8 @@ function getViewportVisibleAreaCount(fallback = refs.viewportAreaNames.length) {
 }
 
 function selectAreaFull(name, fromMap) {
+  const prev = S.area;
+  if (prev !== name) trackFilterChange({ filter: 'area', value: name, previousValue: prev, mode: refs.searchMode, city: S.city });
   if (refs.searchMode !== 'nearby') refs.searchMode = 'area';
   resetViewportSearchMeta({ clearVisibleAreas: true });
   refs.lastViewportSearchKey = '';
@@ -117,6 +123,8 @@ function selectAreaFull(name, fromMap) {
 }
 
 function clearFilterFull(f) {
+  const prevValues = { area: S.area, type: S.type, beds: S.beds, price: S.priceMin || S.priceMax ? `${S.priceMin}-${S.priceMax}` : '', more: S.furnished ? 'furnished' : S.sort || '' };
+  if (prevValues[f]) trackFilterChange({ filter: f, value: '', previousValue: prevValues[f], mode: refs.searchMode, city: S.city });
   if (f === 'area') {
     refs.searchMode = refs.searchMode === 'nearby' ? 'nearby' : getBrowseMode();
     resetViewportSearchMeta({ clearVisibleAreas: true });
@@ -481,6 +489,11 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
     $('#listingsGrid').innerHTML = refs.currentResults.map((it, i) => renderCard(it, i)).join('');
   } else {
     const next = data.results || [];
+    if (!next.length) {
+      hideLoading();
+      renderFooter(refs.currentResults.length);
+      return;
+    }
     const start = refs.currentResults.length;
     refs.currentResults = refs.currentResults.concat(next);
     next.forEach((it, i) => $('#listingsGrid').insertAdjacentHTML('beforeend', renderCard(it, start + i)));
@@ -499,6 +512,7 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
   });
   $('#reportBtn').classList.remove('hidden');
   initCarousels();
+  observeCards();
   updateMapMarkers();
   updateCoverageBadge();
   if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
@@ -574,6 +588,7 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     const r = await fetch('/api/map-search?' + params.toString(), { signal: controller.signal });
     if (!r.ok) {
       const e = await r.json().catch(() => ({ detail: 'Map search failed' }));
+      trackApiError({ endpoint: '/api/map-search', statusCode: r.status, errorMessage: e.detail, mode: 'viewport', city: S.city });
       throw new Error(e.detail || 'Map search failed');
     }
     const data = await r.json();
@@ -586,13 +601,17 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
   } catch (e) {
     if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
-    refs.currentResults = [];
-    resetViewportSearchMeta();
-    updateHeader({ total: 0, source: 'unavailable', mode: 'viewport', visibleAreas: refs.viewportAreaNames.length, coveredAreas: 0, ranking: 'default' });
-    renderNoResults(e.message || 'Could not update the map view right now');
-    updateMapMarkers();
-    updateCoverageBadge();
-    if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+    if (append) {
+      showToast('Could not load more results.', { tone: 'error' });
+    } else {
+      refs.currentResults = [];
+      resetViewportSearchMeta();
+      updateHeader({ total: 0, source: 'unavailable', mode: 'viewport', visibleAreas: refs.viewportAreaNames.length, coveredAreas: 0, ranking: 'default' });
+      renderNoResults(e.message || 'Could not update the map view right now');
+      updateMapMarkers();
+      updateCoverageBadge();
+      if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+    }
     trackSearchOutcome({ success: false, data: e.message, mode: 'viewport', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy });
   } finally {
     finalizeSearch(token, controller);
@@ -617,6 +636,7 @@ async function doAreaSearch(page = 1) {
     const r = await fetch('/api/search?' + getParams(refs.currentPage).toString(), { signal: controller.signal });
     if (!r.ok) {
       const e = await r.json().catch(() => ({ detail: 'Search failed' }));
+      trackApiError({ endpoint: '/api/search', statusCode: r.status, errorMessage: e.detail, mode: refs.searchMode, city: S.city });
       throw new Error(e.detail || 'Search failed');
     }
     const data = await r.json();
@@ -628,12 +648,16 @@ async function doAreaSearch(page = 1) {
   } catch (e) {
     if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
-    refs.currentResults = [];
-    updateHeader({ total: 0, source: 'unavailable', mode: refs.searchMode });
-    renderNoResults(e.message || 'Search failed');
-    updateMapMarkers();
-    updateCoverageBadge();
-    if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+    if (append) {
+      showToast('Could not load more results.', { tone: 'error' });
+    } else {
+      refs.currentResults = [];
+      updateHeader({ total: 0, source: 'unavailable', mode: refs.searchMode });
+      renderNoResults(e.message || 'Search failed');
+      updateMapMarkers();
+      updateCoverageBadge();
+      if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+    }
     trackSearchOutcome({ success: false, data: e.message, mode: refs.searchMode, page: refs.currentPage, triggeredBy: refs._lastTriggeredBy });
   } finally {
     finalizeSearch(token, controller);
@@ -680,6 +704,7 @@ async function doNearbySearch(page = 1) {
     const r = await fetch('/api/nearby-search?' + params.toString(), { signal: controller.signal });
     if (!r.ok) {
       const e = await r.json().catch(() => ({ detail: 'Nearby search failed' }));
+      trackApiError({ endpoint: '/api/nearby-search', statusCode: r.status, errorMessage: e.detail, mode: 'nearby', city: S.city });
       throw new Error(e.detail || 'Nearby search failed');
     }
     const data = await r.json();
@@ -691,12 +716,16 @@ async function doNearbySearch(page = 1) {
   } catch (e) {
     if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
-    refs.currentResults = [];
-    updateHeader({ total: 0, source: 'unavailable', mode: 'nearby' });
-    renderNoResults(e.message || `No exact-pin rentals were found within ${refs.nearbyRadiusKm} km.`);
-    updateMapMarkers();
-    updateCoverageBadge();
-    if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+    if (append) {
+      showToast('Could not load more results.', { tone: 'error' });
+    } else {
+      refs.currentResults = [];
+      updateHeader({ total: 0, source: 'unavailable', mode: 'nearby' });
+      renderNoResults(e.message || `No exact-pin rentals were found within ${refs.nearbyRadiusKm} km.`);
+      updateMapMarkers();
+      updateCoverageBadge();
+      if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+    }
     trackSearchOutcome({ success: false, data: e.message, mode: 'nearby', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy, radiusKm: refs.nearbyRadiusKm });
   } finally {
     finalizeSearch(token, controller);
@@ -774,7 +803,9 @@ async function doNlSearch() {
 function initCityTabs() {
   $$('.city-tab').forEach(tab => tab.addEventListener('click', () => {
     if (tab.dataset.city === S.city) return;
+    const prevCity = S.city;
     S.city = tab.dataset.city;
+    trackCitySwitch({ from: prevCity, to: S.city });
     S.area = ''; S.type = ''; S.beds = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
     refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
     resetViewportSearchMeta({ clearVisibleAreas: true });
@@ -793,6 +824,31 @@ function initCityTabs() {
     refs._lastTriggeredBy = 'city_change';
     loadCityData();
   }));
+}
+
+let _maxCardSeen = 0;
+let _scrollDepthTimer = null;
+const _scrollObserver = new IntersectionObserver(entries => {
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue;
+    const idx = parseInt(entry.target.dataset.idx, 10);
+    if (Number.isFinite(idx) && idx > _maxCardSeen) _maxCardSeen = idx;
+  }
+  clearTimeout(_scrollDepthTimer);
+  _scrollDepthTimer = setTimeout(() => {
+    if (_maxCardSeen > 0) {
+      trackScrollDepth({ maxPosition: _maxCardSeen, totalResults: refs.lastSearchTotal || refs.currentResults.length, mode: refs.searchMode, city: S.city });
+    }
+  }, 2000);
+}, { threshold: 0.5 });
+
+function observeCards() {
+  $$('.card-wrap').forEach(card => _scrollObserver.observe(card));
+}
+
+function resetScrollTracking() {
+  _maxCardSeen = 0;
+  clearTimeout(_scrollDepthTimer);
 }
 
 function initCardListeners() {
@@ -952,7 +1008,10 @@ async function loadCityData() {
     refs.mobileUserLocationCircle = null;
     refs.mobileNearbyRadiusLayer = null;
   }
+  const carousel = $('#mapCarousel');
+  if (carousel) { carousel.innerHTML = ''; carousel.classList.add('hidden'); }
   updateNearbyControls();
+  resetExactPrefetchState();
   ensureMarkers(selectAreaFull);
   updateMapMarkers();
   updateCoverageBadge();

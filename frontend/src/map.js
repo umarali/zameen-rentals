@@ -2,7 +2,7 @@
 
 import { $, $$, esc, escA, fmtPrice, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
-import { track } from './analytics.js';
+import { track, trackMapMarkerClick } from './analytics.js';
 import { formatDistance, getAreaForListing } from './cards.js';
 import {
   createBaseLayer,
@@ -342,6 +342,13 @@ function cancelExactLocationPrefetch() {
   exactPrefetchSession += 1;
 }
 
+export function resetExactPrefetchState() {
+  cancelExactLocationPrefetch();
+  exactPrefetchPending.clear();
+  exactPrefetchMissing.clear();
+  exactPrefetchCooldown.clear();
+}
+
 function canPrefetchExactLocation(item) {
   if (!item?.url || hasExactLocation(item)) return false;
   if (exactPrefetchPending.has(item.url) || exactPrefetchMissing.has(item.url)) return false;
@@ -430,10 +437,10 @@ function clearListingLayer(layerKey) {
   }
 }
 
-function getMarkerOffset(lat, lng, index) {
+function getMarkerOffset(lat, lng, index, zoom = 15) {
   if (!index) return [lat, lng];
   const angle = (index * 55) * (Math.PI / 180);
-  const distance = 0.00008 * Math.ceil(index / 6);
+  const distance = 0.00008 * Math.pow(2, 15 - zoom) * Math.ceil(index / 6);
   return [lat + (Math.sin(angle) * distance), lng + (Math.cos(angle) * distance)];
 }
 
@@ -444,6 +451,7 @@ function syncListingCardHighlight(listingUrl, active) {
 }
 
 function handleAreaMarkerClick(area, selectAreaFull, mapInstance = refs.map, { mobile = false } = {}) {
+  trackMapMarkerClick({ areaName: area.name, markerType: 'area', city: S.city, mode: refs.searchMode });
   const count = refs.areaCounts[area.name] || 0;
   const hasResults = count > 0 || area.name === S.area;
 
@@ -492,7 +500,7 @@ function updateListingMarkers(mapInstance = refs.map, { mobile = false } = {}) {
     const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
     const duplicateIndex = duplicateCounts.get(key) || 0;
     duplicateCounts.set(key, duplicateIndex + 1);
-    const [markerLat, markerLng] = getMarkerOffset(lat, lng, duplicateIndex);
+    const [markerLat, markerLng] = getMarkerOffset(lat, lng, duplicateIndex, mapInstance.getZoom());
     const radius = mobile ? 5.5 : 6.5;
     const marker = L.circleMarker([markerLat, markerLng], {
       radius,
@@ -506,6 +514,7 @@ function updateListingMarkers(mapInstance = refs.map, { mobile = false } = {}) {
     });
 
     marker.on('click', () => {
+      trackMapMarkerClick({ areaName: null, markerType: 'listing', city: S.city, mode: refs.searchMode });
       if (mobile) {
         cancelExactLocationPrefetch();
         $('#mapOverlay').classList.add('hidden');
