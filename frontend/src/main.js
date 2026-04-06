@@ -352,6 +352,8 @@ function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCou
   return 'Pan or zoom the map to discover other areas';
 }
 
+let coverageExpanded = false;
+
 function updateCoverageBadge() {
   const desktop = $('#mapCoverageBadge');
   const mobile = $('#mapCoverageBadgeMobile');
@@ -389,15 +391,28 @@ function updateCoverageBadge() {
         <span class="coverage-legend-item"><span class="coverage-legend-dot exact" aria-hidden="true"></span>Red: exact listing pin</span>
       </div>
     `;
+    const chevron = `<svg class="w-3.5 h-3.5 text-gray-400 transition-transform ${coverageExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>`;
 
     el.innerHTML = `
-      <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Map Coverage</div>
-      <div class="mt-1 text-sm font-semibold text-gray-800">${summary}</div>
-      <div class="mt-1 text-xs text-gray-500">${detail}</div>
-      <div class="mt-2 flex flex-wrap gap-2">${coveredHtml}</div>
-      ${legendHtml}
+      <button class="coverage-toggle flex items-center justify-between w-full text-left">
+        <div>
+          <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Map Coverage</div>
+          <div class="mt-0.5 text-sm font-semibold text-gray-800">${summary}</div>
+        </div>
+        ${chevron}
+      </button>
+      <div class="coverage-detail ${coverageExpanded ? '' : 'hidden'}" style="margin-top:8px">
+        <div class="text-xs text-gray-500">${detail}</div>
+        <div class="mt-2 flex flex-wrap gap-2">${coveredHtml}</div>
+        ${legendHtml}
+      </div>
     `;
     el.classList.remove('hidden');
+
+    el.querySelector('.coverage-toggle').addEventListener('click', () => {
+      coverageExpanded = !coverageExpanded;
+      updateCoverageBadge();
+    });
   });
 }
 

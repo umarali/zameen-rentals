@@ -633,6 +633,11 @@ export function updateMapMarkers() {
     marker.setZIndexOffset(showLabel ? AREA_LABEL_Z_INDEX : 0);
 
     if (isActive) {
+      const zoom = map.getZoom();
+      if (zoom >= AREA_LABEL_HIDE_ZOOM) {
+        if (map.hasLayer(marker)) map.removeLayer(marker);
+        return;
+      }
       const activeCount = refs.lastSearchTotal || count || 0;
       marker.setIcon(createIcon(name, true, showLabel ? activeCount : 0, map, 'covered', showLabel));
       if (!map.hasLayer(marker)) marker.addTo(map);
@@ -779,6 +784,7 @@ export function updateMobileMarkers(selectAreaFull) {
     if (!area.lat || !area.lng || area.name === cityName || !bounds.contains(L.latLng(area.lat, area.lng))) return;
     const count = counts[area.name] || 0;
     const isActive = area.name === S.area;
+    if (isActive && map.getZoom() >= AREA_LABEL_HIDE_ZOOM) return;
     const showLabel = shouldShowAreaLabel(map, {
       active: isActive,
       preview: refs.previewArea === area.name,
