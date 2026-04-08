@@ -28,8 +28,13 @@
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
+<!-- ===== OFFLINE BANNER ===== -->
+<div id="offlineBanner" class="hidden fixed top-0 inset-x-0 bg-amber-500 text-white text-xs text-center py-1.5 z-[500] font-medium">
+  You're offline — showing cached data
+</div>
+
 <!-- ===== NAVBAR ===== -->
-<header class="flex items-center gap-3 px-4 lg:px-6 bg-white border-b border-gray-200 z-50">
+<header class="flex items-center gap-3 px-4 lg:px-6 bg-white border-b border-gray-200 z-50 min-w-0">
   <a class="brand-link shrink-0" href="/" aria-label="ZameenRentals home">
     <img class="brand-mark" src="/logo.svg" alt="" width="40" height="40">
     <span class="brand-wordmark">
@@ -272,6 +277,16 @@
   <button id="galleryPrev" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
   <button id="galleryNext" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
   <div id="galleryImg" class="w-full h-full flex items-center justify-center p-12"><img class="max-w-full max-h-full object-contain" src="" alt=""></div>
+</div>
+
+<!-- ===== INSTALL BANNER ===== -->
+<div id="installBanner" class="hidden fixed bottom-0 inset-x-0 z-[450] bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] px-4 py-3 safe-bottom">
+  <div class="flex items-center gap-3 max-w-lg mx-auto">
+    <img src="/logo.svg" alt="" class="w-10 h-10 shrink-0 rounded-xl">
+    <p id="installMsg" class="flex-1 text-sm text-gray-700 font-medium">Add ZameenRentals to your home screen for faster access</p>
+    <button id="installBtn" class="px-4 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-full transition-colors shrink-0">Install</button>
+    <button id="installDismiss" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 text-lg shrink-0">&times;</button>
+  </div>
 </div>
 
 <script type="module" src="/src/main.js"></script>

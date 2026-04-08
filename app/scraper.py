@@ -361,10 +361,10 @@ def parse_listings(html):
             loc_text = "".join(loc_el.find_all(string=True, recursive=False)).strip()
             if not loc_text:
                 loc_text = loc_el.get_text(strip=True)
-            # Strip area-size that bleeds in (e.g. "DHA Phase 845292 Sq. Yd.")
+            # Strip area-size that bleeds in (e.g. "DHA Phase 845292 Sq. Yd." or "DHA Defence55500 Sq. Yd.")
             loc_text = re.sub(r'[\d,]+\s*(?:Sq\.?\s*(?:Yd|Ft|M)\.?|Marla|Kanal).*$', '', loc_text, flags=re.I).strip()
-            # Strip trailing digits that may bleed in from adjacent elements
-            loc_text = re.sub(r'\d+\s*$', '', loc_text).strip().rstrip(',')
+            # Strip trailing digits that may bleed in from adjacent elements (with or without preceding space)
+            loc_text = re.sub(r'\s*\d+\s*$', '', loc_text).strip().rstrip(',')
             listing["location"] = loc_text
         else:
             for span in card.select("span, div"):

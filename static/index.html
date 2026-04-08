@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#127b5a">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
@@ -29,8 +29,13 @@
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
+<!-- ===== OFFLINE BANNER ===== -->
+<div id="offlineBanner" class="hidden fixed top-0 inset-x-0 bg-amber-500 text-white text-xs text-center py-1.5 z-[500] font-medium">
+  You're offline — showing cached data
+</div>
+
 <!-- ===== NAVBAR ===== -->
-<header class="flex items-center gap-3 px-4 lg:px-6 bg-white border-b border-gray-200 z-50">
+<header class="flex items-center gap-3 px-4 lg:px-6 bg-white border-b border-gray-200 z-50 min-w-0">
   <a class="brand-link shrink-0" href="/" aria-label="ZameenRentals home">
     <img class="brand-mark" src="/static/logo.svg" alt="" width="40" height="40">
     <span class="brand-wordmark">
@@ -38,10 +43,10 @@
       <span class="brand-wordmark-accent">Rentals</span>
     </span>
   </a>
-  <div class="flex-1 max-w-xl mx-auto relative">
-    <div class="flex items-center border border-gray-200 rounded-full bg-white px-4 pr-1 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
+  <div class="flex-1 min-w-0 max-w-xl mx-auto relative">
+    <div class="flex items-center min-w-0 border border-gray-200 rounded-full bg-white px-4 pr-1 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
       <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      <input id="nlInput" type="text" class="flex-1 py-2.5 px-3 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Try: 2 bed flat DHA under 50k" autocomplete="off">
+      <input id="nlInput" type="text" class="flex-1 min-w-0 w-full py-2.5 px-3 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Try: 2 bed flat DHA under 50k" autocomplete="off">
       <button id="nlSearchBtn" class="w-8 h-8 rounded-full bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shrink-0 transition-colors disabled:opacity-50">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
       </button>
@@ -74,7 +79,8 @@
 </script>
 
 <!-- ===== FILTER BAR ===== -->
-<div class="relative bg-white border-b border-gray-200 z-40">
+<div id="filtersShell" class="relative bg-white border-b border-gray-200 z-40 min-w-0">
+<div class="filter-bar-wrap">
 <div class="flex items-center gap-2 px-4 lg:px-6 py-2 overflow-x-auto scroll-thin" id="filterBar" style="scrollbar-width:none">
   <div id="cityTabs" class="flex items-center bg-gray-100 rounded-lg p-0.5 shrink-0 mr-1">
     <button class="city-tab text-xs font-semibold px-3 py-1.5 rounded-md transition-all" data-city="lahore">Lahore</button>
@@ -89,6 +95,7 @@
   <button class="chip-filter shrink-0" data-filter="beds" id="bedsChip">Beds <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
   <button class="chip-filter shrink-0" data-filter="price" id="priceChip">Price <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
   <button class="chip-filter shrink-0" data-filter="more" id="moreChip">More <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+</div>
 </div>
 
   <!-- Dropdowns -->
@@ -183,8 +190,8 @@
 <div id="ddBackdrop" class="fixed inset-0 bg-black/30 z-40 hidden"></div>
 
 <!-- ===== MAIN CONTENT ===== -->
-<main class="grid grid-cols-1 lg:grid-cols-[55fr_45fr] overflow-hidden">
-  <section id="listingsPanel" class="overflow-y-auto overscroll-contain p-4 lg:p-6 scroll-thin">
+<main class="grid grid-cols-1 lg:grid-cols-[55fr_45fr] overflow-hidden min-w-0">
+  <section id="listingsPanel" class="overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-6 pb-20 lg:pb-6 scroll-thin min-w-0">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h2 id="listingsTitle" class="text-base font-bold text-gray-700">Rentals in Karachi</h2>
@@ -195,7 +202,7 @@
         <span id="dataSource" class="text-xs text-gray-300 hidden"></span>
       </div>
     </div>
-    <div id="listingsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-5"></div>
+    <div id="listingsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-5"></div>
     <div id="listingsFooter"></div>
     <div class="text-center py-6 text-xs text-gray-400">
       Powered by Zameen.com data
@@ -216,7 +223,7 @@
 <!-- Mobile map overlay -->
 <div id="mapOverlay" class="fixed inset-0 bg-white z-[60] hidden">
   <div id="mapCoverageBadgeMobile" class="hidden absolute top-14 left-3 right-3 z-[61] rounded-2xl bg-white/92 backdrop-blur border border-gray-200 shadow-sm px-4 py-3"></div>
-  <div class="absolute top-3 left-3 z-[61]">
+  <div id="mapOverlayCloseWrap" class="absolute z-[61]">
     <button id="mapOverlayClose" class="flex items-center gap-1 px-4 py-2 rounded-full bg-white border border-gray-200 text-sm font-semibold text-gray-700 shadow-md hover:bg-gray-50 transition-colors">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
       List
@@ -254,7 +261,7 @@
 
 <!-- ===== DRAWER ===== -->
 <div id="drawerOverlay" class="fixed inset-0 bg-black/40 z-[200] opacity-0 pointer-events-none transition-opacity duration-300"></div>
-<div id="drawer" class="fixed z-[201] bg-white overflow-y-auto overscroll-contain transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)] top-0 right-0 bottom-0 w-[480px] max-w-[95vw] translate-x-full shadow-2xl max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:w-full max-md:max-h-[92vh] max-md:rounded-t-2xl max-md:translate-x-0 max-md:translate-y-full">
+<div id="drawer" class="fixed z-[201] bg-white overflow-y-auto overscroll-contain transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)] top-0 right-0 bottom-0 w-[480px] max-w-[95vw] shadow-2xl max-md:inset-0 max-md:w-full max-md:max-w-full max-md:h-[100dvh] max-md:max-h-none max-md:rounded-none">
   <div class="relative">
     <button id="drawerClose" class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur hover:bg-gray-100 flex items-center justify-center text-gray-600 text-xl z-10 transition-colors shadow-sm">&times;</button>
     <div id="drawerImgArea"></div>
@@ -271,6 +278,16 @@
   <button id="galleryPrev" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
   <button id="galleryNext" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
   <div id="galleryImg" class="w-full h-full flex items-center justify-center p-12"><img class="max-w-full max-h-full object-contain" src="" alt=""></div>
+</div>
+
+<!-- ===== INSTALL BANNER ===== -->
+<div id="installBanner" class="hidden fixed bottom-0 inset-x-0 z-[450] bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] px-4 py-3 safe-bottom">
+  <div class="flex items-center gap-3 max-w-lg mx-auto">
+    <img src="/static/logo.svg" alt="" class="w-10 h-10 shrink-0 rounded-xl">
+    <p id="installMsg" class="flex-1 text-sm text-gray-700 font-medium">Add ZameenRentals to your home screen for faster access</p>
+    <button id="installBtn" class="px-4 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-full transition-colors shrink-0">Install</button>
+    <button id="installDismiss" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 text-lg shrink-0">&times;</button>
+  </div>
 </div>
 
 <div id="toastStack" class="pointer-events-none fixed top-4 right-4 z-[400] flex w-[min(92vw,360px)] flex-col gap-2"></div>
