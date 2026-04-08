@@ -21,6 +21,42 @@ import {
   trackCitySwitch, trackFilterChange, trackMapMarkerClick, trackApiError, trackScrollDepth, trackFeedbackSubmitted,
 } from './analytics.js';
 
+const DISPLAY_MODE_QUERIES = [
+  '(display-mode: standalone)',
+  '(display-mode: fullscreen)',
+  '(display-mode: window-controls-overlay)',
+];
+
+function isStandaloneDisplayMode() {
+  return DISPLAY_MODE_QUERIES.some(query => {
+    try {
+      return window.matchMedia(query).matches;
+    } catch {
+      return false;
+    }
+  }) || navigator.standalone === true;
+}
+
+function syncStandaloneLayout() {
+  document.documentElement.classList.toggle('app-standalone', isStandaloneDisplayMode());
+}
+
+function initDisplayModeSync() {
+  syncStandaloneLayout();
+  DISPLAY_MODE_QUERIES.forEach(query => {
+    let mediaQueryList;
+    try {
+      mediaQueryList = window.matchMedia(query);
+    } catch {
+      return;
+    }
+
+    const handleChange = () => syncStandaloneLayout();
+    if (mediaQueryList.addEventListener) mediaQueryList.addEventListener('change', handleChange);
+    else if (mediaQueryList.addListener) mediaQueryList.addListener(handleChange);
+  });
+}
+
 function isNearbySupportedCity() {
   return S.city === 'karachi';
 }
@@ -349,6 +385,10 @@ function isEmptyExactBoundsFallback(scope = refs.viewportScope) {
     && refs.viewportExactBoundsTotal === 0;
 }
 
+function isStandaloneCoverageMode() {
+  return document.documentElement.classList.contains('app-standalone');
+}
+
 function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCount(), scope = refs.viewportScope } = {}) {
   if (scope === 'exact_bounds') {
     return 'No exact-pin rentals are visible here right now. Zoom out to broaden the map view.';
@@ -372,9 +412,11 @@ function updateCoverageBadge() {
   const visibleAreas = getViewportVisibleAreaCount();
   const coveredEntries = Object.entries(refs.mapAreaTotals || {}).sort((a, b) => b[1] - a[1]);
   const coveredAreas = coveredEntries.length;
+  const standaloneMode = isStandaloneCoverageMode();
 
   badges.forEach(el => {
     if (refs.searchMode !== 'viewport') {
+      if (standaloneMode) coverageExpanded = false;
       el.classList.add('hidden');
       el.innerHTML = '';
       return;
@@ -401,21 +443,41 @@ function updateCoverageBadge() {
       </div>
     `;
     const chevron = `<svg class="w-3.5 h-3.5 text-gray-400 transition-transform ${coverageExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>`;
+    const compactSummary = coveredAreas > 0
+      ? `${coveredAreas}/${visibleAreas || coveredAreas}`
+      : `${visibleAreas || 0}`;
+    const compactMode = standaloneMode && !coverageExpanded;
 
-    el.innerHTML = `
-      <button class="coverage-toggle flex items-center justify-between w-full text-left">
-        <div>
-          <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Map Coverage</div>
-          <div class="mt-0.5 text-sm font-semibold text-gray-800">${summary}</div>
+    el.classList.toggle('coverage-badge-compact', compactMode);
+    el.classList.toggle('coverage-badge-expanded', standaloneMode && coverageExpanded);
+
+    el.innerHTML = compactMode
+      ? `
+        <button class="coverage-toggle coverage-toggle-compact" aria-expanded="false" aria-label="Open map coverage">
+          <span class="coverage-toggle-compact-icon" aria-hidden="true">
+            <span class="coverage-legend-dot live"></span>
+          </span>
+          <span class="coverage-toggle-compact-text">
+            <span class="coverage-toggle-compact-label">Coverage</span>
+            <span class="coverage-toggle-compact-count">${compactSummary}</span>
+          </span>
+          ${chevron}
+        </button>
+      `
+      : `
+        <button class="coverage-toggle flex items-center justify-between w-full text-left" aria-expanded="${coverageExpanded ? 'true' : 'false'}">
+          <div>
+            <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Map Coverage</div>
+            <div class="mt-0.5 text-sm font-semibold text-gray-800">${summary}</div>
+          </div>
+          ${chevron}
+        </button>
+        <div class="coverage-detail ${coverageExpanded ? '' : 'hidden'}" style="margin-top:8px">
+          <div class="text-xs text-gray-500">${detail}</div>
+          <div class="mt-2 flex flex-wrap gap-2">${coveredHtml}</div>
+          ${legendHtml}
         </div>
-        ${chevron}
-      </button>
-      <div class="coverage-detail ${coverageExpanded ? '' : 'hidden'}" style="margin-top:8px">
-        <div class="text-xs text-gray-500">${detail}</div>
-        <div class="mt-2 flex flex-wrap gap-2">${coveredHtml}</div>
-        ${legendHtml}
-      </div>
-    `;
+      `;
     el.classList.remove('hidden');
 
     el.querySelector('.coverage-toggle').addEventListener('click', () => {
@@ -1094,6 +1156,7 @@ async function loadCityData({ search = true } = {}) {
 }
 
 async function init() {
+  initDisplayModeSync();
   initAnalytics();
   initMobileMap(selectAreaFull, openDrawerFull, () => scheduleViewportSearch({ mobile: true }));
   await chooseInitialCity();

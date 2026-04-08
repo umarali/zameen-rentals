@@ -185,4 +185,23 @@ test.describe("Detail Drawer - Mobile", () => {
       timeout: 3000,
     });
   });
+
+  test("drawer uses the full mobile viewport", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    await page.locator(".card-wrap").first().click();
+    await expect(page.locator("#drawer")).toHaveClass(/drawer-open/, {
+      timeout: 3000,
+    });
+    await page.waitForTimeout(450);
+
+    const viewport = page.viewportSize();
+    const box = await page.locator("#drawer").boundingBox();
+
+    expect(box).toBeTruthy();
+    expect(Math.abs(box.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.width - viewport.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.height - viewport.height)).toBeLessThanOrEqual(1);
+  });
 });

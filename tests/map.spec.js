@@ -291,6 +291,37 @@ test.describe("Mobile Map", () => {
     await expect(page.locator("#mapContainerMobile")).toBeVisible();
   });
 
+  test("mobile map controls align cleanly", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector("#mapFab", { timeout: 30000 });
+    await page.locator("#mapFab").click();
+
+    const closeBtn = page.locator("#mapOverlayClose");
+    const layerControl = page.locator("#mapOverlay .map-layer-control").first();
+    const gpsControl = page.locator("#mapOverlay .map-gps-control").first();
+    const zoomControl = page.locator("#mapOverlay .leaflet-control-zoom").first();
+
+    await expect(closeBtn).toBeVisible();
+    await expect(layerControl).toBeVisible();
+    await expect(gpsControl).toBeVisible();
+    await expect(zoomControl).toBeVisible();
+
+    const closeBox = await closeBtn.boundingBox();
+    const layerBox = await layerControl.boundingBox();
+    const gpsBox = await gpsControl.boundingBox();
+    const zoomBox = await zoomControl.boundingBox();
+
+    expect(closeBox).toBeTruthy();
+    expect(layerBox).toBeTruthy();
+    expect(gpsBox).toBeTruthy();
+    expect(zoomBox).toBeTruthy();
+    expect(Math.abs(closeBox.y - layerBox.y)).toBeLessThanOrEqual(4);
+    expect(Math.abs((layerBox.x + layerBox.width) - (gpsBox.x + gpsBox.width))).toBeLessThanOrEqual(2);
+    expect(Math.abs((layerBox.x + layerBox.width) - (zoomBox.x + zoomBox.width))).toBeLessThanOrEqual(2);
+    expect(gpsBox.y).toBeGreaterThan(layerBox.y + layerBox.height - 2);
+    expect(zoomBox.y).toBeGreaterThan(gpsBox.y + gpsBox.height - 2);
+  });
+
   test("mobile map close button works", async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector("#mapFab", { timeout: 30000 });
