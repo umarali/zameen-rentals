@@ -44,7 +44,10 @@ function countFilters() {
 export function updateChips() {
   setChipVal($('#areaChip'), S.area, 'Area');
   setChipVal($('#typeChip'), S.type ? TYPE_L[S.type] || S.type : '', 'Type');
-  setChipVal($('#bedsChip'), S.beds ? S.beds + (S.beds === '5' ? '+' : '') + ' Bed' : '', 'Beds');
+  const bedLabel = S.beds
+    ? (S.bedsMax && S.bedsMax !== S.beds ? S.beds + '-' + S.bedsMax + ' Bed' : S.beds + (S.beds === '5' ? '+' : '') + ' Bed')
+    : '';
+  setChipVal($('#bedsChip'), bedLabel, 'Beds');
 
   let pl = '';
   if (S.priceMin || S.priceMax) {
@@ -166,7 +169,7 @@ export function clearFilter(f, { resetMapView, doSearch } = {}) {
     if (refs.searchMode !== 'nearby') resetMapView?.();
   }
   if (f === 'type') { S.type = ''; $$('#typeGrid .chip').forEach(c => c.classList.remove('active')); }
-  if (f === 'beds') { S.beds = ''; $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === '')); }
+  if (f === 'beds') { S.beds = ''; S.bedsMax = ''; $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === '')); }
   if (f === 'price') { S.priceMin = ''; S.priceMax = ''; $$('#priceGrid .chip').forEach(c => c.classList.remove('active')); $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = ''; }
   if (f === 'more') { S.furnished = false; S.sort = ''; setToggle(false); $('#sortSelect').value = ''; }
   updateChips(); doSearch?.();
@@ -202,7 +205,8 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
 
   // Clear All
   $('#clearAllBtn').addEventListener('click', () => {
-    S.area = ''; S.type = ''; S.beds = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
+    S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
+    S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
     $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
     $$('#typeGrid .chip').forEach(c => c.classList.remove('active'));
     $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === ''));
@@ -267,7 +271,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     const c = e.target.closest('.chip'); if (!c) return;
     const prev = S.beds;
     $$('#bedRow .chip').forEach(x => x.classList.remove('active'));
-    c.classList.add('active'); S.beds = c.dataset.beds;
+    c.classList.add('active'); S.beds = c.dataset.beds; S.bedsMax = '';
     if (prev !== S.beds) trackFilterChange({ filter: 'beds', value: S.beds, previousValue: prev, mode: refs.searchMode, city: S.city });
     updateChips(); closeDD(); doSearch();
   });
@@ -315,7 +319,8 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     const c = e.target.closest('.chip'); if (!c) return;
     $$('#presetRow .chip').forEach(x => x.classList.remove('active'));
     c.classList.add('active');
-    S.type = c.dataset.type || ''; S.beds = c.dataset.beds || ''; S.priceMin = c.dataset.pmin || ''; S.priceMax = c.dataset.pmax || '';
+    S.type = c.dataset.type || ''; S.beds = c.dataset.beds || ''; S.bedsMax = ''; S.priceMin = c.dataset.pmin || ''; S.priceMax = c.dataset.pmax || '';
+    S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
     $$('#typeGrid .chip').forEach(x => x.classList.toggle('active', x.dataset.type === S.type));
     $$('#bedRow .chip').forEach(x => x.classList.toggle('active', x.dataset.beds === S.beds));
     syncPriceChips();

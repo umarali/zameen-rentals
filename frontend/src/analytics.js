@@ -174,3 +174,11 @@ export function trackScrollDepth({ maxPosition, totalResults, mode, city }) {
     city,
   });
 }
+
+export function trackFeedbackSubmitted({ messageLength }) {
+  track('feedback_submitted', {
+    city: S.city,
+    mode: refs.searchMode,
+    message_length: messageLength,
+  });
+}

@@ -18,7 +18,7 @@ import { openDrawer, initDrawerListeners } from './drawer.js';
 import { getStoredMapLayer } from './map-layers.js';
 import {
   initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen,
-  trackCitySwitch, trackFilterChange, trackMapMarkerClick, trackApiError, trackScrollDepth,
+  trackCitySwitch, trackFilterChange, trackMapMarkerClick, trackApiError, trackScrollDepth, trackFeedbackSubmitted,
 } from './analytics.js';
 
 function isNearbySupportedCity() {
@@ -41,15 +41,21 @@ function updateNearbyControls() {
   const radiusChip = $('#radiusChip');
   if (!nearbyChip || !radiusChip) return;
 
+  const sortDist = $('#sortDistance');
   if (refs.searchMode === 'nearby') {
     nearbyChip.innerHTML = `Near Me<span class="chip-clear" data-nearby-clear="1">&times;</span>`;
     nearbyChip.classList.add('has-value');
     radiusChip.classList.remove('hidden');
     radiusChip.innerHTML = `${refs.nearbyRadiusKm} km <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>`;
+    if (sortDist) sortDist.hidden = false;
   } else {
     nearbyChip.textContent = 'Near Me';
     nearbyChip.classList.remove('has-value');
     radiusChip.classList.add('hidden');
+    if (sortDist) {
+      sortDist.hidden = true;
+      if ($('#sortSelect').value === 'distance') { $('#sortSelect').value = ''; S.sort = ''; }
+    }
   }
 
   nearbyChip.classList.toggle('chip-disabled', !isNearbySupportedCity() && refs.searchMode !== 'nearby');
@@ -109,7 +115,7 @@ function getViewportVisibleAreaCount(fallback = refs.viewportAreaNames.length) {
     : fallback;
 }
 
-function selectAreaFull(name, fromMap) {
+function selectAreaFull(name, fromMap, { search = true } = {}) {
   const prev = S.area;
   if (prev !== name) trackFilterChange({ filter: 'area', value: name, previousValue: prev, mode: refs.searchMode, city: S.city });
   if (refs.searchMode !== 'nearby') refs.searchMode = 'area';
@@ -119,7 +125,7 @@ function selectAreaFull(name, fromMap) {
   refs.hoveredArea = null;
   refs._lastTriggeredBy = 'area_select';
   updateNearbyControls();
-  selectArea(name, fromMap, { highlightMarker, doSearch });
+  selectArea(name, fromMap, { highlightMarker, doSearch: search ? doSearch : undefined });
 }
 
 function clearFilterFull(f) {
@@ -148,8 +154,11 @@ function getParams(pg, { omitArea = false } = {}) {
   if (!omitArea && S.area) p.set('area', S.area);
   if (S.type) p.set('property_type', S.type);
   if (S.beds) p.set('bedrooms', S.beds);
+  if (S.bedsMax) p.set('bedrooms_max', S.bedsMax);
   if (S.priceMin) p.set('price_min', S.priceMin);
   if (S.priceMax) p.set('price_max', S.priceMax);
+  if (S.sizeMarlaMin) p.set('size_marla_min', S.sizeMarlaMin);
+  if (S.sizeMarlaMax) p.set('size_marla_max', S.sizeMarlaMax);
   if (S.furnished) p.set('furnished', 'true');
   if (S.sort) p.set('sort', S.sort);
   p.set('page', pg);
@@ -780,20 +789,41 @@ async function doNlSearch() {
     const parts = [];
     if (f.area) parts.push('<b class="text-brand-500">' + esc(f.area) + '</b>');
     if (f.property_type) parts.push('<b class="text-brand-500">' + (TYPE_L[f.property_type] || f.property_type) + '</b>');
-    if (f.bedrooms) parts.push('<b class="text-brand-500">' + f.bedrooms + ' bed</b>');
+    if (f.bedrooms && f.bedrooms_max) parts.push('<b class="text-brand-500">' + f.bedrooms + '-' + f.bedrooms_max + ' bed</b>');
+    else if (f.bedrooms) parts.push('<b class="text-brand-500">' + f.bedrooms + ' bed</b>');
     if (f.price_min || f.price_max) {
       const mn = f.price_min ? (f.price_min / 1e3 | 0) + 'K' : '';
       const mx = f.price_max ? (f.price_max / 1e3 | 0) + 'K' : '';
       parts.push('<b class="text-brand-500">' + (mn && mx ? mn + '-' + mx : mx ? '<' + mx : mn + '+') + '</b>');
     }
+    if (f.size_marla_min || f.size_marla_max) {
+      const toL = v => v >= 20 && v % 20 === 0 ? (v / 20) + ' kanal' : v + ' marla';
+      const smn = f.size_marla_min ? toL(f.size_marla_min) : '';
+      const smx = f.size_marla_max ? toL(f.size_marla_max) : '';
+      parts.push('<b class="text-brand-500">' + (smn && smx ? smn + '-' + smx : smx ? '<' + smx : smn) + '</b>');
+    }
     if (f.furnished) parts.push('<b class="text-brand-500">Furnished</b>');
     parsed.innerHTML = parts.join(' &middot; ');
-    if (f.area) selectAreaFull(f.area);
+    // City auto-switch (before area selection)
+    if (f.city_hint && f.city_hint !== S.city && CITY_DEFAULTS[f.city_hint]) {
+      S.city = f.city_hint;
+      S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
+      S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
+      refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+      resetViewportSearchMeta({ clearVisibleAreas: true });
+      $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
+      updateCityTabs(); updateNlExamples(); updateNearbyControls();
+      await loadCityData({ search: false });
+    }
+    if (f.area) selectAreaFull(f.area, false, { search: false });
     if (f.property_type) { S.type = f.property_type; $$('#typeGrid .chip').forEach(c => c.classList.toggle('active', c.dataset.type === f.property_type)); }
     if (f.bedrooms) { S.beds = String(f.bedrooms); $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === S.beds)); }
+    S.bedsMax = f.bedrooms_max ? String(f.bedrooms_max) : '';
     if (f.price_min) S.priceMin = String(f.price_min);
     if (f.price_max) S.priceMax = String(f.price_max);
     if (f.price_min || f.price_max) syncPriceChips();
+    S.sizeMarlaMin = f.size_marla_min != null ? String(f.size_marla_min) : '';
+    S.sizeMarlaMax = f.size_marla_max != null ? String(f.size_marla_max) : '';
     if (f.furnished) setToggle(true);
     if (f.sort) { S.sort = f.sort; $('#sortSelect').value = f.sort; }
     trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: true, filters: f });
@@ -820,7 +850,8 @@ function initCityTabs() {
     const prevCity = S.city;
     S.city = tab.dataset.city;
     trackCitySwitch({ from: prevCity, to: S.city });
-    S.area = ''; S.type = ''; S.beds = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
+    S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
+    S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
     refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
     resetViewportSearchMeta({ clearVisibleAreas: true });
     refs.lastViewportSearchKey = '';
@@ -1011,6 +1042,7 @@ function initReportBtn() {
         body: JSON.stringify({ message: text, context: gatherFeedbackContext() }),
       });
       if (!resp.ok) throw new Error();
+      trackFeedbackSubmitted({ messageLength: text.length });
       closeFeedback();
       showToast('Thanks for your feedback!');
     } catch {
@@ -1022,7 +1054,7 @@ function initReportBtn() {
   });
 }
 
-async function loadCityData() {
+async function loadCityData({ search = true } = {}) {
   try {
     const r = await fetch('/api/areas?city=' + S.city);
     refs.allAreas = await r.json();
@@ -1058,7 +1090,7 @@ async function loadCityData() {
   ensureMarkers(selectAreaFull);
   updateMapMarkers();
   updateCoverageBadge();
-  doSearch();
+  if (search) doSearch();
 }
 
 async function init() {

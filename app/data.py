@@ -248,6 +248,175 @@ ROMAN_URDU_AREAS = {
     "kaneez fatima": "Scheme 33 Gulshan-e-Kaneez Fatima",
 }
 
+ROMAN_URDU_AREAS_LAHORE = {
+    # DHA Lahore
+    "dha": "DHA Defence", "defence": "DHA Defence", "defense": "DHA Defence",
+    "dha lahore": "DHA Defence",
+    "dha phase 1": "Defence  DHA  Phase 1", "dha 1": "Defence  DHA  Phase 1",
+    "dha phase 2": "DHA Defence DHA Phase 2", "dha 2": "DHA Defence DHA Phase 2",
+    "dha phase 3": "Defence  DHA  Phase 3", "dha 3": "Defence  DHA  Phase 3",
+    "dha phase 4": "Defence  DHA  Phase 4", "dha 4": "Defence  DHA  Phase 4",
+    "dha phase 5": "Defence  DHA  Phase 5", "dha 5": "Defence  DHA  Phase 5",
+    "dha phase 6": "Defence  DHA  Phase 6", "dha 6": "Defence  DHA  Phase 6",
+    "dha phase 7": "Defence  DHA  Phase 7", "dha 7": "Defence  DHA  Phase 7",
+    "dha phase 8": "DHA Defence DHA Phase 8", "dha 8": "DHA Defence DHA Phase 8",
+    "dha phase 9": "DHA Defence DHA Phase 9 Prism", "dha 9": "DHA Defence DHA Phase 9 Prism",
+    "dha rahbar": "DHA 11 Rahbar",
+    # Bahria
+    "bahria": "Bahria Town", "bahria town": "Bahria Town", "bahria town lahore": "Bahria Town",
+    "bahria orchard": "Bahria Orchard", "bahria nasheman": "Bahria Nasheman",
+    # Gulberg
+    "gulberg": "Gulberg", "gulberg lahore": "Gulberg",
+    "gulberg 1": "Gulberg 1", "gulberg 2": "Gulberg 2", "gulberg 3": "Gulberg 3",
+    "mm alam": "Gulberg", "mm alam road": "Gulberg",
+    # Johar Town
+    "johar": "Johar Town", "johar town": "Johar Town",
+    "johar town phase 1": "Johar Town Phase 1", "johar town phase 2": "Johar Town Phase 2",
+    # Model Town
+    "model town": "Model Town", "model town lahore": "Model Town",
+    # Garden Town
+    "garden town": "Garden Town",
+    # Allama Iqbal Town / Iqbal Town
+    "iqbal town": "Allama Iqbal Town", "allama iqbal town": "Allama Iqbal Town",
+    # Faisal Town
+    "faisal town": "Faisal Town",
+    # Township
+    "township": "Township Sector A2",
+    # Wapda Town
+    "wapda town": "Wapda Town",
+    # Cantt
+    "cantt": "Cantt", "cant": "Cantt", "lahore cantt": "Cantt",
+    # Askari
+    "askari": "Askari", "askari 10": "Askari Askari 10", "askari 11": "Askari Askari 11",
+    # Cavalry Ground
+    "cavalry": "Cavalry Ground", "cavalry ground": "Cavalry Ground",
+    # EME Society
+    "eme": "EME Society", "eme society": "EME Society",
+    # State Life
+    "state life": "State Life Housing Society",
+    # Samanabad
+    "samanabad": "Samanabad",
+    # Lake City
+    "lake city": "Raiwind Road Lake City",
+    # Valencia
+    "valencia": "Valencia Housing Society",
+    # Raiwind Road area
+    "raiwind": "Raiwind Road",
+    # Punjab Coop
+    "punjab coop": "Punjab Co operative Housing Society",
+}
+
+ROMAN_URDU_AREAS_ISLAMABAD = {
+    # DHA Islamabad
+    "dha": "DHA Defence", "defence": "DHA Defence", "defense": "DHA Defence",
+    "dha islamabad": "DHA Defence",
+    "dha phase 1": "DHA Defence Phase 1", "dha phase 2": "DHA Defence Phase 2",
+    # Bahria
+    "bahria": "Bahria Town", "bahria town": "Bahria Town",
+    "bahria town islamabad": "Bahria Town",
+    "bahria enclave": "Bahria Town Bahria Enclave",
+    # Gulberg
+    "gulberg": "Gulberg", "gulberg greens": "Gulberg Gulberg Greens",
+    "gulberg residencia": "Gulberg Gulberg Residencia",
+    # Sector F (area file uses "F 6", "F 7", etc.)
+    "f6": "F 6", "f-6": "F 6", "f 6": "F 6",
+    "f7": "F 7", "f-7": "F 7", "f 7": "F 7",
+    "f8": "F 8", "f-8": "F 8", "f 8": "F 8",
+    "f10": "F 10", "f-10": "F 10", "f 10": "F 10",
+    "f11": "F 11", "f-11": "F 11", "f 11": "F 11",
+    # Sector G
+    "g9": "G 9", "g-9": "G 9", "g 9": "G 9",
+    "g10": "G 10", "g-10": "G 10", "g 10": "G 10",
+    "g11": "G 11", "g-11": "G 11", "g 11": "G 11",
+    "g13": "G 13", "g-13": "G 13", "g 13": "G 13",
+    # Sector E
+    "e11": "E 11", "e-11": "E 11", "e 11": "E 11",
+    "e12": "E 12", "e-12": "E 12", "e 12": "E 12",
+    # Sector I (note: "I  8" has double space in area file)
+    "i8": "I  8", "i-8": "I  8", "i 8": "I  8",
+    "i10": "I 10", "i-10": "I 10", "i 10": "I 10",
+    "i14": "I 14", "i-14": "I 14", "i 14": "I 14",
+    # Sector B/D/H
+    "b17": "B 17", "b-17": "B 17", "b 17": "B 17",
+    "d12": "D 12", "d-12": "D 12", "d 12": "D 12",
+    "h13": "H 13", "h-13": "H 13", "h 13": "H 13",
+    # Blue Area
+    "blue area": "Blue Area",
+    # CBR Town
+    "cbr": "CBR Town", "cbr town": "CBR Town",
+    # Soan Garden
+    "soan garden": "Soan Garden", "soan": "Soan Garden",
+    # PWD
+    "pwd": "PWD Housing Scheme", "pwd housing": "PWD Housing Scheme",
+    # Pakistan Town
+    "pakistan town": "Pakistan Town",
+    # Bani Gala
+    "bani gala": "Bani Gala",
+    # Chak Shahzad
+    "chak shahzad": "Chak Shahzad",
+}
+
+# City-indexed Roman Urdu area lookup (for match_area and parse_natural_query)
+ROMAN_URDU_AREAS_BY_CITY = {
+    "karachi": ROMAN_URDU_AREAS,
+    "lahore": ROMAN_URDU_AREAS_LAHORE,
+    "islamabad": ROMAN_URDU_AREAS_ISLAMABAD,
+}
+
+# Famous landmarks → nearest available area (by city)
+LANDMARKS = {
+    "karachi": {
+        "jinnah airport": "Cantt", "karachi airport": "Cantt",
+        "aga khan hospital": "Saddar", "aga khan": "Saddar",
+        "dow university": "Saddar",
+        "dolmen mall clifton": "Clifton", "dolmen mall": "Clifton",
+        "lucky one mall": "Gulshan-e-Iqbal",
+        "ocean mall": "Clifton",
+        "sea view": "Clifton", "seaview": "Clifton",
+        "mazar e quaid": "Saddar", "quaid mausoleum": "Saddar",
+        "safari park": "Gulshan-e-Iqbal",
+        "port qasim": "Bin Qasim Town",
+        "karachi zoo": "Saddar",
+        "french beach": "Clifton",
+    },
+    "lahore": {
+        "allama iqbal airport": "Cantt", "lahore airport": "Cantt",
+        "lums": "DHA Defence", "lums university": "DHA Defence",
+        "uet lahore": "Cantt", "uet": "Cantt",
+        "ucp": "Johar Town",
+        "punjab university": "Cantt",
+        "fast lahore": "DHA Defence",
+        "emporium mall": "Johar Town",
+        "packages mall": "Gulberg",
+        "fortress square": "Cantt",
+        "liberty market": "Gulberg", "liberty": "Gulberg",
+        "mm alam road": "Gulberg",
+        "lahore fort": "Gulberg",
+        "badshahi mosque": "Gulberg", "badshahi masjid": "Gulberg",
+        "data darbar": "Gulberg",
+        "kalma chowk": "Gulberg",
+        "canal road": "Gulberg",
+    },
+    "islamabad": {
+        "islamabad airport": "B 17", "new islamabad airport": "B 17",
+        "nust": "H 13", "nust islamabad": "H 13",
+        "quaid e azam university": "G 9", "qau": "G 9",
+        "fast islamabad": "F 7",
+        "comsats islamabad": "G 9",
+        "centaurus mall": "F 8", "centaurus": "F 8",
+        "giga mall": "DHA Defence",
+        "jinnah super market": "F 7", "jinnah super": "F 7",
+        "f7 markaz": "F 7", "f-7 markaz": "F 7",
+        "faisal masjid": "F 8", "faisal mosque": "F 8",
+        "pakistan monument": "F 7",
+        "margalla hills": "F 6", "margalla": "F 6",
+        "daman e koh": "F 6",
+        "rawal lake": "G 9",
+        "zero point": "G 9",
+        "blue area": "Blue Area",
+    },
+}
+
 USER_AGENTS = [
     # Chrome 145 (current stable, Mar 2026)
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",

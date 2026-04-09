@@ -1,5 +1,5 @@
 """Listing CRUD operations and local search queries."""
-import hashlib, json, logging, math
+import hashlib, json, logging, math, re
 from datetime import datetime
 
 from app.database import _get_conn
@@ -7,6 +7,31 @@ from app.data import PROPERTY_TYPES
 
 logger = logging.getLogger("zameenrentals")
 _DISTANCE_SENTINEL = 999999999
+
+_ADDED_RE = re.compile(r"Added:\s*(\d+)\s*(minute|hour|day|week|month)", re.IGNORECASE)
+_UNIT_MINUTES = {"minute": 1, "hour": 60, "day": 1440, "week": 10080, "month": 43200}
+
+
+def _parse_added_minutes(text):
+    """Parse 'Added: N unit(s) ago' into approximate minutes-ago (lower = newer)."""
+    if not text:
+        return 999999
+    m = _ADDED_RE.search(text)
+    if not m:
+        return 999999
+    return int(m.group(1)) * _UNIT_MINUTES[m.group(2).lower()]
+
+
+# SQL expression equivalent of _parse_added_minutes for ORDER BY clauses.
+_ADDED_MINUTES_SQL = """
+CASE
+  WHEN added_text LIKE 'Added: % minute%' THEN CAST(substr(added_text, 8, instr(substr(added_text,8),' ')-1) AS INTEGER)
+  WHEN added_text LIKE 'Added: % hour%'   THEN CAST(substr(added_text, 8, instr(substr(added_text,8),' ')-1) AS INTEGER) * 60
+  WHEN added_text LIKE 'Added: % day%'    THEN CAST(substr(added_text, 8, instr(substr(added_text,8),' ')-1) AS INTEGER) * 1440
+  WHEN added_text LIKE 'Added: % week%'   THEN CAST(substr(added_text, 8, instr(substr(added_text,8),' ')-1) AS INTEGER) * 10080
+  WHEN added_text LIKE 'Added: % month%'  THEN CAST(substr(added_text, 8, instr(substr(added_text,8),' ')-1) AS INTEGER) * 43200
+  ELSE 999999
+END"""
 
 
 def city_priority_sql(column="city"):
@@ -21,7 +46,8 @@ def city_priority_sql(column="city"):
 
 
 def _listing_filter_clauses(*, city="karachi", area=None, area_names=None, property_type=None,
-                            bedrooms=None, price_min=None, price_max=None,
+                            bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
+                            size_marla_min=None, size_marla_max=None,
                             furnished=None, q=None, exact_only=False, geocoded_only=False):
     conditions = ["is_active = 1", "city = ?"]
     params = [city]
@@ -43,9 +69,28 @@ def _listing_filter_clauses(*, city="karachi", area=None, area_names=None, prope
         if info:
             conditions.append("property_type = ?")
             params.append(info["label"])
-    if bedrooms:
+    if bedrooms and bedrooms_max:
+        conditions.append("bedrooms >= ? AND bedrooms <= ?")
+        params.extend([bedrooms, bedrooms_max])
+    elif bedrooms:
         conditions.append("bedrooms = ?")
         params.append(bedrooms)
+    if size_marla_min is not None:
+        conditions.append("""(CASE
+          WHEN area_size LIKE '% Marla' THEN CAST(REPLACE(REPLACE(area_size, ' Marla', ''), ',', '') AS REAL)
+          WHEN area_size LIKE '% Kanal' THEN CAST(REPLACE(REPLACE(area_size, ' Kanal', ''), ',', '') AS REAL) * 20
+          WHEN area_size LIKE '% sqft' THEN CAST(REPLACE(REPLACE(area_size, ' sqft', ''), ',', '') AS REAL) / 225.0
+          WHEN area_size LIKE '% Sq. Yd.' THEN CAST(REPLACE(REPLACE(area_size, ' Sq. Yd.', ''), ',', '') AS REAL) * 9.0 / 225.0
+          ELSE NULL END) >= ?""")
+        params.append(size_marla_min)
+    if size_marla_max is not None:
+        conditions.append("""(CASE
+          WHEN area_size LIKE '% Marla' THEN CAST(REPLACE(REPLACE(area_size, ' Marla', ''), ',', '') AS REAL)
+          WHEN area_size LIKE '% Kanal' THEN CAST(REPLACE(REPLACE(area_size, ' Kanal', ''), ',', '') AS REAL) * 20
+          WHEN area_size LIKE '% sqft' THEN CAST(REPLACE(REPLACE(area_size, ' sqft', ''), ',', '') AS REAL) / 225.0
+          WHEN area_size LIKE '% Sq. Yd.' THEN CAST(REPLACE(REPLACE(area_size, ' Sq. Yd.', ''), ',', '') AS REAL) * 9.0 / 225.0
+          ELSE NULL END) <= ?""")
+        params.append(size_marla_max)
     if price_min:
         conditions.append("price >= ?")
         params.append(price_min)
@@ -111,7 +156,7 @@ def _datetime_sort_value(value):
 def _nearby_sort_key(row, sort):
     distance_km = row["_distance_km"]
     price = row["price"]
-    first_seen_at = _datetime_sort_value(row["first_seen_at"])
+    added_hours = _parse_added_minutes(row.get("added_text"))
     last_seen_at = _datetime_sort_value(row["last_seen_at"])
 
     if sort == "distance":
@@ -121,7 +166,7 @@ def _nearby_sort_key(row, sort):
     if sort == "price_high":
         return (price is None, -(price if price is not None else 0), distance_km, -last_seen_at)
     if sort == "newest":
-        return (-first_seen_at, distance_km, -last_seen_at)
+        return (added_hours, distance_km, -last_seen_at)
     return (distance_km, -last_seen_at)
 
 
@@ -398,14 +443,17 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
 
 
 def search_listings(*, city="karachi", area=None, area_names=None, property_type=None,
-                    bedrooms=None, price_min=None, price_max=None,
+                    bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
+                    size_marla_min=None, size_marla_max=None,
                     furnished=None, sort=None, q=None, page=1, per_page=25,
                     center_lat=None, center_lng=None):
     """Search listings from local DB. Returns dict matching current API shape."""
     conn = _get_conn()
     conditions, params = _listing_filter_clauses(
         city=city, area=area, area_names=area_names, property_type=property_type,
-        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+        price_min=price_min, price_max=price_max,
+        size_marla_min=size_marla_min, size_marla_max=size_marla_max,
         furnished=furnished, q=q,
     )
     where = " AND ".join(conditions)
@@ -422,7 +470,7 @@ def search_listings(*, city="karachi", area=None, area_names=None, property_type
     elif sort == "price_high":
         order = "price DESC NULLS LAST"
     elif sort == "newest":
-        order = "first_seen_at DESC"
+        order = f"({_ADDED_MINUTES_SQL}) ASC"
     elif sort == "distance" and map_focus:
         order = "distance_to_center ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC, last_seen_at DESC"
     elif map_focus:
@@ -453,13 +501,16 @@ def search_listings(*, city="karachi", area=None, area_names=None, property_type
 
 
 def count_listings_by_area(*, city="karachi", area_names=None, property_type=None,
-                           bedrooms=None, price_min=None, price_max=None,
+                           bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
+                           size_marla_min=None, size_marla_max=None,
                            furnished=None, q=None):
     """Return listing counts grouped by area for the current filter set."""
     conn = _get_conn()
     conditions, params = _listing_filter_clauses(
         city=city, area_names=area_names, property_type=property_type,
-        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+        price_min=price_min, price_max=price_max,
+        size_marla_min=size_marla_min, size_marla_max=size_marla_max,
         furnished=furnished, q=q,
     )
     where = " AND ".join(conditions)
@@ -478,13 +529,16 @@ def count_listings_by_area(*, city="karachi", area_names=None, property_type=Non
 
 def search_nearby_listings(*, city="karachi", lat, lng, radius_km=5,
                            area=None, property_type=None, bedrooms=None,
-                           price_min=None, price_max=None, furnished=None,
+                           bedrooms_max=None, price_min=None, price_max=None,
+                           size_marla_min=None, size_marla_max=None, furnished=None,
                            sort=None, q=None, page=1, per_page=25):
     """Search nearby listings using exact coordinates only."""
     conn = _get_conn()
     conditions, params = _listing_filter_clauses(
         city=city, area=area, property_type=property_type,
-        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+        price_min=price_min, price_max=price_max,
+        size_marla_min=size_marla_min, size_marla_max=size_marla_max,
         furnished=furnished, q=q, exact_only=True, geocoded_only=True,
     )
     south, north, west, east = _bounding_box(lat, lng, radius_km)
@@ -532,7 +586,8 @@ def search_nearby_listings(*, city="karachi", lat, lng, radius_km=5,
 
 def search_exact_listings_in_bounds(*, city="karachi", south, west, north, east,
                                     property_type=None, bedrooms=None,
-                                    price_min=None, price_max=None,
+                                    bedrooms_max=None, price_min=None, price_max=None,
+                                    size_marla_min=None, size_marla_max=None,
                                     furnished=None, sort=None, q=None,
                                     page=1, per_page=25, center_lat=None,
                                     center_lng=None):
@@ -540,7 +595,9 @@ def search_exact_listings_in_bounds(*, city="karachi", south, west, north, east,
     conn = _get_conn()
     conditions, params = _listing_filter_clauses(
         city=city, property_type=property_type,
-        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+        price_min=price_min, price_max=price_max,
+        size_marla_min=size_marla_min, size_marla_max=size_marla_max,
         furnished=furnished, q=q, exact_only=True, geocoded_only=True,
     )
     conditions.extend([
@@ -562,7 +619,7 @@ def search_exact_listings_in_bounds(*, city="karachi", south, west, north, east,
     elif sort == "price_high":
         order = "price DESC NULLS LAST"
     elif sort == "newest":
-        order = "first_seen_at DESC"
+        order = f"({_ADDED_MINUTES_SQL}) ASC"
     elif sort == "distance" and map_focus:
         order = "distance_to_center ASC, last_seen_at DESC"
     elif map_focus:
@@ -609,13 +666,16 @@ def search_exact_listings_in_bounds(*, city="karachi", south, west, north, east,
 
 def get_nearby_enrichment_candidates(*, city="karachi", lat, lng, radius_km=5,
                                      area=None, property_type=None, bedrooms=None,
-                                     price_min=None, price_max=None, furnished=None,
-                                     q=None, limit=12):
+                                     bedrooms_max=None, price_min=None, price_max=None,
+                                     size_marla_min=None, size_marla_max=None,
+                                     furnished=None, q=None, limit=12):
     """Return centroid-backed candidates worth upgrading to exact coordinates."""
     conn = _get_conn()
     conditions, params = _listing_filter_clauses(
         city=city, area=area, property_type=property_type,
-        bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+        bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+        price_min=price_min, price_max=price_max,
+        size_marla_min=size_marla_min, size_marla_max=size_marla_max,
         furnished=furnished, q=q, geocoded_only=True,
     )
     conditions.append("location_source IS NOT NULL")

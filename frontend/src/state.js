@@ -29,8 +29,9 @@ export const NL_EXAMPLES = {
 
 /** Reactive-ish filter state. */
 export const S = {
-  city: 'lahore', area: '', type: '', beds: '',
+  city: 'lahore', area: '', type: '', beds: '', bedsMax: '',
   priceMin: '', priceMax: '', furnished: false, sort: '',
+  sizeMarlaMin: '', sizeMarlaMax: '',
 };
 
 /** Mutable runtime refs (not filter state). */

@@ -592,11 +592,11 @@ async def fetch_phone_number(listing_url):
     return detail.get("call_phone") if detail else None
 
 
-async def search_zameen(area=None, property_type=None, bedrooms=None, price_min=None, price_max=None, furnished=None, page=1, sort=None, city="karachi"):
-    ck = cache_key(city=city, area=area, property_type=property_type, bedrooms=bedrooms, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort)
+async def search_zameen(area=None, property_type=None, bedrooms=None, bedrooms_max=None, price_min=None, price_max=None, furnished=None, page=1, sort=None, city="karachi"):
+    ck = cache_key(city=city, area=area, property_type=property_type, bedrooms=bedrooms, bedrooms_max=bedrooms_max, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort)
     cached = cache_get(ck)
     if cached: return cached
-    url = build_url(area, property_type, bedrooms, price_min, price_max, furnished, page, sort, city=city)
+    url = build_url(area, property_type, bedrooms, bedrooms_max, price_min, price_max, furnished, page, sort, city=city)
     logger.info(f"Fetching: {url}")
     async with httpx.AsyncClient() as client:
         html = await fetch_page(url, client)

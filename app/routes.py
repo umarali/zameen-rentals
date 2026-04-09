@@ -128,12 +128,16 @@ async def _refresh_exact_location_candidate(candidate):
 
 
 async def _maybe_enrich_nearby_exact_locations(*, city, lat, lng, radius_km, area,
-                                               property_type, bedrooms, price_min,
-                                               price_max, furnished, q=None):
+                                               property_type, bedrooms, bedrooms_max=None,
+                                               price_min, price_max,
+                                               size_marla_min=None, size_marla_max=None,
+                                               furnished, q=None):
     candidates = get_nearby_enrichment_candidates(
         city=city, lat=lat, lng=lng, radius_km=radius_km, area=area,
-        property_type=property_type, bedrooms=bedrooms, price_min=price_min,
-        price_max=price_max, furnished=furnished, q=q, limit=_NEARBY_ENRICHMENT_LIMIT,
+        property_type=property_type, bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+        price_min=price_min, price_max=price_max,
+        size_marla_min=size_marla_min, size_marla_max=size_marla_max,
+        furnished=furnished, q=q, limit=_NEARBY_ENRICHMENT_LIMIT,
     )
     if not candidates:
         return False
@@ -239,13 +243,15 @@ async def api_parse_query(request: Request, q: str = Query(..., min_length=1), c
 
 @router.get("/api/search")
 @limiter.limit("10/minute")
-async def search(request: Request, city: str = Query("karachi"), area: Optional[str]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
+async def search(request: Request, city: str = Query("karachi"), area: Optional[str]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), bedrooms_max: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), size_marla_min: Optional[float]=Query(None, ge=0), size_marla_max: Optional[float]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
     try:
         _validate_price_range(price_min, price_max)
         # Try local DB first (instant results from crawler data)
         local_result = search_listings(
             city=city, area=area, property_type=property_type,
-            bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+            bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+            price_min=price_min, price_max=price_max,
+            size_marla_min=size_marla_min, size_marla_max=size_marla_max,
             furnished=furnished, sort=sort, page=page
         )
         if local_result["total"] > 0:
@@ -257,7 +263,7 @@ async def search(request: Request, city: str = Query("karachi"), area: Optional[
 
         # Fallback to live scraping if local DB has no results for this query
         try:
-            result = await search_zameen(area=area, property_type=property_type, bedrooms=bedrooms, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort, city=city)
+            result = await search_zameen(area=area, property_type=property_type, bedrooms=bedrooms, bedrooms_max=bedrooms_max, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort, city=city)
             result["source"] = "live"
             log_search(city=city, area=area, property_type=property_type, bedrooms=bedrooms,
                        price_min=price_min, price_max=price_max, furnished=furnished,
@@ -282,8 +288,11 @@ async def map_search(
     areas: list[str] = Query([]),
     property_type: Optional[str] = Query(None),
     bedrooms: Optional[int] = Query(None, ge=1, le=10),
+    bedrooms_max: Optional[int] = Query(None, ge=1, le=10),
     price_min: Optional[int] = Query(None, ge=0),
     price_max: Optional[int] = Query(None, ge=0),
+    size_marla_min: Optional[float] = Query(None, ge=0),
+    size_marla_max: Optional[float] = Query(None, ge=0),
     furnished: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
     sort: Optional[str] = Query(None),
@@ -303,8 +312,10 @@ async def map_search(
     if has_bounds:
         exact_result = search_exact_listings_in_bounds(
             city=city, south=south, west=west, north=north, east=east,
-            property_type=property_type, bedrooms=bedrooms,
-            price_min=price_min, price_max=price_max, furnished=furnished,
+            property_type=property_type, bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+            price_min=price_min, price_max=price_max,
+            size_marla_min=size_marla_min, size_marla_max=size_marla_max,
+            furnished=furnished,
             sort=sort, page=page, center_lat=center_lat, center_lng=center_lng,
         )
         exact_bounds_total = exact_result["total"]
@@ -329,7 +340,9 @@ async def map_search(
 
         result = search_listings(
             city=city, area_names=area_names, property_type=property_type,
-            bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+            bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+            price_min=price_min, price_max=price_max,
+            size_marla_min=size_marla_min, size_marla_max=size_marla_max,
             furnished=furnished, sort=sort, page=page,
             center_lat=center_lat, center_lng=center_lng,
         )
@@ -337,7 +350,9 @@ async def map_search(
         result["visible_areas"] = len(area_names)
         result["area_totals"] = count_listings_by_area(
             city=city, area_names=area_names, property_type=property_type,
-            bedrooms=bedrooms, price_min=price_min, price_max=price_max,
+            bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+            price_min=price_min, price_max=price_max,
+            size_marla_min=size_marla_min, size_marla_max=size_marla_max,
             furnished=furnished,
         )
 
@@ -366,8 +381,11 @@ async def nearby_search(
     area: Optional[str] = Query(None),
     property_type: Optional[str] = Query(None),
     bedrooms: Optional[int] = Query(None, ge=1, le=10),
+    bedrooms_max: Optional[int] = Query(None, ge=1, le=10),
     price_min: Optional[int] = Query(None, ge=0),
     price_max: Optional[int] = Query(None, ge=0),
+    size_marla_min: Optional[float] = Query(None, ge=0),
+    size_marla_max: Optional[float] = Query(None, ge=0),
     furnished: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
     sort: Optional[str] = Query(None),
@@ -377,21 +395,27 @@ async def nearby_search(
 
     result = search_nearby_listings(
         city=city, lat=lat, lng=lng, radius_km=radius_km, area=area,
-        property_type=property_type, bedrooms=bedrooms, price_min=price_min,
-        price_max=price_max, furnished=furnished, sort=sort, page=page,
+        property_type=property_type, bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+        price_min=price_min, price_max=price_max,
+        size_marla_min=size_marla_min, size_marla_max=size_marla_max,
+        furnished=furnished, sort=sort, page=page,
     )
 
     if page == 1 and result["total"] < result["per_page"]:
         upgraded = await _maybe_enrich_nearby_exact_locations(
             city=city, lat=lat, lng=lng, radius_km=radius_km, area=area,
-            property_type=property_type, bedrooms=bedrooms, price_min=price_min,
-            price_max=price_max, furnished=furnished,
+            property_type=property_type, bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+            price_min=price_min, price_max=price_max,
+            size_marla_min=size_marla_min, size_marla_max=size_marla_max,
+            furnished=furnished,
         )
         if upgraded:
             result = search_nearby_listings(
                 city=city, lat=lat, lng=lng, radius_km=radius_km, area=area,
-                property_type=property_type, bedrooms=bedrooms, price_min=price_min,
-                price_max=price_max, furnished=furnished, sort=sort, page=page,
+                property_type=property_type, bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+                price_min=price_min, price_max=price_max,
+                size_marla_min=size_marla_min, size_marla_max=size_marla_max,
+                furnished=furnished, sort=sort, page=page,
             )
 
     result["source"] = "local"
