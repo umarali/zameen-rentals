@@ -13,6 +13,16 @@
   --font-brand: 'Sora', 'Inter', system-ui, sans-serif;
 }
 
+:root {
+  --app-header-pad-y: 0.625rem;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --app-header-pad-y: 0.75rem;
+  }
+}
+
 /* ===== Layout ===== */
 html, body { height: 100vh; height: 100dvh; overflow: hidden; }
 body {
@@ -30,6 +40,9 @@ header,
 #filtersShell,
 main {
   width: 100%;
+}
+header {
+  padding-block: var(--app-header-pad-y);
 }
 header > * {
   min-width: 0;
@@ -484,35 +497,10 @@ main {
 
 /* ===== PWA standalone safe-area ===== */
 @supports (padding-top: env(safe-area-inset-top)) {
-  header { padding-top: env(safe-area-inset-top); }
+  header { padding-top: calc(env(safe-area-inset-top) + var(--app-header-pad-y)); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
 
-html.app-standalone header {
-  flex-wrap: wrap;
-  align-items: flex-start;
-  row-gap: 0.75rem;
-  padding-bottom: 0.75rem;
-}
-html.app-standalone .brand-link {
-  flex: 1 1 auto;
-}
-html.app-standalone header > .flex-1 {
-  order: 3;
-  flex: 1 0 100%;
-  width: 100%;
-  max-width: none;
-  margin-inline: 0;
-}
-html.app-standalone #clearAllBtn {
-  order: 2;
-  margin-left: auto;
-}
-html.app-standalone #nlParsed {
-  order: 4;
-  width: 100%;
-  min-width: 0;
-}
 html.app-standalone #mapCoverageBadgeMobile.coverage-badge-compact {
   top: calc(max(env(safe-area-inset-top), 0.75rem) + 4rem);
   right: auto;
@@ -544,6 +532,35 @@ html.app-standalone #mapCoverageBadge.coverage-badge-compact {
 html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
   left: 0.75rem;
   width: min(18rem, calc(100% - 1.5rem));
+}
+
+@media (max-width: 767px) {
+  html.app-standalone header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+  html.app-standalone .brand-link {
+    flex: 1 1 auto;
+  }
+  html.app-standalone header > .flex-1 {
+    order: 3;
+    flex: 1 0 100%;
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+    margin-block: 0.1rem 0.2rem;
+  }
+  html.app-standalone #clearAllBtn {
+    order: 2;
+    margin-left: auto;
+  }
+  html.app-standalone #nlParsed {
+    order: 4;
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 /* ===== Map offline placeholder ===== */
@@ -584,7 +601,7 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
     -webkit-overflow-scrolling: touch; scrollbar-width: none; height: 240px; gap: 0;
   }
   .drawer-img-grid::-webkit-scrollbar { display: none; }
-  .drawer-img-grid > div { flex: 0 0 85%; scroll-snap-align: start; height: 100%; }
+  .drawer-img-grid > div:not(.img-count) { flex: 0 0 85%; scroll-snap-align: start; height: 100%; }
   .drawer-img-grid .img-main { grid-row: unset; }
   .drawer-img-single { height: 240px; }
 }

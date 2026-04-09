@@ -61,9 +61,43 @@ function isNearbySupportedCity() {
   return S.city === 'karachi';
 }
 
+async function hydrateLocalListingTotals(cities = Object.keys(CITY_DEFAULTS)) {
+  const requestedCities = [...new Set(cities)].filter(city => CITY_DEFAULTS[city]);
+  const pendingCities = requestedCities.filter(city => refs.localListingTotals[city] == null);
+  if (!pendingCities.length) return refs.localListingTotals;
+
+  const stats = await Promise.all(pendingCities.map(async city => {
+    try {
+      const r = await fetch('/api/crawl-status?city=' + city);
+      if (!r.ok) return { city, totalListings: 0 };
+      const data = await r.json();
+      return {
+        city,
+        totalListings: Number.isFinite(Number(data.total_listings)) ? Number(data.total_listings) : 0,
+      };
+    } catch {
+      return { city, totalListings: 0 };
+    }
+  }));
+
+  stats.forEach(({ city, totalListings }) => {
+    refs.localListingTotals[city] = totalListings;
+  });
+  return refs.localListingTotals;
+}
+
+function hasLocalViewportCoverage(city = S.city) {
+  return Number(refs.localListingTotals?.[city] || 0) > 0;
+}
+
+function isViewportBrowseAvailable({ mobile = false, city = S.city } = {}) {
+  if (!hasLocalViewportCoverage(city)) return false;
+  return mobile ? !!refs.mobileMap : window.innerWidth >= 1024 && !!refs.map;
+}
+
 function getBrowseMode() {
   if (S.area) return 'area';
-  return window.innerWidth >= 1024 && refs.map ? 'viewport' : 'city';
+  return isViewportBrowseAvailable() ? 'viewport' : 'city';
 }
 
 function getActiveMapInstance() {
@@ -264,6 +298,8 @@ function getStoredCityPreference() {
 }
 
 async function chooseInitialCity() {
+  await hydrateLocalListingTotals();
+
   const storedCity = getStoredCityPreference();
   if (storedCity) {
     S.city = storedCity;
@@ -271,15 +307,10 @@ async function chooseInitialCity() {
   }
 
   try {
-    const cities = Object.keys(CITY_DEFAULTS);
-    const stats = await Promise.all(cities.map(async city => {
-      const r = await fetch('/api/crawl-status?city=' + city);
-      if (!r.ok) return { city, total_listings: 0 };
-      const d = await r.json();
-      return { city, total_listings: d.total_listings || 0 };
-    }));
-    const best = stats.sort((a, b) => b.total_listings - a.total_listings)[0];
-    if (best?.total_listings > 0) S.city = best.city;
+    const best = Object.entries(refs.localListingTotals)
+      .map(([city, totalListings]) => ({ city, totalListings: Number(totalListings) || 0 }))
+      .sort((a, b) => b.totalListings - a.totalListings)[0];
+    if (best?.totalListings > 0) S.city = best.city;
   } catch {}
 }
 
@@ -389,6 +420,14 @@ function isStandaloneCoverageMode() {
   return document.documentElement.classList.contains('app-standalone');
 }
 
+function isCompactStandaloneViewport() {
+  return isStandaloneCoverageMode() && window.innerWidth < 768;
+}
+
+function shouldHideOverlayCoverageBadge() {
+  return window.innerWidth < 768;
+}
+
 function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCount(), scope = refs.viewportScope } = {}) {
   if (scope === 'exact_bounds') {
     return 'No exact-pin rentals are visible here right now. Zoom out to broaden the map view.';
@@ -413,17 +452,18 @@ function updateCoverageBadge() {
   const coveredEntries = Object.entries(refs.mapAreaTotals || {}).sort((a, b) => b[1] - a[1]);
   const coveredAreas = coveredEntries.length;
   const standaloneMode = isStandaloneCoverageMode();
+  const compactStandaloneMode = isCompactStandaloneViewport();
 
   badges.forEach(el => {
-    if (el === mobile) {
-      // Temporarily disable the mobile coverage UI until the compact treatment is revisited.
+    if (el === mobile && shouldHideOverlayCoverageBadge()) {
+      // Temporarily hide the overlay coverage UI on genuinely small screens.
       el.classList.add('hidden');
       el.innerHTML = '';
       return;
     }
 
     if (refs.searchMode !== 'viewport') {
-      if (standaloneMode) coverageExpanded = false;
+      if (compactStandaloneMode) coverageExpanded = false;
       el.classList.add('hidden');
       el.innerHTML = '';
       return;
@@ -453,10 +493,10 @@ function updateCoverageBadge() {
     const compactSummary = coveredAreas > 0
       ? `${coveredAreas}/${visibleAreas || coveredAreas}`
       : `${visibleAreas || 0}`;
-    const compactMode = standaloneMode && !coverageExpanded;
+    const compactMode = compactStandaloneMode && !coverageExpanded;
 
     el.classList.toggle('coverage-badge-compact', compactMode);
-    el.classList.toggle('coverage-badge-expanded', standaloneMode && coverageExpanded);
+    el.classList.toggle('coverage-badge-expanded', compactStandaloneMode && coverageExpanded);
 
     el.innerHTML = compactMode
       ? `
@@ -616,8 +656,7 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
 function shouldUseViewportSearch({ mobile = false } = {}) {
   if (refs.searchMode === 'nearby') return false;
   if (S.area) return false;
-  if (mobile) return !!refs.mobileMap;
-  return window.innerWidth >= 1024 && !!refs.map;
+  return isViewportBrowseAvailable({ mobile });
 }
 
 function buildViewportSearchKey({ visibleAreaNames, center, bounds, mobile = false, page = 1 }) {
@@ -832,6 +871,7 @@ async function doSearch(page = 1, opts = {}) {
 
 function scheduleViewportSearch(opts = {}) {
   if (S.area || refs.searchMode === 'nearby') return;
+  if (!isViewportBrowseAvailable({ mobile: Boolean(opts.mobile) })) return;
   clearTimeout(refs.mapTimer);
   refs.mapTimer = setTimeout(() => {
     refs._lastTriggeredBy = 'map_viewport';
@@ -878,7 +918,7 @@ async function doNlSearch() {
       S.city = f.city_hint;
       S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
       S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
-      refs.searchMode = window.innerWidth >= 1024 && refs.map ? 'viewport' : 'city';
+      refs.searchMode = getBrowseMode();
       resetViewportSearchMeta({ clearVisibleAreas: true });
       $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
       updateCityTabs(); updateNlExamples(); updateNearbyControls();
@@ -921,7 +961,7 @@ function initCityTabs() {
     trackCitySwitch({ from: prevCity, to: S.city });
     S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
     S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
-    refs.searchMode = window.innerWidth >= 1024 && refs.map ? 'viewport' : 'city';
+    refs.searchMode = getBrowseMode();
     resetViewportSearchMeta({ clearVisibleAreas: true });
     refs.lastViewportSearchKey = '';
     refs.previewArea = null;
@@ -1130,6 +1170,7 @@ async function loadCityData({ search = true } = {}) {
   } catch (e) {
     console.error(e);
   }
+  await hydrateLocalListingTotals([S.city]);
 
   Object.values(refs.markers).forEach(m => { if (refs.map) refs.map.removeLayer(m); });
   refs.markers = {};
@@ -1159,7 +1200,10 @@ async function loadCityData({ search = true } = {}) {
   ensureMarkers(selectAreaFull);
   updateMapMarkers();
   updateCoverageBadge();
-  if (search) doSearch();
+  if (search) {
+    if (refs.searchMode !== 'nearby') refs.searchMode = getBrowseMode();
+    doSearch();
+  }
 }
 
 async function init() {
@@ -1208,12 +1252,13 @@ async function init() {
   initHoverSync();
 
   loadSearch();
+  await hydrateLocalListingTotals([S.city]);
   updateNearbyControls();
   if (window.innerWidth >= 1024) {
-    refs.searchMode = S.area ? 'area' : 'viewport';
     initMap(selectAreaFull, () => scheduleViewportSearch(), openDrawerFull);
     if (S.area) highlightMarker(S.area, true);
   }
+  if (refs.searchMode !== 'nearby') refs.searchMode = getBrowseMode();
   refs._lastTriggeredBy = 'page_load';
   doSearch();
 }

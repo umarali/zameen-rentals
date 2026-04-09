@@ -243,7 +243,11 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
   });
   areaClear.addEventListener('click', () => {
     S.area = ''; areaInput.value = ''; areaClear.classList.add('hidden');
-    if (refs.searchMode !== 'nearby') refs.searchMode = window.innerWidth >= 1024 && refs.map ? 'viewport' : 'city';
+    if (refs.searchMode !== 'nearby') {
+      refs.searchMode = window.innerWidth >= 1024 && refs.map && Number(refs.localListingTotals?.[S.city] || 0) > 0
+        ? 'viewport'
+        : 'city';
+    }
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
     refs.viewportRanking = 'default';

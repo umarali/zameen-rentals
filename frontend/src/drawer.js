@@ -30,13 +30,13 @@ function renderDrawerImages(imgs) {
   }
   if (imgs.length === 1) {
     di.innerHTML = `<div class="drawer-img-single" data-gallery><img src="${escA(imgs[0])}" alt="" onerror="this.parentElement.innerHTML='<div class=\\'h-full bg-gray-100 flex items-center justify-center text-5xl text-gray-300\\'>&#x1f3e0;</div>'">
-      <div class="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-black/60 text-white text-xs font-medium backdrop-blur-sm">1 photo</div></div>`;
+      <div class="absolute bottom-3 left-3 px-3 py-1.5 rounded-lg bg-black/60 text-white text-xs font-medium backdrop-blur-sm">1 photo</div></div>`;
   } else {
     const grid = imgs.slice(0, 5);
     di.innerHTML = `<div class="drawer-img-grid" data-gallery>
       <div class="img-main"><img src="${escA(grid[0])}" alt="" onerror="this.src=''"></div>
       ${grid.slice(1).map(u => `<div><img src="${escA(u)}" alt="" onerror="this.src=''"></div>`).join('')}
-      ${imgs.length > 5 ? `<div class="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-black/60 text-white text-xs font-medium backdrop-blur-sm cursor-pointer">${imgs.length} photos</div>` : ''}
+      ${imgs.length > 5 ? `<div class="img-count absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-black/60 text-white text-xs font-medium backdrop-blur-sm cursor-pointer">${imgs.length} photos</div>` : ''}
     </div>`;
   }
 }
@@ -160,6 +160,7 @@ export function openDrawer(item, selectAreaFull) {
   $('#drawer').classList.add('drawer-open');
   $('#drawerOverlay').classList.add('overlay-open');
   document.body.style.overflow = 'hidden';
+  $('#reportBtn')?.classList.add('hidden');
   // Push history so back button can close drawer
   try { refs._drawerHistoryPushed = true; history.pushState({ drawer: true }, '', ''); } catch { refs._drawerHistoryPushed = false; }
 
@@ -278,6 +279,7 @@ export function closeDrawer(fromPopState) {
   drawerDetailController?.abort();
   drawerDetailController = null;
   $('#drawer').classList.remove('drawer-open');
+  $('#reportBtn')?.classList.remove('hidden');
   $('#drawerOverlay').classList.remove('overlay-open');
   document.body.style.overflow = '';
   if (refs.miniMap) { refs.miniMap.remove(); refs.miniMap = null; refs.miniMapBaseLayer = null; }

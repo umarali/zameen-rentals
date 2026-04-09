@@ -17,13 +17,17 @@ module.exports = defineConfig({
   webServer: {
     command: "uvicorn main:app --port 8000",
     port: 8000,
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     timeout: 15_000,
   },
   projects: [
     {
       name: "chromium",
       use: { browserName: "chromium", viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: "mobile-chromium",
+      use: { browserName: "chromium", viewport: { width: 375, height: 812 } },
     },
   ],
 });

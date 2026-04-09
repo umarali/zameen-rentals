@@ -42,6 +42,7 @@ export const refs = {
   searchController: null,
   currentResults: [],
   allAreas: [],
+  localListingTotals: {},
   searchMode: 'city',
   mapLayer: 'osm',
   userLocation: null,
