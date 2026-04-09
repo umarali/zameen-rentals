@@ -831,11 +831,16 @@ export function initMobileMap(selectAreaFull, openDrawer, onViewportChange) {
       });
     }
 
-    setTimeout(() => refs.mobileMap?.invalidateSize(), 100);
+    setTimeout(() => {
+      refs.mobileMap?.invalidateSize();
+      // Trigger viewport search after map has laid out correctly
+      setTimeout(() => {
+        updateMobileMarkers(selectAreaFull);
+        if (!S.area && isMobileOverlayVisible()) refs._onMobileViewportChange?.();
+      }, 50);
+    }, 100);
     if (S.area && refs.markers[S.area]) refs.mobileMap.setView(refs.markers[S.area].getLatLng(), 14);
-    updateMobileMarkers(selectAreaFull);
     updateMobileCarousel(refs.currentResults);
-    if (!S.area && isMobileOverlayVisible()) refs._onMobileViewportChange?.();
   });
 
   $('#mapCarousel').addEventListener('click', e => {

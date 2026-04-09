@@ -316,6 +316,8 @@ test.describe("Mobile Map", () => {
     expect(gpsBox).toBeTruthy();
     expect(zoomBox).toBeTruthy();
     expect(Math.abs(closeBox.y - layerBox.y)).toBeLessThanOrEqual(4);
+    expect(Math.abs(closeBox.height - layerBox.height)).toBeLessThanOrEqual(2);
+    expect(closeBox.height).toBeLessThanOrEqual(48);
     expect(Math.abs((layerBox.x + layerBox.width) - (gpsBox.x + gpsBox.width))).toBeLessThanOrEqual(2);
     expect(Math.abs((layerBox.x + layerBox.width) - (zoomBox.x + zoomBox.width))).toBeLessThanOrEqual(2);
     expect(gpsBox.y).toBeGreaterThan(layerBox.y + layerBox.height - 2);

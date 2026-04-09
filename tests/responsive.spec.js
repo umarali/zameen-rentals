@@ -126,7 +126,7 @@ test("standalone mode stacks the brand row above the search bar", async ({
   expect(layout.searchWidth, details).toBeGreaterThanOrEqual(340);
 });
 
-test("standalone mode collapses map coverage into a side dock", async ({
+test("standalone mode keeps mobile coverage hidden", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -193,12 +193,5 @@ test("standalone mode collapses map coverage into a side dock", async ({
   await page.waitForSelector("#mapFab", { timeout: 30000 });
   await page.locator("#mapFab").click();
 
-  const badge = page.locator("#mapCoverageBadgeMobile");
-  await expect(badge).toBeVisible();
-  await expect(badge).toHaveClass(/coverage-badge-compact/);
-  await expect(badge).toContainText("Coverage");
-
-  await badge.locator(".coverage-toggle").click();
-  await expect(badge).toHaveClass(/coverage-badge-expanded/);
-  await expect(badge).toContainText("Map Coverage");
+  await expect(page.locator("#mapCoverageBadgeMobile")).toHaveCount(0);
 });

@@ -63,7 +63,7 @@ function isNearbySupportedCity() {
 
 function getBrowseMode() {
   if (S.area) return 'area';
-  return window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+  return window.innerWidth >= 1024 && refs.map ? 'viewport' : 'city';
 }
 
 function getActiveMapInstance() {
@@ -415,6 +415,13 @@ function updateCoverageBadge() {
   const standaloneMode = isStandaloneCoverageMode();
 
   badges.forEach(el => {
+    if (el === mobile) {
+      // Temporarily disable the mobile coverage UI until the compact treatment is revisited.
+      el.classList.add('hidden');
+      el.innerHTML = '';
+      return;
+    }
+
     if (refs.searchMode !== 'viewport') {
       if (standaloneMode) coverageExpanded = false;
       el.classList.add('hidden');
@@ -610,7 +617,7 @@ function shouldUseViewportSearch({ mobile = false } = {}) {
   if (refs.searchMode === 'nearby') return false;
   if (S.area) return false;
   if (mobile) return !!refs.mobileMap;
-  return window.innerWidth > 768 && !!refs.map;
+  return window.innerWidth >= 1024 && !!refs.map;
 }
 
 function buildViewportSearchKey({ visibleAreaNames, center, bounds, mobile = false, page = 1 }) {
@@ -871,7 +878,7 @@ async function doNlSearch() {
       S.city = f.city_hint;
       S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
       S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
-      refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+      refs.searchMode = window.innerWidth >= 1024 && refs.map ? 'viewport' : 'city';
       resetViewportSearchMeta({ clearVisibleAreas: true });
       $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
       updateCityTabs(); updateNlExamples(); updateNearbyControls();
@@ -914,7 +921,7 @@ function initCityTabs() {
     trackCitySwitch({ from: prevCity, to: S.city });
     S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
     S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
-    refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+    refs.searchMode = window.innerWidth >= 1024 && refs.map ? 'viewport' : 'city';
     resetViewportSearchMeta({ clearVisibleAreas: true });
     refs.lastViewportSearchKey = '';
     refs.previewArea = null;
@@ -1202,7 +1209,7 @@ async function init() {
 
   loadSearch();
   updateNearbyControls();
-  if (window.innerWidth > 768) {
+  if (window.innerWidth >= 1024) {
     refs.searchMode = S.area ? 'area' : 'viewport';
     initMap(selectAreaFull, () => scheduleViewportSearch(), openDrawerFull);
     if (S.area) highlightMarker(S.area, true);

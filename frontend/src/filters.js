@@ -73,10 +73,10 @@ export function openDD(name) {
   const el = $('#' + ddMap[name]);
   el.classList.add('open');
   refs.activeDD = name;
-  if (window.innerWidth <= 768) $('#ddBackdrop').classList.remove('hidden');
+  if (window.innerWidth < 1024) $('#ddBackdrop').classList.remove('hidden');
 
   // Position dropdown under its chip button (desktop only)
-  if (window.innerWidth > 768) {
+  if (window.innerWidth >= 1024) {
     const chip = $(`[data-filter="${name}"]`);
     const bar = el.parentElement;
     const chipRect = chip.getBoundingClientRect();
@@ -243,7 +243,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
   });
   areaClear.addEventListener('click', () => {
     S.area = ''; areaInput.value = ''; areaClear.classList.add('hidden');
-    if (refs.searchMode !== 'nearby') refs.searchMode = window.innerWidth > 768 && refs.map ? 'viewport' : 'city';
+    if (refs.searchMode !== 'nearby') refs.searchMode = window.innerWidth >= 1024 && refs.map ? 'viewport' : 'city';
     refs.mapAreaTotals = {};
     refs.viewportAreaNames = [];
     refs.viewportRanking = 'default';

@@ -9,15 +9,15 @@ module.exports = defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   use: {
-    baseURL: "http://localhost:8000",
+    baseURL: "http://127.0.0.1:8011",
     actionTimeout: 15_000,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: "uvicorn main:app --port 8000",
-    port: 8000,
-    reuseExistingServer: true,
+    command: "uvicorn main:app --port 8011",
+    port: 8011,
+    reuseExistingServer: false,
     timeout: 15_000,
   },
   projects: [
