@@ -502,9 +502,9 @@ main {
 }
 
 html.app-standalone #mapCoverageBadgeMobile.coverage-badge-compact {
-  top: calc(max(env(safe-area-inset-top), 0.75rem) + 4rem);
+  top: auto;
   right: auto;
-  bottom: auto;
+  bottom: calc(5rem + env(safe-area-inset-bottom));
   left: 0;
   z-index: 62;
   border-left: none;
@@ -512,13 +512,13 @@ html.app-standalone #mapCoverageBadgeMobile.coverage-badge-compact {
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
 }
 html.app-standalone #mapCoverageBadgeMobile.coverage-badge-expanded {
-  top: calc(max(env(safe-area-inset-top), 0.75rem) + 4rem);
+  top: auto;
   right: auto;
-  bottom: auto;
+  bottom: calc(5rem + env(safe-area-inset-bottom));
   left: 0.75rem;
   z-index: 62;
   width: min(18rem, calc(100vw - 1.5rem));
-  max-height: calc(100dvh - max(env(safe-area-inset-top), 0.75rem) - 11rem - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 11rem - env(safe-area-inset-bottom));
   overflow: auto;
 }
 html.app-standalone #mapCoverageBadge.coverage-badge-compact {
@@ -657,12 +657,12 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
   }
   html.app-standalone #mapCoverageBadgeMobile.coverage-badge-compact {
-    top: calc(max(env(safe-area-inset-top), 0.75rem) + 4rem);
-    bottom: auto;
+    bottom: 5rem;
+    top: auto;
   }
   html.app-standalone #mapCoverageBadgeMobile.coverage-badge-expanded {
-    top: calc(max(env(safe-area-inset-top), 0.75rem) + 4rem);
-    bottom: auto;
+    bottom: 5rem;
+    top: auto;
     width: min(17rem, calc(100vw - 1rem));
     left: 0.5rem;
   }
@@ -706,4 +706,24 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
 }
 @media (max-width: 360px) {
   .brand-wordmark { display: none; }
+  #welcomeBtn { display: none; }
 }
+
+/* ===== Welcome overlay ===== */
+.welcome-backdrop { opacity: 0; transition: opacity .25s ease; }
+.welcome-backdrop-open { opacity: 1; }
+.welcome-panel { opacity: 0; transform: translateY(12px); transition: opacity .25s ease, transform .25s ease; }
+.welcome-panel.welcome-open { opacity: 1; transform: translateY(0); }
+.welcome-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem;
+  padding: 0.875rem; border-radius: 0.75rem;
+  border: 1px solid #e5e7eb; background: #fff;
+  cursor: pointer; transition: all .15s ease; text-align: left;
+}
+.welcome-card:hover { border-color: #127b5a; background: #eef8f4; }
+.welcome-card:hover .welcome-card-icon { color: #127b5a; }
+.welcome-card-icon { color: #9ca3af; transition: color .15s ease; }
+.welcome-card-label { font-size: 0.8125rem; font-weight: 600; color: #1f2937; }
+.welcome-card-desc { font-size: 0.6875rem; color: #9ca3af; line-height: 1.3; }
+.welcome-card-disabled { opacity: 0.5; cursor: default; }
+.welcome-card-disabled:hover { border-color: #e5e7eb; background: #fff; }

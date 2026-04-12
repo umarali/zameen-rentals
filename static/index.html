@@ -24,8 +24,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script type="module" crossorigin src="/static/assets/index-CtsJ_Psg.js"></script>
-  <link rel="stylesheet" crossorigin href="/static/assets/index-CkcBotc4.css">
+  <script type="module" crossorigin src="/static/assets/index-BuZF-8tk.js"></script>
+  <link rel="stylesheet" crossorigin href="/static/assets/index-BWrBpv0g.css">
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
@@ -43,6 +43,9 @@
       <span class="brand-wordmark-accent">Rentals</span>
     </span>
   </a>
+  <button id="welcomeBtn" title="About ZameenRentals" aria-label="About ZameenRentals" class="w-8 h-8 rounded-full border border-gray-200 hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center text-gray-400 hover:text-brand-500 transition-all shrink-0">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+  </button>
   <div class="flex-1 min-w-0 max-w-xl mx-auto relative">
     <div class="flex items-center min-w-0 border border-gray-200 rounded-full bg-white px-4 pr-1 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
       <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -187,7 +190,7 @@
 </div>
 
 <!-- Mobile dropdown backdrop -->
-<div id="ddBackdrop" class="fixed inset-0 bg-black/30 z-40 hidden"></div>
+<div id="ddBackdrop" class="fixed inset-0 bg-black/30 z-[35] hidden"></div>
 
 <!-- ===== MAIN CONTENT ===== -->
 <main class="grid grid-cols-1 lg:grid-cols-[55fr_45fr] overflow-hidden min-w-0">
@@ -222,7 +225,7 @@
 
 <!-- Mobile map overlay -->
 <div id="mapOverlay" class="fixed inset-0 bg-white z-[60] hidden">
-  <div id="mapCoverageBadgeMobile" class="hidden absolute top-14 left-3 right-3 z-[61] rounded-2xl bg-white/92 backdrop-blur border border-gray-200 shadow-sm px-4 py-3"></div>
+  <div id="mapCoverageBadgeMobile" class="hidden absolute bottom-20 left-3 z-[61] max-w-[260px] rounded-2xl bg-white/92 backdrop-blur border border-gray-200 shadow-sm px-4 py-3"></div>
   <div id="mapOverlayCloseWrap" class="absolute z-[61]">
     <button id="mapOverlayClose" class="flex items-center gap-1 px-4 py-2 rounded-full bg-white border border-gray-200 text-sm font-semibold text-gray-700 shadow-md hover:bg-gray-50 transition-colors">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>

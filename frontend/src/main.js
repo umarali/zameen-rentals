@@ -16,6 +16,7 @@ import {
 } from './map.js';
 import { openDrawer, initDrawerListeners } from './drawer.js';
 import { getStoredMapLayer } from './map-layers.js';
+import { initWelcome } from './welcome.js';
 import {
   initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen,
   trackCitySwitch, trackFilterChange, trackMapMarkerClick, trackApiError, trackScrollDepth, trackFeedbackSubmitted,
@@ -58,7 +59,7 @@ function initDisplayModeSync() {
 }
 
 function isNearbySupportedCity() {
-  return S.city === 'karachi';
+  return ['karachi', 'lahore', 'islamabad'].includes(S.city);
 }
 
 async function hydrateLocalListingTotals(cities = Object.keys(CITY_DEFAULTS)) {
@@ -425,7 +426,7 @@ function isCompactStandaloneViewport() {
 }
 
 function shouldHideOverlayCoverageBadge() {
-  return window.innerWidth < 768;
+  return false;
 }
 
 function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCount(), scope = refs.viewportScope } = {}) {
@@ -807,7 +808,7 @@ async function doNearbySearch(page = 1) {
     return doAreaSearch(1);
   }
   if (!isNearbySupportedCity()) {
-    showToast('Nearby search is available in Karachi for now.', { tone: 'warning' });
+    showToast('Nearby search is not available for this city.', { tone: 'warning' });
     refs.searchMode = getBrowseMode();
     updateNearbyControls();
     clearNearbyRadiusOverlays();
@@ -1068,7 +1069,7 @@ function initNearbyControls() {
     }
 
     if (!isNearbySupportedCity()) {
-      showToast('Nearby search is available in Karachi for now.', { tone: 'warning' });
+      showToast('Nearby search is not available for this city.', { tone: 'warning' });
       return;
     }
 
@@ -1261,6 +1262,22 @@ async function init() {
   if (refs.searchMode !== 'nearby') refs.searchMode = getBrowseMode();
   refs._lastTriggeredBy = 'page_load';
   doSearch();
+
+  initWelcome({
+    doSearch,
+    doNlSearch,
+    updateChips,
+    syncPriceChips,
+    setToggle,
+    isNearbySupportedCity,
+    triggerNearby: () => $('#nearbyChip').click(),
+    onCityChange: (city) => {
+      updateCityTabs();
+      updateNlExamples();
+      updateNearbyControls();
+      loadCityData();
+    },
+  });
 }
 
 init();

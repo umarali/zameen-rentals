@@ -27,7 +27,7 @@ router = APIRouter()
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _MAX_VIEWPORT_AREAS = 500
-_NEARBY_SUPPORTED_CITIES = {"karachi"}
+_NEARBY_SUPPORTED_CITIES = {"karachi", "lahore", "islamabad"}
 _NEARBY_ENRICHMENT_LIMIT = 12
 _NEARBY_ENRICHMENT_CONCURRENCY = 3
 _PARSE_QUERY_TIMEOUT_SECONDS = 8
@@ -60,7 +60,7 @@ def _contact_response_from_listing(listing):
 
 def _validate_nearby_request(city, lat, lng, radius_km):
     if city not in _NEARBY_SUPPORTED_CITIES:
-        raise HTTPException(status_code=400, detail="Nearby search is available in Karachi for now.")
+        raise HTTPException(status_code=400, detail="Nearby search is not available for this city.")
     if not (-90 <= lat <= 90):
         raise HTTPException(status_code=400, detail="Latitude must be between -90 and 90.")
     if not (-180 <= lng <= 180):
