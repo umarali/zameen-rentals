@@ -9,7 +9,8 @@ test.describe("Search Results Display", () => {
 
   test("results count is displayed", async ({ page }) => {
     const text = await page.locator("#resultsCount").textContent();
-    expect(text).toMatch(/\d+\s*results|Showing \d+ of \d+ results/);
+    // Viewport mode shows "X shown"; city mode shows "X results" or "Showing X of Y results"
+    expect(text).toMatch(/\d+\s*(results|shown)|Showing \d+ of \d+ results/);
   });
 
   test("results count shows 'Showing X of Y' when paginated", async ({
@@ -26,7 +27,7 @@ test.describe("Search Results Display", () => {
     const firstCard = page.locator(".card-wrap").first();
     // Card should contain price text (Lakh, K, etc.)
     const text = await firstCard.textContent();
-    expect(text).toMatch(/Lakh|lakh|Rs|PKR|\d+K/i);
+    expect(text).toMatch(/Lakh|lakh|Rs|PKR|\d+K|\d+\s*Thousand/i);
   });
 
   test("listing card has title", async ({ page }) => {
@@ -177,10 +178,10 @@ test.describe("Image Carousel", () => {
     await page.goto("/");
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
     const srcEl = page.locator("#dataSource");
-    // Should show "Instant" (local DB) or "Live" (Zameen.com)
+    // Can be "Instant", "Instant / Nearest first", "Instant / Nearby", "Live", "Local only"
     const text = await srcEl.textContent();
-    if (text) {
-      expect(["Instant", "Live"]).toContain(text.trim());
+    if (text && text.trim()) {
+      expect(text.trim()).toMatch(/^(Instant|Live|Local only)/);
     }
   });
 });

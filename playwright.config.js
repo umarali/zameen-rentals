@@ -13,11 +13,18 @@ module.exports = defineConfig({
     actionTimeout: 15_000,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    // Pre-dismiss the welcome overlay so it never blocks test interactions
+    storageState: {
+      cookies: [],
+      origins: [{
+        origin: "http://127.0.0.1:8000",
+        localStorage: [{ name: "zr_welcomed", value: "1" }],
+      }],
+    },
   },
   webServer: {
-    command: "uvicorn main:app --port 8000",
+    command: "ZAMEENRENTALS_PLAYWRIGHT=1 uvicorn main:app --port 8000",
     port: 8000,
-    reuseExistingServer: true,
     timeout: 15_000,
   },
   projects: [

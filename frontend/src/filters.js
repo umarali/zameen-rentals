@@ -42,6 +42,7 @@ function countFilters() {
 }
 
 export function updateChips() {
+  const hasActiveFilters = countFilters() > 0;
   setChipVal($('#areaChip'), S.area, 'Area');
   setChipVal($('#typeChip'), S.type ? TYPE_L[S.type] || S.type : '', 'Type');
   const bedLabel = S.beds
@@ -60,7 +61,8 @@ export function updateChips() {
   const mc = (S.furnished ? 1 : 0) + (S.sort ? 1 : 0);
   setChipVal($('#moreChip'), mc ? 'More (' + mc + ')' : '', 'More');
 
-  $('#clearAllBtn').classList.toggle('hidden', countFilters() === 0);
+  $('#clearAllBtn').classList.toggle('hidden', !hasActiveFilters);
+  $('#appHeader')?.classList.toggle('header-has-clear', hasActiveFilters);
 }
 
 // ===== DROPDOWNS =====

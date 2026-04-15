@@ -535,15 +535,18 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
 }
 
 @media (max-width: 767px) {
+  header.header-has-clear,
   html.app-standalone header {
     flex-wrap: wrap;
     align-items: flex-start;
     row-gap: 0.75rem;
     padding-bottom: 0.75rem;
   }
+  header.header-has-clear .brand-link,
   html.app-standalone .brand-link {
     flex: 1 1 auto;
   }
+  header.header-has-clear > .flex-1,
   html.app-standalone header > .flex-1 {
     order: 3;
     flex: 1 0 100%;
@@ -552,10 +555,14 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
     margin-inline: 0;
     margin-block: 0.1rem 0.2rem;
   }
+  header.header-has-clear #clearAllBtn,
   html.app-standalone #clearAllBtn {
     order: 2;
     margin-left: auto;
+    position: relative;
+    z-index: 1;
   }
+  header.header-has-clear #nlParsed,
   html.app-standalone #nlParsed {
     order: 4;
     width: 100%;

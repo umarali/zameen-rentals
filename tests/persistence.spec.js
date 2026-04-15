@@ -8,7 +8,7 @@ test.describe("LocalStorage Persistence", () => {
 
     // Set filters
     await page.locator("#typeChip").click();
-    await page.locator('.chip[data-type="apartment"]').click();
+    await page.locator('#typeGrid .chip[data-type="apartment"]').click();
     await page.locator("#bedsChip").click();
     await page.locator('#bedRow .chip[data-beds="2"]').click();
     await page.waitForTimeout(1000);

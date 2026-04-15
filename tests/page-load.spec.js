@@ -59,11 +59,19 @@ test.describe("Page Load & Layout", () => {
   });
 
   test("desktop map panel is visible on wide viewport", async ({ page }) => {
+    if ((page.viewportSize()?.width ?? 1440) < 1024) {
+      test.skip(true, "Desktop-only test, skipping on mobile viewport");
+      return;
+    }
     await expect(page.locator("#mapPanel")).toBeVisible();
     await expect(page.locator("#mapContainer")).toBeVisible();
   });
 
   test("map FAB is hidden on desktop", async ({ page }) => {
+    if ((page.viewportSize()?.width ?? 1440) < 1024) {
+      test.skip(true, "Desktop-only test, skipping on mobile viewport");
+      return;
+    }
     await expect(page.locator("#mapFab")).toBeHidden();
   });
 

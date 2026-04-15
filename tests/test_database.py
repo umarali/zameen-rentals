@@ -249,6 +249,43 @@ class TestSearchListings:
         for r in result["results"]:
             assert 60000 <= r["price"] <= 80000
 
+    def test_furnished_filter_excludes_unfurnished_titles(self):
+        upsert_listing(
+            zameen_id="200900",
+            url="https://zameen.com/Property/t-200900-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            card_data={
+                "title": "Fully Furnished Apartment For Rent",
+                "price": 90000,
+                "bedrooms": 2,
+                "bathrooms": 2,
+                "area_size": "1100 sqft",
+                "property_type": "Apartment",
+            },
+        )
+        upsert_listing(
+            zameen_id="200901",
+            url="https://zameen.com/Property/t-200901-1-1.html",
+            city="karachi",
+            area_name="Clifton",
+            area_slug="Karachi_Clifton",
+            card_data={
+                "title": "Very Well Maintained (Unfurnished) Flat For Rent",
+                "price": 85000,
+                "bedrooms": 2,
+                "bathrooms": 2,
+                "area_size": "1050 sqft",
+                "property_type": "Apartment",
+            },
+        )
+
+        result = search_listings(city="karachi", furnished=True)
+
+        assert result["total"] == 1
+        assert result["results"][0]["title"] == "Fully Furnished Apartment For Rent"
+
     def test_sort_price_low(self):
         self._seed()
         result = search_listings(city="karachi", sort="price_low")

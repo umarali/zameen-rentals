@@ -1,6 +1,7 @@
 """API route handlers."""
 import asyncio
 import logging
+import os
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Optional
@@ -31,6 +32,10 @@ _NEARBY_SUPPORTED_CITIES = {"karachi", "lahore", "islamabad"}
 _NEARBY_ENRICHMENT_LIMIT = 12
 _NEARBY_ENRICHMENT_CONCURRENCY = 3
 _PARSE_QUERY_TIMEOUT_SECONDS = 8
+_PLAYWRIGHT_SERVER = os.getenv("ZAMEENRENTALS_PLAYWRIGHT") == "1"
+_SEARCH_RATE_LIMIT = "60/minute" if _PLAYWRIGHT_SERVER else "10/minute"
+_MAP_SEARCH_RATE_LIMIT = "60/minute" if _PLAYWRIGHT_SERVER else "20/minute"
+_NEARBY_SEARCH_RATE_LIMIT = "60/minute" if _PLAYWRIGHT_SERVER else "10/minute"
 
 
 def _normalize_area_names(areas, *, limit=_MAX_VIEWPORT_AREAS):
@@ -242,7 +247,7 @@ async def api_parse_query(request: Request, q: str = Query(..., min_length=1), c
 
 
 @router.get("/api/search")
-@limiter.limit("10/minute")
+@limiter.limit(_SEARCH_RATE_LIMIT)
 async def search(request: Request, city: str = Query("karachi"), area: Optional[str]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), bedrooms_max: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), size_marla_min: Optional[float]=Query(None, ge=0), size_marla_max: Optional[float]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
     try:
         _validate_price_range(price_min, price_max)
@@ -281,7 +286,7 @@ async def search(request: Request, city: str = Query("karachi"), area: Optional[
 
 
 @router.get("/api/map-search")
-@limiter.limit("20/minute")
+@limiter.limit(_MAP_SEARCH_RATE_LIMIT)
 async def map_search(
     request: Request,
     city: str = Query("karachi"),
@@ -371,7 +376,7 @@ async def map_search(
 
 
 @router.get("/api/nearby-search")
-@limiter.limit("10/minute")
+@limiter.limit(_NEARBY_SEARCH_RATE_LIMIT)
 async def nearby_search(
     request: Request,
     city: str = Query("karachi"),

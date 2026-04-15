@@ -98,7 +98,14 @@ def _listing_filter_clauses(*, city="karachi", area=None, area_names=None, prope
         conditions.append("price <= ?")
         params.append(price_max)
     if furnished:
-        conditions.append("(amenities_json LIKE '%furnished%' OR details_json LIKE '%furnished%')")
+        conditions.append(
+            "("
+            "(LOWER(title) LIKE '%furnished%' OR LOWER(COALESCE(amenities_json,'')) LIKE '%furnished%' OR LOWER(COALESCE(details_json,'')) LIKE '%furnished%')"
+            " AND LOWER(title) NOT LIKE '%unfurnished%'"
+            " AND LOWER(COALESCE(amenities_json,'')) NOT LIKE '%unfurnished%'"
+            " AND LOWER(COALESCE(details_json,'')) NOT LIKE '%unfurnished%'"
+            ")"
+        )
     if q:
         conditions.append("id IN (SELECT rowid FROM listings_fts WHERE listings_fts MATCH ?)")
         params.append(q)

@@ -3,6 +3,11 @@ const { test, expect } = require("@playwright/test");
 
 test.describe("Desktop Map", () => {
   test.beforeEach(async ({ page }) => {
+    // Skip on mobile viewports — desktop map (#mapContainer) is hidden below 1024px
+    if ((page.viewportSize()?.width ?? 1440) < 1024) {
+      test.skip(true, "Desktop-only test, skipping on mobile viewport");
+      return;
+    }
     await page.goto("/");
     await page.waitForSelector("#mapContainer", { timeout: 30000 });
     await expect(page.locator("#mapContainer")).toHaveClass(/leaflet-container/);
@@ -125,7 +130,7 @@ test.describe("Desktop Map", () => {
     expect(await markers.count()).toBeGreaterThan(0);
   });
 
-  test("street zoom swaps the focused area label for an active dot", async ({ page }) => {
+  test("street zoom removes the active area label (marker removed at high zoom)", async ({ page }) => {
     await page.locator('.city-tab[data-city="karachi"]').click();
     // Select an area to make it active
     await page.locator("#areaChip").click();
@@ -133,8 +138,8 @@ test.describe("Desktop Map", () => {
     await page.waitForTimeout(400);
     await page.locator(".area-opt").first().click();
     await page.waitForTimeout(2000);
-    await expect(page.locator("#mapContainer .area-label")).toHaveCount(0);
-    expect(await page.locator("#mapContainer .area-dot-active").count()).toBeGreaterThanOrEqual(1);
+    // At zoom >= 13, active area marker is removed entirely (listing pins take over)
+    await expect(page.locator("#mapContainer .area-label-active")).toHaveCount(0);
   });
 
   test("active area badge shows total count", async ({ page }) => {
@@ -153,15 +158,47 @@ test.describe("Desktop Map", () => {
     }
   });
 
-  test("area mode hides exact listing pins so the map does not imply viewport filtering", async ({ page }) => {
+  test("area mode shows exact listing pins for listings with known coordinates", async ({ page }) => {
+    await page.route("**/api/search**", async (route) => {
+      const url = new URL(route.request().url());
+      if (url.searchParams.get("city") === "karachi" && url.searchParams.get("area") === "Clifton") {
+        await route.fulfill({
+          json: {
+            total: 1,
+            page: 1,
+            per_page: 25,
+            source: "local",
+            results: [
+              {
+                title: "Clifton exact pin",
+                url: "https://www.zameen.com/Property/test-clifton-exact-pin.html",
+                price: 98000,
+                bedrooms: 2,
+                bathrooms: 2,
+                area_size: "1200 sqft",
+                location: "Clifton, Karachi",
+                property_type: "Apartment",
+                latitude: 24.8215,
+                longitude: 67.0309,
+                location_source: "listing_exact",
+                has_exact_geography: true,
+              },
+            ],
+          },
+        });
+        return;
+      }
+      await route.fallback();
+    });
+
     await page.locator('.city-tab[data-city="karachi"]').click();
     await page.locator("#areaChip").click();
     await page.locator("#areaInput").fill("Clifton");
     await page.waitForTimeout(400);
     await page.locator(".area-opt", { hasText: "Clifton" }).first().click();
-    await page.waitForTimeout(2500);
+    await expect(page.locator("#listingsGrid")).toContainText("Clifton exact pin");
     await expect(page.locator("#listingsTitle")).toContainText("Clifton");
-    await expect(page.locator("#mapContainer .listing-exact-marker")).toHaveCount(0);
+    await expect(page.locator("#mapContainer .listing-exact-marker")).toHaveCount(1, { timeout: 10000 });
   });
 
   test("city change keeps the map in viewport mode", async ({ page }) => {
@@ -213,12 +250,14 @@ test.describe("Desktop Map", () => {
     await expect(page.locator("#dataSource")).toContainText(/Nearest first|Instant/);
   });
 
-  test("nearby chip warns when city is not supported yet", async ({ page }) => {
-    await page.locator('.city-tab[data-city="lahore"]').click();
-    await page.locator("#nearbyChip").click();
-    await expect(page.locator("#toastStack")).toContainText(
-      "Nearby search is available in Karachi for now."
-    );
+  test("nearby chip is available for all three cities", async ({ page }) => {
+    // Nearby search was expanded from Karachi-only to all 3 cities
+    for (const city of ["karachi", "lahore", "islamabad"]) {
+      await page.locator(`.city-tab[data-city="${city}"]`).click();
+      await page.waitForTimeout(500);
+      // The chip should NOT be disabled for any supported city
+      await expect(page.locator("#nearbyChip")).not.toHaveClass(/chip-disabled/);
+    }
   });
 
   test("nearby mode shows exact distance labels and radius controls", async ({

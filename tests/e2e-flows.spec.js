@@ -1,6 +1,25 @@
 // @ts-check
 const { test, expect } = require("@playwright/test");
 
+async function clickCityAndWait(page, city) {
+  const activeCity = await page.locator(".city-tab.active").getAttribute("data-city");
+  if (activeCity !== city) {
+    const citySearch = page.waitForResponse((response) => {
+      if (!response.ok()) return false;
+      const url = new URL(response.url());
+      return ["/api/search", "/api/map-search"].includes(url.pathname) &&
+        url.searchParams.get("city") === city;
+    });
+    await page.locator(`.city-tab[data-city="${city}"]`).click();
+    await citySearch;
+  }
+
+  await expect(page.locator(`.city-tab[data-city="${city}"]`)).toHaveClass(/active/);
+  await expect(page.locator("#resultsCount")).not.toHaveText("", { timeout: 30000 });
+  await expect(page.locator(".card-wrap").first()).toBeVisible();
+  await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem("rk_s") || "{}").city)).toBe(city);
+}
+
 test.describe("End-to-End User Flows", () => {
   test("complete search flow: NL query → filter → load more → drawer → nearby", async ({
     page,
@@ -9,8 +28,7 @@ test.describe("End-to-End User Flows", () => {
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
 
     // Switch to Karachi for NL tests (DHA is a Karachi area)
-    await page.locator('.city-tab[data-city="karachi"]').click();
-    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    await clickCityAndWait(page, "karachi");
 
     // Step 1: NL search
     await page.locator("#nlInput").fill("flat in DHA");
@@ -35,7 +53,7 @@ test.describe("End-to-End User Flows", () => {
     });
 
     // Step 5: Check drawer content
-    await expect(page.locator("#drawerContent")).toContainText(/Rs|Lakh|PKR/i);
+    await expect(page.locator("#drawerContent")).toContainText(/Rs|Lakh|PKR|Thousand/i);
     await expect(
       page.locator('#drawerContent a[title="View on Zameen.com"]')
     ).toBeVisible();
@@ -51,19 +69,18 @@ test.describe("End-to-End User Flows", () => {
     await page.goto("/");
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
 
-    // Switch to Karachi (default is Lahore)
-    await page.locator('.city-tab[data-city="karachi"]').click();
-    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    await clickCityAndWait(page, "lahore");
+    await expect(page.locator("#listingsTitle")).toContainText("Lahore");
+    await clickCityAndWait(page, "karachi");
     await expect(page.locator("#listingsTitle")).toContainText("Karachi");
 
-    // Search in Lahore
+    // Apply type filter
     await page.locator("#typeChip").click();
     await page.locator('#typeGrid .chip[data-type="house"]').click();
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
 
     // Switch to Islamabad
-    await page.locator('.city-tab[data-city="islamabad"]').click();
-    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    await clickCityAndWait(page, "islamabad");
     await expect(page.locator("#listingsTitle")).toContainText("Islamabad");
     // Filters should be cleared
     await expect(page.locator("#typeChip")).not.toHaveClass(/has-value/);
@@ -87,7 +104,6 @@ test.describe("End-to-End User Flows", () => {
       .count();
     expect(activeChips).toBeGreaterThan(0);
 
-    // Clear all
     await expect(page.locator("#clearAllBtn")).toBeVisible();
     await page.locator("#clearAllBtn").click();
     const afterClear = await page
@@ -122,7 +138,8 @@ test.describe("End-to-End User Flows", () => {
     await page.locator("#moreChip").click();
     await page.locator("#furnishedToggle").click();
     await page.locator("#sortSelect").selectOption("price_low");
-    await page.locator("#listingsGrid").click(); // close dropdown
+    // Sort select already calls closeDD(); press Escape as a safety net
+    await page.keyboard.press("Escape");
 
     await expect(page.locator("#moreChip")).toHaveClass(/has-value/);
     await page.waitForSelector(".card-wrap", { timeout: 30000 });

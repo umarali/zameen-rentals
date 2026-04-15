@@ -161,6 +161,11 @@ test.describe("Detail Drawer", () => {
   });
 
   test("drawer mini map inherits the active satellite layer", async ({ page }) => {
+    // Desktop-only: #mapContainer layer toggle is hidden on mobile
+    if ((page.viewportSize()?.width ?? 1440) < 1024) {
+      test.skip(true, "Desktop-only test, skipping on mobile viewport");
+      return;
+    }
     await stubDrawerMapSearch(page);
     await page.locator('#mapContainer [data-map-layer="satellite"]').first().click();
     await page.locator(".card-wrap").first().click();

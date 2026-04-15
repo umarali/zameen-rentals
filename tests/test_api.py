@@ -172,7 +172,9 @@ class TestListingDetailEndpoint:
             url="https://www.zameen.com/Property/test-900001-1-1.html",
             city="karachi",
             detail_data={"phone": "+923001234567", "description": "Nice flat",
-                         "features": ["AC"], "amenities": ["Parking"]}
+                         "features": ["AC"], "amenities": ["Parking"],
+                         "latitude": 24.8000, "longitude": 67.0000,
+                         "location_source": "listing_exact"}
         )
         res = client.get("/api/listing-detail?url=https://www.zameen.com/Property/test-900001-1-1.html")
         assert res.status_code == 200
@@ -219,7 +221,8 @@ class TestListingDetailEndpoint:
             zameen_id="900005",
             url="https://www.zameen.com/Property/test-900005-1-1.html",
             city="karachi",
-            detail_data={"call_phone": "+922134567890", "whatsapp_phone": None, "description": "Call only"},
+            detail_data={"call_phone": "+922134567890", "whatsapp_phone": None, "description": "Call only",
+                         "latitude": 24.8000, "longitude": 67.0000, "location_source": "listing_exact"},
         )
 
         res = client.get("/api/listing-detail?url=https://www.zameen.com/Property/test-900005-1-1.html")
@@ -632,11 +635,10 @@ class TestNearbySearchEndpoint:
         assert data["results"][0]["is_distance_approximate"] is False
         assert data["results"][0]["distance_km"] < 1
 
-    def test_nearby_search_rejects_unsupported_city(self, client):
-        res = client.get("/api/nearby-search?city=lahore&lat=31.52&lng=74.35&radius_km=5")
-
-        assert res.status_code == 400
-        assert "Karachi" in res.json()["detail"]
+    def test_nearby_search_supported_for_all_cities(self, client):
+        for city, lat, lng in [("karachi", 24.82, 67.03), ("lahore", 31.52, 74.35), ("islamabad", 33.72, 73.06)]:
+            res = client.get(f"/api/nearby-search?city={city}&lat={lat}&lng={lng}&radius_km=5")
+            assert res.status_code == 200, f"Expected 200 for {city}, got {res.status_code}"
 
     def test_nearby_search_rejects_invalid_radius(self, client):
         res = client.get("/api/nearby-search?city=karachi&lat=24.82&lng=67.03&radius_km=25")

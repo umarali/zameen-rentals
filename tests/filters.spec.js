@@ -300,8 +300,13 @@ test.describe("Dropdown Management", () => {
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
     await page.locator("#typeChip").click();
     await expect(page.locator("#dd-type")).toHaveClass(/open/);
-    // Click on body/listings area
-    await page.locator("#listingsGrid").click();
+    // Click the backdrop (covers screen on mobile; falls through to document on desktop)
+    const backdrop = page.locator("#ddBackdrop");
+    if (await backdrop.isVisible()) {
+      await backdrop.click();
+    } else {
+      await page.locator("#listingsGrid").click();
+    }
     await expect(page.locator("#dd-type")).not.toHaveClass(/open/);
   });
 
