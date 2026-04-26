@@ -2,6 +2,8 @@
 import asyncio
 import logging
 import os
+import time
+from threading import Lock as _Lock
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Optional
@@ -25,6 +27,22 @@ from app.db_listings import (
 
 logger = logging.getLogger("zameenrentals")
 router = APIRouter()
+
+# In-memory cache for the default city-browse query (no filters, page=1).
+# Keyed by city. TTL=120s. 3 entries max (one per city). Zero memory growth risk.
+_DEFAULT_SEARCH_CACHE: dict = {}
+_DEFAULT_SEARCH_LOCK = _Lock()
+_DEFAULT_SEARCH_TTL = 120
+
+
+def _is_default_search(area, property_type, bedrooms, bedrooms_max,
+                       price_min, price_max, size_marla_min, size_marla_max,
+                       furnished, sort, page) -> bool:
+    return (area is None and property_type is None and bedrooms is None
+            and bedrooms_max is None and price_min is None and price_max is None
+            and size_marla_min is None and size_marla_max is None
+            and furnished is None and sort is None and page == 1)
+
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _MAX_VIEWPORT_AREAS = 500
@@ -251,6 +269,17 @@ async def api_parse_query(request: Request, q: str = Query(..., min_length=1), c
 async def search(request: Request, city: str = Query("karachi"), area: Optional[str]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), bedrooms_max: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), size_marla_min: Optional[float]=Query(None, ge=0), size_marla_max: Optional[float]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
     try:
         _validate_price_range(price_min, price_max)
+        # Serve from in-memory cache for the default (no-filter, page=1) query.
+        # log_search is intentionally skipped on cache hits to avoid inflating search history counts.
+        is_default = _is_default_search(area, property_type, bedrooms, bedrooms_max,
+                                        price_min, price_max, size_marla_min, size_marla_max,
+                                        furnished, sort, page)
+        if is_default:
+            with _DEFAULT_SEARCH_LOCK:
+                cached = _DEFAULT_SEARCH_CACHE.get(city)
+            if cached and cached[1] > time.monotonic():
+                return {**cached[0], "source": "local"}
+
         # Try local DB first (instant results from crawler data)
         local_result = search_listings(
             city=city, area=area, property_type=property_type,
@@ -261,6 +290,9 @@ async def search(request: Request, city: str = Query("karachi"), area: Optional[
         )
         if local_result["total"] > 0:
             local_result["source"] = "local"
+            if is_default:
+                with _DEFAULT_SEARCH_LOCK:
+                    _DEFAULT_SEARCH_CACHE[city] = (local_result, time.monotonic() + _DEFAULT_SEARCH_TTL)
             log_search(city=city, area=area, property_type=property_type, bedrooms=bedrooms,
                        price_min=price_min, price_max=price_max, furnished=furnished,
                        sort=sort, result_count=local_result["total"])

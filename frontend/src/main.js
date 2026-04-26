@@ -299,14 +299,14 @@ function getStoredCityPreference() {
 }
 
 async function chooseInitialCity() {
-  await hydrateLocalListingTotals();
-
   const storedCity = getStoredCityPreference();
   if (storedCity) {
     S.city = storedCity;
-    return;
+    return; // Skip the 3 crawl-status fetches — single-city hydration runs later in init()
   }
 
+  // New user: fetch all cities to auto-select the one with most listings
+  await hydrateLocalListingTotals();
   try {
     const best = Object.entries(refs.localListingTotals)
       .map(([city, totalListings]) => ({ city, totalListings: Number(totalListings) || 0 }))
@@ -1246,30 +1246,34 @@ async function init() {
 
   updateCityTabs();
   updateNlExamples();
-  try {
-    const r = await fetch('/api/areas?city=' + S.city);
-    refs.allAreas = await r.json();
-  } catch (e) {
-    console.error(e);
-  }
 
-  try {
-    const r = await fetch('/api/popular-searches?city=' + S.city + '&limit=5');
-    const popular = await r.json();
-    if (popular.length) {
-      const container = $('#nlSuggestions');
-      let html = '<div class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Popular</div>';
-      popular.forEach(p => {
-        const parts = [];
-        if (p.bedrooms) parts.push(p.bedrooms + ' bed');
-        if (p.property_type) parts.push(TYPE_L[p.property_type] || p.property_type);
-        if (p.area) parts.push('in ' + p.area);
-        const label = parts.join(' ') || 'All listings';
-        html += `<div class="pop-search px-3 py-2 text-sm text-gray-600 hover:bg-brand-50 hover:text-brand-500 cursor-pointer transition-colors" data-area="${p.area || ''}" data-type="${p.property_type || ''}" data-beds="${p.bedrooms || ''}">${label} <span class="text-gray-300 text-xs">(${p.count})</span></div>`;
-      });
-      container.insertAdjacentHTML('afterbegin', html);
-    }
-  } catch {}
+  // Fetch areas, popular searches, and crawl-status in parallel — all independent.
+  // hydrateLocalListingTotals MUST complete before getBrowseMode() below (viewport mode detection).
+  await Promise.all([
+    fetch('/api/areas?city=' + S.city)
+      .then(r => r.json())
+      .then(d => { refs.allAreas = d; })
+      .catch(console.error),
+    fetch('/api/popular-searches?city=' + S.city + '&limit=5')
+      .then(r => r.json())
+      .then(popular => {
+        if (popular.length) {
+          const container = $('#nlSuggestions');
+          let html = '<div class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Popular</div>';
+          popular.forEach(p => {
+            const parts = [];
+            if (p.bedrooms) parts.push(p.bedrooms + ' bed');
+            if (p.property_type) parts.push(TYPE_L[p.property_type] || p.property_type);
+            if (p.area) parts.push('in ' + p.area);
+            const label = parts.join(' ') || 'All listings';
+            html += `<div class="pop-search px-3 py-2 text-sm text-gray-600 hover:bg-brand-50 hover:text-brand-500 cursor-pointer transition-colors" data-area="${p.area || ''}" data-type="${p.property_type || ''}" data-beds="${p.bedrooms || ''}">${label} <span class="text-gray-300 text-xs">(${p.count})</span></div>`;
+          });
+          container.insertAdjacentHTML('afterbegin', html);
+        }
+      })
+      .catch(() => {}),
+    hydrateLocalListingTotals([S.city]),
+  ]);
 
   initCityTabs();
   initFilterListeners({ doSearch, selectAreaFull, clearFilterFull, resetMapView });
@@ -1281,7 +1285,6 @@ async function init() {
   initHoverSync();
 
   loadSearch();
-  await hydrateLocalListingTotals([S.city]);
   updateNearbyControls();
   if (window.innerWidth >= 1024) {
     initMap(selectAreaFull, () => scheduleViewportSearch(), openDrawerFull);

@@ -108,6 +108,7 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_listings_zameen_id ON listings(zameen_id);
             CREATE INDEX IF NOT EXISTS idx_listings_last_seen ON listings(last_seen_at);
             CREATE INDEX IF NOT EXISTS idx_listings_detail ON listings(detail_scraped_at);
+            CREATE INDEX IF NOT EXISTS idx_listings_default ON listings(is_active, city, last_seen_at DESC);
             -- ── Crawl state per area ──
             CREATE TABLE IF NOT EXISTS crawl_state (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
