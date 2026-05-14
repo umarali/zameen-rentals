@@ -41,6 +41,15 @@ function countFilters() {
   return n;
 }
 
+// #nlInput follows a clear-on-apply model: it represents the next NL query
+// the user might type, not a record of what's currently filtered. Any action
+// that submits a new search should clear it so it never lies about state.
+function clearNlInput() {
+  const el = $('#nlInput');
+  if (el) el.value = '';
+  $('#nlSuggestions')?.classList.add('hidden');
+}
+
 export function updateChips() {
   const hasActiveFilters = countFilters() > 0;
   setChipVal($('#areaChip'), S.area, 'Area');
@@ -174,6 +183,7 @@ export function clearFilter(f, { resetMapView, doSearch } = {}) {
   if (f === 'beds') { S.beds = ''; S.bedsMax = ''; $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === '')); }
   if (f === 'price') { S.priceMin = ''; S.priceMax = ''; $$('#priceGrid .chip').forEach(c => c.classList.remove('active')); $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = ''; }
   if (f === 'more') { S.furnished = false; S.sort = ''; setToggle(false); $('#sortSelect').value = ''; }
+  clearNlInput();
   updateChips(); doSearch?.();
 }
 
@@ -183,6 +193,7 @@ export function selectArea(name, fromMap, { highlightMarker, doSearch } = {}) {
   S.area = name;
   $('#areaInput').value = name;
   $('#areaClear').classList.remove('hidden');
+  clearNlInput();
   closeDD();
   updateChips();
   if (!fromMap) highlightMarker?.(name, true);
@@ -216,6 +227,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = '';
     setToggle(false); $('#sortSelect').value = '';
     $$('#presetRow .chip').forEach(c => c.classList.remove('active'));
+    clearNlInput();
     updateChips();
     if (refs.searchMode !== 'nearby') resetMapView();
     doSearch();
@@ -259,6 +271,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     refs.previewArea = null;
     refs.hoveredArea = null;
     if (refs.searchMode !== 'nearby') resetMapView();
+    clearNlInput();
     updateChips(); renderAreaList(refs.allAreas.slice(0, 20)); doSearch();
   });
 
@@ -269,6 +282,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     if (c.classList.contains('active')) { c.classList.remove('active'); S.type = ''; }
     else { $$('#typeGrid .chip').forEach(x => x.classList.remove('active')); c.classList.add('active'); S.type = c.dataset.type; }
     if (prev !== S.type) trackFilterChange({ filter: 'type', value: S.type, previousValue: prev, mode: refs.searchMode, city: S.city });
+    clearNlInput();
     updateChips(); closeDD(); doSearch();
   });
 
@@ -279,6 +293,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     $$('#bedRow .chip').forEach(x => x.classList.remove('active'));
     c.classList.add('active'); S.beds = c.dataset.beds; S.bedsMax = '';
     if (prev !== S.beds) trackFilterChange({ filter: 'beds', value: S.beds, previousValue: prev, mode: refs.searchMode, city: S.city });
+    clearNlInput();
     updateChips(); closeDD(); doSearch();
   });
 
@@ -297,18 +312,20 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     else { $$('#priceGrid .chip').forEach(x => x.classList.remove('active')); c.classList.add('active'); S.priceMin = c.dataset.pmin; S.priceMax = c.dataset.pmax; }
     const newPrice = `${S.priceMin}-${S.priceMax}`;
     if (prevPrice !== newPrice) trackFilterChange({ filter: 'price', value: newPrice, previousValue: prevPrice, mode: refs.searchMode, city: S.city });
+    clearNlInput();
     updateChips(); closeDD(); doSearch();
   });
   $('#priceMin').addEventListener('input', () => { S.priceMin = $('#priceMin').value; updateChips(); });
   $('#priceMax').addEventListener('input', () => { S.priceMax = $('#priceMax').value; updateChips(); });
-  $$('#customPrice input').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { closeDD(); doSearch(); } }));
-  $('#priceApply').addEventListener('click', () => { S.priceMin = $('#priceMin').value; S.priceMax = $('#priceMax').value; updateChips(); closeDD(); doSearch(); });
+  $$('#customPrice input').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { clearNlInput(); closeDD(); doSearch(); } }));
+  $('#priceApply').addEventListener('click', () => { S.priceMin = $('#priceMin').value; S.priceMax = $('#priceMax').value; clearNlInput(); updateChips(); closeDD(); doSearch(); });
 
   // Furnished
   $('#furnishedToggle').addEventListener('click', () => {
     const prev = S.furnished;
     setToggle(!S.furnished);
     trackFilterChange({ filter: 'furnished', value: String(S.furnished), previousValue: String(prev), mode: refs.searchMode, city: S.city });
+    clearNlInput();
     updateChips(); doSearch();
   });
 
@@ -317,6 +334,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     const prev = S.sort;
     S.sort = $('#sortSelect').value;
     if (prev !== S.sort) trackFilterChange({ filter: 'sort', value: S.sort, previousValue: prev, mode: refs.searchMode, city: S.city });
+    clearNlInput();
     updateChips(); closeDD(); doSearch();
   });
 
@@ -330,6 +348,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     $$('#typeGrid .chip').forEach(x => x.classList.toggle('active', x.dataset.type === S.type));
     $$('#bedRow .chip').forEach(x => x.classList.toggle('active', x.dataset.beds === S.beds));
     syncPriceChips();
+    clearNlInput();
     updateChips(); closeDD(); doSearch();
   });
 

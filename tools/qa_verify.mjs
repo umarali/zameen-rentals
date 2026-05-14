@@ -78,10 +78,43 @@ async function verifyWelcome(browser, viewport, tag) {
   await ctx.close();
 }
 
+async function verifyClearOnApply(browser, viewport, tag) {
+  console.log(`\n[clear-on-apply] ${tag} ${viewport.width}x${viewport.height}`);
+  const { ctx, page } = await withWelcomeDismissed(browser, viewport);
+  await page.waitForSelector('.card-wrap', { timeout: 30000 });
+
+  // Type into nlInput, apply a chip — input should clear.
+  await page.locator('#nlInput').fill('stale text');
+  await page.locator('#typeChip').click();
+  await page.locator('#typeGrid .chip[data-type="apartment"]').click();
+  await page.waitForTimeout(800);
+  const v1 = await page.locator('#nlInput').inputValue();
+  if (v1 === '') ok('nlInput cleared after type-chip apply'); else fail('nlInput after type-chip', JSON.stringify(v1));
+
+  // Pre-populate filters via URL? Easier: apply a couple via UI then Clear All.
+  await page.locator('#bedsChip').click();
+  await page.locator('#bedRow .chip[data-beds="3"]').click();
+  await page.waitForTimeout(500);
+  await page.locator('#nlInput').fill('another stale query');
+  await page.locator('#clearAllBtn').click();
+  await page.waitForTimeout(800);
+
+  const v2 = await page.locator('#nlInput').inputValue();
+  if (v2 === '') ok('nlInput cleared after Clear All'); else fail('nlInput after Clear All', JSON.stringify(v2));
+
+  const title = await page.locator('#listingsTitle').textContent();
+  if (!/Bahria Town/.test(title)) ok(`title cleared of area name (got: "${title.trim()}")`); else fail('title still references area', title);
+
+  await page.screenshot({ path: `${OUT}/clearapply_${tag}_${viewport.width}.png` });
+  await ctx.close();
+}
+
 (async () => {
   const browser = await chromium.launch();
   await verifyWelcome(browser, { width: 1440, height: 900 }, 'desktop');
   await verifyWelcome(browser, { width: 375, height: 812 }, 'mobile');
+  await verifyClearOnApply(browser, { width: 1440, height: 900 }, 'desktop');
+  await verifyClearOnApply(browser, { width: 375, height: 812 }, 'mobile');
   await browser.close();
   if (process.exitCode) console.log('\nResult: FAILURES'); else console.log('\nResult: ALL PASS');
 })();

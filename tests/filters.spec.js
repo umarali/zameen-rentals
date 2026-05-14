@@ -292,6 +292,44 @@ test.describe("Clear All", () => {
     await expect(page.locator("#bedsChip")).not.toHaveClass(/has-value/);
     await expect(page.locator("#clearAllBtn")).toBeHidden();
   });
+
+  test("clear all also clears nlInput and resets the listings title", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+
+    // Type something into the NL search box and apply a chip filter
+    // (the NL input is not submitted, but mimics a stale-state scenario).
+    await page.locator("#nlInput").fill("3 bed house Bahria Town under 80k");
+    await page.locator("#typeChip").click();
+    await page.locator('#typeGrid .chip[data-type="house"]').click();
+    await page.waitForSelector(".card-wrap");
+
+    await expect(page.locator("#nlInput")).toHaveValue("");
+
+    // Re-type something, then Clear All — both should be cleared.
+    await page.locator("#nlInput").fill("anything goes here");
+    await page.locator("#clearAllBtn").click();
+    await page.waitForSelector(".card-wrap");
+
+    await expect(page.locator("#nlInput")).toHaveValue("");
+    // After Clear All, title should NOT reference any specific area.
+    const title = await page.locator("#listingsTitle").textContent();
+    expect(title).not.toMatch(/Bahria Town/);
+    // Listings should still render — Clear All re-runs the default search.
+    await expect(page.locator(".card-wrap").first()).toBeVisible();
+  });
+
+  test("applying a filter chip clears nlInput (clear-on-apply model)", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+
+    await page.locator("#nlInput").fill("stale query text");
+    await page.locator("#typeChip").click();
+    await page.locator('#typeGrid .chip[data-type="apartment"]').click();
+    await page.waitForSelector(".card-wrap");
+
+    await expect(page.locator("#nlInput")).toHaveValue("");
+  });
 });
 
 test.describe("Dropdown Management", () => {

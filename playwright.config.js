@@ -26,6 +26,7 @@ module.exports = defineConfig({
     command: "ZAMEENRENTALS_PLAYWRIGHT=1 uvicorn main:app --port 8000",
     port: 8000,
     timeout: 15_000,
+    reuseExistingServer: !process.env.CI,
   },
   projects: [
     {
