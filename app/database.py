@@ -250,6 +250,44 @@ def init_db():
             )
             conn.commit()
 
+        # Backfill clean `location` for legacy rows where the trailing city
+        # token was duplicated (e.g. 'DHA Defence, Karachi Karachi'). Same
+        # scraper-noise pattern as the size-bleed fix above. Runs once per
+        # fresh deploy via the schema_migrations sentinel.
+        already_applied = conn.execute(
+            "SELECT 1 FROM schema_migrations WHERE name = ?",
+            ("clean_location_doubled_city_v1",),
+        ).fetchone()
+        if not already_applied:
+            from app.scraper import sanitize_location
+            rows = conn.execute(
+                "SELECT id, location FROM listings WHERE location IS NOT NULL AND ("
+                "location LIKE '% Karachi Karachi%' OR "
+                "location LIKE '% Lahore Lahore%' OR "
+                "location LIKE '% Islamabad Islamabad%' OR "
+                "location LIKE '% Rawalpindi Rawalpindi%'"
+                ")"
+            ).fetchall()
+            updates = []
+            for row in rows:
+                cleaned = sanitize_location(row["location"])
+                if cleaned != row["location"]:
+                    updates.append((cleaned, row["id"]))
+            if updates:
+                conn.executemany(
+                    "UPDATE listings SET location = ? WHERE id = ?",
+                    updates,
+                )
+                logger.info(
+                    "Cleaned doubled trailing city from location for %d listings",
+                    len(updates),
+                )
+            conn.execute(
+                "INSERT INTO schema_migrations(name) VALUES (?)",
+                ("clean_location_doubled_city_v1",),
+            )
+            conn.commit()
+
         # Create geo index after location_source column is guaranteed to exist
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_listings_geo_active ON listings(city, location_source, latitude, longitude)

@@ -26,18 +26,21 @@ _LOCATION_SIZE_TAIL_RE = re.compile(
     re.IGNORECASE,
 )
 
+_LOCATION_DOUBLED_CITY_RE = re.compile(r'\s+([A-Z][a-z]+)\s+\1\s*$')
+
 
 def sanitize_location(text):
-    """Strip area-size that bled into a Zameen location string.
+    """Strip scraper noise that bled into a Zameen location string.
 
     Zameen card markup sometimes runs the location and size together without
-    a separator (e.g. 'Scheme 33, Karachi22200 Sq. Yd.' or
-    'DHA Phase 845292 Sq. Yd.'). This removes the size token and any trailing
-    punctuation. Returns None for empty input.
+    a separator (e.g. 'Scheme 33, Karachi22200 Sq. Yd.') and sometimes
+    duplicates the trailing city token (e.g. 'DHA Defence, Karachi Karachi').
+    This removes both kinds of noise. Returns None for empty input.
     """
     if not text or not isinstance(text, str):
         return text
     cleaned = _LOCATION_SIZE_TAIL_RE.sub('', text).strip().rstrip(',').strip()
+    cleaned = _LOCATION_DOUBLED_CITY_RE.sub(r' \1', cleaned).strip()
     return cleaned or None
 
 

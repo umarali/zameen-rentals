@@ -3,7 +3,7 @@ import pytest
 from app.scraper import (
     extract_zameen_id, parse_listings, _is_property_photo_url,
     _extract_property_type, _extract_images, _extract_listing_geography,
-    _normalize_phone, _parse_contact_payload,
+    _normalize_phone, _parse_contact_payload, sanitize_location,
 )
 from app.parsing import parse_price, build_url, match_area
 from app.cache import RateLimiter
@@ -245,6 +245,47 @@ class TestExtractListingGeography:
         assert result is not None
         assert result["latitude"] == pytest.approx(24.954818)
         assert result["longitude"] == pytest.approx(67.11663)
+
+
+class TestSanitizeLocation:
+    def test_size_tail_sq_yd(self):
+        assert sanitize_location("Scheme 33, Karachi22200 Sq. Yd.") == "Scheme 33, Karachi"
+
+    def test_size_tail_marla(self):
+        assert sanitize_location("DHA Phase 8 45 Marla") == "DHA Phase 8"
+
+    def test_size_tail_kanal(self):
+        assert sanitize_location("Bahria Town, Lahore 1 Kanal") == "Bahria Town, Lahore"
+
+    def test_doubled_city_karachi(self):
+        assert sanitize_location("DHA Defence, Karachi Karachi") == "DHA Defence, Karachi"
+
+    def test_doubled_city_lahore(self):
+        assert sanitize_location("Garden Town, Lahore Lahore") == "Garden Town, Lahore"
+
+    def test_doubled_city_islamabad(self):
+        assert sanitize_location("F-8, Islamabad Islamabad") == "F-8, Islamabad"
+
+    def test_doubled_city_no_comma(self):
+        assert sanitize_location("Bahria Town Karachi Karachi") == "Bahria Town Karachi"
+
+    def test_doubled_city_then_size(self):
+        # Size bleed strips first, then doubled-city pass
+        assert sanitize_location("DHA Phase 5, Karachi Karachi 10 Marla") == "DHA Phase 5, Karachi"
+
+    def test_no_op_clean_location(self):
+        assert sanitize_location("Clifton, Karachi") == "Clifton, Karachi"
+
+    def test_no_op_subarea_includes_city_name(self):
+        # 'Bahria Town Karachi' is a real sub-area; trailing ', Karachi' is the city.
+        # These are NOT doubled (comma separates them) — must be preserved.
+        assert sanitize_location("Bahria Town Karachi, Karachi") == "Bahria Town Karachi, Karachi"
+
+    def test_empty_string(self):
+        assert sanitize_location("") == ""
+
+    def test_none(self):
+        assert sanitize_location(None) is None
 
 
 class TestRateLimiter:
