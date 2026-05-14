@@ -69,10 +69,11 @@ test.describe("End-to-End User Flows", () => {
     await page.goto("/");
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
 
+    // City tab clicks fly the map and refresh listings but do NOT switch
+    // out of viewport browse mode, so the title stays "Rentals in this
+    // map view". State assertions live in clickCityAndWait.
     await clickCityAndWait(page, "lahore");
-    await expect(page.locator("#listingsTitle")).toContainText("Lahore");
     await clickCityAndWait(page, "karachi");
-    await expect(page.locator("#listingsTitle")).toContainText("Karachi");
 
     // Apply type filter
     await page.locator("#typeChip").click();
@@ -81,7 +82,6 @@ test.describe("End-to-End User Flows", () => {
 
     // Switch to Islamabad
     await clickCityAndWait(page, "islamabad");
-    await expect(page.locator("#listingsTitle")).toContainText("Islamabad");
     // Filters should be cleared
     await expect(page.locator("#typeChip")).not.toHaveClass(/has-value/);
   });

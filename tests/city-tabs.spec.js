@@ -18,9 +18,10 @@ async function clickCityAndWait(page, city) {
   await expect(page.locator("#resultsCount")).not.toHaveText("", { timeout: 30000 });
   await expect(page.locator(".card-wrap").first()).toBeVisible();
   await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem("rk_s") || "{}").city)).toBe(city);
-  await expect(page.locator("#listingsTitle")).toContainText(
-    city.charAt(0).toUpperCase() + city.slice(1)
-  );
+  // Note: title intentionally NOT asserted to contain the city name. The
+  // default browse mode is viewport ("Rentals in this map view"), so
+  // clicking a city tab flies the map without switching titles to
+  // "Rentals in <city>". This helper now only asserts state, not chrome text.
 }
 
 test.describe("City Tabs", () => {

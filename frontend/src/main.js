@@ -504,20 +504,37 @@ function updateCoverageBadge() {
       el.classList.add('coverage-mobile-inline');
       el.classList.remove('coverage-badge-compact', 'coverage-badge-expanded');
       const coverageIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linejoin="round" aria-hidden="true"><path d="M12,21 C9.5,17.5 6,14 6,10 A6,6 0 1,1 18,10 C18,14 14.5,17.5 12,21 Z" stroke-width="2"/><circle cx="10.2" cy="8.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="8.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="13.8" cy="8.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="10.2" cy="10.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="10.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="13.8" cy="10.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/><circle cx="10.2" cy="12.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/><circle cx="12" cy="12.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/><circle cx="13.8" cy="12.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/></svg>`;
-      el.innerHTML = coverageExpanded
-        ? `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="true" aria-label="Map coverage">
+      // Standalone tablet (PWA at >=768px) has room for the full panel inline —
+      // show the "Map Coverage" label and summary alongside the icon instead of
+      // hiding everything behind a tap.
+      const standaloneTablet = standaloneMode && !compactStandaloneMode;
+      if (standaloneTablet) {
+        el.innerHTML = `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="${coverageExpanded ? 'true' : 'false'}" aria-label="Map coverage">
              ${coverageIcon}
            </button>
            <div class="coverage-mobile-panel">
              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Map Coverage</div>
              <div style="margin-top:.25rem;font-size:.875rem;font-weight:600;color:#1f2937">${summary}</div>
-             <div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
+             ${coverageExpanded ? `<div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
              <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.5rem">${coveredHtml}</div>
-             ${legendHtml}
-           </div>`
-        : `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="false" aria-label="Map coverage">
-             ${coverageIcon}
-           </button>`;
+             ${legendHtml}` : ''}
+           </div>`;
+      } else {
+        el.innerHTML = coverageExpanded
+          ? `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="true" aria-label="Map coverage">
+               ${coverageIcon}
+             </button>
+             <div class="coverage-mobile-panel">
+               <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Map Coverage</div>
+               <div style="margin-top:.25rem;font-size:.875rem;font-weight:600;color:#1f2937">${summary}</div>
+               <div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
+               <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.5rem">${coveredHtml}</div>
+               ${legendHtml}
+             </div>`
+          : `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="false" aria-label="Map coverage">
+               ${coverageIcon}
+             </button>`;
+      }
       el.classList.remove('hidden');
       el.querySelector('.coverage-toggle').addEventListener('click', () => {
         coverageExpanded = !coverageExpanded;
