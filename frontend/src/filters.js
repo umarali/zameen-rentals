@@ -78,17 +78,24 @@ export function updateChips() {
 
 const ddMap = { area: 'dd-area', type: 'dd-type', beds: 'dd-beds', price: 'dd-price', more: 'dd-more', radius: 'dd-radius' };
 
+// Element to restore focus to when the active dropdown closes. Captured on
+// open so Esc / click-outside / Apply all return keyboard users to the chip.
+let _ddTrigger = null;
+
 export function openDD(name) {
   if (refs.activeDD === name) { closeDD(); return; }
-  closeDD();
+  // Switching dropdowns: skip focus restore on the previous trigger so it
+  // doesn't briefly steal focus while we're opening the new one.
+  closeDD({ restoreFocus: false });
   const el = $('#' + ddMap[name]);
   el.classList.add('open');
   refs.activeDD = name;
+  _ddTrigger = $(`[data-filter="${name}"]`) || null;
   if (window.innerWidth < 1024) $('#ddBackdrop').classList.remove('hidden');
 
   // Position dropdown under its chip button (desktop only)
   if (window.innerWidth >= 1024) {
-    const chip = $(`[data-filter="${name}"]`);
+    const chip = _ddTrigger;
     const bar = el.parentElement;
     const chipRect = chip.getBoundingClientRect();
     const barRect = bar.getBoundingClientRect();
@@ -101,10 +108,20 @@ export function openDD(name) {
   if (name === 'area') { $('#areaInput').focus(); renderAreaList(filterAreas($('#areaInput').value.trim())); }
 }
 
-export function closeDD() {
+export function closeDD({ restoreFocus = true } = {}) {
+  const wasOpen = refs.activeDD !== null;
   Object.values(ddMap).forEach(id => $('#' + id).classList.remove('open'));
   refs.activeDD = null;
   $('#ddBackdrop').classList.add('hidden');
+  // Restore focus to the triggering chip on Esc / Apply / chip-select close.
+  // Click-outside callers pass restoreFocus:false so focus follows the click.
+  // Defer to the next tick so an in-flight Enter keypress can't fire a
+  // synthetic click on the newly-focused chip and reopen the dropdown.
+  if (wasOpen && restoreFocus && _ddTrigger && typeof _ddTrigger.focus === 'function') {
+    const t = _ddTrigger;
+    setTimeout(() => t.focus(), 0);
+  }
+  _ddTrigger = null;
 }
 
 // ===== AREA AUTOCOMPLETE =====
@@ -210,11 +227,15 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     openDD(el.dataset.filter);
   }));
 
-  // Click outside closes dropdown
+  // Click outside closes dropdown — don't yank focus back to the chip; let
+  // it follow whatever the user actually clicked on.
   document.addEventListener('click', e => {
-    if (!e.target.closest('.filter-dd') && !e.target.closest('[data-filter]')) closeDD();
+    if (!e.target.closest('.filter-dd') && !e.target.closest('[data-filter]')) {
+      closeDD({ restoreFocus: false });
+    }
   });
-  $('#ddBackdrop').addEventListener('click', closeDD);
+  // Mobile backdrop is a deliberate dismiss gesture, more like Esc — restore.
+  $('#ddBackdrop').addEventListener('click', () => closeDD());
 
   // Clear All
   $('#clearAllBtn').addEventListener('click', () => {

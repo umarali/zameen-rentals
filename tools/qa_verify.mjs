@@ -145,6 +145,28 @@ async function verifyShowingHeader(browser, viewport, tag) {
   await ctx.close();
 }
 
+async function verifyDDFocusReturn(browser, viewport, tag) {
+  console.log(`\n[dropdown focus return] ${tag} ${viewport.width}x${viewport.height}`);
+  const { ctx, page } = await withWelcomeDismissed(browser, viewport);
+  await page.waitForSelector('.card-wrap', { timeout: 30000 });
+
+  // Chips to test: type, beds, price, more. Area is special (focuses input).
+  const chips = ['typeChip', 'bedsChip', 'priceChip', 'moreChip'];
+  for (const id of chips) {
+    const trigger = page.locator('#' + id);
+    if (!(await trigger.isVisible())) continue;
+    await trigger.click();
+    await page.waitForTimeout(150);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(150);
+    const focused = await page.evaluate(() => document.activeElement?.id);
+    if (focused === id) ok(`focus returned to #${id} after Esc`);
+    else fail(`focus after Esc on #${id}`, focused || '(none)');
+  }
+
+  await ctx.close();
+}
+
 (async () => {
   const browser = await chromium.launch();
   await verifyWelcome(browser, { width: 1440, height: 900 }, 'desktop');
@@ -153,6 +175,8 @@ async function verifyShowingHeader(browser, viewport, tag) {
   await verifyClearOnApply(browser, { width: 375, height: 812 }, 'mobile');
   await verifyShowingHeader(browser, { width: 1440, height: 900 }, 'desktop');
   await verifyShowingHeader(browser, { width: 375, height: 812 }, 'mobile');
+  await verifyDDFocusReturn(browser, { width: 1440, height: 900 }, 'desktop');
+  await verifyDDFocusReturn(browser, { width: 375, height: 812 }, 'mobile');
   await browser.close();
   if (process.exitCode) console.log('\nResult: FAILURES'); else console.log('\nResult: ALL PASS');
 })();
