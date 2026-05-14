@@ -349,19 +349,27 @@ function updateHeader({
   const metaEl = $('#resultsMeta');
   const sourceEl = $('#dataSource');
 
+  // Headline count: "Showing X–Y of Z" when more results exist, "Showing all Z"
+  // when the page already holds the entire result set, otherwise empty-state.
+  const fmt = n => Number(n).toLocaleString();
+  let countText;
+  if (!shown) countText = total ? '0 shown' : 'No results';
+  else if (total > shown) countText = `Showing 1–${fmt(shown)} of ${fmt(total)}`;
+  else countText = `Showing all ${fmt(shown)}`;
+
   if (mode === 'nearby') {
     titleEl.textContent = 'Rentals near you';
-    countEl.textContent = `${shown} shown`;
+    countEl.textContent = countText;
     metaEl.textContent = total
-      ? `${total} exact-pin rentals within ${refs.nearbyRadiusKm} km`
+      ? `Within ${refs.nearbyRadiusKm} km`
       : `No exact-pin rentals found within ${refs.nearbyRadiusKm} km`;
   } else if (mode === 'viewport') {
     titleEl.textContent = 'Rentals in this map view';
-    countEl.textContent = `${shown} shown`;
+    countEl.textContent = countText;
     const coverageMessage = getViewportCoverageMessage({ total, visibleAreas, coveredAreas });
     if (scope === 'exact_bounds') {
       metaEl.textContent = total
-        ? `${total} exact-pin rentals currently visible on the map`
+        ? `${fmt(total)} exact-pin rentals currently visible on the map`
         : 'No exact-pin rentals are visible in this map view';
     } else if (isEmptyExactBoundsFallback(scope)) {
       metaEl.textContent = total
@@ -372,12 +380,12 @@ function updateHeader({
     }
   } else if (S.area) {
     titleEl.textContent = 'Rentals in ' + S.area;
-    countEl.textContent = `${shown} shown`;
-    metaEl.textContent = total ? `${total} total in this area` : 'No rentals match this area right now';
+    countEl.textContent = countText;
+    metaEl.textContent = total ? `In this area` : 'No rentals match this area right now';
   } else {
     titleEl.textContent = 'Rentals in ' + cityName;
-    countEl.textContent = `${shown} shown`;
-    metaEl.textContent = total ? `${total} total across current filters` : `No rentals match your filters in ${cityName}`;
+    countEl.textContent = countText;
+    metaEl.textContent = total ? `Across current filters` : `No rentals match your filters in ${cityName}`;
   }
 
   if (source === 'local') {

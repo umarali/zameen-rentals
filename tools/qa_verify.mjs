@@ -109,12 +109,50 @@ async function verifyClearOnApply(browser, viewport, tag) {
   await ctx.close();
 }
 
+async function verifyShowingHeader(browser, viewport, tag) {
+  console.log(`\n[showing X–Y of Z] ${tag} ${viewport.width}x${viewport.height}`);
+  const { ctx, page } = await withWelcomeDismissed(browser, viewport);
+  await page.waitForSelector('.card-wrap', { timeout: 30000 });
+  await page.waitForTimeout(500);
+
+  const text = (await page.locator('#resultsCount').textContent() || '').trim();
+  const SHOWING_X_Y_OF_Z = /^Showing\s+1–[\d,]+\s+of\s+[\d,]+$/;
+  const SHOWING_ALL = /^Showing all\s+[\d,]+$/;
+  const NONE = /^(0 shown|No results)$/;
+  if (SHOWING_X_Y_OF_Z.test(text) || SHOWING_ALL.test(text) || NONE.test(text)) {
+    ok(`header reads: "${text}"`);
+  } else {
+    fail('header format', `got: "${text}"`);
+  }
+
+  // Load More should grow X.
+  const loadMore = page.locator('#listingsFooter button').first();
+  if (await loadMore.count() && SHOWING_X_Y_OF_Z.test(text)) {
+    const before = Number(text.match(/of ([\d,]+)/)[1].replace(/,/g, ''));
+    const shownBefore = Number(text.match(/–([\d,]+)/)[1].replace(/,/g, ''));
+    await loadMore.click();
+    await page.waitForTimeout(2000);
+    const text2 = (await page.locator('#resultsCount').textContent() || '').trim();
+    const m = text2.match(/^Showing\s+1–([\d,]+)\s+of\s+([\d,]+)$/);
+    if (m && Number(m[1].replace(/,/g, '')) > shownBefore && Number(m[2].replace(/,/g, '')) === before) {
+      ok(`header after Load More: "${text2}"`);
+    } else {
+      fail('header after Load More', text2);
+    }
+  }
+
+  await page.screenshot({ path: `${OUT}/header_${tag}_${viewport.width}.png` });
+  await ctx.close();
+}
+
 (async () => {
   const browser = await chromium.launch();
   await verifyWelcome(browser, { width: 1440, height: 900 }, 'desktop');
   await verifyWelcome(browser, { width: 375, height: 812 }, 'mobile');
   await verifyClearOnApply(browser, { width: 1440, height: 900 }, 'desktop');
   await verifyClearOnApply(browser, { width: 375, height: 812 }, 'mobile');
+  await verifyShowingHeader(browser, { width: 1440, height: 900 }, 'desktop');
+  await verifyShowingHeader(browser, { width: 375, height: 812 }, 'mobile');
   await browser.close();
   if (process.exitCode) console.log('\nResult: FAILURES'); else console.log('\nResult: ALL PASS');
 })();
