@@ -8,6 +8,7 @@ const WELCOMED_KEY = 'zr_welcomed';
 
 let _deps = null;
 let _overlay = null;
+let _lastTrigger = null;
 
 export function initWelcome(deps) {
   _deps = deps;
@@ -21,6 +22,9 @@ export function initWelcome(deps) {
 
 export function showWelcome() {
   if (!_overlay) return;
+  // Remember what had focus so we can restore it on close (a11y).
+  const active = document.activeElement;
+  if (active && active !== document.body) _lastTrigger = active;
   // Sync city pills to current state
   _overlay.querySelectorAll('[data-wcity]').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.wcity === S.city)
@@ -44,6 +48,9 @@ export function hideWelcome() {
   setTimeout(() => _overlay.classList.add('hidden'), 250);
   document.removeEventListener('keydown', onEsc);
   localStorage.setItem(WELCOMED_KEY, '1');
+  const trigger = _lastTrigger;
+  _lastTrigger = null;
+  if (trigger && typeof trigger.focus === 'function') trigger.focus();
 }
 
 function onEsc(e) {
@@ -109,7 +116,7 @@ function buildDOM() {
   el.setAttribute('aria-labelledby', 'welcomeTitle');
   el.innerHTML = `
     <div class="welcome-backdrop fixed inset-0 bg-black/40 z-[260]"></div>
-    <div class="fixed inset-0 z-[261] flex items-center justify-center p-4">
+    <div class="welcome-wrapper fixed inset-0 z-[261] flex items-center justify-center p-4">
       <div class="welcome-panel bg-white rounded-2xl shadow-2xl w-[92vw] max-w-[520px] max-h-[90dvh] overflow-y-auto p-6 sm:p-8 relative scroll-thin">
         <div class="flex items-center justify-between mb-5">
           <div class="flex items-center gap-2.5">
@@ -174,12 +181,17 @@ function updateNearbyCardState() {
 }
 
 function wireEvents() {
-  const backdrop = _overlay.querySelector('.welcome-backdrop');
+  const wrapper = _overlay.querySelector('.welcome-wrapper');
   const close = _overlay.querySelector('#welcomeClose');
   const dismiss = _overlay.querySelector('#welcomeDismiss');
   const nlTip = _overlay.querySelector('#welcomeNlTip');
 
-  backdrop.addEventListener('click', () => { hideWelcome(); track('welcome_dismissed', { method: 'backdrop' }); });
+  // The wrapper is full-viewport above the visual backdrop, so the user's
+  // "click outside the card" actually hits the wrapper. Treat a click whose
+  // target is the wrapper itself (not bubbled from the card) as dismiss.
+  wrapper.addEventListener('click', e => {
+    if (e.target === wrapper) { hideWelcome(); track('welcome_dismissed', { method: 'backdrop' }); }
+  });
   close.addEventListener('click', () => { hideWelcome(); track('welcome_dismissed', { method: 'close' }); });
   dismiss.addEventListener('click', () => { hideWelcome(); track('welcome_dismissed', { method: 'explore' }); });
 
