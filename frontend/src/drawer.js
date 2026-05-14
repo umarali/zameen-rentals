@@ -1,6 +1,6 @@
 /** Detail drawer, photo gallery, contact bar. */
 
-import { $, $$, esc, escA, fmtPrice } from './utils.js';
+import { $, $$, esc, escA, fmtPrice, fmtRelative } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import { getAreaForListing, handleContactAction } from './cards.js';
 import { createBaseLayer } from './map-layers.js';
@@ -124,7 +124,16 @@ export function openDrawer(item, selectAreaFull) {
       <span class="text-2xl font-extrabold text-gray-900">${esc(fmtPrice(item.price, item.price_text))}</span>
       <span class="text-sm text-gray-400">/ month</span>
     </div>
-    ${item.added ? `<div class="text-xs text-gray-400 mb-2">${esc(item.added)}</div>` : ''}
+    ${(() => {
+      const addedRel = item.posted_at ? fmtRelative(item.posted_at) : '';
+      const addedLine = addedRel ? `Added ${addedRel}` : (item.added || '');
+      const updatedRel = item.updated_at ? fmtRelative(item.updated_at) : '';
+      if (!addedLine && !updatedRel) return '';
+      return `<div class="mb-2 leading-tight">
+        ${addedLine ? `<div class="text-xs text-gray-500">${esc(addedLine)}</div>` : ''}
+        ${updatedRel ? `<div class="text-[11px] text-gray-400">Updated ${esc(updatedRel)}</div>` : ''}
+      </div>`;
+    })()}
     ${highlights.length ? `<div class="drawer-divider"></div><div class="grid grid-cols-2 gap-3 mb-1">${highlights.join('')}</div>` : ''}
     <div id="drawerEnriched">
       <div class="drawer-divider"></div>

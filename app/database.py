@@ -1,5 +1,6 @@
 """SQLite database for persistent cache, search history, and listing storage."""
 import json, logging, os, sqlite3, threading, time
+from datetime import datetime
 from pathlib import Path
 
 logger = logging.getLogger("zameenrentals")
@@ -95,6 +96,7 @@ def init_db():
                 card_scraped_at    TEXT,
                 detail_scraped_at  TEXT,
                 last_seen_at       TEXT NOT NULL DEFAULT (datetime('now')),
+                zameen_posted_at   TEXT,
                 is_active          INTEGER NOT NULL DEFAULT 1,
                 content_hash       TEXT,
                 detail_hash        TEXT
@@ -174,10 +176,79 @@ def init_db():
             "contact_fetched_at": "ALTER TABLE listings ADD COLUMN contact_fetched_at TEXT",
             "contact_source": "ALTER TABLE listings ADD COLUMN contact_source TEXT",
             "location_source": "ALTER TABLE listings ADD COLUMN location_source TEXT",
+            "zameen_posted_at": "ALTER TABLE listings ADD COLUMN zameen_posted_at TEXT",
         }
         for name, ddl in contact_columns.items():
             if name not in existing_columns:
                 conn.execute(ddl)
+
+        # Backfill zameen_posted_at from added_text for legacy rows. Uses
+        # card_scraped_at (or first_seen_at) as the reference for the relative
+        # text we recorded. One-shot: only fills NULL rows, never overwrites.
+        if "zameen_posted_at" not in existing_columns:
+            from app.db_listings import parse_added_text_to_timestamp
+            rows = conn.execute(
+                "SELECT id, added_text, card_scraped_at, first_seen_at FROM listings "
+                "WHERE zameen_posted_at IS NULL AND added_text IS NOT NULL AND added_text != ''"
+            ).fetchall()
+            updates = []
+            for row in rows:
+                ref_str = row["card_scraped_at"] or row["first_seen_at"]
+                if not ref_str:
+                    continue
+                try:
+                    ref = datetime.fromisoformat(ref_str)
+                except ValueError:
+                    continue
+                posted = parse_added_text_to_timestamp(row["added_text"], ref)
+                if posted:
+                    updates.append((posted, row["id"]))
+            if updates:
+                conn.executemany(
+                    "UPDATE listings SET zameen_posted_at = ? WHERE id = ?",
+                    updates,
+                )
+                logger.info("Backfilled zameen_posted_at for %d listings", len(updates))
+
+        # Backfill clean `location` for legacy rows where area-size bled into the
+        # location string (e.g. 'Scheme 33, Karachi22200 Sq. Yd.'). Runs once
+        # per fresh deploy via the schema_migrations sentinel.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                name        TEXT PRIMARY KEY,
+                applied_at  TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+        """)
+        already_applied = conn.execute(
+            "SELECT 1 FROM schema_migrations WHERE name = ?",
+            ("clean_location_size_bleed_v1",),
+        ).fetchone()
+        if not already_applied:
+            from app.scraper import sanitize_location
+            rows = conn.execute(
+                "SELECT id, location FROM listings WHERE location IS NOT NULL AND ("
+                "location LIKE '%Sq.%' OR location LIKE '%Marla%' OR location LIKE '%Kanal%'"
+                ")"
+            ).fetchall()
+            updates = []
+            for row in rows:
+                cleaned = sanitize_location(row["location"])
+                if cleaned != row["location"]:
+                    updates.append((cleaned, row["id"]))
+            if updates:
+                conn.executemany(
+                    "UPDATE listings SET location = ? WHERE id = ?",
+                    updates,
+                )
+                logger.info(
+                    "Cleaned size-bleed from location for %d listings",
+                    len(updates),
+                )
+            conn.execute(
+                "INSERT INTO schema_migrations(name) VALUES (?)",
+                ("clean_location_size_bleed_v1",),
+            )
+            conn.commit()
 
         # Create geo index after location_source column is guaranteed to exist
         conn.execute("""

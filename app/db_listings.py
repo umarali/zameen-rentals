@@ -1,6 +1,6 @@
 """Listing CRUD operations and local search queries."""
 import hashlib, json, logging, math, re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.database import _get_conn
 from app.data import PROPERTY_TYPES
@@ -11,6 +11,13 @@ _DISTANCE_SENTINEL = 999999999
 _ADDED_RE = re.compile(r"Added:\s*(\d+)\s*(minute|hour|day|week|month)", re.IGNORECASE)
 _UNIT_MINUTES = {"minute": 1, "hour": 60, "day": 1440, "week": 10080, "month": 43200}
 
+# Broader pattern: matches "2 days ago", "Added: 5 hours ago", "1 month", "yesterday".
+_ADDED_RE_BROAD = re.compile(r"(\d+)\s*(minute|hour|day|week|month|year)", re.IGNORECASE)
+_UNIT_MINUTES_FULL = {
+    "minute": 1, "hour": 60, "day": 1440,
+    "week": 10080, "month": 43200, "year": 525600,
+}
+
 
 def _parse_added_minutes(text):
     """Parse 'Added: N unit(s) ago' into approximate minutes-ago (lower = newer)."""
@@ -20,6 +27,30 @@ def _parse_added_minutes(text):
     if not m:
         return 999999
     return int(m.group(1)) * _UNIT_MINUTES[m.group(2).lower()]
+
+
+def parse_added_text_to_timestamp(added_text, reference):
+    """Convert Zameen's relative 'Added: N unit ago' text to an absolute ISO timestamp.
+
+    `reference` is the moment we observed the text (typically the scrape time).
+    Returns ISO-format string of `reference - parsed_offset`, or None if unparseable.
+    """
+    if not added_text or reference is None:
+        return None
+    text = added_text.strip().lower()
+    if not text:
+        return None
+    if "yesterday" in text:
+        return (reference - timedelta(days=1)).isoformat()
+    if "today" in text or "just now" in text or "moments ago" in text:
+        return reference.isoformat()
+    m = _ADDED_RE_BROAD.search(text)
+    if not m:
+        return None
+    qty = int(m.group(1))
+    unit = m.group(2).lower()
+    minutes = qty * _UNIT_MINUTES_FULL[unit]
+    return (reference - timedelta(minutes=minutes)).isoformat()
 
 
 # SQL expression equivalent of _parse_added_minutes for ORDER BY clauses.
@@ -264,13 +295,16 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             if not images and card_data.get("image_url"):
                 images = [card_data["image_url"]]
             location_source = "area_centroid" if lat is not None and lng is not None else None
+            posted_at = parse_added_text_to_timestamp(
+                card_data.get("added"), datetime.utcnow()
+            )
             conn.execute("""
                 INSERT INTO listings (
                     zameen_id, url, title, price, price_text, bedrooms, bathrooms,
                     area_size, location, image_url, images_json, property_type,
                     added_text, city, area_name, area_slug, latitude, longitude, location_source,
-                    card_scraped_at, last_seen_at, content_hash, is_active
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    card_scraped_at, last_seen_at, zameen_posted_at, content_hash, is_active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             """, (
                 zameen_id, url, card_data.get("title"), card_data.get("price"),
                 card_data.get("price_text"), card_data.get("bedrooms"),
@@ -278,7 +312,8 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                 card_data.get("location"), card_data.get("image_url"),
                 json.dumps(images) if images else None,
                 card_data.get("property_type"), card_data.get("added"),
-                city, area_name, area_slug, lat, lng, location_source, now, now, c_hash
+                city, area_name, area_slug, lat, lng, location_source,
+                now, now, posted_at, c_hash
             ))
             conn.commit()
             return "inserted"
@@ -730,6 +765,8 @@ def _row_to_listing(row):
         "image_url": row["image_url"],
         "property_type": row["property_type"],
         "added": row["added_text"],
+        "posted_at": row["zameen_posted_at"] if "zameen_posted_at" in row.keys() else None,
+        "updated_at": row["last_seen_at"] if "last_seen_at" in row.keys() else None,
     }
     if row["images_json"]:
         imgs = decode_listing_json_field(

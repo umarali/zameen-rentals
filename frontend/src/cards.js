@@ -1,6 +1,6 @@
 /** Listing card rendering, carousels, contact actions. */
 
-import { $, $$, esc, escA, TYPE_L, fmtPrice } from './utils.js';
+import { $, $$, esc, escA, TYPE_L, fmtPrice, fmtRelative } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import { trackContactIntent } from './analytics.js';
 
@@ -93,7 +93,16 @@ export function renderCard(item, idx) {
       ${item.location ? `<div class="flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 mb-1 sm:mb-2"><svg class="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="line-clamp-1">${esc(item.location)}</span></div>` : ''}
       ${distanceLabel ? `<div class="text-[10px] sm:text-xs font-semibold text-brand-600 mb-1 sm:mb-2">${esc(distanceLabel)}</div>` : ''}
       ${badges.length ? `<div class="flex flex-wrap gap-1.5 sm:gap-3 text-[10px] sm:text-xs text-gray-500">${badges.join('')}</div>` : ''}
-      ${item.added ? `<div class="hidden sm:block text-[11px] text-gray-400 mt-2">${esc(item.added)}</div>` : ''}
+      ${(() => {
+        const addedRel = item.posted_at ? fmtRelative(item.posted_at) : '';
+        const addedLine = addedRel ? `Added ${addedRel}` : (item.added || '');
+        const updatedRel = item.updated_at ? fmtRelative(item.updated_at) : '';
+        if (!addedLine && !updatedRel) return '';
+        return `<div class="mt-2 leading-tight">
+          ${addedLine ? `<div class="text-[11px] text-gray-500">${esc(addedLine)}</div>` : ''}
+          ${updatedRel ? `<div class="hidden sm:block text-[10px] text-gray-400">Updated ${esc(updatedRel)}</div>` : ''}
+        </div>`;
+      })()}
       ${item.url ? `<div class="flex items-center justify-end gap-0.5 sm:gap-1 pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 border-t border-gray-100">
         <a data-action="open" href="${escA(item.url)}" target="_blank" rel="noopener" class="action-btn w-7 h-7 sm:w-8 sm:h-8 rounded-full text-gray-400 hover:text-brand-500 hover:bg-brand-50 transition-colors" title="Open on Zameen.com"><svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg></a>
         <button data-action="call" data-url="${escA(item.url)}" ${contactAttrs} class="action-btn w-7 h-7 sm:w-8 sm:h-8 rounded-full text-gray-400 hover:text-brand-500 hover:bg-brand-50 transition-colors" title="Call"><svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg></button>

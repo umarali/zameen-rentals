@@ -11,3 +11,5 @@ static/assets/
 data/
 node_modules/
 test-results/
+playwright-report/
+.claude/

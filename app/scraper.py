@@ -21,6 +21,26 @@ def extract_zameen_id(url: str) -> str | None:
     return m.group(1) if m else None
 
 
+_LOCATION_SIZE_TAIL_RE = re.compile(
+    r'[\d,]+\s*(?:Sq\.?\s*(?:Yd|Ft|M)\.?|Marla|Kanal).*$',
+    re.IGNORECASE,
+)
+
+
+def sanitize_location(text):
+    """Strip area-size that bled into a Zameen location string.
+
+    Zameen card markup sometimes runs the location and size together without
+    a separator (e.g. 'Scheme 33, Karachi22200 Sq. Yd.' or
+    'DHA Phase 845292 Sq. Yd.'). This removes the size token and any trailing
+    punctuation. Returns None for empty input.
+    """
+    if not text or not isinstance(text, str):
+        return text
+    cleaned = _LOCATION_SIZE_TAIL_RE.sub('', text).strip().rstrip(',').strip()
+    return cleaned or None
+
+
 def _contact_api_headers(user_agent, referer_url):
     headers = {
         "User-Agent": user_agent,
@@ -361,11 +381,9 @@ def parse_listings(html):
             loc_text = "".join(loc_el.find_all(string=True, recursive=False)).strip()
             if not loc_text:
                 loc_text = loc_el.get_text(strip=True)
-            # Strip area-size that bleeds in (e.g. "DHA Phase 845292 Sq. Yd." or "DHA Defence55500 Sq. Yd.")
-            loc_text = re.sub(r'[\d,]+\s*(?:Sq\.?\s*(?:Yd|Ft|M)\.?|Marla|Kanal).*$', '', loc_text, flags=re.I).strip()
-            # Strip trailing digits that may bleed in from adjacent elements (with or without preceding space)
-            loc_text = re.sub(r'\s*\d+\s*$', '', loc_text).strip().rstrip(',')
-            listing["location"] = loc_text
+            cleaned = sanitize_location(loc_text)
+            if cleaned:
+                listing["location"] = cleaned
         else:
             for span in card.select("span, div"):
                 t = span.get_text(strip=True)

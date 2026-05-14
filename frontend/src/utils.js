@@ -20,6 +20,24 @@ export function fmtPrice(p, t) {
   return 'Rs ' + p.toLocaleString();
 }
 
+export function fmtRelative(iso) {
+  if (!iso) return '';
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return '';
+  const sec = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (sec < 60) return 'just now';
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min} minute${min === 1 ? '' : 's'} ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? '' : 's'} ago`;
+  const day = Math.round(hr / 24);
+  if (day < 7) return `${day} day${day === 1 ? '' : 's'} ago`;
+  if (day < 30) { const w = Math.round(day / 7); return `${w} week${w === 1 ? '' : 's'} ago`; }
+  if (day < 365) { const mo = Math.round(day / 30); return `${mo} month${mo === 1 ? '' : 's'} ago`; }
+  const yr = Math.round(day / 365);
+  return `${yr} year${yr === 1 ? '' : 's'} ago`;
+}
+
 export function showToast(message, { tone = 'default', duration = 3200 } = {}) {
   const stack = $('#toastStack');
   if (!stack || !message) return;
