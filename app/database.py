@@ -22,6 +22,7 @@ def _get_conn() -> sqlite3.Connection:
                 os.makedirs(_DB_DIR, exist_ok=True)
                 _conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
                 _conn.row_factory = sqlite3.Row
+                _conn.execute("PRAGMA foreign_keys=ON")
                 _conn.execute("PRAGMA journal_mode=WAL")
                 _conn.execute("PRAGMA busy_timeout=5000")
     return _conn
@@ -124,6 +125,7 @@ def init_db():
                 new_listings    INTEGER DEFAULT 0,
                 updated_listings INTEGER DEFAULT 0,
                 crawl_status    TEXT DEFAULT 'pending',
+                crawl_claimed_at TEXT,
                 error_message   TEXT,
                 priority        INTEGER DEFAULT 50,
                 UNIQUE(city, area_slug)
@@ -181,6 +183,25 @@ def init_db():
         for name, ddl in contact_columns.items():
             if name not in existing_columns:
                 conn.execute(ddl)
+
+        crawl_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(crawl_state)").fetchall()
+        }
+        if "crawl_claimed_at" not in crawl_columns:
+            conn.execute("ALTER TABLE crawl_state ADD COLUMN crawl_claimed_at TEXT")
+
+        conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_listings_default_freshness
+            ON listings(
+                is_active,
+                city,
+                COALESCE(zameen_posted_at, first_seen_at) DESC,
+                last_seen_at DESC,
+                id DESC
+            )
+            """
+        )
 
         # Backfill zameen_posted_at from added_text for legacy rows. Uses
         # card_scraped_at (or first_seen_at) as the reference for the relative

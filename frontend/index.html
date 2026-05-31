@@ -32,11 +32,9 @@
 <meta name="twitter:image:alt" content="ZameenRentals — Find your rental in seconds.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://unpkg.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/src/style.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
@@ -71,6 +69,13 @@
     </div>
   </div>
   <div id="nlParsed" class="hidden items-center text-xs text-gray-600 bg-brand-50 rounded-lg px-3 py-1.5 whitespace-nowrap"></div>
+  <button id="saveSearchBtn" title="Save current search as alert" aria-label="Save current search as alert" class="relative z-10 w-8 h-8 rounded-full border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center text-gray-400 hover:text-brand-500 transition-all shrink-0">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+  </button>
+  <button id="alertsBellBtn" title="Alerts, saved, hidden, recently viewed" aria-label="Your space: alerts, saved, hidden, recent" class="relative z-10 w-8 h-8 rounded-full border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center text-gray-400 hover:text-brand-500 transition-all shrink-0">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0"/></svg>
+    <span class="alerts-badge hidden absolute -top-1 -right-1 text-[10px] font-bold bg-brand-500 text-white px-1.5 py-0.5 rounded-full leading-none min-w-[18px] text-center"></span>
+  </button>
   <button id="clearAllBtn" class="hidden text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 rounded-full px-3 py-1.5 transition-colors shrink-0">Clear All</button>
 </header>
 
@@ -208,7 +213,7 @@
   <section id="listingsPanel" class="overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-6 pb-20 lg:pb-6 scroll-thin min-w-0">
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h2 id="listingsTitle" class="text-base font-bold text-gray-700">Rentals in Karachi</h2>
+        <h2 id="listingsTitle" class="text-base font-bold text-gray-700">Rentals in Lahore</h2>
         <p id="resultsMeta" class="mt-1 text-xs text-gray-400">Browse the map or use filters to refine results</p>
       </div>
       <div class="flex items-center gap-2">

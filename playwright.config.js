@@ -11,6 +11,7 @@ module.exports = defineConfig({
   use: {
     baseURL: "http://127.0.0.1:8000",
     actionTimeout: 15_000,
+    serviceWorkers: "block",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     // Pre-dismiss the welcome overlay so it never blocks test interactions

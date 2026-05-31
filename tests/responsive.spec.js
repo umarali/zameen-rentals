@@ -64,6 +64,22 @@ for (const viewport of MOBILE_VIEWPORTS) {
   });
 }
 
+test("mobile header actions do not overlap search submit", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+
+  const layout = await page.evaluate(() => {
+    const search = document.getElementById("nlSearchBtn").getBoundingClientRect();
+    const save = document.getElementById("saveSearchBtn").getBoundingClientRect();
+    return {
+      searchRight: Number(search.right.toFixed(2)),
+      saveLeft: Number(save.left.toFixed(2)),
+    };
+  });
+
+  expect(layout.searchRight, JSON.stringify(layout)).toBeLessThanOrEqual(layout.saveLeft);
+});
+
 test("desktop header keeps vertical breathing room around the brand and search", async ({
   page,
 }) => {

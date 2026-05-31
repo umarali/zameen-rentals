@@ -9,17 +9,16 @@ test.describe("Search Results Display", () => {
 
   test("results count is displayed", async ({ page }) => {
     const text = await page.locator("#resultsCount").textContent();
-    // Viewport mode shows "X shown"; city mode shows "X results" or "Showing X of Y results"
-    expect(text).toMatch(/\d+\s*(results|shown)|Showing \d+ of \d+ results/);
+    expect(text).toMatch(/^(?:Showing 1–[\d,]+ of [\d,]+|Showing all [\d,]+|0 shown|No results)$/);
   });
 
   test("results count shows 'Showing X of Y' when paginated", async ({
     page,
   }) => {
     const text = await page.locator("#resultsCount").textContent();
-    // If total > loaded, should show "Showing X of Y results"
-    if (text.includes("Showing")) {
-      expect(text).toMatch(/Showing \d+ of \d+ results/);
+    // If total > loaded, the range should be explicit.
+    if (text.startsWith("Showing 1–")) {
+      expect(text).toMatch(/^Showing 1–[\d,]+ of [\d,]+$/);
     }
   });
 

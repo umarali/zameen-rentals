@@ -40,7 +40,7 @@ test.describe("Area Filter", () => {
     await expect(page.locator("#areaChip")).toHaveClass(/has-value/);
     await expect(page.locator("#dd-area")).not.toHaveClass(/open/);
     await expect(page.locator("#listingsTitle")).not.toContainText(
-      "Rentals in Karachi"
+      "Rentals in Lahore"
     );
   });
 

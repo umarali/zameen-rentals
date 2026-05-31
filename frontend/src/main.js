@@ -6,7 +6,14 @@ import {
   updateCityTabs, updateNlExamples, updateChips, clearFilter, selectArea,
   syncPriceChips, setToggle, initFilterListeners, closeDD,
 } from './filters.js';
-import { renderCard, initCarousels, handleContactAction, skeletonCard } from './cards.js';
+import {
+  renderCard, initCarousels, handleContactAction, skeletonCard,
+  updateFavoriteButton, updateCompareButton, hideCardElement,
+} from './cards.js';
+import * as personalization from './personalization.js';
+import { initPersonalizationUI, openPanel as openPersonalizationPanel } from './personalization-ui.js';
+import { registerSW, initOfflineHandlers, queueFeedback } from './sw-register.js';
+import * as compare from './compare.js';
 import {
   initMap, ensureMarkers, updateMapMarkers, highlightMarker, resetMapView,
   initMobileMap, updateMobileCarousel, updateMobileMarkers, initHoverSync,
@@ -217,6 +224,38 @@ function clearFilterFull(f) {
 function openDrawerFull(item, position) {
   trackListingOpen({ item, position: position ?? null, mode: refs.searchMode, city: S.city, area: S.area, source: refs._lastSearchSource });
   openDrawer(item, selectAreaFull);
+  const zid = getListingZameenId(item);
+  if (zid) personalization.recordView(zid).catch(() => {});
+}
+
+function getListingZameenId(item) {
+  if (!item) return '';
+  if (item.zameen_id) return String(item.zameen_id);
+  const url = item.url || '';
+  const m = url.match(/-(\d{5,10})-\d+-\d+\.html?(?:$|\?|#)/);
+  return m ? m[1] : '';
+}
+
+function filterHiddenResults(results) {
+  if (!results?.length) return results;
+  return results.filter(item => {
+    const zid = getListingZameenId(item);
+    return !zid || !personalization.isHidden(zid);
+  });
+}
+
+function getCurrentFiltersForAlert() {
+  const filters = { city: S.city };
+  if (S.area) filters.area = S.area;
+  if (S.type) filters.property_type = S.type;
+  if (S.beds) filters.bedrooms = Number(S.beds);
+  if (S.bedsMax) filters.bedrooms_max = Number(S.bedsMax);
+  if (S.priceMin) filters.price_min = Number(S.priceMin);
+  if (S.priceMax) filters.price_max = Number(S.priceMax);
+  if (S.sizeMarlaMin) filters.size_marla_min = Number(S.sizeMarlaMin);
+  if (S.sizeMarlaMax) filters.size_marla_max = Number(S.sizeMarlaMax);
+  if (S.furnished) filters.furnished = true;
+  return filters;
 }
 
 function getParams(pg, { omitArea = false } = {}) {
@@ -302,17 +341,9 @@ async function chooseInitialCity() {
   const storedCity = getStoredCityPreference();
   if (storedCity) {
     S.city = storedCity;
-    return; // Skip the 3 crawl-status fetches — single-city hydration runs later in init()
+    return;
   }
-
-  // New user: fetch all cities to auto-select the one with most listings
-  await hydrateLocalListingTotals();
-  try {
-    const best = Object.entries(refs.localListingTotals)
-      .map(([city, totalListings]) => ({ city, totalListings: Number(totalListings) || 0 }))
-      .sort((a, b) => b.totalListings - a.totalListings)[0];
-    if (best?.totalListings > 0) S.city = best.city;
-  } catch {}
+  S.city = 'lahore';
 }
 
 function showLoading(append) {
@@ -389,11 +420,20 @@ function updateHeader({
   }
 
   if (source === 'local') {
-    sourceEl.textContent = mode === 'nearby'
-      ? 'Instant / Nearby'
+    const rankingLabel = mode === 'nearby'
+      ? 'Nearby'
+      : S.sort === 'newest'
+      ? 'Newest first'
+      : S.sort === 'price_low'
+      ? 'Lowest price'
+      : S.sort === 'price_high'
+      ? 'Highest price'
       : mode === 'viewport' && ranking === 'map_focus'
-      ? 'Instant / Nearest first'
-      : 'Instant';
+      ? 'Nearest first'
+      : !S.sort
+      ? 'Newest first'
+      : '';
+    sourceEl.textContent = rankingLabel ? `Instant / ${rankingLabel}` : 'Instant';
     sourceEl.className = 'text-xs text-brand-500 font-medium';
     sourceEl.classList.remove('hidden');
   } else if (source === 'live') {
@@ -629,6 +669,9 @@ function renderFooter(total) {
 }
 
 function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
+  if (data && Array.isArray(data.results)) {
+    data.results = filterHiddenResults(data.results);
+  }
   refs.lastSearchTotal = data.total || 0;
   if (mode === 'viewport') {
     refs.mapAreaTotals = data.area_totals || {};
@@ -929,13 +972,13 @@ function scheduleViewportSearch(opts = {}) {
   clearTimeout(refs.mapTimer);
   refs.mapTimer = setTimeout(() => {
     refs._lastTriggeredBy = 'map_viewport';
-    doSearch(1, opts);
+    doSearch(1, { ...opts, viewport: true });
   }, 250);
 }
 
 async function doNlSearch() {
   const q = $('#nlInput').value.trim();
-  if (!q || refs.isLoading) return;
+  if (!q) return;
   $('#nlSearchBtn').disabled = true;
   const parsed = $('#nlParsed');
   parsed.classList.remove('hidden');
@@ -1076,8 +1119,75 @@ function initCardListeners() {
     if (!btn || btn.dataset.action === 'open') return;
     e.preventDefault();
     e.stopPropagation();
-    handleContactAction(btn.dataset.action, btn.dataset.url, btn);
+    const action = btn.dataset.action;
+    if (action === 'favorite') return handleFavoriteToggle(btn);
+    if (action === 'hide') return handleHide(btn);
+    if (action === 'compare') return handleCompareToggle(btn);
+    handleContactAction(action, btn.dataset.url, btn);
   });
+}
+
+function handleCompareToggle(btn) {
+  const zid = btn.dataset.zameenId;
+  if (!zid) return;
+  const item = refs.currentResults.find(r => String(r.zameen_id || '') === String(zid))
+    || { zameen_id: zid, url: btn.closest('.card-wrap')?.dataset.url };
+  const wasIn = compare.has(zid);
+  const ok = compare.toggle(item);
+  if (wasIn && !compare.has(zid)) {
+    updateCompareButton(zid, false);
+    showToast('Removed from compare');
+  } else if (!wasIn && compare.has(zid)) {
+    updateCompareButton(zid, true);
+    showToast(`Added to compare (${compare.count()}/4)`, {
+      action: compare.count() >= 2 ? { label: 'Compare now', onClick: () => compare.openModal() } : null,
+    });
+  }
+}
+
+async function handleFavoriteToggle(btn) {
+  const zid = btn.dataset.zameenId;
+  if (!zid) return;
+  const wasFavorited = personalization.isFavorite(zid);
+  try {
+    if (wasFavorited) {
+      await personalization.removeFavorite(zid);
+      updateFavoriteButton(zid, false);
+      showToast('Removed from favorites');
+    } else {
+      await personalization.addFavorite(zid);
+      updateFavoriteButton(zid, true);
+      showToast('Saved to favorites');
+    }
+  } catch (err) {
+    showToast(err?.message || 'Could not update favorite', { tone: 'error' });
+  }
+}
+
+async function handleHide(btn) {
+  const zid = btn.dataset.zameenId;
+  if (!zid) return;
+  try {
+    await personalization.addHidden(zid);
+    removeHiddenResult(zid);
+    showToast('Hidden — it won\'t appear in your results', {
+      action: { label: 'View hidden', onClick: () => openPersonalizationPanel({ tab: 'hidden' }) },
+    });
+  } catch (err) {
+    showToast(err?.message || 'Could not hide listing', { tone: 'error' });
+  }
+}
+
+function removeHiddenResult(zid) {
+  hideCardElement(zid);
+  refs.currentResults = filterHiddenResults(refs.currentResults);
+  $$('#listingsGrid .card-wrap:not(.card-hidden)').forEach((card, idx) => {
+    card.dataset.idx = String(idx);
+  });
+  updateMapMarkers();
+  if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+  updateMobileCarousel(refs.currentResults);
+  renderFooter(refs.lastSearchTotal);
 }
 
 function initNlListeners() {
@@ -1196,21 +1306,28 @@ function initReportBtn() {
   submitBtn.addEventListener('click', async () => {
     const text = msg.value.trim();
     if (!text) return;
+    const context = gatherFeedbackContext();
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending...';
     try {
       const resp = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, context: gatherFeedbackContext() }),
+        body: JSON.stringify({ message: text, context }),
       });
       if (!resp.ok) throw new Error();
       trackFeedbackSubmitted({ messageLength: text.length });
       closeFeedback();
       showToast('Thanks for your feedback!');
     } catch {
-      showToast('Could not send feedback. Please try again.', { tone: 'error' });
-      submitBtn.disabled = false;
+      if (!navigator.onLine) {
+        queueFeedback(text, context);
+        closeFeedback();
+        showToast('You are offline. Feedback queued for delivery.');
+      } else {
+        showToast('Could not send feedback. Please try again.', { tone: 'error' });
+        submitBtn.disabled = false;
+      }
     } finally {
       submitBtn.textContent = 'Send';
     }
@@ -1263,9 +1380,30 @@ async function loadCityData({ search = true } = {}) {
 async function init() {
   initDisplayModeSync();
   initAnalytics();
+  registerSW();
+  initOfflineHandlers();
+  // Bootstrap personalization off the critical path — UI renders cached state
+  // immediately and re-renders once the server snapshot arrives.
+  personalization.initPersonalization();
+  initPersonalizationUI({
+    getCurrentFilters: getCurrentFiltersForAlert,
+    refreshSearch: () => doSearch(1),
+    openListingFromCard: (item) => openDrawerFull(item, null),
+  });
+  compare.init();
+  // Keep card buttons synced when compare is mutated from the tray or modal.
+  let _lastCompareIds = new Set();
+  compare.subscribe(items => {
+    const nextIds = new Set(items.map(i => String(i.zameen_id)));
+    // Items removed externally: flip those buttons off.
+    for (const id of _lastCompareIds) if (!nextIds.has(id)) updateCompareButton(id, false);
+    for (const id of nextIds) if (!_lastCompareIds.has(id)) updateCompareButton(id, true);
+    _lastCompareIds = nextIds;
+  });
   initMobileMap(selectAreaFull, openDrawerFull, () => scheduleViewportSearch({ mobile: true }));
   await chooseInitialCity();
   refs._notify = showToast;
+  refs._hideListing = removeHiddenResult;
   refs.mapLayer = getStoredMapLayer();
   hydrateStoredUserLocation();
 

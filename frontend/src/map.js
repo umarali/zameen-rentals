@@ -1,5 +1,7 @@
 /** Leaflet map: desktop viewport browsing, markers, and mobile map overlay. */
 
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { $, $$, esc, escA, fmtPrice, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import { track, trackMapMarkerClick } from './analytics.js';
@@ -88,6 +90,18 @@ function applyBaseLayer(mapInstance, layerRefKey, layerKey = refs.mapLayer) {
   if (!mapInstance) return;
   clearLayerRef(layerRefKey);
   refs[layerRefKey] = createBaseLayer(layerKey).addTo(mapInstance);
+}
+
+function applyBaseLayerAfterPageLoad(mapInstance, layerRefKey) {
+  if (document.readyState === 'complete') {
+    applyBaseLayer(mapInstance, layerRefKey, refs.mapLayer);
+    return;
+  }
+  window.addEventListener(
+    'load',
+    () => applyBaseLayer(mapInstance, layerRefKey, refs.mapLayer),
+    { once: true },
+  );
 }
 
 function syncLayerToggleButtons() {
@@ -720,7 +734,7 @@ export function initMap(selectAreaFull, onViewportChange, openDrawer) {
   const cd = CITY_DEFAULTS[S.city];
   ensureMapLayerState();
   refs.map = L.map('mapContainer', { zoomControl: false }).setView([cd.lat, cd.lng], cd.zoom);
-  applyBaseLayer(refs.map, 'mapBaseLayer', refs.mapLayer);
+  applyBaseLayerAfterPageLoad(refs.map, 'mapBaseLayer');
   refs.map.addControl(new (createLayerToggleControl())());
   refs.map.addControl(new (createGpsControl(refs.map))());
   L.control.zoom({ position: 'topright' }).addTo(refs.map);

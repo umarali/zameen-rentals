@@ -52,6 +52,45 @@ class TestUpsertListing:
                                 city="karachi", card_data=card2)
         assert result == "updated"
 
+    def test_unchanged_card_refresh_updates_source_freshness_when_age_label_changes(self):
+        card = {
+            "title": "Bumped listing",
+            "price": 50000,
+            "bedrooms": 2,
+            "bathrooms": 1,
+            "area_size": "5 Marla",
+            "added": "Added: 3 days ago",
+        }
+        upsert_listing(
+            zameen_id="100011",
+            url="https://zameen.com/Property/t-100011-1-1.html",
+            city="karachi",
+            card_data=card,
+        )
+        conn = _get_conn()
+        conn.execute("""
+            UPDATE listings
+            SET zameen_posted_at = '2000-01-01T00:00:00',
+                card_scraped_at = '2000-01-01T00:00:00'
+            WHERE zameen_id = '100011'
+        """)
+        conn.commit()
+
+        result = upsert_listing(
+            zameen_id="100011",
+            url="https://zameen.com/Property/t-100011-1-1.html",
+            city="karachi",
+            card_data={**card, "added": "Added: 0 minutes ago"},
+        )
+
+        row = conn.execute(
+            "SELECT added_text, card_scraped_at, zameen_posted_at FROM listings WHERE zameen_id = '100011'"
+        ).fetchone()
+        assert result == "unchanged"
+        assert row["added_text"] == "Added: 0 minutes ago"
+        assert row["card_scraped_at"] > "2000-01-01T00:00:00"
+        assert row["zameen_posted_at"] > "2000-01-01T00:00:00"
+
     def test_detail_update(self):
         card = {"title": "Test", "price": 50000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"}
         upsert_listing(zameen_id="100004", url="https://zameen.com/Property/t-100004-1-1.html",
@@ -297,6 +336,39 @@ class TestSearchListings:
         result = search_listings(city="karachi", sort="price_high")
         prices = [r["price"] for r in result["results"] if r["price"]]
         assert prices == sorted(prices, reverse=True)
+
+    def test_default_sort_prioritizes_source_freshness_over_crawl_visitation(self):
+        for zameen_id, title, added in (
+            ("200910", "Older source listing", "Added: 1 week ago"),
+            ("200911", "Fresh source listing", "Added: 1 minute ago"),
+        ):
+            upsert_listing(
+                zameen_id=zameen_id,
+                url=f"https://zameen.com/Property/t-{zameen_id}-1-1.html",
+                city="karachi",
+                card_data={
+                    "title": title,
+                    "price": 70000,
+                    "bedrooms": 2,
+                    "bathrooms": 1,
+                    "area_size": "5 Marla",
+                    "added": added,
+                },
+            )
+        conn = _get_conn()
+        conn.execute("""
+            UPDATE listings
+            SET last_seen_at = '9999-01-01T00:00:00'
+            WHERE zameen_id = '200910'
+        """)
+        conn.commit()
+
+        result = search_listings(city="karachi")
+
+        assert [item["title"] for item in result["results"]] == [
+            "Fresh source listing",
+            "Older source listing",
+        ]
 
     def test_pagination(self):
         self._seed(30)

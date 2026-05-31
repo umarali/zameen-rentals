@@ -24,6 +24,7 @@ from app.crawler_worker import (
     crawl_area_cards, crawl_detail_batch, refresh_phones_batch,
     _build_browser_profile, crawler_rate_limiter,
 )
+from app.personalization import init_personalization_schema, run_match_cycle
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +37,7 @@ _shutdown = False
 
 # ── Crawl schedule configuration ──
 CARD_CYCLE_INTERVAL_HOURS = 1    # Re-crawl areas every 1 hour (was 4)
+CRAWL_CLAIM_LEASE_HOURS = 4      # Recover areas left in-progress after a worker crash
 DETAIL_BATCH_SIZE = 15           # Detail pages per iteration
 PHONE_BATCH_SIZE = 25            # Phone API calls per iteration
 INTER_AREA_DELAY = (0.5, 1.5)   # Random delay between areas (seconds) — tighter for faster cycles
@@ -178,15 +180,21 @@ def _scale_delay_range(delay_range, speed_multiplier):
     return (max(min_delay, low / speed_multiplier), max(min_delay, high / speed_multiplier))
 
 
-def claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS):
-    """Atomically claim the next stale area, prioritizing Karachi before other cities."""
+def claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS,
+                    claim_lease_hours=CRAWL_CLAIM_LEASE_HOURS):
+    """Atomically claim the next stale area, recovering expired worker leases."""
     conn = _get_conn()
     stale_window = f'-{max_age_hours} hours'
+    lease_window = f'-{claim_lease_hours} hours'
     conn.execute("BEGIN IMMEDIATE")
     try:
         row = conn.execute("""
             SELECT * FROM crawl_state
-            WHERE crawl_status != 'in_progress'
+            WHERE (
+                    crawl_status != 'in_progress'
+                    OR crawl_claimed_at IS NULL
+                    OR crawl_claimed_at < datetime('now', ?)
+                  )
               AND (last_crawl_at IS NULL OR last_crawl_at < datetime('now', ?))
             ORDER BY
                 CASE WHEN last_crawl_at IS NULL THEN 0 ELSE 1 END,
@@ -194,13 +202,17 @@ def claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS):
                 priority ASC,
                 last_crawl_at ASC
             LIMIT 1
-        """, (stale_window,)).fetchone()
+        """, (lease_window, stale_window)).fetchone()
         if row is None:
             conn.commit()
             return None
 
         conn.execute(
-            "UPDATE crawl_state SET crawl_status = 'in_progress' WHERE id = ?",
+            """
+            UPDATE crawl_state
+            SET crawl_status = 'in_progress', crawl_claimed_at = datetime('now')
+            WHERE id = ?
+            """,
             (row["id"],)
         )
         conn.commit()
@@ -231,6 +243,7 @@ async def run_backfill_worker(*, detail_batch=DETAIL_BATCH_SIZE, phone_batch=PHO
     When `watch` is True it keeps polling for new listings to enrich.
     """
     init_db()
+    init_personalization_schema()
     init_crawl_state()
 
     cycle_count = 0
@@ -298,6 +311,7 @@ async def run_backfill_worker(*, detail_batch=DETAIL_BATCH_SIZE, phone_batch=PHO
 async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_SPEED_MULTIPLIER):
     """Main crawler loop with scheduled cycles and rest periods."""
     init_db()
+    init_personalization_schema()
     init_crawl_state()
     inter_area_delay = _scale_delay_range(INTER_AREA_DELAY, card_speed)
     page_delay = _scale_delay_range((0.5, 1.5), card_speed)
@@ -379,6 +393,7 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                     conn.execute("""
                         UPDATE crawl_state SET
                             crawl_status = 'completed', last_crawl_at = datetime('now'),
+                            crawl_claimed_at = NULL,
                             pages_crawled = ?, listings_found = ?,
                             new_listings = ?, updated_listings = ?, error_message = NULL
                         WHERE id = ?
@@ -392,7 +407,11 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                     consecutive_errors += 1
                     logger.exception("Error crawling %s/%s", city, area_name)
                     conn.execute(
-                        "UPDATE crawl_state SET crawl_status = 'error', error_message = ? WHERE id = ?",
+                        """
+                        UPDATE crawl_state
+                        SET crawl_status = 'error', crawl_claimed_at = NULL, error_message = ?
+                        WHERE id = ?
+                        """,
                         (str(e)[:500], area["id"])
                     )
                     conn.commit()
@@ -458,6 +477,20 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
 
                 # ── Phase D: Staleness cleanup ──
                 mark_stale_listings(days=7)
+
+        # ── Alert dispatch: notify clients of new matches ──
+        try:
+            match_summary = run_match_cycle(dispatch=True)
+            if match_summary.get("matches"):
+                logger.info(
+                    "[Alerts] %d new matches, %d push sent, %d failed, %d no-sub",
+                    match_summary.get("matches", 0),
+                    match_summary.get("sent", 0),
+                    match_summary.get("failed", 0),
+                    match_summary.get("no_subscription", 0),
+                )
+        except Exception:
+            logger.exception("Alert dispatch failed")
 
         # ── Cycle summary ──
         cycle_duration = (time.monotonic() - cycle_start) / 60

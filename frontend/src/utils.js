@@ -38,17 +38,34 @@ export function fmtRelative(iso) {
   return `${yr} year${yr === 1 ? '' : 's'} ago`;
 }
 
-export function showToast(message, { tone = 'default', duration = 3200 } = {}) {
+export function showToast(message, { tone = 'default', duration = 3200, action = null } = {}) {
   const stack = $('#toastStack');
   if (!stack || !message) return;
   const toast = document.createElement('div');
-  toast.className = `toast toast-${tone}`;
-  toast.textContent = message;
+  toast.className = `toast toast-${tone} pointer-events-auto`;
+  const messageEl = document.createElement('span');
+  messageEl.textContent = message;
+  toast.appendChild(messageEl);
+  if (action?.label && typeof action.onClick === 'function') {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action';
+    btn.textContent = action.label;
+    btn.addEventListener('click', () => {
+      try { action.onClick(); } finally { dismiss(); }
+    });
+    toast.appendChild(btn);
+    duration = Math.max(duration, 5000); // Give the user time to click.
+  }
   stack.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add('toast-visible'));
 
-  window.setTimeout(() => {
+  let dismissed = false;
+  function dismiss() {
+    if (dismissed) return;
+    dismissed = true;
     toast.classList.remove('toast-visible');
     window.setTimeout(() => toast.remove(), 220);
-  }, duration);
+  }
+  window.setTimeout(dismiss, duration);
 }

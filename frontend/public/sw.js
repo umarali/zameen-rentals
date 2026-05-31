@@ -1,6 +1,6 @@
-/** ZameenRentals Service Worker — offline shell, tiered API caching. */
+/** ZameenRentals Service Worker — offline shell, tiered API caching, push handler. */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v3';
 const SHELL_CACHE   = `zr-shell-${CACHE_VERSION}`;
 const CDN_CACHE     = `zr-cdn-${CACHE_VERSION}`;
 const API_STATIC    = `zr-api-static-${CACHE_VERSION}`;
@@ -16,8 +16,8 @@ const SHELL_URLS = [
 
 const PRECACHE_API = [
   '/api/cities',
-  '/api/areas?city=karachi',
   '/api/areas?city=lahore',
+  '/api/areas?city=karachi',
   '/api/areas?city=islamabad',
   '/api/property-types',
 ];
@@ -64,9 +64,10 @@ self.addEventListener('fetch', (e) => {
       return;
     }
 
-    // App shell (root HTML)
+    // App shell (root HTML) — prefer fresh HTML online so it always references
+    // the currently deployed hashed bundles, with cached shell as fallback.
     if (url.pathname === '/' || url.pathname === '/index.html') {
-      e.respondWith(staleWhileRevalidate(request, SHELL_CACHE));
+      e.respondWith(networkFirst(request, SHELL_CACHE));
       return;
     }
 
@@ -110,11 +111,10 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // External CDN resources (fonts, Leaflet) — cache-first
+  // External font resources — cache-first
   if (
     url.hostname === 'fonts.googleapis.com' ||
-    url.hostname === 'fonts.gstatic.com' ||
-    url.hostname === 'unpkg.com'
+    url.hostname === 'fonts.gstatic.com'
   ) {
     e.respondWith(cacheFirst(request, CDN_CACHE));
     return;
@@ -170,7 +170,7 @@ async function networkFirst(request, cacheName, maxEntries) {
     if (response.ok) {
       const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
-      evictOldEntries(cacheName, maxEntries);
+      if (Number.isFinite(maxEntries)) evictOldEntries(cacheName, maxEntries);
     }
     return response;
   } catch {
@@ -190,3 +190,51 @@ async function evictOldEntries(cacheName, max) {
     await Promise.all(toDelete.map((k) => cache.delete(k)));
   }
 }
+
+// ===== PUSH NOTIFICATIONS =====
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+  if (event.data) {
+    try { payload = event.data.json(); }
+    catch { payload = { title: 'ZameenRentals', body: event.data.text() || 'New activity' }; }
+  }
+  const title = payload.title || 'ZameenRentals';
+  const options = {
+    body: payload.body || 'You have new activity',
+    icon: '/android-chrome-192x192.png',
+    badge: '/favicon-32x32.png',
+    tag: payload.tag || 'zr-alert',
+    renotify: true,
+    data: {
+      url: payload.url || '/?alerts=open',
+      alert_id: payload.alert_id || null,
+      type: payload.type || 'alert_match',
+    },
+  };
+  if (payload.image) options.image = payload.image;
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil((async () => {
+    const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of allClients) {
+      // Reuse an existing tab on the same origin.
+      try {
+        const url = new URL(client.url);
+        if (url.origin === self.location.origin) {
+          await client.focus();
+          if ('navigate' in client) {
+            try { await client.navigate(target); } catch {}
+          }
+          try { client.postMessage({ type: 'notification-click', target, data: event.notification.data }); } catch {}
+          return;
+        }
+      } catch {}
+    }
+    await self.clients.openWindow(target);
+  })());
+});

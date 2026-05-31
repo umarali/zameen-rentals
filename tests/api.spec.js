@@ -42,11 +42,12 @@ test.describe("API Endpoints", () => {
     }
   });
 
-  test("GET /api/areas defaults to karachi", async ({ request }) => {
+  test("GET /api/areas defaults to lahore", async ({ request }) => {
     const res = await request.get("/api/areas");
     const areas = await res.json();
-    // Karachi has ~366 areas
-    expect(areas.length).toBeGreaterThan(300);
+    // Lahore has ~462 areas
+    expect(areas.length).toBeGreaterThan(400);
+    expect(areas.some((area) => area.name === "Lahore")).toBeTruthy();
   });
 
   test("GET /api/search-areas fuzzy searches within city", async ({
@@ -137,7 +138,7 @@ test.describe("API Endpoints", () => {
     );
     if (!res.ok()) test.skip();
     const body = await res.json();
-    expect(body.url).toContain("zameen.com");
+    expect(body).toHaveProperty("total");
     expect(Array.isArray(body.results)).toBeTruthy();
   });
 
@@ -236,6 +237,6 @@ test.describe("API Endpoints", () => {
     if (!res.ok()) test.skip();
     const body = await res.json();
     expect(body).toHaveProperty("source");
-    expect(["local", "live"]).toContain(body.source);
+    expect(["local", "live", "unavailable"]).toContain(body.source);
   });
 });

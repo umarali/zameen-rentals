@@ -1,5 +1,7 @@
 /** Shared base-layer definitions and persistence helpers for Leaflet maps. */
 
+import L from 'leaflet';
+
 const STORAGE_KEY = 'rk_mapLayer';
 
 export const MAP_LAYER_DEFS = {
@@ -43,4 +45,3 @@ export function createBaseLayer(layerKey) {
   const def = MAP_LAYER_DEFS[sanitizeMapLayerKey(layerKey)];
   return L.tileLayer(def.url, def.options);
 }
-

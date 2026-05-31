@@ -36,7 +36,7 @@ for _ck, _ci in CITIES.items():
 # Backwards compatibility
 KARACHI_AREAS = CITY_AREAS["karachi"]
 
-def get_areas(city="karachi"):
+def get_areas(city="lahore"):
     """Get areas dict for a city."""
     return CITY_AREAS.get(city, CITY_AREAS["karachi"])
 

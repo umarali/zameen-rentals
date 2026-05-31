@@ -245,7 +245,7 @@ test.describe("Desktop Map", () => {
   test("viewport mode explains shown vs available counts", async ({ page }) => {
     await page.locator('.city-tab[data-city="karachi"]').click();
     await page.waitForTimeout(2000);
-    await expect(page.locator("#resultsCount")).toContainText("shown");
+    await expect(page.locator("#resultsCount")).toContainText(/Showing|shown/);
     await expect(page.locator("#resultsMeta")).toContainText(/exact-pin rentals currently visible|available in|available across|No local listings|Move the map/);
     await expect(page.locator("#dataSource")).toContainText(/Nearest first|Instant/);
   });
@@ -305,7 +305,7 @@ test.describe("Desktop Map", () => {
     await page.locator("#nearbyChip").click();
 
     await expect(page.locator("#listingsTitle")).toHaveText("Rentals near you");
-    await expect(page.locator("#resultsMeta")).toContainText("within 5 km");
+    await expect(page.locator("#resultsMeta")).toContainText(/within 5 km/i);
     await expect(page.locator("#listingsGrid")).toContainText("1.2 km away");
     await expect(page.locator("#radiusChip")).toBeVisible();
     await expect(page.locator("#mapContainer .user-location-marker")).toBeVisible();

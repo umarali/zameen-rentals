@@ -36,7 +36,7 @@ def _parse_price_token(text):
     return None
 
 
-def resolve_landmark(query: str, city: str = "karachi") -> Optional[str]:
+def resolve_landmark(query: str, city: str = "lahore") -> Optional[str]:
     """Return area name if query contains a known landmark for this city."""
     city_landmarks = LANDMARKS.get(city, {})
     ql = query.lower()
@@ -94,7 +94,7 @@ def _parse_size_value(num: str, unit: str) -> Optional[float]:
     return v
 
 
-def parse_natural_query(query: str, city: str = "karachi") -> dict:
+def parse_natural_query(query: str, city: str = "lahore") -> dict:
     """Parse a natural language rental query into structured filters.
     Supports English, Roman Urdu, and Urdu script."""
     result = {}
@@ -227,7 +227,7 @@ def parse_natural_query(query: str, city: str = "karachi") -> dict:
     return result
 
 
-def match_area(query, city="karachi"):
+def match_area(query, city="lahore"):
     areas = get_areas(city)
     q = query.strip()
     if not q:
@@ -293,11 +293,11 @@ def parse_price(text):
     return int(float(m.group(0))) if m else None
 
 
-def build_url(area=None, property_type=None, bedrooms=None, bedrooms_max=None, price_min=None, price_max=None, furnished=None, page=1, sort=None, city="karachi"):
+def build_url(area=None, property_type=None, bedrooms=None, bedrooms_max=None, price_min=None, price_max=None, furnished=None, page=1, sort=None, city="lahore"):
     ptype_slug = "Rentals"
     if property_type and property_type.lower() in PROPERTY_TYPES:
         ptype_slug = PROPERTY_TYPES[property_type.lower()]["slug"]
-    city_info = CITIES.get(city, CITIES["karachi"])
+    city_info = CITIES.get(city, CITIES["lahore"])
     areas = get_areas(city)
     area_slug, area_id = city_info["name"], city_info["id"]
     if area:
@@ -413,7 +413,7 @@ def _get_instructor_client():
     return _instructor_client
 
 
-async def parse_query_with_claude(query: str, city: str = "karachi") -> dict:
+async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
     """Use Instructor + Claude Haiku to parse a natural language rental query."""
     client = _get_instructor_client()
     if client is None:

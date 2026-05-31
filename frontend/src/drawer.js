@@ -1,9 +1,16 @@
 /** Detail drawer, photo gallery, contact bar. */
 
-import { $, $$, esc, escA, fmtPrice, fmtRelative } from './utils.js';
+import L from 'leaflet';
+import { $, $$, esc, escA, fmtPrice, fmtRelative, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
-import { getAreaForListing, handleContactAction } from './cards.js';
+import {
+  getAreaForListing, handleContactAction, extractZameenIdFromUrl,
+  updateFavoriteButton, updateCompareButton, hideCardElement,
+  FAV_FILLED_SVG, FAV_HOLLOW_SVG, HIDE_SVG, COMPARE_SVG,
+} from './cards.js';
 import { createBaseLayer } from './map-layers.js';
+import { isFavorite, addFavorite, removeFavorite, addHidden } from './personalization.js';
+import { has as compareHas, toggle as compareToggle, openModal as openCompareModal } from './compare.js';
 
 let drawerDetailController = null;
 let drawerDetailRequestId = 0;
@@ -113,11 +120,33 @@ export function openDrawer(item, selectAreaFull) {
     if (nb.length) nearbyHtml = `<div><div class="text-sm font-semibold text-gray-800 mb-3">Nearby areas</div><div class="flex flex-wrap gap-2">${nb.map(n => `<span class="amenity-pill cursor-pointer hover:border-gray-400 transition-colors" data-nearby="${escA(n.name)}">${esc(n.name)}</span>`).join('')}</div></div>`;
   }
 
+  const zid = item.zameen_id || extractZameenIdFromUrl(item.url);
+  const zidAttr = zid ? `data-zameen-id="${escA(zid)}"` : '';
+  const favorited = isFavorite(zid);
+  const compared = compareHas(zid);
+  const drawerActionsHtml = zid ? `
+    <div class="flex items-center gap-2 mt-3 -ml-1">
+      <button data-drawer-action="favorite" ${zidAttr} aria-pressed="${favorited ? 'true' : 'false'}" class="drawer-action-btn ${favorited ? 'text-rose-500 bg-rose-50 border-rose-100' : 'text-gray-500 hover:text-rose-500 border-gray-200'}" title="${favorited ? 'Remove from favorites' : 'Save to favorites'}">
+        <span class="drawer-action-icon">${favorited ? FAV_FILLED_SVG : FAV_HOLLOW_SVG}</span>
+        <span class="text-xs font-semibold">${favorited ? 'Saved' : 'Save'}</span>
+      </button>
+      <button data-drawer-action="hide" ${zidAttr} class="drawer-action-btn text-gray-500 hover:text-gray-800 border-gray-200" title="Hide this listing — it won't show up in your future search results">
+        <span class="drawer-action-icon">${HIDE_SVG}</span>
+        <span class="text-xs font-semibold">Hide</span>
+      </button>
+      <button data-drawer-action="compare" ${zidAttr} aria-pressed="${compared ? 'true' : 'false'}" class="drawer-action-btn ${compared ? 'text-brand-600 bg-brand-50 border-brand-100' : 'text-gray-500 hover:text-brand-600 border-gray-200'}" title="${compared ? 'In compare list' : 'Add to compare'}">
+        <span class="drawer-action-icon">${COMPARE_SVG}</span>
+        <span class="text-xs font-semibold">${compared ? 'In compare' : 'Compare'}</span>
+      </button>
+    </div>
+  ` : '';
+
   $('#drawerContent').innerHTML = `
     <div class="drawer-summary mt-5 mb-1">
       ${item.property_type ? `<div class="text-xs font-semibold uppercase tracking-wider text-brand-500 mb-1">${esc(item.property_type)} for Rent</div>` : ''}
       <h2 class="text-xl font-bold text-gray-900 leading-snug">${esc(item.title || 'Rental Property')}</h2>
       ${item.location ? `<div class="flex items-center gap-1.5 text-sm text-gray-500 mt-1"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>${esc(item.location)}</div>` : ''}
+      ${drawerActionsHtml}
     </div>
     <div class="drawer-divider"></div>
     <div class="flex items-baseline gap-2 mb-1">
@@ -280,6 +309,72 @@ async function fetchDrawerDetail(item, existingImgs) {
   }
 }
 
+async function handleDrawerAction(btn) {
+  const zid = btn.dataset.zameenId;
+  const action = btn.dataset.drawerAction;
+  if (!zid) return;
+  try {
+    if (action === 'favorite') {
+      const currentlyFavorited = isFavorite(zid);
+      if (currentlyFavorited) {
+        await removeFavorite(zid);
+        showToast('Removed from favorites');
+      } else {
+        await addFavorite(zid);
+        showToast('Saved to favorites');
+      }
+      updateFavoriteButton(zid, !currentlyFavorited);
+      // Also flip the in-drawer button.
+      const label = btn.querySelector('.text-xs.font-semibold');
+      btn.setAttribute('aria-pressed', !currentlyFavorited ? 'true' : 'false');
+      btn.classList.toggle('text-rose-500', !currentlyFavorited);
+      btn.classList.toggle('bg-rose-50', !currentlyFavorited);
+      btn.classList.toggle('border-rose-100', !currentlyFavorited);
+      btn.classList.toggle('text-gray-500', currentlyFavorited);
+      btn.classList.toggle('hover:text-rose-500', currentlyFavorited);
+      btn.classList.toggle('border-gray-200', currentlyFavorited);
+      btn.querySelector('.drawer-action-icon').innerHTML = !currentlyFavorited ? FAV_FILLED_SVG : FAV_HOLLOW_SVG;
+      if (label) label.textContent = !currentlyFavorited ? 'Saved' : 'Save';
+      btn.title = !currentlyFavorited ? 'Remove from favorites' : 'Save to favorites';
+    } else if (action === 'hide') {
+      await addHidden(zid);
+      if (refs._hideListing) refs._hideListing(zid);
+      else hideCardElement(zid);
+      showToast('Hidden — it won\'t appear in your results', {
+        action: { label: 'View hidden', onClick: () => {
+          import('./personalization-ui.js').then(mod => mod.openPanel({ tab: 'hidden' }));
+        }},
+      });
+      closeDrawer();
+    } else if (action === 'compare') {
+      const wasIn = compareHas(zid);
+      // Reconstruct the listing snapshot from the visible drawer state. Best
+      // effort — the compare module just needs enough to render a column.
+      const listing = {
+        zameen_id: zid,
+        url: btn.closest('#drawer')?.querySelector('a[href*="zameen.com"]')?.href || '',
+      };
+      // Try to pull the original item from a global hook if present.
+      const orig = refs.currentResults?.find(r => String(r.zameen_id || extractZameenIdFromUrl(r.url)) === String(zid));
+      compareToggle(orig || listing);
+      const isIn = compareHas(zid);
+      updateCompareButton(zid, isIn);
+      btn.setAttribute('aria-pressed', isIn ? 'true' : 'false');
+      btn.classList.toggle('text-brand-600', isIn);
+      btn.classList.toggle('bg-brand-50', isIn);
+      btn.classList.toggle('border-brand-100', isIn);
+      btn.classList.toggle('text-gray-500', !isIn);
+      btn.classList.toggle('hover:text-brand-600', !isIn);
+      btn.classList.toggle('border-gray-200', !isIn);
+      const label = btn.querySelector('.text-xs.font-semibold');
+      if (label) label.textContent = isIn ? 'In compare' : 'Compare';
+      btn.title = isIn ? 'In compare list' : 'Add to compare';
+    }
+  } catch (err) {
+    showToast(err?.message || 'Action failed', { tone: 'error' });
+  }
+}
+
 // ===== CLOSE DRAWER =====
 
 export function closeDrawer(fromPopState) {
@@ -326,6 +421,14 @@ export function initDrawerListeners(selectAreaFull) {
     if (nearby) {
       closeDrawer();
       selectAreaFull?.(nearby.dataset.nearby);
+      return;
+    }
+
+    const drawerAction = e.target.closest('[data-drawer-action]');
+    if (drawerAction) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleDrawerAction(drawerAction);
       return;
     }
 

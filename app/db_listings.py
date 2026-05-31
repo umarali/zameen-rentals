@@ -7,9 +7,8 @@ from app.data import PROPERTY_TYPES
 
 logger = logging.getLogger("zameenrentals")
 _DISTANCE_SENTINEL = 999999999
-
-_ADDED_RE = re.compile(r"Added:\s*(\d+)\s*(minute|hour|day|week|month)", re.IGNORECASE)
-_UNIT_MINUTES = {"minute": 1, "hour": 60, "day": 1440, "week": 10080, "month": 43200}
+_FRESHNESS_SQL = "COALESCE(zameen_posted_at, first_seen_at)"
+_STABLE_RECENCY_SQL = f"{_FRESHNESS_SQL} DESC, last_seen_at DESC, id DESC"
 
 # Broader pattern: matches "2 days ago", "Added: 5 hours ago", "1 month", "yesterday".
 _ADDED_RE_BROAD = re.compile(r"(\d+)\s*(minute|hour|day|week|month|year)", re.IGNORECASE)
@@ -17,16 +16,6 @@ _UNIT_MINUTES_FULL = {
     "minute": 1, "hour": 60, "day": 1440,
     "week": 10080, "month": 43200, "year": 525600,
 }
-
-
-def _parse_added_minutes(text):
-    """Parse 'Added: N unit(s) ago' into approximate minutes-ago (lower = newer)."""
-    if not text:
-        return 999999
-    m = _ADDED_RE.search(text)
-    if not m:
-        return 999999
-    return int(m.group(1)) * _UNIT_MINUTES[m.group(2).lower()]
 
 
 def parse_added_text_to_timestamp(added_text, reference):
@@ -53,18 +42,6 @@ def parse_added_text_to_timestamp(added_text, reference):
     return (reference - timedelta(minutes=minutes)).isoformat()
 
 
-# SQL expression equivalent of _parse_added_minutes for ORDER BY clauses.
-_ADDED_MINUTES_SQL = """
-CASE
-  WHEN added_text LIKE 'Added: % minute%' THEN CAST(substr(added_text, 8, instr(substr(added_text,8),' ')-1) AS INTEGER)
-  WHEN added_text LIKE 'Added: % hour%'   THEN CAST(substr(added_text, 8, instr(substr(added_text,8),' ')-1) AS INTEGER) * 60
-  WHEN added_text LIKE 'Added: % day%'    THEN CAST(substr(added_text, 8, instr(substr(added_text,8),' ')-1) AS INTEGER) * 1440
-  WHEN added_text LIKE 'Added: % week%'   THEN CAST(substr(added_text, 8, instr(substr(added_text,8),' ')-1) AS INTEGER) * 10080
-  WHEN added_text LIKE 'Added: % month%'  THEN CAST(substr(added_text, 8, instr(substr(added_text,8),' ')-1) AS INTEGER) * 43200
-  ELSE 999999
-END"""
-
-
 def city_priority_sql(column="city"):
     return f"""
         CASE {column}
@@ -76,7 +53,7 @@ def city_priority_sql(column="city"):
     """
 
 
-def _listing_filter_clauses(*, city="karachi", area=None, area_names=None, property_type=None,
+def _listing_filter_clauses(*, city="lahore", area=None, area_names=None, property_type=None,
                             bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
                             size_marla_min=None, size_marla_max=None,
                             furnished=None, q=None, exact_only=False, geocoded_only=False):
@@ -194,18 +171,23 @@ def _datetime_sort_value(value):
 def _nearby_sort_key(row, sort):
     distance_km = row["_distance_km"]
     price = row["price"]
-    added_hours = _parse_added_minutes(row.get("added_text"))
+    freshness_at = _datetime_sort_value(
+        row.get("zameen_posted_at") or row.get("first_seen_at") or row.get("last_seen_at")
+    )
     last_seen_at = _datetime_sort_value(row["last_seen_at"])
+    listing_id = row.get("id", 0)
 
     if sort == "distance":
-        return (distance_km, -last_seen_at)
+        return (distance_km, -freshness_at, -last_seen_at, -listing_id)
     if sort == "price_low":
-        return (price is None, price if price is not None else float("inf"), distance_km, -last_seen_at)
+        return (price is None, price if price is not None else float("inf"),
+                distance_km, -freshness_at, -last_seen_at, -listing_id)
     if sort == "price_high":
-        return (price is None, -(price if price is not None else 0), distance_km, -last_seen_at)
+        return (price is None, -(price if price is not None else 0),
+                distance_km, -freshness_at, -last_seen_at, -listing_id)
     if sort == "newest":
-        return (added_hours, distance_km, -last_seen_at)
-    return (distance_km, -last_seen_at)
+        return (-freshness_at, distance_km, -last_seen_at, -listing_id)
+    return (distance_km, -freshness_at, -last_seen_at, -listing_id)
 
 
 def _distance_km_from_center(distance_to_center):
@@ -272,11 +254,22 @@ def _value_or_existing(data, key, existing_value):
     return existing_value
 
 
+def _refreshed_posted_at(existing, added_text, reference):
+    """Keep a stable absolute timestamp until Zameen's relative age label changes."""
+    existing_posted_at = existing["zameen_posted_at"] if existing is not None else None
+    if not added_text:
+        return existing_posted_at
+    if existing is not None and added_text == existing["added_text"] and existing_posted_at:
+        return existing_posted_at
+    return parse_added_text_to_timestamp(added_text, reference) or existing_posted_at
+
+
 def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                    lat=None, lng=None, card_data=None, detail_data=None):
     """Insert or update a listing. Returns 'inserted', 'updated', or 'unchanged'."""
     conn = _get_conn()
-    now = datetime.utcnow().isoformat()
+    scraped_at = datetime.utcnow()
+    now = scraped_at.isoformat()
 
     existing = conn.execute(
         "SELECT * FROM listings WHERE zameen_id = ?",
@@ -295,10 +288,8 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             if not images and card_data.get("image_url"):
                 images = [card_data["image_url"]]
             location_source = "area_centroid" if lat is not None and lng is not None else None
-            posted_at = parse_added_text_to_timestamp(
-                card_data.get("added"), datetime.utcnow()
-            )
-            conn.execute("""
+            posted_at = _refreshed_posted_at(None, card_data.get("added"), scraped_at)
+            cur = conn.execute("""
                 INSERT INTO listings (
                     zameen_id, url, title, price, price_text, bedrooms, bathrooms,
                     area_size, location, image_url, images_json, property_type,
@@ -315,8 +306,36 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                 city, area_name, area_slug, lat, lng, location_source,
                 now, now, posted_at, c_hash
             ))
+            new_id = cur.lastrowid
             conn.commit()
+            try:
+                from app.personalization import record_match_for_inserted_listing
+                inserted_row = {
+                    "id": new_id,
+                    "zameen_id": zameen_id,
+                    "url": url,
+                    "title": card_data.get("title"),
+                    "price": card_data.get("price"),
+                    "price_text": card_data.get("price_text"),
+                    "bedrooms": card_data.get("bedrooms"),
+                    "bathrooms": card_data.get("bathrooms"),
+                    "area_size": card_data.get("area_size"),
+                    "location": card_data.get("location"),
+                    "image_url": card_data.get("image_url"),
+                    "property_type": card_data.get("property_type"),
+                    "city": city,
+                    "area_name": area_name,
+                    "is_active": 1,
+                    "amenities_json": None,
+                    "details_json": None,
+                }
+                record_match_for_inserted_listing(new_id, inserted_row)
+            except Exception:
+                logger.exception("Alert match hook failed for %s", zameen_id)
             return "inserted"
+
+        added_text = card_data.get("added")
+        posted_at = _refreshed_posted_at(existing, added_text, scraped_at)
 
         if existing["content_hash"] == c_hash:
             conn.execute("""
@@ -336,9 +355,15 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                         WHEN ? IS NOT NULL AND ? IS NOT NULL THEN 'area_centroid'
                         ELSE location_source
                     END,
+                    added_text = COALESCE(?, added_text),
+                    card_scraped_at = ?,
+                    zameen_posted_at = COALESCE(?, zameen_posted_at),
                     last_seen_at = ?, is_active = 1
                 WHERE zameen_id = ?
-            """, (area_name, area_slug, lat, lng, lat, lng, now, zameen_id))
+            """, (
+                area_name, area_slug, lat, lng, lat, lng,
+                added_text, now, posted_at, now, zameen_id
+            ))
             conn.commit()
             return "unchanged"
 
@@ -350,7 +375,8 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             UPDATE listings SET
                 title = ?, price = ?, price_text = ?, bedrooms = ?, bathrooms = ?,
                 area_size = ?, location = ?, image_url = ?, images_json = ?,
-                property_type = ?, added_text = ?, area_name = ?, area_slug = ?,
+                property_type = ?, added_text = COALESCE(?, added_text),
+                area_name = ?, area_slug = ?,
                 latitude = CASE
                     WHEN location_source = 'listing_exact' THEN latitude
                     ELSE COALESCE(?, latitude)
@@ -364,7 +390,8 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                     WHEN ? IS NOT NULL AND ? IS NOT NULL THEN 'area_centroid'
                     ELSE location_source
                 END,
-                card_scraped_at = ?, last_seen_at = ?, content_hash = ?, is_active = 1
+                card_scraped_at = ?, zameen_posted_at = COALESCE(?, zameen_posted_at),
+                last_seen_at = ?, content_hash = ?, is_active = 1
             WHERE zameen_id = ?
         """, (
             card_data.get("title"), card_data.get("price"),
@@ -373,7 +400,7 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             card_data.get("location"), card_data.get("image_url"),
             json.dumps(images) if images else None,
             card_data.get("property_type"), card_data.get("added"),
-            area_name, area_slug, lat, lng, lat, lng, now, now, c_hash, zameen_id
+            area_name, area_slug, lat, lng, lat, lng, now, posted_at, now, c_hash, zameen_id
         ))
         conn.commit()
         return "updated"
@@ -484,7 +511,7 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
     return "unchanged"
 
 
-def search_listings(*, city="karachi", area=None, area_names=None, property_type=None,
+def search_listings(*, city="lahore", area=None, area_names=None, property_type=None,
                     bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
                     size_marla_min=None, size_marla_max=None,
                     furnished=None, sort=None, q=None, page=1, per_page=25,
@@ -507,21 +534,22 @@ def search_listings(*, city="karachi", area=None, area_names=None, property_type
         else ("NULL", [])
     )
 
-    if sort == "price_low":
-        order = "price ASC NULLS LAST"
-    elif sort == "price_high":
-        order = "price DESC NULLS LAST"
+    exact_location_order = "CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC"
+    if sort in {"price_low", "price_high"}:
+        direction = "ASC" if sort == "price_low" else "DESC"
+        order = f"price {direction} NULLS LAST"
+        if map_focus:
+            order = f"{order}, distance_to_center ASC, {exact_location_order}"
+        order = f"{order}, {_STABLE_RECENCY_SQL}"
     elif sort == "newest":
-        order = f"({_ADDED_MINUTES_SQL}) ASC"
-    elif sort == "distance" and map_focus:
-        order = "distance_to_center ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC, last_seen_at DESC"
+        order = f"{_FRESHNESS_SQL} DESC"
+        if map_focus:
+            order = f"{order}, distance_to_center ASC, {exact_location_order}"
+        order = f"{order}, last_seen_at DESC, id DESC"
     elif map_focus:
-        order = "distance_to_center ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC, last_seen_at DESC"
+        order = f"distance_to_center ASC, {exact_location_order}, {_STABLE_RECENCY_SQL}"
     else:
-        order = "last_seen_at DESC"
-
-    if map_focus and sort in {"price_low", "price_high", "newest"}:
-        order = f"{order}, distance_to_center ASC, CASE WHEN location_source = 'listing_exact' THEN 0 ELSE 1 END ASC"
+        order = _STABLE_RECENCY_SQL
 
     total = conn.execute(f"SELECT COUNT(*) FROM listings WHERE {where}", params).fetchone()[0]
 
@@ -542,7 +570,7 @@ def search_listings(*, city="karachi", area=None, area_names=None, property_type
     }
 
 
-def count_listings_by_area(*, city="karachi", area_names=None, property_type=None,
+def count_listings_by_area(*, city="lahore", area_names=None, property_type=None,
                            bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
                            size_marla_min=None, size_marla_max=None,
                            furnished=None, q=None):
@@ -569,7 +597,7 @@ def count_listings_by_area(*, city="karachi", area_names=None, property_type=Non
     return {row["area_name"]: row["total"] for row in rows}
 
 
-def search_nearby_listings(*, city="karachi", lat, lng, radius_km=5,
+def search_nearby_listings(*, city="lahore", lat, lng, radius_km=5,
                            area=None, property_type=None, bedrooms=None,
                            bedrooms_max=None, price_min=None, price_max=None,
                            size_marla_min=None, size_marla_max=None, furnished=None,
@@ -626,7 +654,7 @@ def search_nearby_listings(*, city="karachi", lat, lng, radius_km=5,
     }
 
 
-def search_exact_listings_in_bounds(*, city="karachi", south, west, north, east,
+def search_exact_listings_in_bounds(*, city="lahore", south, west, north, east,
                                     property_type=None, bedrooms=None,
                                     bedrooms_max=None, price_min=None, price_max=None,
                                     size_marla_min=None, size_marla_max=None,
@@ -656,23 +684,21 @@ def search_exact_listings_in_bounds(*, city="karachi", south, west, north, east,
         else ("NULL", [])
     )
 
-    if sort == "price_low":
-        order = "price ASC NULLS LAST"
-    elif sort == "price_high":
-        order = "price DESC NULLS LAST"
-    elif sort == "newest":
-        order = f"({_ADDED_MINUTES_SQL}) ASC"
-    elif sort == "distance" and map_focus:
-        order = "distance_to_center ASC, last_seen_at DESC"
-    elif map_focus:
-        order = "distance_to_center ASC, last_seen_at DESC"
-    else:
-        order = "last_seen_at DESC"
-
-    if sort in {"price_low", "price_high", "newest"}:
+    if sort in {"price_low", "price_high"}:
+        direction = "ASC" if sort == "price_low" else "DESC"
+        order = f"price {direction} NULLS LAST"
         if map_focus:
             order = f"{order}, distance_to_center ASC"
-        order = f"{order}, last_seen_at DESC"
+        order = f"{order}, {_STABLE_RECENCY_SQL}"
+    elif sort == "newest":
+        order = f"{_FRESHNESS_SQL} DESC"
+        if map_focus:
+            order = f"{order}, distance_to_center ASC"
+        order = f"{order}, last_seen_at DESC, id DESC"
+    elif map_focus:
+        order = f"distance_to_center ASC, {_STABLE_RECENCY_SQL}"
+    else:
+        order = _STABLE_RECENCY_SQL
 
     total = conn.execute(
         f"SELECT COUNT(*) FROM listings WHERE {where}",
@@ -706,7 +732,7 @@ def search_exact_listings_in_bounds(*, city="karachi", south, west, north, east,
     }
 
 
-def get_nearby_enrichment_candidates(*, city="karachi", lat, lng, radius_km=5,
+def get_nearby_enrichment_candidates(*, city="lahore", lat, lng, radius_km=5,
                                      area=None, property_type=None, bedrooms=None,
                                      bedrooms_max=None, price_min=None, price_max=None,
                                      size_marla_min=None, size_marla_max=None,
@@ -754,6 +780,8 @@ def _row_to_listing(row):
     zameen_id = row["zameen_id"] if "zameen_id" in row.keys() else None
     location_source = None
     d = {
+        "zameen_id": zameen_id,
+        "first_seen_at": row["first_seen_at"] if "first_seen_at" in row.keys() else None,
         "title": row["title"],
         "url": row["url"],
         "price": row["price"],

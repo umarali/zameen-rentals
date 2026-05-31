@@ -64,27 +64,6 @@ const NL_TIPS = { karachi: '2 bed flat DHA under 50k', lahore: '3 bed house Bahr
 
 function getNlTip() { return NL_TIPS[S.city] || NL_TIPS.lahore; }
 
-function detectUserCity() {
-  return new Promise(resolve => {
-    if (!navigator.geolocation) return resolve(null);
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        let closest = null;
-        let minDist = Infinity;
-        for (const [key, city] of Object.entries(CITY_DEFAULTS)) {
-          const d = Math.hypot(lat - city.lat, lng - city.lng);
-          if (d < minDist) { minDist = d; closest = key; }
-        }
-        // Only match if within ~100km (~1 degree)
-        resolve(minDist < 1 ? closest : null);
-      },
-      () => resolve(null),
-      { timeout: 4000, maximumAge: 300000 }
-    );
-  });
-}
-
 function buildDOM() {
   const cityOrder = ['lahore', 'karachi', 'islamabad'];
   const cityPills = cityOrder.map(key => {
@@ -155,20 +134,6 @@ function buildDOM() {
   document.body.appendChild(el);
   _overlay = el;
   updateNearbyCardState();
-
-  // Try to auto-detect city on first visit
-  if (!localStorage.getItem(WELCOMED_KEY)) {
-    detectUserCity().then(city => {
-      if (city && city !== S.city) {
-        S.city = city;
-        _deps.onCityChange(city);
-        _overlay.querySelectorAll('[data-wcity]').forEach(btn =>
-          btn.classList.toggle('active', btn.dataset.wcity === city)
-        );
-        updateNearbyCardState();
-      }
-    });
-  }
 }
 
 function updateNearbyCardState() {

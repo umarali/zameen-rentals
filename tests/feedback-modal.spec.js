@@ -95,4 +95,17 @@ test.describe("Feedback Modal", () => {
     // Submit button re-enabled
     await expect(page.locator("#feedbackSubmit")).not.toBeDisabled();
   });
+
+  test("offline submission queues feedback and closes modal", async ({ page }) => {
+    await page.context().setOffline(true);
+    await page.locator("#reportBtn").click();
+    await page.locator("#feedbackMsg").fill("Send this when online");
+    await page.locator("#feedbackSubmit").click();
+
+    await expect(page.locator("#feedbackModal")).toHaveClass(/hidden/);
+    await expect(page.locator("#toastStack")).toContainText("Feedback queued");
+    const queued = await page.evaluate(() => JSON.parse(localStorage.getItem("zr_feedback_queue") || "[]"));
+    expect(queued).toHaveLength(1);
+    expect(queued[0].message).toBe("Send this when online");
+  });
 });

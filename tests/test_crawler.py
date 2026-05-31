@@ -189,6 +189,83 @@ class TestAreaScheduling:
         assert area["city"] == "karachi"
         assert area["area_name"] == "Clifton"
 
+    def test_claim_next_area_recovers_expired_worker_lease(self):
+        init_crawl_state()
+        conn = _get_conn()
+        conn.execute("""
+            UPDATE crawl_state
+            SET last_crawl_at = datetime('now'), crawl_status = 'completed',
+                crawl_claimed_at = NULL, priority = 50
+        """)
+        conn.execute("""
+            UPDATE crawl_state
+            SET last_crawl_at = datetime('now', '-8 hours'),
+                crawl_status = 'in_progress',
+                crawl_claimed_at = datetime('now', '-5 hours')
+            WHERE city = 'karachi' AND area_name = 'Clifton'
+        """)
+        conn.commit()
+
+        area = claim_next_area(max_age_hours=4, claim_lease_hours=4)
+
+        assert area["city"] == "karachi"
+        assert area["area_name"] == "Clifton"
+        row = conn.execute(
+            "SELECT crawl_status, crawl_claimed_at FROM crawl_state WHERE id = ?",
+            (area["id"],),
+        ).fetchone()
+        assert row["crawl_status"] == "in_progress"
+        assert row["crawl_claimed_at"] is not None
+
+    def test_claim_next_area_recovers_legacy_claim_without_lease(self):
+        init_crawl_state()
+        conn = _get_conn()
+        conn.execute("""
+            UPDATE crawl_state
+            SET last_crawl_at = datetime('now'), crawl_status = 'completed',
+                crawl_claimed_at = NULL, priority = 50
+        """)
+        conn.execute("""
+            UPDATE crawl_state
+            SET last_crawl_at = datetime('now', '-8 hours'),
+                crawl_status = 'in_progress',
+                crawl_claimed_at = NULL
+            WHERE city = 'karachi' AND area_name = 'Clifton'
+        """)
+        conn.commit()
+
+        area = claim_next_area(max_age_hours=4, claim_lease_hours=4)
+
+        assert area["city"] == "karachi"
+        assert area["area_name"] == "Clifton"
+
+    def test_claim_next_area_keeps_active_worker_lease(self):
+        init_crawl_state()
+        conn = _get_conn()
+        conn.execute("""
+            UPDATE crawl_state
+            SET last_crawl_at = datetime('now'), crawl_status = 'completed',
+                crawl_claimed_at = NULL, priority = 50
+        """)
+        conn.execute("""
+            UPDATE crawl_state
+            SET last_crawl_at = datetime('now', '-8 hours'),
+                crawl_status = 'in_progress',
+                crawl_claimed_at = datetime('now')
+            WHERE city = 'karachi' AND area_name = 'Clifton'
+        """)
+        conn.execute("""
+            UPDATE crawl_state
+            SET last_crawl_at = datetime('now', '-8 hours')
+            WHERE city = 'lahore' AND area_name = 'Gulberg'
+        """)
+        conn.commit()
+
+        area = claim_next_area(max_age_hours=4, claim_lease_hours=4)
+
+        assert area["city"] == "lahore"
+        assert area["area_name"] == "Gulberg"
+
 
 class TestRefreshPhonesBatch:
     @pytest.mark.asyncio

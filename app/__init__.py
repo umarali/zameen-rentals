@@ -28,10 +28,16 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "An internal error occurred."})
 
 from app.database import init_db, close_db  # noqa: E402
+from app.personalization import init_personalization_schema, ensure_vapid_keys  # noqa: E402
 
 @app.on_event("startup")
 async def startup():
     init_db()
+    init_personalization_schema()
+    try:
+        ensure_vapid_keys()
+    except Exception:
+        logging.getLogger("zameenrentals").exception("Failed to initialize VAPID keys")
 
 @app.on_event("shutdown")
 async def shutdown():

@@ -29,15 +29,17 @@ test.describe("Natural Language Search", () => {
     await expect(page.locator("#nlSuggestions")).toBeHidden();
   });
 
-  test("clicking example suggestion fills input and searches", async ({
+  test("clicking example suggestion applies filters and searches", async ({
     page,
   }) => {
     await page.locator("#nlInput").focus();
     await expect(page.locator("#nlSuggestions")).toBeVisible();
     const example = page.locator(".nl-ex").first();
-    const text = await example.textContent();
     await example.click();
-    await expect(page.locator("#nlInput")).toHaveValue(text);
+    await expect(page.locator("#nlInput")).toHaveValue("");
+    await expect(page.locator("#areaChip")).toHaveClass(/has-value/);
+    await expect(page.locator("#typeChip")).toHaveClass(/has-value/);
+    await expect(page.locator("#bedsChip")).toHaveClass(/has-value/);
     // Should trigger a search
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
   });
@@ -45,7 +47,7 @@ test.describe("Natural Language Search", () => {
   test("clicking outside closes suggestions", async ({ page }) => {
     await page.locator("#nlInput").focus();
     await expect(page.locator("#nlSuggestions")).toBeVisible();
-    await page.locator("#listingsGrid").click();
+    await page.mouse.click(2, 2);
     await expect(page.locator("#nlSuggestions")).toBeHidden();
   });
 

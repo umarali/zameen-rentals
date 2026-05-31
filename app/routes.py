@@ -1,5 +1,6 @@
 """API route handlers."""
 import asyncio
+import hmac
 import logging
 import os
 import time
@@ -29,10 +30,10 @@ logger = logging.getLogger("zameenrentals")
 router = APIRouter()
 
 # In-memory cache for the default city-browse query (no filters, page=1).
-# Keyed by city. TTL=120s. 3 entries max (one per city). Zero memory growth risk.
+# Keyed by city. TTL=30s. 3 entries max (one per city). Zero memory growth risk.
 _DEFAULT_SEARCH_CACHE: dict = {}
 _DEFAULT_SEARCH_LOCK = _Lock()
-_DEFAULT_SEARCH_TTL = 120
+_DEFAULT_SEARCH_TTL = 30
 
 
 def _is_default_search(area, property_type, bedrooms, bedrooms_max,
@@ -51,9 +52,20 @@ _NEARBY_ENRICHMENT_LIMIT = 12
 _NEARBY_ENRICHMENT_CONCURRENCY = 3
 _PARSE_QUERY_TIMEOUT_SECONDS = 8
 _PLAYWRIGHT_SERVER = os.getenv("ZAMEENRENTALS_PLAYWRIGHT") == "1"
-_SEARCH_RATE_LIMIT = "60/minute" if _PLAYWRIGHT_SERVER else "10/minute"
-_MAP_SEARCH_RATE_LIMIT = "60/minute" if _PLAYWRIGHT_SERVER else "20/minute"
-_NEARBY_SEARCH_RATE_LIMIT = "60/minute" if _PLAYWRIGHT_SERVER else "10/minute"
+_SEARCH_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "10/minute"
+_MAP_SEARCH_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "20/minute"
+_NEARBY_SEARCH_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "10/minute"
+_PARSE_QUERY_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "15/minute"
+_LISTING_DETAIL_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "20/minute"
+
+
+def _require_admin_token(request: Request):
+    configured = os.getenv("ZAMEENRENTALS_ADMIN_TOKEN", "")
+    supplied = request.headers.get("X-Admin-Token", "")
+    if not configured:
+        raise HTTPException(status_code=503, detail="Admin endpoint is not configured")
+    if not supplied or not hmac.compare_digest(supplied, configured):
+        raise HTTPException(status_code=401, detail="Invalid admin token")
 
 
 def _normalize_area_names(areas, *, limit=_MAX_VIEWPORT_AREAS):
@@ -186,19 +198,19 @@ async def get_cities():
 
 
 @router.get("/api/areas")
-async def get_areas_api(city: str = Query("karachi")):
+async def get_areas_api(city: str = Query("lahore")):
     areas = get_areas(city)
     urdu_map = _ENGLISH_TO_URDU if city == "karachi" else {}
     return [{"name": n, "slug": s, "id": i, "lat": lat, "lng": lng, "name_ur": urdu_map.get(n, "")} for n, (s, i, lat, lng) in sorted(areas.items())]
 
 
 @router.get("/api/search-areas")
-async def search_areas(q: str = Query(..., min_length=1), city: str = Query("karachi"), limit: int = Query(20, ge=1, le=50)):
+async def search_areas(q: str = Query(..., min_length=1), city: str = Query("lahore"), limit: int = Query(20, ge=1, le=50)):
     """Fuzzy search across all known areas for a city. Returns top matches."""
     areas = get_areas(city)
     ql = q.strip().lower()
     scored = []
-    city_name = CITIES.get(city, CITIES["karachi"])["name"]
+    city_name = CITIES.get(city, CITIES["lahore"])["name"]
     for name, (slug, aid, lat, lng) in areas.items():
         if name == city_name:
             continue
@@ -244,20 +256,23 @@ async def get_property_types():
 
 
 @router.get("/api/parse-query")
-@limiter.limit("15/minute")
-async def api_parse_query(request: Request, q: str = Query(..., min_length=1), city: str = Query("karachi")):
+@limiter.limit(_PARSE_QUERY_RATE_LIMIT)
+async def api_parse_query(request: Request, q: str = Query(..., min_length=1), city: str = Query("lahore")):
     try:
-        try:
-            result = await asyncio.wait_for(
-                parse_query_with_claude(q, city=city),
-                timeout=_PARSE_QUERY_TIMEOUT_SECONDS,
-            )
-        except asyncio.TimeoutError:
-            logger.warning(
-                "Parse query timed out after %ss, falling back to regex parser",
-                _PARSE_QUERY_TIMEOUT_SECONDS,
-            )
+        if _PLAYWRIGHT_SERVER:
             result = parse_natural_query(q, city=city)
+        else:
+            try:
+                result = await asyncio.wait_for(
+                    parse_query_with_claude(q, city=city),
+                    timeout=_PARSE_QUERY_TIMEOUT_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Parse query timed out after %ss, falling back to regex parser",
+                    _PARSE_QUERY_TIMEOUT_SECONDS,
+                )
+                result = parse_natural_query(q, city=city)
         return _build_parse_query_response(q, city, result)
     except Exception:
         logger.exception("Parse query error")
@@ -266,7 +281,7 @@ async def api_parse_query(request: Request, q: str = Query(..., min_length=1), c
 
 @router.get("/api/search")
 @limiter.limit(_SEARCH_RATE_LIMIT)
-async def search(request: Request, city: str = Query("karachi"), area: Optional[str]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), bedrooms_max: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), size_marla_min: Optional[float]=Query(None, ge=0), size_marla_max: Optional[float]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
+async def search(request: Request, city: str = Query("lahore"), area: Optional[str]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), bedrooms_max: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), size_marla_min: Optional[float]=Query(None, ge=0), size_marla_max: Optional[float]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
     try:
         _validate_price_range(price_min, price_max)
         # Serve from in-memory cache for the default (no-filter, page=1) query.
@@ -298,6 +313,15 @@ async def search(request: Request, city: str = Query("karachi"), area: Optional[
                        sort=sort, result_count=local_result["total"])
             return local_result
 
+        if _PLAYWRIGHT_SERVER:
+            return {
+                "total": 0,
+                "page": page,
+                "per_page": 25,
+                "results": [],
+                "source": "unavailable",
+            }
+
         # Fallback to live scraping if local DB has no results for this query
         try:
             result = await search_zameen(area=area, property_type=property_type, bedrooms=bedrooms, bedrooms_max=bedrooms_max, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort, city=city)
@@ -321,7 +345,7 @@ async def search(request: Request, city: str = Query("karachi"), area: Optional[
 @limiter.limit(_MAP_SEARCH_RATE_LIMIT)
 async def map_search(
     request: Request,
-    city: str = Query("karachi"),
+    city: str = Query("lahore"),
     areas: list[str] = Query([]),
     property_type: Optional[str] = Query(None),
     bedrooms: Optional[int] = Query(None, ge=1, le=10),
@@ -411,7 +435,7 @@ async def map_search(
 @limiter.limit(_NEARBY_SEARCH_RATE_LIMIT)
 async def nearby_search(
     request: Request,
-    city: str = Query("karachi"),
+    city: str = Query("lahore"),
     lat: float = Query(...),
     lng: float = Query(...),
     radius_km: float = Query(5),
@@ -466,7 +490,7 @@ async def nearby_search(
 
 
 @router.get("/api/listing-detail")
-@limiter.limit("20/minute")
+@limiter.limit(_LISTING_DETAIL_RATE_LIMIT)
 async def listing_detail(request: Request, url: str = Query(...)):
     """Fetch enriched detail — from local DB if available, else live scrape."""
     if not url.startswith("https://www.zameen.com/"):
@@ -523,6 +547,8 @@ async def listing_detail(request: Request, url: str = Query(...)):
                 }
                 if local_detail["has_exact_geography"]:
                     return local_detail
+        if _PLAYWRIGHT_SERVER:
+            return local_detail or {}
         # Fallback to live scrape
         detail = await fetch_listing_detail(url)
         if detail and zid and listing:
@@ -540,7 +566,7 @@ async def listing_detail(request: Request, url: str = Query(...)):
 
 
 @router.get("/api/listing-contact")
-@limiter.limit("20/minute")
+@limiter.limit(_LISTING_DETAIL_RATE_LIMIT)
 async def listing_contact(request: Request, url: str = Query(...)):
     """Fetch contact data — from local DB if available, else live via showNumbers."""
     if not url.startswith("https://www.zameen.com/"):
@@ -552,6 +578,8 @@ async def listing_contact(request: Request, url: str = Query(...)):
             listing = get_listing_by_zameen_id(zid)
             if listing and (listing.get("call_phone") or listing.get("phone") or listing.get("whatsapp_phone")):
                 return _contact_response_from_listing(listing)
+        if _PLAYWRIGHT_SERVER:
+            return {"phone": None, "call_phone": None, "whatsapp_phone": None}
         contact = await fetch_listing_contact(url)
         if not contact:
             return {"phone": None, "call_phone": None, "whatsapp_phone": None}
@@ -580,7 +608,7 @@ async def listing_contact(request: Request, url: str = Query(...)):
 
 
 @router.get("/api/listing-phone")
-@limiter.limit("20/minute")
+@limiter.limit(_LISTING_DETAIL_RATE_LIMIT)
 async def listing_phone(request: Request, url: str = Query(...)):
     """Legacy contact endpoint kept for card actions."""
     if not url.startswith("https://www.zameen.com/"):
@@ -599,12 +627,12 @@ async def crawl_status(city: Optional[str] = Query(None)):
 
 
 @router.get("/api/popular-searches")
-async def popular_searches(city: str = Query("karachi"), limit: int = Query(8, ge=1, le=20)):
+async def popular_searches(city: str = Query("lahore"), limit: int = Query(8, ge=1, le=20)):
     return get_popular_searches(city, limit)
 
 
 @router.get("/api/recent-searches")
-async def recent_searches(city: str = Query("karachi"), limit: int = Query(8, ge=1, le=20)):
+async def recent_searches(city: str = Query("lahore"), limit: int = Query(8, ge=1, le=20)):
     return get_recent_searches(city, limit)
 
 
@@ -620,6 +648,339 @@ async def submit_feedback(request: Request):
     context = body.get("context")
     save_feedback(message, context)
     return {"ok": True}
+
+
+# ── Personalization: alerts, favorites, hidden, recently viewed, push ──
+
+from app import personalization as pers  # noqa: E402
+
+_PERSONALIZATION_BURST = "240/minute" if _PLAYWRIGHT_SERVER else "60/minute"
+_PERSONALIZATION_STEADY = "240/minute" if _PLAYWRIGHT_SERVER else "120/minute"
+_PERSONALIZATION_HIGH = "600/minute" if _PLAYWRIGHT_SERVER else "240/minute"
+
+
+def _require_client_id(request: Request) -> str:
+    client_id = (request.headers.get("X-Client-Id") or "").strip()
+    if not pers.is_valid_client_id(client_id):
+        raise HTTPException(status_code=400, detail="Missing or invalid X-Client-Id header")
+    return client_id
+
+
+@router.post("/api/personalization/touch")
+@limiter.limit(_PERSONALIZATION_BURST)
+async def personalization_touch(request: Request):
+    """Record a new session visit and return the previous visit timestamp.
+
+    The previous timestamp powers the 'new since your last visit' badge.
+    """
+    client_id = _require_client_id(request)
+    previous_visit = pers.previous_visit_at(client_id)
+    pers.ensure_client(client_id, touch_visit=True)
+    unseen = pers.unseen_match_count(client_id)
+    return {
+        "client_id": client_id,
+        "previous_visit_at": previous_visit,
+        "unseen_alert_matches": unseen,
+        "vapid_public_key": pers.vapid_public_key(),
+    }
+
+
+@router.get("/api/personalization/state")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def personalization_state(request: Request):
+    """Snapshot of everything the frontend needs to render personalization."""
+    client_id = _require_client_id(request)
+    pers.ensure_client(client_id)
+    return {
+        "favorites": sorted(pers.get_favorite_zameen_ids(client_id)),
+        "hidden": sorted(pers.get_hidden_zameen_ids(client_id)),
+        "alert_count": pers.count_alerts(client_id),
+        "unseen_alert_matches": pers.unseen_match_count(client_id),
+        "vapid_public_key": pers.vapid_public_key(),
+        "push_subscription_count": len(pers.list_push_subscriptions(client_id)),
+    }
+
+
+@router.get("/api/alerts")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def alerts_list(request: Request):
+    client_id = _require_client_id(request)
+    return {"alerts": pers.list_alerts(client_id)}
+
+
+@router.post("/api/alerts")
+@limiter.limit(_PERSONALIZATION_BURST)
+async def alerts_create(request: Request):
+    client_id = _require_client_id(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body must be an object")
+    filters = body.get("filters") or {}
+    label = body.get("label")
+    try:
+        alert = pers.create_alert(
+            client_id,
+            label=label,
+            filters=filters,
+            notify_push=body.get("notify_push", True),
+            notify_inapp=body.get("notify_inapp", True),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return alert
+
+
+@router.patch("/api/alerts/{alert_id}")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def alerts_update(request: Request, alert_id: int):
+    client_id = _require_client_id(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body must be an object")
+    try:
+        alert = pers.update_alert(
+            client_id,
+            alert_id,
+            label=body.get("label"),
+            paused=body.get("paused"),
+            notify_push=body.get("notify_push"),
+            notify_inapp=body.get("notify_inapp"),
+            filters=body.get("filters"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return alert
+
+
+@router.delete("/api/alerts/{alert_id}")
+@limiter.limit(_PERSONALIZATION_BURST)
+async def alerts_delete(request: Request, alert_id: int):
+    client_id = _require_client_id(request)
+    if not pers.delete_alert(client_id, alert_id):
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"ok": True}
+
+
+@router.get("/api/alerts/matches")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def alerts_matches(request: Request,
+                         alert_id: Optional[int] = Query(None),
+                         unseen: bool = Query(False),
+                         limit: int = Query(50, ge=1, le=200)):
+    client_id = _require_client_id(request)
+    matches = pers.list_matches(client_id, alert_id=alert_id, unseen_only=unseen, limit=limit)
+    return {
+        "matches": matches,
+        "unseen_count": pers.unseen_match_count(client_id),
+    }
+
+
+@router.post("/api/alerts/matches/seen")
+@limiter.limit(_PERSONALIZATION_BURST)
+async def alerts_matches_seen(request: Request):
+    client_id = _require_client_id(request)
+    body = await request.json() if await _has_json_body(request) else {}
+    match_ids = body.get("match_ids") if isinstance(body, dict) else None
+    alert_id = body.get("alert_id") if isinstance(body, dict) else None
+    updated = pers.mark_matches_seen(client_id, match_ids=match_ids, alert_id=alert_id)
+    return {"updated": updated, "unseen_count": pers.unseen_match_count(client_id)}
+
+
+async def _has_json_body(request: Request) -> bool:
+    ctype = request.headers.get("content-type", "")
+    if "application/json" not in ctype.lower():
+        return False
+    raw = await request.body()
+    return bool(raw)
+
+
+@router.post("/api/alerts/run-match-cycle")
+@limiter.limit("6/minute")
+async def alerts_run_cycle(request: Request):
+    """Trigger a global alert match cycle for an authorized admin."""
+    _require_admin_token(request)
+    dispatch = (request.query_params.get("dispatch") or "").lower() in ("1", "true", "yes")
+    summary = pers.run_match_cycle(dispatch=dispatch)
+    return summary
+
+
+@router.get("/api/favorites")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def favorites_list(request: Request, limit: int = Query(200, ge=1, le=500)):
+    client_id = _require_client_id(request)
+    return {"favorites": pers.list_favorites(client_id, limit=limit)}
+
+
+@router.post("/api/favorites")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def favorites_create(request: Request):
+    client_id = _require_client_id(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body must be an object")
+    zameen_id = (body.get("zameen_id") or "").strip()
+    if not zameen_id:
+        raise HTTPException(status_code=400, detail="zameen_id is required")
+    fav = pers.add_favorite(client_id, zameen_id, note=body.get("note"))
+    return {"favorite": fav}
+
+
+@router.delete("/api/favorites/{zameen_id}")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def favorites_remove(request: Request, zameen_id: str):
+    client_id = _require_client_id(request)
+    removed = pers.remove_favorite(client_id, zameen_id)
+    return {"ok": removed}
+
+
+@router.get("/api/hidden")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def hidden_list(request: Request, limit: int = Query(200, ge=1, le=500)):
+    client_id = _require_client_id(request)
+    return {"hidden": pers.list_hidden(client_id, limit=limit)}
+
+
+@router.post("/api/hidden")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def hidden_create(request: Request):
+    client_id = _require_client_id(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body must be an object")
+    zameen_id = (body.get("zameen_id") or "").strip()
+    if not zameen_id:
+        raise HTTPException(status_code=400, detail="zameen_id is required")
+    added = pers.add_hidden(client_id, zameen_id)
+    return {"ok": True, "added": added}
+
+
+@router.delete("/api/hidden/{zameen_id}")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def hidden_remove(request: Request, zameen_id: str):
+    client_id = _require_client_id(request)
+    removed = pers.remove_hidden(client_id, zameen_id)
+    return {"ok": removed}
+
+
+@router.get("/api/recent-views")
+@limiter.limit(_PERSONALIZATION_STEADY)
+async def recent_views_list(request: Request, limit: int = Query(50, ge=1, le=200)):
+    client_id = _require_client_id(request)
+    return {"recent_views": pers.list_recent_views(client_id, limit=limit)}
+
+
+@router.post("/api/recent-views")
+@limiter.limit(_PERSONALIZATION_HIGH)
+async def recent_views_record(request: Request):
+    client_id = _require_client_id(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body must be an object")
+    zameen_id = (body.get("zameen_id") or "").strip()
+    if not zameen_id:
+        raise HTTPException(status_code=400, detail="zameen_id is required")
+    pers.record_view(client_id, zameen_id)
+    return {"ok": True}
+
+
+@router.get("/api/push/vapid-key")
+async def push_vapid_key():
+    return {"vapid_public_key": pers.vapid_public_key()}
+
+
+@router.post("/api/push/subscribe")
+@limiter.limit(_PERSONALIZATION_BURST)
+async def push_subscribe(request: Request):
+    client_id = _require_client_id(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body must be an object")
+    endpoint = (body.get("endpoint") or "").strip()
+    keys = body.get("keys") or {}
+    p256dh = (keys.get("p256dh") or "").strip()
+    auth = (keys.get("auth") or "").strip()
+    if not endpoint or not p256dh or not auth:
+        raise HTTPException(status_code=400, detail="endpoint, keys.p256dh, and keys.auth are required")
+    ua = request.headers.get("user-agent")
+    try:
+        sub = pers.save_push_subscription(client_id, endpoint=endpoint, p256dh=p256dh,
+                                          auth=auth, user_agent=ua)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True, "subscription_id": sub.get("id")}
+
+
+@router.post("/api/push/unsubscribe")
+@limiter.limit(_PERSONALIZATION_BURST)
+async def push_unsubscribe(request: Request):
+    client_id = _require_client_id(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body must be an object")
+    endpoint = (body.get("endpoint") or "").strip()
+    if not endpoint:
+        raise HTTPException(status_code=400, detail="endpoint is required")
+    pers.remove_push_subscription(endpoint=endpoint, client_id=client_id)
+    return {"ok": True}
+
+
+@router.post("/api/push/test")
+@limiter.limit("6/minute")
+async def push_test(request: Request):
+    """Send a one-off test notification to all of the caller's subscriptions."""
+    client_id = _require_client_id(request)
+    subs = pers.list_push_subscriptions(client_id)
+    if not subs:
+        return {"sent": 0, "detail": "No push subscriptions"}
+    payload = {
+        "type": "test",
+        "title": "ZameenRentals",
+        "body": "Notifications are working! You'll get a ping when a new rental matches one of your alerts.",
+        "url": "/?alerts=open",
+        "tag": "zameen-test",
+    }
+    sent = sum(1 for sub in subs if pers.send_push(sub, payload))
+    return {"sent": sent, "total": len(subs)}
+
+
+_ROOT_STATIC_FILES = {
+    "sw.js": "application/javascript",
+    "offline.html": "text/html",
+    "site.webmanifest": "application/manifest+json",
+    "favicon.svg": "image/svg+xml",
+    "favicon-16x16.png": "image/png",
+    "favicon-32x32.png": "image/png",
+    "favicon-512.png": "image/png",
+    "apple-touch-icon.png": "image/png",
+    "android-chrome-192x192.png": "image/png",
+    "android-chrome-512x512.png": "image/png",
+    "logo.svg": "image/svg+xml",
+    "og-card.png": "image/png",
+    "og-card.svg": "image/svg+xml",
+}
+
+
+@router.get("/{filename}")
+async def serve_root_static(filename: str):
+    """Serve PWA assets (service worker, manifest, favicons) from root path.
+
+    The service worker MUST be served from a path whose scope includes the
+    pages it controls — registering /sw.js at scope '/' requires the file
+    itself to be at /sw.js, not /static/sw.js.
+    """
+    if filename not in _ROOT_STATIC_FILES:
+        raise HTTPException(status_code=404)
+    path = _PROJECT_ROOT / "static" / filename
+    if not path.exists():
+        raise HTTPException(status_code=404)
+    headers = {}
+    if filename == "sw.js":
+        # Never cache the service worker so updates roll out on next visit.
+        headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        headers["Service-Worker-Allowed"] = "/"
+    return FileResponse(path, media_type=_ROOT_STATIC_FILES[filename], headers=headers)
 
 
 @router.get("/")
