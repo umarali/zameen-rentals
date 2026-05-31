@@ -21,7 +21,7 @@ from app.database import _get_conn, init_db
 from app.data import CITIES, CITY_AREAS
 from app.db_listings import mark_stale_listings, get_crawl_stats, city_priority_sql
 from app.crawler_worker import (
-    crawl_area_cards, crawl_detail_batch, refresh_phones_batch,
+    crawl_area_cards, crawl_city_latest_cards, crawl_detail_batch, refresh_phones_batch,
     _build_browser_profile, crawler_rate_limiter,
 )
 from app.personalization import init_personalization_schema, run_match_cycle
@@ -44,6 +44,8 @@ INTER_AREA_DELAY = (0.5, 1.5)   # Random delay between areas (seconds) — tight
 CYCLE_REST_MINUTES = 5           # Rest between full cycles (was 15)
 MAX_CONSECUTIVE_ERRORS = 5       # Pause crawling after this many errors in a row
 CARD_SPEED_MULTIPLIER = 1.0
+LATEST_CITY_PAGES = 3            # Newest-first pages per city in the fast refresh lane
+LATEST_REFRESH_MINUTES = 5       # Keep every city close to Zameen's newest listings
 
 
 def _handle_signal(sig, frame):
@@ -235,6 +237,50 @@ def all_areas_crawled_recently(hours=4):
     return stale == 0
 
 
+def flush_alert_notifications(context):
+    """Dispatch recorded alert matches without waiting for an exhaustive cycle."""
+    try:
+        summary = run_match_cycle(dispatch=True)
+        if summary.get("matches") or summary.get("sent") or summary.get("failed"):
+            logger.info(
+                "[Alerts:%s] %d new matches, %d push sent, %d failed, %d no-sub",
+                context,
+                summary.get("matches", 0),
+                summary.get("sent", 0),
+                summary.get("failed", 0),
+                summary.get("no_subscription", 0),
+            )
+        return summary
+    except Exception:
+        logger.exception("Alert dispatch failed during %s", context)
+        return {}
+
+
+async def refresh_latest_city_feeds(client, session_headers, *, pages=LATEST_CITY_PAGES):
+    """Refresh newest listings for every city before returning to deep crawling."""
+    total_new, total_updated, total_pages = 0, 0, 0
+    for city in CITIES:
+        try:
+            new, updated, unchanged, fetched = await crawl_city_latest_cards(
+                city, client, session_headers, pages=pages
+            )
+            total_new += new
+            total_updated += updated
+            total_pages += fetched
+            logger.info(
+                "[Latest:%s] %d pages, %d new, %d updated, %d unchanged",
+                city, fetched, new, updated, unchanged,
+            )
+        except Exception:
+            logger.exception("Latest-feed refresh failed for %s", city)
+    flush_alert_notifications("latest")
+    logger.info(
+        "[Latest complete] %d pages, %d new, %d updated",
+        total_pages, total_new, total_updated,
+    )
+    return {"pages": total_pages, "new": total_new, "updated": total_updated}
+
+
 async def run_backfill_worker(*, detail_batch=DETAIL_BATCH_SIZE, phone_batch=PHONE_BATCH_SIZE,
                               watch=False, poll_seconds=300):
     """Drain detail/contact enrichment for existing listings.
@@ -362,6 +408,8 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
 
         async with httpx.AsyncClient() as client:
             # ── Phase A: Card crawl (all stale areas) ──
+            await refresh_latest_city_feeds(client, session_headers)
+            latest_refreshed_at = time.monotonic()
             logger.info("[Phase A] Card crawling...")
             phase_a_new, phase_a_updated = 0, 0
 
@@ -399,6 +447,7 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                         WHERE id = ?
                     """, (pages, new + updated + unchanged, new, updated, area["id"]))
                     conn.commit()
+                    flush_alert_notifications("area")
 
                     if iteration % 25 == 0:
                         logger.info("  [%d areas] %d new, %d updated so far", iteration, phase_a_new, phase_a_updated)
@@ -423,6 +472,10 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
 
                 if _shutdown:
                     break
+
+                if time.monotonic() - latest_refreshed_at >= LATEST_REFRESH_MINUTES * 60:
+                    await refresh_latest_city_feeds(client, session_headers)
+                    latest_refreshed_at = time.monotonic()
 
                 # Human-like delay between areas
                 await asyncio.sleep(random.uniform(*inter_area_delay))
@@ -479,18 +532,7 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                 mark_stale_listings(days=7)
 
         # ── Alert dispatch: notify clients of new matches ──
-        try:
-            match_summary = run_match_cycle(dispatch=True)
-            if match_summary.get("matches"):
-                logger.info(
-                    "[Alerts] %d new matches, %d push sent, %d failed, %d no-sub",
-                    match_summary.get("matches", 0),
-                    match_summary.get("sent", 0),
-                    match_summary.get("failed", 0),
-                    match_summary.get("no_subscription", 0),
-                )
-        except Exception:
-            logger.exception("Alert dispatch failed")
+        flush_alert_notifications("cycle")
 
         # ── Cycle summary ──
         cycle_duration = (time.monotonic() - cycle_start) / 60

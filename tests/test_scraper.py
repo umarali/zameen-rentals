@@ -177,6 +177,23 @@ class TestParseListings:
         assert listings[0]["title"] == "Listing with empty offers"
         assert "price" not in listings[0]
 
+    def test_extracts_div_location_and_separate_source_times(self):
+        html = """
+        <li role="article">
+          <h2><a href="/Property/test-flat-50001122-1-1.html">Test flat</a></h2>
+          <span aria-label="Price">PKR 50 Thousand</span>
+          <div aria-label="Location">DHA Phase 5, DHA Defence</div>
+          <span aria-label="Listing creation date">Added: 14 hours ago</span>
+          <span aria-label="Listing updated date">(Updated: 4 hours ago)</span>
+        </li>
+        """
+
+        listings = parse_listings(html)
+
+        assert listings[0]["location"] == "DHA Phase 5, DHA Defence"
+        assert listings[0]["added"] == "Added: 14 hours ago"
+        assert listings[0]["updated"] == "Updated: 4 hours ago"
+
 
 class TestContactParsing:
     def test_normalize_phone_adds_plus_for_country_code(self):

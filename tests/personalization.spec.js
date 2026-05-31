@@ -25,13 +25,14 @@ test.describe("Personalization UI — header controls", () => {
     await expect(page.locator("#alertsBellBtn")).toBeVisible();
   });
 
-  test("alerts panel opens via bell, four tabs visible", async ({ page }) => {
+  test("my rentals panel opens via header button, four tabs visible", async ({ page }) => {
     await gotoApp(page);
     await page.click("#alertsBellBtn");
     const panel = page.locator("#personalizationPanel");
     const drawer = page.locator("#personalizationPanel .personalization-drawer");
     await expect(panel).not.toHaveClass(/(?:^|\s)hidden(?:\s|$)/);
     await expect(drawer).toBeVisible();
+    await expect(drawer).toContainText("My rentals");
     for (const id of ["alerts", "favorites", "recent", "hidden"]) {
       await expect(drawer.locator(`[data-ptab="${id}"]`)).toBeVisible();
     }
@@ -58,9 +59,8 @@ test.describe("Personalization UI — save search modal", () => {
     await gotoApp(page);
     await page.click("#saveSearchBtn");
     await expect(page.locator("#saveSearchModal")).toBeVisible();
-    await expect(page.locator("#saveSearchTitle")).toHaveText(/Save this search as an alert/);
-    await expect(page.locator("#saveSearchPush")).toBeChecked();
-    await expect(page.locator("#saveSearchInapp")).toBeChecked();
+    await expect(page.locator("#saveSearchTitle")).toHaveText(/Get alerts for new rentals/);
+    await expect(page.locator("#saveSearchModal")).toContainText("You'll find updates in My rentals");
     // Close.
     await page.click("#saveSearchClose");
     await expect(page.locator("#saveSearchModal")).toBeHidden();
@@ -99,6 +99,19 @@ test.describe("Personalization UI — save search modal", () => {
     await expect(page.locator("#toastStack")).toContainText("Alert deleted");
     // Empty state should return.
     await expect(page.locator("#personalizationBody")).toContainText(/Set up your first alert|No alerts yet/);
+  });
+});
+
+test.describe("First visit guidance", () => {
+  test("uses a non-blocking inline guide instead of opening a modal", async ({ page }) => {
+    await gotoApp(page);
+    await page.evaluate(() => localStorage.removeItem("zr_welcomed"));
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.locator("#firstVisitGuide")).toBeVisible();
+    await expect(page.locator("#welcomeOverlay")).toHaveClass(/(?:^|\s)hidden(?:\s|$)/);
+    await expect(page.locator("#nlInput")).toBeVisible();
   });
 });
 

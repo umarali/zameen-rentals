@@ -1,12 +1,13 @@
 """Core crawl logic: card scraping, detail scraping, phone API, browser simulation."""
 import asyncio, hashlib, json, logging, random, re, uuid
 from datetime import datetime
+from urllib.parse import urlencode
 
 import httpx
 from bs4 import BeautifulSoup
 
 from app.cache import RateLimiter
-from app.data import USER_AGENTS, PROPERTY_TYPES, CITY_AREAS, CRAWL_PROPERTY_TYPES
+from app.data import USER_AGENTS, PROPERTY_TYPES, CITIES, CITY_AREAS, CRAWL_PROPERTY_TYPES
 from app.database import _get_conn
 from app.db_listings import upsert_listing, get_listings_needing_detail, city_priority_sql
 from app.scraper import (
@@ -221,6 +222,76 @@ async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
 
         await asyncio.sleep(random.uniform(*page_delay))
 
+    return new_count, updated_count, unchanged_count, pages_fetched
+
+
+def infer_area_from_location(city, location):
+    """Infer the most specific known area named in a city-feed listing location."""
+    if not location:
+        return None
+    normalized_location = re.sub(r"[^a-z0-9]+", " ", location.lower()).strip()
+    candidates = []
+    for area_name, area_info in CITY_AREAS.get(city, {}).items():
+        if area_name == CITIES.get(city, {}).get("name"):
+            continue
+        normalized_area = re.sub(r"[^a-z0-9]+", " ", area_name.lower()).strip()
+        if len(normalized_area) >= 4 and normalized_area in normalized_location:
+            candidates.append((len(normalized_area), area_name, area_info))
+    if not candidates:
+        return None
+    _, area_name, (area_slug, _, lat, lng) = max(candidates)
+    return area_name, area_slug, lat, lng
+
+
+async def crawl_city_latest_cards(city, client, session_headers, *, pages=3,
+                                  page_delay=(0.25, 0.75)):
+    """Refresh a small newest-first city feed so recent changes arrive quickly."""
+    city_info = CITIES[city]
+    new_count, updated_count, unchanged_count, pages_fetched = 0, 0, 0, 0
+    for page_num in range(1, pages + 1):
+        base_url = (
+            f"https://www.zameen.com/Rentals/"
+            f"{city_info['name']}-{city_info['id']}-{page_num}.html"
+        )
+        url = f"{base_url}?{urlencode({'sort': 'date_desc'})}"
+        headers = {**session_headers}
+        headers["Referer"] = (
+            f"https://www.zameen.com/Rentals/"
+            f"{city_info['name']}-{city_info['id']}-{max(1, page_num - 1)}.html"
+        )
+        html = await _fetch(url, client, headers)
+        if not html:
+            break
+        pages_fetched += 1
+        listings = parse_listings(html)
+        if not listings:
+            break
+        for listing in listings:
+            listing_url = listing.get("url", "")
+            zid = extract_zameen_id(listing_url)
+            if not zid:
+                continue
+            inferred = infer_area_from_location(city, listing.get("location"))
+            area_name, area_slug, lat, lng = inferred or (None, None, None, None)
+            result = upsert_listing(
+                zameen_id=zid,
+                url=listing_url,
+                city=city,
+                area_name=area_name,
+                area_slug=area_slug,
+                lat=lat,
+                lng=lng,
+                card_data=listing,
+            )
+            if result == "inserted":
+                new_count += 1
+            elif result == "updated":
+                updated_count += 1
+            else:
+                unchanged_count += 1
+        if len(listings) < 25 or page_num >= pages:
+            break
+        await asyncio.sleep(random.uniform(*page_delay))
     return new_count, updated_count, unchanged_count, pages_fetched
 
 

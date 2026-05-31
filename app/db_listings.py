@@ -7,15 +7,36 @@ from app.data import PROPERTY_TYPES
 
 logger = logging.getLogger("zameenrentals")
 _DISTANCE_SENTINEL = 999999999
-_FRESHNESS_SQL = "COALESCE(zameen_posted_at, first_seen_at)"
+_FRESHNESS_SQL = "COALESCE(zameen_updated_at, zameen_posted_at, first_seen_at)"
 _STABLE_RECENCY_SQL = f"{_FRESHNESS_SQL} DESC, last_seen_at DESC, id DESC"
 
 # Broader pattern: matches "2 days ago", "Added: 5 hours ago", "1 month", "yesterday".
 _ADDED_RE_BROAD = re.compile(r"(\d+)\s*(minute|hour|day|week|month|year)", re.IGNORECASE)
+_ADDED_TEXT_RE = re.compile(r"\bAdded:\s*(.*?)(?=\s*\(?Updated:|$)", re.IGNORECASE)
+_UPDATED_TEXT_RE = re.compile(r"\bUpdated:\s*(.*?)(?=\)?\s*$)", re.IGNORECASE)
 _UNIT_MINUTES_FULL = {
     "minute": 1, "hour": 60, "day": 1440,
     "week": 10080, "month": 43200, "year": 525600,
 }
+
+
+def split_zameen_age_text(added_text, updated_text=None):
+    """Return canonical Added/Updated labels from Zameen card text."""
+    raw_added = (added_text or "").strip()
+    raw_updated = (updated_text or "").strip()
+
+    added_match = _ADDED_TEXT_RE.search(raw_added)
+    if added_match:
+        canonical_added = f"Added: {added_match.group(1).strip().rstrip(')').strip()}"
+    else:
+        canonical_added = raw_added or None
+
+    updated_match = _UPDATED_TEXT_RE.search(raw_updated) or _UPDATED_TEXT_RE.search(raw_added)
+    canonical_updated = (
+        f"Updated: {updated_match.group(1).strip().rstrip(')').strip()}"
+        if updated_match else None
+    )
+    return canonical_added, canonical_updated
 
 
 def parse_added_text_to_timestamp(added_text, reference):
@@ -26,7 +47,7 @@ def parse_added_text_to_timestamp(added_text, reference):
     """
     if not added_text or reference is None:
         return None
-    text = added_text.strip().lower()
+    text = (added_text or "").strip().lower()
     if not text:
         return None
     if "yesterday" in text:
@@ -172,7 +193,8 @@ def _nearby_sort_key(row, sort):
     distance_km = row["_distance_km"]
     price = row["price"]
     freshness_at = _datetime_sort_value(
-        row.get("zameen_posted_at") or row.get("first_seen_at") or row.get("last_seen_at")
+        row.get("zameen_updated_at") or row.get("zameen_posted_at")
+        or row.get("first_seen_at") or row.get("last_seen_at")
     )
     last_seen_at = _datetime_sort_value(row["last_seen_at"])
     listing_id = row.get("id", 0)
@@ -254,14 +276,41 @@ def _value_or_existing(data, key, existing_value):
     return existing_value
 
 
-def _refreshed_posted_at(existing, added_text, reference):
-    """Keep a stable absolute timestamp until Zameen's relative age label changes."""
-    existing_posted_at = existing["zameen_posted_at"] if existing is not None else None
-    if not added_text:
-        return existing_posted_at
-    if existing is not None and added_text == existing["added_text"] and existing_posted_at:
-        return existing_posted_at
-    return parse_added_text_to_timestamp(added_text, reference) or existing_posted_at
+def _refreshed_source_timestamp(existing, *, text, text_column, timestamp_column, reference):
+    """Keep a stable absolute timestamp until a source relative-age label changes."""
+    existing_timestamp = existing[timestamp_column] if existing is not None else None
+    if not text:
+        return None
+    if existing is not None and text == existing[text_column] and existing_timestamp:
+        return existing_timestamp
+    return parse_added_text_to_timestamp(text, reference) or existing_timestamp
+
+
+def _source_age_fields(existing, card_data, reference):
+    has_updated = "updated" in card_data
+    added_text, parsed_updated = split_zameen_age_text(
+        card_data.get("added"), card_data.get("updated")
+    )
+    if parsed_updated is not None:
+        has_updated = True
+    updated_text = parsed_updated if has_updated else (
+        existing["updated_text"] if existing is not None else None
+    )
+    posted_at = _refreshed_source_timestamp(
+        existing,
+        text=added_text,
+        text_column="added_text",
+        timestamp_column="zameen_posted_at",
+        reference=reference,
+    )
+    updated_at = _refreshed_source_timestamp(
+        existing,
+        text=updated_text,
+        text_column="updated_text",
+        timestamp_column="zameen_updated_at",
+        reference=reference,
+    )
+    return added_text, updated_text, posted_at, updated_at, has_updated
 
 
 def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
@@ -288,23 +337,26 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             if not images and card_data.get("image_url"):
                 images = [card_data["image_url"]]
             location_source = "area_centroid" if lat is not None and lng is not None else None
-            posted_at = _refreshed_posted_at(None, card_data.get("added"), scraped_at)
+            added_text, updated_text, posted_at, updated_at, _ = _source_age_fields(
+                None, card_data, scraped_at
+            )
             cur = conn.execute("""
                 INSERT INTO listings (
                     zameen_id, url, title, price, price_text, bedrooms, bathrooms,
                     area_size, location, image_url, images_json, property_type,
-                    added_text, city, area_name, area_slug, latitude, longitude, location_source,
-                    card_scraped_at, last_seen_at, zameen_posted_at, content_hash, is_active
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    added_text, updated_text, city, area_name, area_slug, latitude, longitude,
+                    location_source, card_scraped_at, last_seen_at, zameen_posted_at,
+                    zameen_updated_at, content_hash, is_active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             """, (
                 zameen_id, url, card_data.get("title"), card_data.get("price"),
                 card_data.get("price_text"), card_data.get("bedrooms"),
                 card_data.get("bathrooms"), card_data.get("area_size"),
                 card_data.get("location"), card_data.get("image_url"),
                 json.dumps(images) if images else None,
-                card_data.get("property_type"), card_data.get("added"),
+                card_data.get("property_type"), added_text, updated_text,
                 city, area_name, area_slug, lat, lng, location_source,
-                now, now, posted_at, c_hash
+                now, now, posted_at, updated_at, c_hash
             ))
             new_id = cur.lastrowid
             conn.commit()
@@ -334,12 +386,14 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                 logger.exception("Alert match hook failed for %s", zameen_id)
             return "inserted"
 
-        added_text = card_data.get("added")
-        posted_at = _refreshed_posted_at(existing, added_text, scraped_at)
+        added_text, updated_text, posted_at, updated_at, has_updated = _source_age_fields(
+            existing, card_data, scraped_at
+        )
 
         if existing["content_hash"] == c_hash:
             conn.execute("""
                 UPDATE listings SET
+                    location = COALESCE(?, location),
                     area_name = COALESCE(?, area_name),
                     area_slug = COALESCE(?, area_slug),
                     latitude = CASE
@@ -356,13 +410,16 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                         ELSE location_source
                     END,
                     added_text = COALESCE(?, added_text),
+                    updated_text = CASE WHEN ? THEN ? ELSE updated_text END,
                     card_scraped_at = ?,
                     zameen_posted_at = COALESCE(?, zameen_posted_at),
+                    zameen_updated_at = CASE WHEN ? THEN ? ELSE zameen_updated_at END,
                     last_seen_at = ?, is_active = 1
                 WHERE zameen_id = ?
             """, (
-                area_name, area_slug, lat, lng, lat, lng,
-                added_text, now, posted_at, now, zameen_id
+                card_data.get("location"), area_name, area_slug, lat, lng, lat, lng,
+                added_text, has_updated, updated_text, now, posted_at,
+                has_updated, updated_at, now, zameen_id
             ))
             conn.commit()
             return "unchanged"
@@ -376,7 +433,8 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                 title = ?, price = ?, price_text = ?, bedrooms = ?, bathrooms = ?,
                 area_size = ?, location = ?, image_url = ?, images_json = ?,
                 property_type = ?, added_text = COALESCE(?, added_text),
-                area_name = ?, area_slug = ?,
+                updated_text = CASE WHEN ? THEN ? ELSE updated_text END,
+                area_name = COALESCE(?, area_name), area_slug = COALESCE(?, area_slug),
                 latitude = CASE
                     WHEN location_source = 'listing_exact' THEN latitude
                     ELSE COALESCE(?, latitude)
@@ -391,6 +449,7 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                     ELSE location_source
                 END,
                 card_scraped_at = ?, zameen_posted_at = COALESCE(?, zameen_posted_at),
+                zameen_updated_at = CASE WHEN ? THEN ? ELSE zameen_updated_at END,
                 last_seen_at = ?, content_hash = ?, is_active = 1
             WHERE zameen_id = ?
         """, (
@@ -399,8 +458,9 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             card_data.get("bathrooms"), card_data.get("area_size"),
             card_data.get("location"), card_data.get("image_url"),
             json.dumps(images) if images else None,
-            card_data.get("property_type"), card_data.get("added"),
-            area_name, area_slug, lat, lng, lat, lng, now, posted_at, now, c_hash, zameen_id
+            card_data.get("property_type"), added_text, has_updated, updated_text,
+            area_name, area_slug, lat, lng, lat, lng, now, posted_at,
+            has_updated, updated_at, now, c_hash, zameen_id
         ))
         conn.commit()
         return "updated"
@@ -793,8 +853,9 @@ def _row_to_listing(row):
         "image_url": row["image_url"],
         "property_type": row["property_type"],
         "added": row["added_text"],
+        "updated": row["updated_text"] if "updated_text" in row.keys() else None,
         "posted_at": row["zameen_posted_at"] if "zameen_posted_at" in row.keys() else None,
-        "updated_at": row["last_seen_at"] if "last_seen_at" in row.keys() else None,
+        "updated_at": row["zameen_updated_at"] if "zameen_updated_at" in row.keys() else None,
     }
     if row["images_json"]:
         imgs = decode_listing_json_field(

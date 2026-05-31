@@ -150,6 +150,14 @@ export async function initPersonalization() {
 
   state.ready = true;
   emit();
+
+  // Browser permission can survive a server reset or an interrupted subscribe
+  // request. Re-register an existing device subscription quietly on return.
+  if (notificationPermission() === 'granted') {
+    syncExistingPushSubscription().catch(err => {
+      console.warn('Push subscription sync failed:', err);
+    });
+  }
 }
 
 // ── Favorites ────────────────────────────────────────────────────────────────
@@ -324,43 +332,47 @@ function urlBase64ToUint8Array(base64String) {
 
 export async function ensurePushSubscription({ requestPermission = true } = {}) {
   if (!isPushSupported()) return { status: 'unsupported' };
-  const reg = await navigator.serviceWorker.ready;
+  try {
+    let perm = Notification.permission;
+    if (perm === 'default' && requestPermission) {
+      perm = await Notification.requestPermission();
+    }
+    if (perm !== 'granted') return { status: perm };
 
-  let perm = Notification.permission;
-  if (perm === 'default' && requestPermission) {
-    perm = await Notification.requestPermission();
-  }
-  if (perm !== 'granted') return { status: perm };
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) {
+      await registerSubscription(existing);
+      state.pushSubscriptionCount = Math.max(1, state.pushSubscriptionCount);
+      emit();
+      return { status: 'granted', subscription: existing };
+    }
 
-  const existing = await reg.pushManager.getSubscription();
-  if (existing) {
-    await registerSubscription(existing);
-    return { status: 'granted', subscription: existing };
-  }
-
-  if (!state.vapidPublicKey) {
-    try {
+    if (!state.vapidPublicKey) {
       const data = await apiFetch('/api/push/vapid-key');
       state.vapidPublicKey = data?.vapid_public_key || null;
-    } catch (err) {
-      console.warn('Failed to fetch VAPID key:', err);
     }
-  }
-  if (!state.vapidPublicKey) return { status: 'no_vapid_key' };
+    if (!state.vapidPublicKey) return { status: 'no_vapid_key' };
 
-  try {
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(state.vapidPublicKey),
     });
     await registerSubscription(sub);
-    state.pushSubscriptionCount += 1;
+    state.pushSubscriptionCount = Math.max(1, state.pushSubscriptionCount);
     emit();
     return { status: 'granted', subscription: sub };
   } catch (err) {
-    console.warn('pushManager.subscribe failed:', err);
+    console.warn('push subscription failed:', err);
     return { status: 'subscribe_failed', error: err };
   }
+}
+
+export async function syncExistingPushSubscription() {
+  if (!isPushSupported() || Notification.permission !== 'granted') {
+    return { status: notificationPermission() };
+  }
+  return ensurePushSubscription({ requestPermission: false });
 }
 
 async function registerSubscription(sub) {
@@ -378,7 +390,11 @@ export async function disablePushSubscription() {
   if (!isPushSupported()) return false;
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
-  if (!sub) return false;
+  if (!sub) {
+    state.pushSubscriptionCount = 0;
+    emit();
+    return false;
+  }
   try { await apiFetch('/api/push/unsubscribe', { method: 'POST', body: { endpoint: sub.endpoint } }); }
   catch (err) { console.warn('unsubscribe API failed:', err); }
   await sub.unsubscribe();

@@ -195,6 +195,31 @@ class TestMatching:
         _insert_listing("NOMATCH-1", card_data={"price": 60000, "bedrooms": 2})
         assert pers.list_matches(CLIENT_ID) == []
 
+    def test_late_discovery_of_old_source_listing_does_not_trigger_alert(self):
+        pers.create_alert(CLIENT_ID, label=None, filters={"city": "lahore"})
+
+        _insert_listing("OLD-SOURCE-1", card_data={"added": "Added: 1 week ago"})
+
+        assert pers.list_matches(CLIENT_ID) == []
+
+    def test_match_cycle_prunes_old_discoveries_recorded_before_source_time_filter(self):
+        alert = pers.create_alert(CLIENT_ID, label=None, filters={"city": "lahore"})
+        listing_id = _insert_listing("OLD-PENDING-1", card_data={"added": "Added: 1 week ago"})
+        conn = _get_conn()
+        conn.execute(
+            """
+            INSERT INTO alert_matches (alert_id, client_id, listing_id, zameen_id)
+            VALUES (?, ?, ?, ?)
+            """,
+            (alert["id"], CLIENT_ID, listing_id, "OLD-PENDING-1"),
+        )
+        conn.commit()
+
+        summary = pers.run_match_cycle(dispatch=False)
+
+        assert summary["stale_pruned"] == 1
+        assert pers.list_matches(CLIENT_ID) == []
+
     def test_paused_alert_does_not_match(self):
         alert = pers.create_alert(CLIENT_ID, label=None,
                                   filters={"city": "lahore", "bedrooms": 2})

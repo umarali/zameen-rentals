@@ -9,19 +9,67 @@ const WELCOMED_KEY = 'zr_welcomed';
 let _deps = null;
 let _overlay = null;
 let _lastTrigger = null;
+let _guide = null;
 
 export function initWelcome(deps) {
   _deps = deps;
   buildDOM();
   wireEvents();
 
-  if (!localStorage.getItem(WELCOMED_KEY)) {
-    setTimeout(showWelcome, 600);
-  }
+  if (!localStorage.getItem(WELCOMED_KEY)) showFirstVisitGuide();
+}
+
+function rememberWelcomeSeen() {
+  localStorage.setItem(WELCOMED_KEY, '1');
+}
+
+function dismissFirstVisitGuide() {
+  _guide?.remove();
+  _guide = null;
+  rememberWelcomeSeen();
+}
+
+function showFirstVisitGuide() {
+  if (_guide || localStorage.getItem(WELCOMED_KEY)) return;
+  const el = document.createElement('div');
+  el.id = 'firstVisitGuide';
+  el.className = 'bg-white border-b border-brand-100 px-4 lg:px-6 py-3 text-sm text-gray-600';
+  el.innerHTML = `
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div class="flex-1 min-w-[220px]">
+        <strong class="text-gray-800">Start with a simple search.</strong>
+        Choose your city, use the filters, or type what you need in everyday words.
+      </div>
+      <button id="firstVisitExample" class="text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-100 rounded-full px-3 py-1.5 transition-colors">Try an example</button>
+      <button id="firstVisitTips" class="text-xs font-semibold text-brand-600 hover:text-brand-800 px-1.5 py-1">See quick tips</button>
+      <button id="firstVisitDismiss" class="w-7 h-7 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 text-lg leading-none" aria-label="Dismiss getting-started guide">&times;</button>
+    </div>
+  `;
+  const anchor = $('#filtersShell');
+  if (anchor) anchor.insertAdjacentElement('beforebegin', el);
+  else document.body.prepend(el);
+  _guide = el;
+
+  el.querySelector('#firstVisitDismiss').addEventListener('click', dismissFirstVisitGuide);
+  el.querySelector('#firstVisitTips').addEventListener('click', () => {
+    dismissFirstVisitGuide();
+    showWelcome();
+  });
+  el.querySelector('#firstVisitExample').addEventListener('click', () => {
+    const input = $('#nlInput');
+    if (input) {
+      input.value = getNlTip();
+      input.focus();
+    }
+    dismissFirstVisitGuide();
+  });
 }
 
 export function showWelcome() {
   if (!_overlay) return;
+  _guide?.remove();
+  _guide = null;
+  rememberWelcomeSeen();
   // Remember what had focus so we can restore it on close (a11y).
   const active = document.activeElement;
   if (active && active !== document.body) _lastTrigger = active;
@@ -47,7 +95,7 @@ export function hideWelcome() {
   backdrop.classList.remove('welcome-backdrop-open');
   setTimeout(() => _overlay.classList.add('hidden'), 250);
   document.removeEventListener('keydown', onEsc);
-  localStorage.setItem(WELCOMED_KEY, '1');
+  rememberWelcomeSeen();
   const trigger = _lastTrigger;
   _lastTrigger = null;
   if (trigger && typeof trigger.focus === 'function') trigger.focus();

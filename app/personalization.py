@@ -36,6 +36,7 @@ MAX_HIDDEN_PER_CLIENT = 500
 MAX_RECENT_VIEWS_PER_CLIENT = 100
 ALERT_LABEL_MAX = 80
 ALERT_MATCH_RETENTION_DAYS = 30
+_SOURCE_ACTIVITY_SQL = "COALESCE(l.zameen_updated_at, l.zameen_posted_at, l.first_seen_at)"
 
 
 # ── Schema ───────────────────────────────────────────────────────────────────
@@ -511,7 +512,8 @@ def find_new_matches(*, limit_per_alert: int = 50) -> list[dict]:
     """
     conn = _get_conn()
     alerts = conn.execute(
-        "SELECT id, client_id, filters_json, last_seen_id, paused, notify_push, notify_inapp, label "
+        "SELECT id, client_id, filters_json, last_seen_id, paused, notify_push, notify_inapp, "
+        "label, created_at "
         "FROM alerts WHERE paused = 0"
     ).fetchall()
     if not alerts:
@@ -530,6 +532,8 @@ def find_new_matches(*, limit_per_alert: int = 50) -> list[dict]:
         conds, params = _build_match_clauses(filters)
         conds.append("l.id > ?")
         params.append(cursor)
+        conds.append(f"datetime({_SOURCE_ACTIVITY_SQL}) >= datetime(?)")
+        params.append(a["created_at"])
         # Exclude already-recorded matches for this alert (cheap because the
         # join is on an indexed unique pair).
         sql = f"""
@@ -581,7 +585,8 @@ def record_match_for_inserted_listing(listing_id: int, listing_row: dict) -> lis
     try:
         conn = _get_conn()
         alerts = conn.execute(
-            "SELECT id, client_id, filters_json, paused, notify_push, notify_inapp, label "
+            "SELECT id, client_id, filters_json, paused, notify_push, notify_inapp, "
+            "label, created_at "
             "FROM alerts WHERE paused = 0 AND (filters_json LIKE ? OR filters_json LIKE ?)",
             (f'%"city": "{listing_row.get("city")}"%',
              f"%\"city\":\"{listing_row.get('city')}\"%"),
@@ -599,6 +604,8 @@ def record_match_for_inserted_listing(listing_id: int, listing_row: dict) -> lis
         conds, params = _build_match_clauses(filters)
         conds.append("l.id = ?")
         params.append(listing_id)
+        conds.append(f"datetime({_SOURCE_ACTIVITY_SQL}) >= datetime(?)")
+        params.append(a["created_at"])
         try:
             listing = conn.execute(
                 f"""
@@ -665,7 +672,7 @@ def list_matches(client_id: str, *, alert_id: int | None = None,
                l.zameen_id, l.title, l.price, l.price_text, l.bedrooms, l.bathrooms,
                l.area_size, l.area_name, l.location, l.image_url, l.images_json,
                l.property_type, l.city, l.url, l.first_seen_at,
-               l.zameen_posted_at AS posted_at
+               l.zameen_posted_at AS posted_at, l.zameen_updated_at AS updated_at
         FROM alert_matches m
         JOIN alerts a ON a.id = m.alert_id
         JOIN listings l ON l.id = m.listing_id
@@ -729,6 +736,26 @@ def prune_old_matches(*, days: int = ALERT_MATCH_RETENTION_DAYS) -> int:
     cur = conn.execute(
         "DELETE FROM alert_matches WHERE matched_at < datetime('now', ?)",
         (f"-{days} days",),
+    )
+    conn.commit()
+    return cur.rowcount
+
+
+def prune_stale_discovered_matches() -> int:
+    """Drop matches discovered late for listings that predate the saved alert."""
+    conn = _get_conn()
+    cur = conn.execute(
+        """
+        DELETE FROM alert_matches
+        WHERE EXISTS (
+            SELECT 1
+            FROM alerts a
+            JOIN listings l ON l.id = alert_matches.listing_id
+            WHERE a.id = alert_matches.alert_id
+              AND datetime(COALESCE(l.zameen_updated_at, l.zameen_posted_at, l.first_seen_at))
+                  < datetime(a.created_at)
+        )
+        """
     )
     conn.commit()
     return cur.rowcount
@@ -987,6 +1014,8 @@ def list_pending_push_matches(*, limit: int = 500) -> list[dict]:
         JOIN alerts a ON a.id = m.alert_id
         JOIN listings l ON l.id = m.listing_id
         WHERE m.notified_push = 0 AND a.paused = 0 AND a.notify_push = 1
+          AND datetime(COALESCE(l.zameen_updated_at, l.zameen_posted_at, l.first_seen_at))
+              >= datetime(a.created_at)
           AND EXISTS (
               SELECT 1 FROM push_subscriptions s WHERE s.client_id = a.client_id
           )
@@ -1188,10 +1217,12 @@ def run_match_cycle(*, dispatch: bool = True) -> dict:
 
     Designed to be called from the crawler between cycles. Returns a summary.
     """
+    stale_pruned = prune_stale_discovered_matches()
     new_matches = find_new_matches()
     summary = {"matches": len(new_matches)}
     if dispatch:
         summary.update(dispatch_matches(list_pending_push_matches()))
     pruned = prune_old_matches()
     summary["pruned"] = pruned
+    summary["stale_pruned"] = stale_pruned
     return summary

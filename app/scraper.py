@@ -7,6 +7,7 @@ from fastapi import HTTPException
 
 from app.data import USER_AGENTS, PROPERTY_TYPES
 from app.cache import cache_key, cache_get, cache_set, rate_limiter
+from app.db_listings import split_zameen_age_text
 from app.parsing import build_url, parse_price
 
 logger = logging.getLogger("zameenrentals")
@@ -378,7 +379,7 @@ def parse_listings(html):
                 if m: listing[key] = int(m.group(1))
         area_el = card.select_one('span[aria-label="Area"]')
         if area_el: listing["area_size"] = area_el.get_text(strip=True)
-        loc_el = card.select_one('span[aria-label="Location"]')
+        loc_el = card.select_one('[aria-label="Location"]')
         if loc_el:
             # Use only direct text nodes to avoid pulling in nested area-size numbers
             loc_text = "".join(loc_el.find_all(string=True, recursive=False)).strip()
@@ -391,7 +392,10 @@ def parse_listings(html):
             for span in card.select("span, div"):
                 t = span.get_text(strip=True)
                 if ("DHA" in t or "Commercial" in t or "Karachi" in t or "Lahore" in t or "Islamabad" in t or "Block" in t) and 5 < len(t) < 80 and "Thousand" not in t and "sqft" not in t:
-                    listing["location"] = t; break
+                    cleaned = sanitize_location(t)
+                    if cleaned:
+                        listing["location"] = cleaned
+                        break
         # Extract all images
         images = _extract_images(card)
         if images:
@@ -402,9 +406,19 @@ def parse_listings(html):
         ptype = _extract_property_type(card)
         if ptype:
             listing["property_type"] = ptype
+        added_text = None
+        updated_text = None
         for span in card.select("span"):
-            t = span.get_text(strip=True).lower()
-            if "added" in t or "ago" in t: listing["added"] = span.get_text(strip=True); break
+            text = span.get_text(" ", strip=True)
+            lowered = text.lower()
+            if "added:" in lowered and added_text is None:
+                added_text = text
+            if "updated:" in lowered and updated_text is None:
+                updated_text = text
+        if added_text:
+            listing["added"], listing["updated"] = split_zameen_age_text(
+                added_text, updated_text
+            )
         if listing.get("title") or listing.get("price"): listings.append(listing)
     if not listings:
         for script in soup.select('script[type="application/ld+json"]'):

@@ -91,6 +91,54 @@ class TestUpsertListing:
         assert row["card_scraped_at"] > "2000-01-01T00:00:00"
         assert row["zameen_posted_at"] > "2000-01-01T00:00:00"
 
+    def test_source_updated_time_is_stored_separately_from_added_time(self):
+        upsert_listing(
+            zameen_id="100012",
+            url="https://zameen.com/Property/t-100012-1-1.html",
+            city="karachi",
+            card_data={
+                "title": "Updated listing",
+                "price": 50000,
+                "bedrooms": 2,
+                "bathrooms": 1,
+                "area_size": "5 Marla",
+                "added": "Added: 14 hours ago",
+                "updated": "Updated: 4 hours ago",
+            },
+        )
+
+        listing = get_listing_by_zameen_id("100012")
+
+        assert listing["added_text"] == "Added: 14 hours ago"
+        assert listing["updated_text"] == "Updated: 4 hours ago"
+        assert listing["zameen_updated_at"] > listing["zameen_posted_at"]
+
+    def test_unchanged_card_refreshes_cleaned_location(self):
+        card = {
+            "title": "Location cleanup",
+            "price": 50000,
+            "bedrooms": 2,
+            "bathrooms": 1,
+            "area_size": "5 Marla",
+            "location": "DHA Phase 5, DHA Defence225 Marla",
+        }
+        upsert_listing(
+            zameen_id="100013",
+            url="https://zameen.com/Property/t-100013-1-1.html",
+            city="lahore",
+            card_data=card,
+        )
+
+        result = upsert_listing(
+            zameen_id="100013",
+            url="https://zameen.com/Property/t-100013-1-1.html",
+            city="lahore",
+            card_data={**card, "location": "DHA Phase 5, DHA Defence"},
+        )
+
+        assert result == "unchanged"
+        assert get_listing_by_zameen_id("100013")["location"] == "DHA Phase 5, DHA Defence"
+
     def test_detail_update(self):
         card = {"title": "Test", "price": 50000, "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"}
         upsert_listing(zameen_id="100004", url="https://zameen.com/Property/t-100004-1-1.html",
@@ -368,6 +416,36 @@ class TestSearchListings:
         assert [item["title"] for item in result["results"]] == [
             "Fresh source listing",
             "Older source listing",
+        ]
+
+    def test_default_sort_uses_source_update_time_when_available(self):
+        upsert_listing(
+            zameen_id="200912",
+            url="https://zameen.com/Property/t-200912-1-1.html",
+            city="karachi",
+            card_data={
+                "title": "Recently updated",
+                "price": 70000,
+                "added": "Added: 1 week ago",
+                "updated": "Updated: 1 minute ago",
+            },
+        )
+        upsert_listing(
+            zameen_id="200913",
+            url="https://zameen.com/Property/t-200913-1-1.html",
+            city="karachi",
+            card_data={
+                "title": "Recently added",
+                "price": 70000,
+                "added": "Added: 1 hour ago",
+            },
+        )
+
+        result = search_listings(city="karachi")
+
+        assert [item["title"] for item in result["results"]] == [
+            "Recently updated",
+            "Recently added",
         ]
 
     def test_pagination(self):

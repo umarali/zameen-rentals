@@ -16,9 +16,9 @@ let _drawerHooks = null;
 let _lastTrigger = null;
 
 const TABS = [
-  { id: 'alerts', label: 'Alerts', icon: 'bell' },
-  { id: 'favorites', label: 'Saved', icon: 'heart' },
-  { id: 'recent', label: 'Recent', icon: 'eye' },
+  { id: 'alerts', label: 'New matches', icon: 'bell' },
+  { id: 'favorites', label: 'Saved homes', icon: 'heart' },
+  { id: 'recent', label: 'Viewed', icon: 'eye' },
   { id: 'hidden', label: 'Hidden', icon: 'hide' },
 ];
 
@@ -82,29 +82,20 @@ function openSaveSearchDialog() {
   modal.setAttribute('aria-labelledby', 'saveSearchTitle');
   modal.innerHTML = `
     <div class="flex items-center justify-between mb-3">
-      <h3 id="saveSearchTitle" class="text-base font-bold text-gray-800">Save this search as an alert</h3>
+      <h3 id="saveSearchTitle" class="text-base font-bold text-gray-800">Get alerts for new rentals</h3>
       <button id="saveSearchClose" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 text-lg" aria-label="Close">&times;</button>
     </div>
-    <p class="text-xs text-gray-500 mb-4">We'll notify you whenever a new rental matches.</p>
-    <label class="block text-xs font-semibold text-gray-600 mb-1">Alert name</label>
-    <input id="saveSearchLabel" type="text" maxlength="80" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition" placeholder="${esc(summary || 'New alert')}">
-    <div class="mt-3 text-xs text-gray-500 leading-relaxed">
-      <div class="font-semibold text-gray-700 mb-1">This alert will watch:</div>
+    <p class="text-sm text-gray-600 mb-4">We'll keep watching this search and show you new matches as they arrive.</p>
+    <div class="rounded-xl bg-brand-50 border border-brand-100 p-3 text-xs leading-relaxed">
+      <div class="font-semibold text-brand-700 mb-1">Watching for:</div>
       <div class="text-gray-600" id="saveSearchPreview">${esc(summary || 'All new rentals')}</div>
     </div>
-    <div class="mt-4 flex items-center gap-3">
-      <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-        <input id="saveSearchPush" type="checkbox" class="rounded border-gray-300 text-brand-500 focus:ring-brand-500" checked>
-        Push notifications
-      </label>
-      <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-        <input id="saveSearchInapp" type="checkbox" class="rounded border-gray-300 text-brand-500 focus:ring-brand-500" checked>
-        In-app
-      </label>
-    </div>
+    <label class="block text-xs font-semibold text-gray-600 mt-4 mb-1">Name this alert <span class="font-normal text-gray-400">(optional)</span></label>
+    <input id="saveSearchLabel" type="text" maxlength="80" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition" placeholder="${esc(summary || 'New rentals')}">
+    <p class="mt-3 text-xs text-gray-500 leading-relaxed">You'll find updates in <strong>My rentals</strong>. You can also turn on device notifications after saving.</p>
     <div class="flex justify-end gap-2 mt-5">
       <button id="saveSearchCancel" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
-      <button id="saveSearchSubmit" class="px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors">Save alert</button>
+      <button id="saveSearchSubmit" class="px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors">Start alert</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -129,21 +120,9 @@ function openSaveSearchDialog() {
     btn.textContent = 'Saving...';
     try {
       const label = $('#saveSearchLabel').value.trim();
-      const notify_push = $('#saveSearchPush').checked;
-      const notify_inapp = $('#saveSearchInapp').checked;
-      await pers.createAlert({ filters, label: label || null, notify_push, notify_inapp });
-      showToast('Alert saved. We\'ll notify you on matches.');
+      await pers.createAlert({ filters, label: label || null, notify_push: true, notify_inapp: true });
+      showToast('Alert saved. We\'ll watch for new matches.');
       close();
-      if (notify_push) {
-        const result = await pers.ensurePushSubscription({ requestPermission: true });
-        if (result.status === 'denied') {
-          showToast('Push notifications denied. Alerts will appear in-app only.');
-        } else if (result.status === 'unsupported') {
-          showToast('Push notifications aren\'t supported in this browser.');
-        } else if (result.status !== 'granted') {
-          showToast('Could not enable push notifications. Alerts will appear in-app only.');
-        }
-      }
       openPanel({ tab: 'alerts' });
     } catch (err) {
       console.error(err);
@@ -189,12 +168,15 @@ function buildDOM() {
     <div class="personalization-backdrop fixed inset-0 bg-black/40 z-[270]"></div>
     <div class="personalization-drawer fixed top-0 right-0 bottom-0 z-[271] w-[420px] max-w-[100vw] bg-white shadow-2xl flex flex-col">
       <header class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-        <h2 id="personalizationTitle" class="text-lg font-bold text-gray-800">Your space</h2>
+        <div>
+          <h2 id="personalizationTitle" class="text-lg font-bold text-gray-800">My rentals</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Your alerts and saved homes</p>
+        </div>
         <button id="personalizationClose" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 text-xl" aria-label="Close">&times;</button>
       </header>
       <div id="personalizationTabs" class="flex border-b border-gray-100 bg-gray-50">
         ${TABS.map(t => `
-          <button class="personalization-tab flex-1 py-3 text-xs font-semibold text-gray-500 hover:text-brand-600 transition-colors relative" data-ptab="${t.id}">
+          <button class="personalization-tab flex-1 py-3 px-1 text-[11px] sm:text-xs font-semibold text-gray-500 hover:text-brand-600 transition-colors relative" data-ptab="${t.id}">
             <span class="capitalize">${t.label}</span>
             <span class="ptab-badge hidden absolute top-1.5 right-1/4 text-[10px] font-bold bg-brand-500 text-white px-1.5 py-0.5 rounded-full"></span>
           </button>
@@ -267,27 +249,38 @@ async function renderAlertsTab(body) {
 
   const filters = _saveSearchHooks?.getCurrentFilters?.();
   const canSaveCurrent = filters && Object.keys(filters).filter(k => k !== 'city').length > 0;
-  const newAlertBtn = `<button id="alertsCreateFromCurrent" class="${canSaveCurrent ? 'inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 px-3 py-1.5 border border-brand-200 rounded-full hover:bg-brand-50 transition-colors' : 'inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 px-3 py-1.5 border border-gray-200 rounded-full cursor-not-allowed'}" ${canSaveCurrent ? '' : 'disabled'} title="${canSaveCurrent ? 'Save current filters as a new alert' : 'Add some filters first, then come back to save them'}">+ New alert from current filters</button>`;
+  const newAlertBtn = `<button id="alertsCreateFromCurrent" class="${canSaveCurrent ? 'inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 px-3 py-1.5 border border-brand-200 rounded-full hover:bg-brand-50 transition-colors' : 'inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 px-3 py-1.5 border border-gray-200 rounded-full cursor-not-allowed'}" ${canSaveCurrent ? '' : 'disabled'} title="${canSaveCurrent ? 'Create an alert for the search you are viewing' : 'Choose filters first, then create an alert'}">+ Alert for this search</button>`;
 
   let pushStatusHtml = '';
   const pushSupported = pers.isPushSupported();
   const perm = pers.notificationPermission();
+  const subscribed = pers.getState().pushSubscriptionCount > 0;
   if (!pushSupported) {
-    pushStatusHtml = '<div class="text-xs text-gray-500 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg mb-3">Push notifications aren\'t supported in this browser. Alerts will still show in this panel.</div>';
+    pushStatusHtml = '<div class="text-xs text-gray-500 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg mb-3">Device notifications aren\'t available in this browser. New matches will still appear here.</div>';
   } else if (perm === 'denied') {
-    pushStatusHtml = '<div class="text-xs text-amber-700 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg mb-3">Push notifications are blocked. Re-enable them in your browser settings to get notified when you\'re not on the site.</div>';
+    pushStatusHtml = '<div class="text-xs text-amber-700 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg mb-3">Device notifications are blocked in your browser settings. New matches will still appear here.</div>';
   } else if (perm === 'default') {
     pushStatusHtml = `
       <div class="flex items-center justify-between gap-3 text-xs text-gray-700 px-3 py-2.5 bg-brand-50 border border-brand-200 rounded-lg mb-3">
-        <span>Enable push notifications to hear about new matches even when the app is closed.</span>
-        <button id="alertsEnablePush" class="shrink-0 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 px-3 py-1.5 rounded-full transition-colors">Enable</button>
+        <span>Want a heads-up when a new rental matches?</span>
+        <button id="alertsEnablePush" class="shrink-0 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 px-3 py-1.5 rounded-full transition-colors">Notify me</button>
       </div>
     `;
-  } else if (perm === 'granted') {
+  } else if (perm === 'granted' && !subscribed) {
+    pushStatusHtml = `
+      <div class="flex items-center justify-between gap-3 text-xs text-gray-700 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg mb-3">
+        <span>Notifications need one quick reconnect on this device.</span>
+        <button id="alertsEnablePush" class="shrink-0 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 px-3 py-1.5 rounded-full transition-colors">Reconnect</button>
+      </div>
+    `;
+  } else if (perm === 'granted' && subscribed) {
     pushStatusHtml = `
       <div class="flex items-center justify-between gap-3 text-xs text-gray-700 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg mb-3">
-        <span>Push notifications are on.</span>
-        <button id="alertsTestPush" class="shrink-0 text-xs font-medium text-emerald-700 hover:text-emerald-900 underline">Send test</button>
+        <span>Notifications are on for this device.</span>
+        <span class="flex gap-2 shrink-0">
+          <button id="alertsTestPush" class="text-xs font-medium text-emerald-700 hover:text-emerald-900 underline">Test</button>
+          <button id="alertsDisablePush" class="text-xs font-medium text-gray-500 hover:text-gray-700 underline">Turn off</button>
+        </span>
       </div>
     `;
   }
@@ -301,8 +294,8 @@ async function renderAlertsTab(body) {
       </div>
       <div class="text-center py-10 px-4 border-2 border-dashed border-gray-200 rounded-xl">
         <div class="text-4xl mb-3">&#x1f514;</div>
-        <p class="text-sm font-semibold text-gray-700">Set up your first alert</p>
-        <p class="mt-1 text-xs text-gray-500 leading-relaxed">Pick the filters you care about, then come back here and click "New alert from current filters". We'll notify you the moment a matching rental shows up.</p>
+        <p class="text-sm font-semibold text-gray-700">Never miss a matching rental</p>
+        <p class="mt-1 text-xs text-gray-500 leading-relaxed">Choose your city and filters, then create an alert for that search. New matches will collect here automatically.</p>
       </div>
     `;
     body.querySelector('#alertsCreateFromCurrent')?.addEventListener('click', () => {
@@ -310,6 +303,7 @@ async function renderAlertsTab(body) {
     });
     body.querySelector('#alertsEnablePush')?.addEventListener('click', enablePushClick);
     body.querySelector('#alertsTestPush')?.addEventListener('click', testPushClick);
+    body.querySelector('#alertsDisablePush')?.addEventListener('click', disablePushClick);
     return;
   }
 
@@ -330,6 +324,7 @@ async function renderAlertsTab(body) {
   });
   body.querySelector('#alertsEnablePush')?.addEventListener('click', enablePushClick);
   body.querySelector('#alertsTestPush')?.addEventListener('click', testPushClick);
+  body.querySelector('#alertsDisablePush')?.addEventListener('click', disablePushClick);
 
   body.querySelectorAll('[data-alert-action]').forEach(btn => {
     btn.addEventListener('click', e => handleAlertAction(btn));
@@ -374,8 +369,8 @@ function renderAlertCard(alert, matches) {
           <p class="mt-1 text-xs text-gray-500">${esc(summary)}</p>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <button data-alert-action="toggle-pause" data-alert-id="${alert.id}" data-paused="${alert.paused ? '1' : '0'}" class="text-xs px-2 py-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700" title="${alert.paused ? 'Resume alert' : 'Pause alert'}">${alert.paused ? '▶' : '⏸'}</button>
-          <button data-alert-action="delete" data-alert-id="${alert.id}" class="text-xs px-2 py-1 rounded hover:bg-rose-50 text-gray-400 hover:text-rose-600" title="Delete alert">&times;</button>
+          <button data-alert-action="toggle-pause" data-alert-id="${alert.id}" data-paused="${alert.paused ? '1' : '0'}" class="text-xs px-2 py-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700">${alert.paused ? 'Resume' : 'Pause'}</button>
+          <button data-alert-action="delete" data-alert-id="${alert.id}" class="text-xs px-2 py-1 rounded hover:bg-rose-50 text-gray-400 hover:text-rose-600">Delete</button>
         </div>
       </div>
       ${matchesHtml}
@@ -423,6 +418,16 @@ async function testPushClick() {
     else showToast('No push subscriptions found.', { tone: 'error' });
   } catch (err) {
     showToast(err.message || 'Test push failed', { tone: 'error' });
+  }
+}
+
+async function disablePushClick() {
+  try {
+    await pers.disablePushSubscription();
+    showToast('Device notifications turned off.');
+    switchTab('alerts');
+  } catch (err) {
+    showToast(err.message || 'Could not turn off notifications.', { tone: 'error' });
   }
 }
 

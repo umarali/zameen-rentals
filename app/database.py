@@ -74,6 +74,7 @@ def init_db():
                 images_json        TEXT,
                 property_type      TEXT,
                 added_text         TEXT,
+                updated_text       TEXT,
                 phone              TEXT,
                 call_phone         TEXT,
                 whatsapp_phone     TEXT,
@@ -98,6 +99,7 @@ def init_db():
                 detail_scraped_at  TEXT,
                 last_seen_at       TEXT NOT NULL DEFAULT (datetime('now')),
                 zameen_posted_at   TEXT,
+                zameen_updated_at  TEXT,
                 is_active          INTEGER NOT NULL DEFAULT 1,
                 content_hash       TEXT,
                 detail_hash        TEXT
@@ -179,6 +181,8 @@ def init_db():
             "contact_source": "ALTER TABLE listings ADD COLUMN contact_source TEXT",
             "location_source": "ALTER TABLE listings ADD COLUMN location_source TEXT",
             "zameen_posted_at": "ALTER TABLE listings ADD COLUMN zameen_posted_at TEXT",
+            "updated_text": "ALTER TABLE listings ADD COLUMN updated_text TEXT",
+            "zameen_updated_at": "ALTER TABLE listings ADD COLUMN zameen_updated_at TEXT",
         }
         for name, ddl in contact_columns.items():
             if name not in existing_columns:
@@ -192,11 +196,11 @@ def init_db():
 
         conn.execute(
             """
-            CREATE INDEX IF NOT EXISTS idx_listings_default_freshness
+            CREATE INDEX IF NOT EXISTS idx_listings_source_freshness
             ON listings(
                 is_active,
                 city,
-                COALESCE(zameen_posted_at, first_seen_at) DESC,
+                COALESCE(zameen_updated_at, zameen_posted_at, first_seen_at) DESC,
                 last_seen_at DESC,
                 id DESC
             )
@@ -240,6 +244,47 @@ def init_db():
                 applied_at  TEXT NOT NULL DEFAULT (datetime('now'))
             );
         """)
+        already_applied = conn.execute(
+            "SELECT 1 FROM schema_migrations WHERE name = ?",
+            ("split_zameen_source_times_v1",),
+        ).fetchone()
+        if not already_applied:
+            from app.db_listings import parse_added_text_to_timestamp, split_zameen_age_text
+            rows = conn.execute(
+                "SELECT id, added_text, updated_text, card_scraped_at, first_seen_at, "
+                "zameen_posted_at, zameen_updated_at FROM listings "
+                "WHERE added_text IS NOT NULL AND added_text != ''"
+            ).fetchall()
+            updates = []
+            for row in rows:
+                added_text, updated_text = split_zameen_age_text(
+                    row["added_text"], row["updated_text"]
+                )
+                ref_str = row["card_scraped_at"] or row["first_seen_at"]
+                try:
+                    ref = datetime.fromisoformat(ref_str) if ref_str else None
+                except ValueError:
+                    ref = None
+                posted_at = row["zameen_posted_at"] or parse_added_text_to_timestamp(
+                    added_text, ref
+                )
+                updated_at = row["zameen_updated_at"] or parse_added_text_to_timestamp(
+                    updated_text, ref
+                )
+                updates.append((added_text, updated_text, posted_at, updated_at, row["id"]))
+            if updates:
+                conn.executemany(
+                    "UPDATE listings SET added_text = ?, updated_text = ?, "
+                    "zameen_posted_at = ?, zameen_updated_at = ? WHERE id = ?",
+                    updates,
+                )
+                logger.info("Split source Added/Updated labels for %d listings", len(updates))
+            conn.execute(
+                "INSERT INTO schema_migrations(name) VALUES (?)",
+                ("split_zameen_source_times_v1",),
+            )
+            conn.commit()
+
         already_applied = conn.execute(
             "SELECT 1 FROM schema_migrations WHERE name = ?",
             ("clean_location_size_bleed_v1",),

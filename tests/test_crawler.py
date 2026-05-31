@@ -3,7 +3,7 @@ import pytest
 from app.crawler import claim_next_area, init_crawl_state, update_area_priorities
 from app.crawler_worker import (
     _build_browser_profile, _api_headers, _get_empty_types, _update_type_state,
-    refresh_phones_batch,
+    crawl_city_latest_cards, infer_area_from_location, refresh_phones_batch,
 )
 from app.database import _get_conn, log_search
 from app.db_listings import upsert_listing, get_listing_by_zameen_id
@@ -124,6 +124,46 @@ class TestEmptyTypesTracking:
         assert "Rentals_Rooms" in _get_empty_types("karachi", "Karachi_Test4")
         _update_type_state("karachi", "Karachi_Test4", "Rentals_Rooms", 5)
         assert "Rentals_Rooms" not in _get_empty_types("karachi", "Karachi_Test4")
+
+
+class TestLatestCityFeed:
+    def test_infers_most_specific_known_area(self):
+        area = infer_area_from_location("lahore", "DHA Phase 5, DHA Defence")
+
+        assert area is not None
+        assert area[0] == "DHA Defence"
+
+    @pytest.mark.asyncio
+    async def test_fetches_newest_city_page_and_persists_source_times(self, monkeypatch):
+        html = """
+        <li role="article">
+          <h2><a href="/Property/test-flat-820001-1-1.html">Latest flat</a></h2>
+          <span aria-label="Price">PKR 50 Thousand</span>
+          <div aria-label="Location">DHA Phase 5, DHA Defence</div>
+          <span aria-label="Listing creation date">Added: 14 hours ago</span>
+          <span aria-label="Listing updated date">(Updated: 4 hours ago)</span>
+        </li>
+        """
+        seen_urls = []
+
+        async def fake_fetch(url, client, headers):
+            seen_urls.append(url)
+            return html
+
+        monkeypatch.setattr("app.crawler_worker._fetch", fake_fetch)
+
+        result = await crawl_city_latest_cards(
+            "lahore", client=None, session_headers={}, pages=1
+        )
+
+        listing = get_listing_by_zameen_id("820001")
+        assert result == (1, 0, 0, 1)
+        assert seen_urls == [
+            "https://www.zameen.com/Rentals/Lahore-1-1.html?sort=date_desc"
+        ]
+        assert listing["area_name"] == "DHA Defence"
+        assert listing["added_text"] == "Added: 14 hours ago"
+        assert listing["updated_text"] == "Updated: 4 hours ago"
 
 
 class TestAreaScheduling:
