@@ -7,7 +7,7 @@ import {
   syncPriceChips, setToggle, initFilterListeners, closeDD,
 } from './filters.js';
 import {
-  renderCard, initCarousels, handleContactAction, skeletonCard,
+  renderCard, initCarousels, handleContactAction, contactFromData, skeletonCard,
   updateFavoriteButton, updateCompareButton, hideCardElement,
 } from './cards.js';
 import * as personalization from './personalization.js';
@@ -1390,7 +1390,29 @@ async function init() {
     refreshSearch: () => doSearch(1),
     openListingFromCard: (item) => openDrawerFull(item, null),
   });
-  compare.init();
+  compare.init({
+    isFavorite: (zid) => personalization.isFavorite(zid),
+    onFavorite: async (zid) => {
+      const wasFav = personalization.isFavorite(zid);
+      try {
+        if (wasFav) {
+          await personalization.removeFavorite(zid);
+          updateFavoriteButton(zid, false);
+          showToast('Removed from favorites');
+        } else {
+          await personalization.addFavorite(zid);
+          updateFavoriteButton(zid, true);
+          showToast('Saved to favorites');
+        }
+        return !wasFav;
+      } catch (err) {
+        showToast(err?.message || 'Could not update favorite', { tone: 'error' });
+        return wasFav;
+      }
+    },
+    onOpenDrawer: (item) => openDrawerFull(item, null),
+    onContact: (action, url, contact) => contactFromData(action, url, contact),
+  });
   // Keep card buttons synced when compare is mutated from the tray or modal.
   let _lastCompareIds = new Set();
   compare.subscribe(items => {

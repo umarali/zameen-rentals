@@ -14,12 +14,16 @@ module.exports = defineConfig({
     serviceWorkers: "block",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    // Pre-dismiss the welcome overlay so it never blocks test interactions
+    // Pre-dismiss onboarding (welcome strip + guided tour) so neither blocks
+    // test interactions. Production first-run users still get them.
     storageState: {
       cookies: [],
       origins: [{
         origin: "http://127.0.0.1:8000",
-        localStorage: [{ name: "zr_welcomed", value: "1" }],
+        localStorage: [
+          { name: "zr_welcomed", value: "1" },
+          { name: "zr_tour_done", value: "1" },
+        ],
       }],
     },
   },

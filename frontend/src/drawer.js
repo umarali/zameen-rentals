@@ -32,11 +32,11 @@ function renderDrawerImages(imgs) {
   const di = $('#drawerImgArea');
   refs.drawerImages = imgs;
   if (!imgs.length) {
-    di.innerHTML = `<div class="h-[280px] bg-gray-100 flex items-center justify-center text-5xl text-gray-300">&#x1f3e0;</div>`;
+    di.innerHTML = `<div class="img-fallback h-[280px]"></div>`;
     return;
   }
   if (imgs.length === 1) {
-    di.innerHTML = `<div class="drawer-img-single" data-gallery><img src="${escA(imgs[0])}" alt="" onerror="this.parentElement.innerHTML='<div class=\\'h-full bg-gray-100 flex items-center justify-center text-5xl text-gray-300\\'>&#x1f3e0;</div>'">
+    di.innerHTML = `<div class="drawer-img-single" data-gallery><img src="${escA(imgs[0])}" alt="" onerror="this.parentElement.innerHTML='<div class=\\'img-fallback h-full\\'></div>'">
       <div class="absolute bottom-3 left-3 px-3 py-1.5 rounded-lg bg-black/60 text-white text-xs font-medium backdrop-blur-sm">1 photo</div></div>`;
   } else {
     const grid = imgs.slice(0, 5);
