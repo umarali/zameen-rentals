@@ -8,6 +8,7 @@ import { $, $$, esc, escA, fmtPrice, fmtRelative } from './utils.js';
 import * as pers from './personalization.js';
 import { showToast } from './utils.js';
 import { S } from './state.js';
+import { bellIcon } from './icons.js';
 
 let _panel = null;
 let _activeTab = 'alerts';
@@ -293,7 +294,7 @@ async function renderAlertsTab(body) {
         ${newAlertBtn}
       </div>
       <div class="text-center py-10 px-4 border-2 border-dashed border-gray-200 rounded-xl">
-        <div class="text-4xl mb-3">&#x1f514;</div>
+        <div class="mb-3 flex justify-center text-gray-300">${bellIcon('w-10 h-10')}</div>
         <p class="text-sm font-semibold text-gray-700">Never miss a matching rental</p>
         <p class="mt-1 text-xs text-gray-500 leading-relaxed">Choose your city and filters, then create an alert for that search. New matches will collect here automatically.</p>
       </div>

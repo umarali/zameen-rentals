@@ -14,3 +14,4 @@ test-results/
 playwright-report/
 tools/qa_verify_out/
 .claude/
+.gstack/

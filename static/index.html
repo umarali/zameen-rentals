@@ -34,8 +34,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet"></noscript>
-  <script type="module" crossorigin src="/static/assets/index-ZDplrqnM.js"></script>
-  <link rel="stylesheet" crossorigin href="/static/assets/index-Cfv9y8Xl.css">
+  <script type="module" crossorigin src="/static/assets/index-DBGeLJRP.js"></script>
+  <link rel="stylesheet" crossorigin href="/static/assets/index-DTFQM1oE.css">
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
@@ -53,7 +53,7 @@
       <span class="brand-wordmark-accent">Rentals</span>
     </span>
   </a>
-  <button id="welcomeBtn" title="Search help" aria-label="Search help" class="w-8 h-8 rounded-full border border-gray-200 hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center text-gray-400 hover:text-brand-500 transition-all shrink-0">
+  <button id="welcomeBtn" title="Help &amp; examples" aria-label="Help and search examples" class="w-8 h-8 rounded-full border border-gray-200 hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center text-gray-400 hover:text-brand-500 transition-all shrink-0">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
   </button>
   <div class="flex-1 min-w-0 max-w-xl mx-auto relative">
@@ -90,7 +90,9 @@
 </div>
 <script>
   (function() {
-    if (sessionStorage.getItem('infoBannerDismissed')) {
+    // On the very first visit the non-blocking intent strip is the single
+    // first-run surface — suppress this banner so they don't stack.
+    if (sessionStorage.getItem('infoBannerDismissed') || !localStorage.getItem('zr_welcomed')) {
       document.getElementById('infoBanner').style.display = 'none';
     }
     document.getElementById('infoBannerClose').addEventListener('click', function() {
