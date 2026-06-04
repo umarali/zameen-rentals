@@ -104,7 +104,7 @@ def _listing_filter_clauses(*, city="lahore", area=None, area_names=None, proper
     elif bedrooms:
         conditions.append("bedrooms = ?")
         params.append(bedrooms)
-    if size_marla_min is not None:
+    if size_marla_min:  # 0/None => no lower bound (matches the price-filter gate)
         conditions.append("""(CASE
           WHEN area_size LIKE '% Marla' THEN CAST(REPLACE(REPLACE(area_size, ' Marla', ''), ',', '') AS REAL)
           WHEN area_size LIKE '% Kanal' THEN CAST(REPLACE(REPLACE(area_size, ' Kanal', ''), ',', '') AS REAL) * 20
@@ -112,7 +112,7 @@ def _listing_filter_clauses(*, city="lahore", area=None, area_names=None, proper
           WHEN area_size LIKE '% Sq. Yd.' THEN CAST(REPLACE(REPLACE(area_size, ' Sq. Yd.', ''), ',', '') AS REAL) * 9.0 / 225.0
           ELSE NULL END) >= ?""")
         params.append(size_marla_min)
-    if size_marla_max is not None:
+    if size_marla_max:  # 0/None => no upper bound
         conditions.append("""(CASE
           WHEN area_size LIKE '% Marla' THEN CAST(REPLACE(REPLACE(area_size, ' Marla', ''), ',', '') AS REAL)
           WHEN area_size LIKE '% Kanal' THEN CAST(REPLACE(REPLACE(area_size, ' Kanal', ''), ',', '') AS REAL) * 20
@@ -611,12 +611,35 @@ def search_listings(*, city="lahore", area=None, area_names=None, property_type=
     else:
         order = _STABLE_RECENCY_SQL
 
-    total = conn.execute(f"SELECT COUNT(*) FROM listings WHERE {where}", params).fetchone()[0]
+    # Collapse reposts: listings that share a content_hash are the same flat posted
+    # multiple times. We keep one representative per group (the freshest, matching the
+    # global ordering) and surface the group size as repost_count. Rows with no
+    # content_hash stay distinct (NULLIF + id fallback gives each its own group), so
+    # the collapse only ever merges genuine duplicates. Both the total and the page
+    # query group on the SAME expression, so "showing X of Y" stays honest.
+    grp_expr = "COALESCE(NULLIF(content_hash, ''), 'id:' || id)"
+
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM (SELECT 1 FROM listings WHERE {where} GROUP BY {grp_expr})",
+        params
+    ).fetchone()[0]
 
     offset = (page - 1) * per_page
     query_params = distance_params + params + [per_page, offset]
     rows = conn.execute(
-        f"SELECT *, {distance_expr} AS distance_to_center FROM listings WHERE {where} ORDER BY {order} LIMIT ? OFFSET ?",
+        f"""
+        WITH base AS (
+            SELECT *, {distance_expr} AS distance_to_center, {grp_expr} AS _grp
+            FROM listings WHERE {where}
+        ),
+        ranked AS (
+            SELECT *,
+                   ROW_NUMBER() OVER (PARTITION BY _grp ORDER BY {_STABLE_RECENCY_SQL}) AS _rn,
+                   COUNT(*)     OVER (PARTITION BY _grp) AS _repost_count
+            FROM base
+        )
+        SELECT * FROM ranked WHERE _rn = 1 ORDER BY {order} LIMIT ? OFFSET ?
+        """,
         query_params
     ).fetchall()
 
@@ -924,6 +947,10 @@ def _row_to_listing(row):
         d["agent_name"] = row["agent_name"]
     if row["agent_agency"]:
         d["agent_agency"] = row["agent_agency"]
+    # Number of times this listing was posted (set by the dedup query in
+    # search_listings). Only emitted when it's an actual repost (>1).
+    if "_repost_count" in row.keys() and row["_repost_count"] and row["_repost_count"] > 1:
+        d["repost_count"] = row["_repost_count"]
     return d
 
 
@@ -978,12 +1005,14 @@ def get_crawl_stats(city=None):
         areas_crawled = conn.execute("SELECT COUNT(*) FROM crawl_state WHERE city = ? AND last_crawl_at IS NOT NULL", (city,)).fetchone()[0]
         areas_total = conn.execute("SELECT COUNT(*) FROM crawl_state WHERE city = ?", (city,)).fetchone()[0]
         last_crawl = conn.execute("SELECT MAX(last_crawl_at) FROM crawl_state WHERE city = ?", (city,)).fetchone()[0]
+        newest = conn.execute(f"SELECT MAX({_FRESHNESS_SQL}) FROM listings WHERE is_active = 1 AND city = ?", (city,)).fetchone()[0]
     else:
         total = conn.execute("SELECT COUNT(*) FROM listings WHERE is_active = 1").fetchone()[0]
         with_detail = conn.execute("SELECT COUNT(*) FROM listings WHERE is_active = 1 AND detail_scraped_at IS NOT NULL").fetchone()[0]
         areas_crawled = conn.execute("SELECT COUNT(*) FROM crawl_state WHERE last_crawl_at IS NOT NULL").fetchone()[0]
         areas_total = conn.execute("SELECT COUNT(*) FROM crawl_state").fetchone()[0]
         last_crawl = conn.execute("SELECT MAX(last_crawl_at) FROM crawl_state").fetchone()[0]
+        newest = conn.execute(f"SELECT MAX({_FRESHNESS_SQL}) FROM listings WHERE is_active = 1").fetchone()[0]
 
     return {
         "total_listings": total,
@@ -991,4 +1020,8 @@ def get_crawl_stats(city=None):
         "areas_crawled": areas_crawled,
         "areas_total": areas_total,
         "last_crawl_at": last_crawl,
+        # Freshness of the freshest listing's source date (zameen_updated/posted ->
+        # first_seen fallback). This drives the honest "data updated" indicator in
+        # the UI — it reflects the data, not just when the crawler last ran.
+        "newest_listing": newest,
     }

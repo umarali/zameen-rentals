@@ -97,6 +97,24 @@ class TestParseQueryEndpoint:
         assert data["filters"]["bedrooms"] == 2
         assert data["filters"]["area"] == "Clifton"
 
+    def test_parse_query_size_with_area_not_flagged_approximate(self, client, monkeypatch):
+        # Force the deterministic regex path so this doesn't depend on Claude.
+        async def slow_parse(*args, **kwargs):
+            await asyncio.sleep(0.05)
+            return {}
+
+        monkeypatch.setattr("app.routes.parse_query_with_claude", slow_parse)
+        monkeypatch.setattr("app.routes._PARSE_QUERY_TIMEOUT_SECONDS", 0.01)
+
+        res = client.get("/api/parse-query?q=5+marla+house+in+DHA+Lahore&city=lahore")
+        assert res.status_code == 200
+        f = res.json()["filters"]
+        assert f["size_marla_min"] == 5
+        assert f.get("area")  # an area was matched
+        # The size unit ("marla") and city name ("lahore") must not leak into the
+        # area match and wrongly flag a clean match as approximate.
+        assert f.get("area_approximate") is not True
+
 
 class TestSearchEndpoint:
     def _seed_listings(self):

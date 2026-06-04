@@ -464,6 +464,28 @@ class TestSearchListings:
         assert result["total"] == 0
         assert result["results"] == []
 
+    def test_reposts_collapse_to_one_with_count(self):
+        # The same flat posted under two listing ids -> identical content_hash.
+        # Dedup keeps one representative and reports the group size as repost_count.
+        for zid in ("210001", "210002"):
+            upsert_listing(
+                zameen_id=zid,
+                url=f"https://zameen.com/Property/t-{zid}-1-1.html",
+                city="karachi", area_name="Clifton", area_slug="Karachi_Clifton",
+                card_data={"title": "Same Flat", "price": 75000, "bedrooms": 3,
+                           "bathrooms": 2, "area_size": "1000 sqft", "property_type": "Apartment"},
+            )
+        result = search_listings(city="karachi")
+        assert result["total"] == 1
+        assert len(result["results"]) == 1
+        assert result["results"][0]["repost_count"] == 2
+
+    def test_distinct_listings_have_no_repost_count(self):
+        self._seed(3)  # distinct titles/prices -> distinct content_hash -> no collapse
+        result = search_listings(city="karachi")
+        assert result["total"] == 3
+        assert all("repost_count" not in r for r in result["results"])
+
     def test_viewport_search_prioritizes_results_near_map_center(self):
         upsert_listing(
             zameen_id="300010",
@@ -1108,6 +1130,14 @@ class TestGetCrawlStats:
         assert get_crawl_stats("karachi")["total_listings"] == 1
         assert get_crawl_stats("lahore")["total_listings"] == 1
         assert get_crawl_stats()["total_listings"] == 2
+
+    def test_includes_newest_listing(self):
+        upsert_listing(zameen_id="700010", url="https://zameen.com/Property/t-700010-1-1.html",
+                       city="karachi", card_data={"title": "N", "price": 50000,
+                                                  "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"})
+        stats = get_crawl_stats("karachi")
+        assert "newest_listing" in stats
+        assert stats["newest_listing"]  # non-null freshness timestamp
 
 
 class TestCrawlTypeState:

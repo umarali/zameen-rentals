@@ -65,6 +65,7 @@ _AREA_NOISE = frozenset({
     'mein', 'me', 'main', 'ka', 'ke', 'ki', 'in', 'for', 'se',
     'rent', 'rental', 'rentals',
     'marla', 'kanal', 'hazar', 'hazaar', 'lac', 'lakh', 'lacs', 'crore',
+    'gaz', 'gaj', 'guz', 'gajj', 'yard', 'yards', 'sqyd', 'sq', 'square',
     'near',
 })
 
@@ -77,20 +78,33 @@ def _strip_noise_tokens(text: str) -> str:
 _BED_RANGE_RE = re.compile(r'(\d+)\s*(?:-|to|se)\s*(\d+)\s*(?:bed(?:room)?s?|br|bhk|kamr[eao]|کمر[ےوں]|بیڈ)')
 _BED_SINGLE_RE = re.compile(r'(\d+)\s*(?:bed(?:room)?s?|br|bhk|kamr[eao]|کمر[ےوں]|بیڈ)')
 
+# Units: marla/kanal (Punjab) + square-yard family / gaz (Karachi). Longer forms
+# are listed before "yards?" so they match fully.
+# Bare "yards" is intentionally excluded — it's ambiguous with distance
+# ("100 yards from beach"). Karachi size is captured via gaz / sq yd / square yards.
+_SIZE_UNIT_PAT = r'(kanal|marla|gaz|gaj|guz|gajj|square\s*yards?|sq\.?\s*yards?|sq\.?\s*yd)'
 _SIZE_RANGE_RE = re.compile(
-    r'([\d.]+)\s*(kanal|marla)\s*(?:se|to|-)\s*([\d.]+)\s*(kanal|marla)', re.I
+    rf'([\d.]+)\s*{_SIZE_UNIT_PAT}\s*(?:se|to|-)\s*([\d.]+)\s*{_SIZE_UNIT_PAT}', re.I
 )
-_SIZE_SINGLE_RE = re.compile(r'([\d.]+)\s*(kanal|marla)', re.I)
+_SIZE_SINGLE_RE = re.compile(rf'([\d.]+)\s*{_SIZE_UNIT_PAT}', re.I)
+
+# Square-yard family — all mean "sq yd". 1 Marla = 25 Sq Yd (matches the backend
+# area_size conversion), so sq-yd values are divided by 25 to reach marla.
+_SQYD_UNITS = {'gaz', 'gaj', 'guz', 'gajj', 'yard', 'yards',
+               'sqyd', 'sqyard', 'sqyards', 'squareyard', 'squareyards'}
 
 
 def _parse_size_value(num: str, unit: str) -> Optional[float]:
-    """Convert a number + unit (marla/kanal) to marla."""
+    """Convert a number + unit (marla/kanal/square-yard) to marla."""
     try:
         v = float(num)
     except ValueError:
         return None
-    if unit.lower() == 'kanal':
+    u = re.sub(r'[\s.]', '', unit.lower())  # "sq. yd" -> "sqyd"
+    if u == 'kanal':
         return v * 20
+    if u in _SQYD_UNITS:
+        return v / 25.0
     return v
 
 

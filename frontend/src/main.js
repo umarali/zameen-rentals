@@ -1,10 +1,10 @@
 /** App entry point — wires modules together, search engine, init. */
 
-import { $, $$, esc, TYPE_L, showToast } from './utils.js';
+import { $, $$, esc, TYPE_L, showToast, fmtRelative } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import {
   updateCityTabs, updateNlExamples, updateChips, clearFilter, selectArea,
-  syncPriceChips, setToggle, initFilterListeners, closeDD,
+  syncPriceChips, syncSizeChips, sizeChipLabel, renderSizeFilter, setToggle, initFilterListeners, closeDD,
 } from './filters.js';
 import {
   renderCard, initCarousels, handleContactAction, contactFromData, skeletonCard,
@@ -72,26 +72,57 @@ function isNearbySupportedCity() {
 async function hydrateLocalListingTotals(cities = Object.keys(CITY_DEFAULTS)) {
   const requestedCities = [...new Set(cities)].filter(city => CITY_DEFAULTS[city]);
   const pendingCities = requestedCities.filter(city => refs.localListingTotals[city] == null);
-  if (!pendingCities.length) return refs.localListingTotals;
+  if (!pendingCities.length) { renderDataStatus(); return refs.localListingTotals; }
 
   const stats = await Promise.all(pendingCities.map(async city => {
     try {
       const r = await fetch('/api/crawl-status?city=' + city);
-      if (!r.ok) return { city, totalListings: 0 };
+      if (!r.ok) return { city, totalListings: 0, newest: null };
       const data = await r.json();
       return {
         city,
         totalListings: Number.isFinite(Number(data.total_listings)) ? Number(data.total_listings) : 0,
+        newest: data.newest_listing || null,
       };
     } catch {
-      return { city, totalListings: 0 };
+      return { city, totalListings: 0, newest: null };
     }
   }));
 
-  stats.forEach(({ city, totalListings }) => {
+  stats.forEach(({ city, totalListings, newest }) => {
     refs.localListingTotals[city] = totalListings;
+    refs.localListingNewest[city] = newest;
   });
+  renderDataStatus();
   return refs.localListingTotals;
+}
+
+// Honest "data freshness + build" line in the footer. Uses newest_listing
+// (the freshest listing's source date) — NOT a "live" claim — plus the app
+// version from /api/health. Softens into a caveat when the data is stale.
+let _appVersion = '';
+let _appVersionFetched = false;
+async function renderDataStatus() {
+  const el = $('#dataStatus');
+  if (!el) return;
+  if (!_appVersionFetched) {
+    _appVersionFetched = true; // fetch /api/health at most once, even if it fails/empties
+    try { const r = await fetch('/api/health'); if (r.ok) _appVersion = (await r.json()).version || ''; }
+    catch { /* leave _appVersion empty; the line just omits the version */ }
+  }
+  const newest = refs.localListingNewest?.[S.city];
+  const parts = [];
+  if (newest) {
+    // Backend writes naive-UTC ISO (no offset); mark it UTC so the age isn't tz-skewed.
+    const newestUtc = /[Zz]|[+-]\d\d:?\d\d$/.test(newest) ? newest : newest + 'Z';
+    const rel = fmtRelative(newestUtc);
+    if (rel) {
+      const ageDays = (Date.now() - Date.parse(newestUtc)) / 86400000;
+      parts.push(ageDays > 10 ? `Data last updated ${rel} — listings may have changed` : `Data updated ${rel}`);
+    }
+  }
+  if (_appVersion) parts.push('v' + _appVersion);
+  el.textContent = parts.join(' · ');
 }
 
 function hasLocalViewportCoverage(city = S.city) {
@@ -207,7 +238,7 @@ function selectAreaFull(name, fromMap, { search = true } = {}) {
 }
 
 function clearFilterFull(f) {
-  const prevValues = { area: S.area, type: S.type, beds: S.beds, price: S.priceMin || S.priceMax ? `${S.priceMin}-${S.priceMax}` : '', more: S.furnished ? 'furnished' : S.sort || '' };
+  const prevValues = { area: S.area, type: S.type, beds: S.beds, price: S.priceMin || S.priceMax ? `${S.priceMin}-${S.priceMax}` : '', size: S.sizeMarlaMin || S.sizeMarlaMax ? `${S.sizeMarlaMin}-${S.sizeMarlaMax}` : '', more: S.furnished ? 'furnished' : S.sort || '' };
   if (prevValues[f]) trackFilterChange({ filter: f, value: '', previousValue: prevValues[f], mode: refs.searchMode, city: S.city });
   if (f === 'area') {
     refs.searchMode = refs.searchMode === 'nearby' ? 'nearby' : getBrowseMode();
@@ -284,6 +315,8 @@ function saveSearch() {
   if (S.beds) p.set('beds', S.beds);
   if (S.priceMin) p.set('price_min', S.priceMin);
   if (S.priceMax) p.set('price_max', S.priceMax);
+  if (S.sizeMarlaMin) p.set('size_marla_min', S.sizeMarlaMin);
+  if (S.sizeMarlaMax) p.set('size_marla_max', S.sizeMarlaMax);
   if (S.furnished) p.set('furnished', '1');
   if (S.sort) p.set('sort', S.sort);
   const qs = p.toString();
@@ -293,7 +326,7 @@ function saveSearch() {
 
 function loadSearch() {
   const urlParams = new URLSearchParams(location.search);
-  const hasUrlState = [...urlParams.keys()].some(k => ['city', 'area', 'type', 'beds', 'price_min', 'price_max', 'furnished', 'sort'].includes(k));
+  const hasUrlState = [...urlParams.keys()].some(k => ['city', 'area', 'type', 'beds', 'price_min', 'price_max', 'size_marla_min', 'size_marla_max', 'furnished', 'sort'].includes(k));
 
   let d;
   if (hasUrlState) {
@@ -304,6 +337,8 @@ function loadSearch() {
       beds: urlParams.get('beds') || '',
       priceMin: urlParams.get('price_min') || '',
       priceMax: urlParams.get('price_max') || '',
+      sizeMarlaMin: urlParams.get('size_marla_min') || '',
+      sizeMarlaMax: urlParams.get('size_marla_max') || '',
       furnished: urlParams.get('furnished') === '1',
       sort: urlParams.get('sort') || '',
     };
@@ -319,6 +354,9 @@ function loadSearch() {
   if (d.priceMin) S.priceMin = d.priceMin;
   if (d.priceMax) S.priceMax = d.priceMax;
   if (d.priceMin || d.priceMax) syncPriceChips();
+  if (d.sizeMarlaMin) S.sizeMarlaMin = d.sizeMarlaMin;
+  if (d.sizeMarlaMax) S.sizeMarlaMax = d.sizeMarlaMax;
+  if (d.sizeMarlaMin || d.sizeMarlaMax) syncSizeChips();
   if (d.furnished) setToggle(true);
   if (d.sort) { S.sort = d.sort; $('#sortSelect').value = d.sort; }
   updateChips();
@@ -441,7 +479,7 @@ function updateHeader({
     sourceEl.className = 'text-xs text-amber-500 font-medium';
     sourceEl.classList.remove('hidden');
   } else if (source === 'unavailable') {
-    sourceEl.textContent = 'Local only';
+    sourceEl.textContent = 'No live results';
     sourceEl.className = 'text-xs text-gray-400 font-medium';
     sourceEl.classList.remove('hidden');
   } else {
@@ -452,10 +490,10 @@ function updateHeader({
 function getViewportCoverageMessage({ total = 0, visibleAreas = 0, coveredAreas = 0 } = {}) {
   if (total && coveredAreas > 0) {
     return coveredAreas === visibleAreas
-      ? `${total} available across ${coveredAreas} visible areas`
-      : `${total} available in ${coveredAreas} covered areas within ${visibleAreas} visible areas`;
+      ? `${total} across ${coveredAreas} areas in view`
+      : `${total} across ${coveredAreas} of ${visibleAreas} areas in view`;
   }
-  if (visibleAreas > 0) return `No local listings in ${visibleAreas} visible areas yet`;
+  if (visibleAreas > 0) return `No listings in the ${visibleAreas} areas in view yet`;
   return 'Move the map to explore nearby areas';
 }
 
@@ -483,7 +521,7 @@ function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCou
   }
   if (isEmptyExactBoundsFallback(scope)) {
     return visibleAreas > 0
-      ? 'No exact-pin rentals are visible here right now. Pan or zoom the map to discover nearby covered areas.'
+      ? 'No exact-pin rentals are visible here right now. Pan or zoom the map to find nearby areas with listings.'
       : 'No exact-pin rentals are visible in this map view.';
   }
   return 'Pan or zoom the map to discover other areas';
@@ -521,21 +559,21 @@ function updateCoverageBadge() {
     const topAreas = coveredEntries.slice(0, 3);
     const coveredHtml = topAreas.length
       ? topAreas.map(([name]) => `<span class="coverage-chip live">${esc(name)}</span>`).join('')
-      : '<span class="coverage-chip">No covered areas here yet</span>';
+      : '<span class="coverage-chip">No areas with listings here yet</span>';
     const summary = coveredAreas > 0
-      ? `${coveredAreas} covered / ${visibleAreas || 0} visible`
-      : `${visibleAreas || 0} visible areas, no local coverage`;
+      ? `${coveredAreas} of ${visibleAreas || coveredAreas} areas have listings`
+      : `${visibleAreas || 0} areas in view, none with listings yet`;
     const previewingEmpty = refs.previewArea && !coveredEntries.some(([name]) => name === refs.previewArea);
     const detail = previewingEmpty
-      ? `Previewing ${refs.previewArea}. Gray dots only preview areas until local listings exist there.`
+      ? `Previewing ${refs.previewArea}. Grey areas are preview-only until listings are available there.`
       : coveredAreas > 0
-      ? 'Green dots have local listings. Gray dots are preview-only. Cards are ordered nearest to the map center.'
-      : 'This part of the map has no crawled local listings yet. Gray dots are preview-only.';
+      ? 'Green areas have listings; grey are preview-only. Cards are ordered nearest to the map center.'
+      : 'No listings in this part of the map yet. Grey areas are preview-only.';
     const legendHtml = `
       <div class="coverage-legend" aria-label="Map legend">
-        <span class="coverage-legend-item"><span class="coverage-legend-dot live" aria-hidden="true"></span>Green: covered area</span>
+        <span class="coverage-legend-item"><span class="coverage-legend-dot live" aria-hidden="true"></span>Green: has listings</span>
         <span class="coverage-legend-item"><span class="coverage-legend-dot preview" aria-hidden="true"></span>Grey: preview only</span>
-        <span class="coverage-legend-item"><span class="coverage-legend-dot exact" aria-hidden="true"></span>Red: exact listing pin</span>
+        <span class="coverage-legend-item"><span class="coverage-legend-dot exact" aria-hidden="true"></span>Red: exact listing</span>
       </div>
     `;
 
@@ -549,11 +587,11 @@ function updateCoverageBadge() {
       // hiding everything behind a tap.
       const standaloneTablet = standaloneMode && !compactStandaloneMode;
       if (standaloneTablet) {
-        el.innerHTML = `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="${coverageExpanded ? 'true' : 'false'}" aria-label="Map coverage">
+        el.innerHTML = `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="${coverageExpanded ? 'true' : 'false'}" aria-label="Areas on map">
              ${coverageIcon}
            </button>
            <div class="coverage-mobile-panel">
-             <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Map Coverage</div>
+             <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Areas on map</div>
              <div style="margin-top:.25rem;font-size:.875rem;font-weight:600;color:#1f2937">${summary}</div>
              ${coverageExpanded ? `<div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
              <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.5rem">${coveredHtml}</div>
@@ -561,17 +599,17 @@ function updateCoverageBadge() {
            </div>`;
       } else {
         el.innerHTML = coverageExpanded
-          ? `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="true" aria-label="Map coverage">
+          ? `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="true" aria-label="Areas on map">
                ${coverageIcon}
              </button>
              <div class="coverage-mobile-panel">
-               <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Map Coverage</div>
+               <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Areas on map</div>
                <div style="margin-top:.25rem;font-size:.875rem;font-weight:600;color:#1f2937">${summary}</div>
                <div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
                <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.5rem">${coveredHtml}</div>
                ${legendHtml}
              </div>`
-          : `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="false" aria-label="Map coverage">
+          : `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="false" aria-label="Areas on map">
                ${coverageIcon}
              </button>`;
       }
@@ -594,12 +632,12 @@ function updateCoverageBadge() {
 
     el.innerHTML = compactMode
       ? `
-        <button class="coverage-toggle coverage-toggle-compact" aria-expanded="false" aria-label="Open map coverage">
+        <button class="coverage-toggle coverage-toggle-compact" aria-expanded="false" aria-label="Open areas on map">
           <span class="coverage-toggle-compact-icon" aria-hidden="true">
             <span class="coverage-legend-dot live"></span>
           </span>
           <span class="coverage-toggle-compact-text">
-            <span class="coverage-toggle-compact-label">Coverage</span>
+            <span class="coverage-toggle-compact-label">Areas</span>
             <span class="coverage-toggle-compact-count">${compactSummary}</span>
           </span>
           ${chevron}
@@ -608,7 +646,7 @@ function updateCoverageBadge() {
       : `
         <button class="coverage-toggle flex items-center justify-between w-full text-left" aria-expanded="${coverageExpanded ? 'true' : 'false'}">
           <div>
-            <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Map Coverage</div>
+            <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Areas on map</div>
             <div class="mt-0.5 text-sm font-semibold text-gray-800">${summary}</div>
           </div>
           ${chevron}
@@ -764,6 +802,8 @@ function buildViewportSearchKey({ visibleAreaNames, center, bounds, mobile = fal
     beds: S.beds || '',
     priceMin: S.priceMin || '',
     priceMax: S.priceMax || '',
+    sizeMarlaMin: S.sizeMarlaMin || '',
+    sizeMarlaMax: S.sizeMarlaMax || '',
     furnished: S.furnished ? 1 : 0,
     sort: S.sort || '',
     mobile,
@@ -976,6 +1016,62 @@ function scheduleViewportSearch(opts = {}) {
   }, 250);
 }
 
+// ===== "Understood:" chips — show how a natural-language query was interpreted,
+// each removable to drop that filter and re-run the search. Driven from S so it
+// stays consistent after a chip is removed or filters change. =====
+function _priceChipLabel() {
+  const mn = S.priceMin ? (Number(S.priceMin) / 1e3 | 0) + 'K' : '';
+  const mx = S.priceMax ? (Number(S.priceMax) / 1e3 | 0) + 'K' : '';
+  return mn && mx ? `${mn}–${mx}` : mx ? `Under ${mx}` : mn ? `${mn}+` : '';
+}
+
+function understoodChips() {
+  const chips = [{ field: 'city', label: CITY_DEFAULTS[S.city]?.name || S.city, removable: false }];
+  if (S.area) chips.push({ field: 'area', label: S.area, removable: true });
+  if (S.type) chips.push({ field: 'type', label: TYPE_L[S.type] || S.type, removable: true });
+  if (S.beds) chips.push({ field: 'beds', label: S.bedsMax ? `${S.beds}–${S.bedsMax} bed` : `${S.beds} bed`, removable: true });
+  if (S.priceMin || S.priceMax) chips.push({ field: 'price', label: _priceChipLabel(), removable: true });
+  if (S.sizeMarlaMin || S.sizeMarlaMax) chips.push({ field: 'size', label: sizeChipLabel(S.sizeMarlaMin, S.sizeMarlaMax), removable: true });
+  if (S.furnished) chips.push({ field: 'more', label: 'Furnished', removable: true });
+  return chips;
+}
+
+function understoodChipHtml(c) {
+  const x = c.removable
+    ? `<button type="button" data-chip-remove="${c.field}" aria-label="Remove ${esc(c.label)} filter" class="ml-0.5 -mr-1 w-4 h-4 inline-flex items-center justify-center rounded-full text-gray-400 hover:text-brand-700 hover:bg-brand-100 text-sm leading-none">&times;</button>`
+    : '';
+  return `<span class="inline-flex items-center gap-1 rounded-full bg-white border border-brand-100 text-brand-700 px-2.5 py-1 font-medium" data-chip-field="${c.field}">${esc(c.label)}${x}</span>`;
+}
+
+function renderUnderstood({ approxQuery = '', approxArea = '' } = {}) {
+  const box = $('#nlUnderstood');
+  if (!box) return;
+  const chips = understoodChips();
+  if (!chips.some(c => c.removable) && !approxQuery) { hideUnderstood(); return; }
+  const approxHtml = approxQuery
+    ? `<span class="inline-flex items-center text-amber-600 ml-1">No exact match for “${esc(approxQuery)}” — showing ${esc(approxArea)}</span>`
+    : '';
+  box.innerHTML = `<span class="font-semibold text-brand-700 mr-0.5">Understood:</span>${chips.map(understoodChipHtml).join('')}${approxHtml}`;
+  box.classList.remove('hidden');
+  box.classList.add('flex');
+}
+
+function syncUnderstood() {
+  const box = $('#nlUnderstood');
+  if (box && !box.classList.contains('hidden')) renderUnderstood();
+}
+
+function hideUnderstood() {
+  const box = $('#nlUnderstood');
+  if (!box) return;
+  box.classList.add('hidden');
+  box.classList.remove('flex');
+  box.innerHTML = '';
+}
+
+// Let filter-bar changes keep the chip row in sync (only while it's showing).
+refs._refreshUnderstood = syncUnderstood;
+
 async function doNlSearch() {
   const q = $('#nlInput').value.trim();
   if (!q) return;
@@ -992,29 +1088,13 @@ async function doNlSearch() {
     const d = await r.json();
     const f = d.filters || {};
     if (!Object.keys(f).length) { trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: false, filters: f }); parsed.innerHTML = 'Could not understand. Try "2 bed flat in DHA under 50k"'; return; }
-    const parts = [];
-    if (f.area) parts.push('<b class="text-brand-500">' + esc(f.area) + '</b>');
-    if (f.property_type) parts.push('<b class="text-brand-500">' + (TYPE_L[f.property_type] || f.property_type) + '</b>');
-    if (f.bedrooms && f.bedrooms_max) parts.push('<b class="text-brand-500">' + f.bedrooms + '-' + f.bedrooms_max + ' bed</b>');
-    else if (f.bedrooms) parts.push('<b class="text-brand-500">' + f.bedrooms + ' bed</b>');
-    if (f.price_min || f.price_max) {
-      const mn = f.price_min ? (f.price_min / 1e3 | 0) + 'K' : '';
-      const mx = f.price_max ? (f.price_max / 1e3 | 0) + 'K' : '';
-      parts.push('<b class="text-brand-500">' + (mn && mx ? mn + '-' + mx : mx ? '<' + mx : mn + '+') + '</b>');
-    }
-    if (f.size_marla_min || f.size_marla_max) {
-      const toL = v => v >= 20 && v % 20 === 0 ? (v / 20) + ' kanal' : v + ' marla';
-      const smn = f.size_marla_min ? toL(f.size_marla_min) : '';
-      const smx = f.size_marla_max ? toL(f.size_marla_max) : '';
-      parts.push('<b class="text-brand-500">' + (smn && smx ? smn + '-' + smx : smx ? '<' + smx : smn) + '</b>');
-    }
-    if (f.furnished) parts.push('<b class="text-brand-500">Furnished</b>');
-    parsed.innerHTML = parts.join(' &middot; ');
+    // Interpreted filters are now shown as editable chips in #nlUnderstood
+    // (rendered after state is applied below — see renderUnderstood).
     // City auto-switch (before area selection)
     if (f.city_hint && f.city_hint !== S.city && CITY_DEFAULTS[f.city_hint]) {
       S.city = f.city_hint;
       S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
-      S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
+      S.sizeMarlaMin = ''; S.sizeMarlaMax = ''; S.sizeUnit = '';
       refs.searchMode = getBrowseMode();
       resetViewportSearchMeta({ clearVisibleAreas: true });
       $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
@@ -1030,19 +1110,18 @@ async function doNlSearch() {
     if (f.price_min || f.price_max) syncPriceChips();
     S.sizeMarlaMin = f.size_marla_min != null ? String(f.size_marla_min) : '';
     S.sizeMarlaMax = f.size_marla_max != null ? String(f.size_marla_max) : '';
+    syncSizeChips();
     if (f.furnished) setToggle(true);
     if (f.sort) { S.sort = f.sort; $('#sortSelect').value = f.sort; }
     trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: true, filters: f });
     updateChips();
     refs._lastTriggeredBy = 'nl_search';
     doSearch();
-    if (f.area_approximate) {
-      parsed.innerHTML = '<span class="text-amber-600">Couldn\'t find "' + esc(f.area_query) + '" specifically — showing results for <b>' + esc(f.area) + '</b></span>';
-      setTimeout(() => { parsed.classList.add('hidden'); parsed.classList.remove('flex'); }, 6000);
-    } else {
-      parsed.classList.add('hidden');
-      parsed.classList.remove('flex');
-    }
+    // Hide the transient parsing pill; the interpreted filters now live in the
+    // persistent, editable "Understood:" chip row below the filter bar.
+    parsed.classList.add('hidden');
+    parsed.classList.remove('flex');
+    renderUnderstood(f.area_approximate ? { approxQuery: f.area_query, approxArea: f.area } : {});
   } catch {
     parsed.innerHTML = 'Something went wrong.';
   } finally {
@@ -1057,7 +1136,7 @@ function initCityTabs() {
     S.city = tab.dataset.city;
     trackCitySwitch({ from: prevCity, to: S.city });
     S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
-    S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
+    S.sizeMarlaMin = ''; S.sizeMarlaMax = ''; S.sizeUnit = '';
     refs.searchMode = getBrowseMode();
     resetViewportSearchMeta({ clearVisibleAreas: true });
     refs.lastViewportSearchKey = '';
@@ -1070,6 +1149,8 @@ function initCityTabs() {
     $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === ''));
     $$('#priceGrid .chip').forEach(c => c.classList.remove('active'));
     $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = '';
+    $$('#sizeGrid .chip').forEach(c => c.classList.remove('active'));
+    $('#customSize').classList.add('hidden'); $('#sizeMin').value = ''; $('#sizeMax').value = '';
     setToggle(false); $('#sortSelect').value = '';
     updateCityTabs(); updateChips(); updateNlExamples(); updateNearbyControls();
     refs._lastTriggeredBy = 'city_change';
@@ -1193,6 +1274,24 @@ function removeHiddenResult(zid) {
 function initNlListeners() {
   $('#nlSearchBtn').addEventListener('click', doNlSearch);
   $('#nlInput').addEventListener('keydown', e => { if (e.key === 'Enter') { $('#nlSuggestions').classList.add('hidden'); doNlSearch(); } });
+  // Remove an interpreted filter by clicking its chip's × — clears that field,
+  // re-runs the search, and re-renders the row (clearFilterFull handles all three).
+  $('#nlUnderstood').addEventListener('click', e => {
+    const btn = e.target.closest('[data-chip-remove]');
+    if (!btn) return;
+    const field = btn.dataset.chipRemove;
+    if (field === 'more') {
+      // The only 'more' chip is "Furnished" — clear just that, leaving any sort intact.
+      S.furnished = false;
+      setToggle(false);
+      updateChips();
+      refs._lastTriggeredBy = 'nl_chip_remove';
+      doSearch();
+    } else {
+      clearFilterFull(field); // clears the field, re-runs the search, and syncs chips
+    }
+    syncUnderstood();
+  });
   $('#nlInput').addEventListener('focus', () => { if (!$('#nlInput').value.trim()) $('#nlSuggestions').classList.remove('hidden'); });
   $('#nlInput').addEventListener('input', () => { $('#nlSuggestions').classList.toggle('hidden', !!$('#nlInput').value.trim()); });
   $('#nlSuggestions').addEventListener('click', e => {
@@ -1285,6 +1384,7 @@ function initReportBtn() {
   const submitBtn = $('#feedbackSubmit');
 
   function openFeedback() {
+    refs._closeOtherOverlays?.('feedback');
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
     msg.value = '';
@@ -1296,10 +1396,19 @@ function initReportBtn() {
     modal.classList.add('hidden');
   }
 
+  refs._registerOverlay?.({
+    name: 'feedback',
+    isOpen: () => !modal.classList.contains('hidden'),
+    close: closeFeedback,
+  });
+
   $('#reportBtn').addEventListener('click', openFeedback);
   $('#feedbackClose').addEventListener('click', closeFeedback);
   $('#feedbackCancel').addEventListener('click', closeFeedback);
   overlay.addEventListener('click', closeFeedback);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeFeedback();
+  });
 
   msg.addEventListener('input', () => { submitBtn.disabled = !msg.value.trim(); });
 
@@ -1342,6 +1451,7 @@ async function loadCityData({ search = true } = {}) {
     console.error(e);
   }
   await hydrateLocalListingTotals([S.city]);
+  renderSizeFilter(); // re-render size presets for the new city's default unit
 
   Object.values(refs.markers).forEach(m => { if (refs.map) refs.map.removeLayer(m); });
   refs.markers = {};
@@ -1376,6 +1486,22 @@ async function loadCityData({ search = true } = {}) {
     doSearch();
   }
 }
+
+// ===== Overlay coordination =====
+// Tiny registry so primary modals/overlays don't stack and so the two surfaces
+// that lacked their own Escape handling (feedback modal, mobile map overlay)
+// close on Escape. Other surfaces (welcome, compare, drawer, gallery, panel,
+// dropdowns) already self-handle Escape and are left untouched. Surfaces
+// self-register { name, isOpen, close }; calls are guarded so a missing surface
+// is a no-op.
+refs._overlays = [];
+refs._registerOverlay = (o) => { refs._overlays.push(o); };
+refs._closeOtherOverlays = (exceptName) => {
+  for (const o of refs._overlays) {
+    if (o.name === exceptName) continue;
+    try { if (o.isOpen()) o.close(); } catch {}
+  }
+};
 
 async function init() {
   initDisplayModeSync();
@@ -1470,6 +1596,7 @@ async function init() {
   initHoverSync();
 
   loadSearch();
+  renderSizeFilter(); // populate size presets for the active city's unit (after any restored state)
   updateNearbyControls();
   if (window.innerWidth >= 1024) {
     initMap(selectAreaFull, () => scheduleViewportSearch(), openDrawerFull);
