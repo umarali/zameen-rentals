@@ -7,7 +7,7 @@ from app.db_listings import (
     upsert_listing, search_listings, get_listing_by_zameen_id,
     get_listings_needing_detail, mark_stale_listings, get_crawl_stats,
     content_hash, detail_hash, search_exact_listings_in_bounds, search_nearby_listings,
-    get_nearby_enrichment_candidates,
+    get_nearby_enrichment_candidates, listing_write_batch,
 )
 
 
@@ -21,6 +21,47 @@ class TestContentHash:
         h1 = content_hash(50000, "Test Flat", 2, 1, "5 Marla")
         h2 = content_hash(60000, "Test Flat", 2, 1, "5 Marla")
         assert h1 != h2
+
+
+class TestListingWriteBatch:
+    def test_rolls_back_failed_batch(self):
+        with pytest.raises(RuntimeError):
+            with listing_write_batch():
+                upsert_listing(
+                    zameen_id="batch-rollback",
+                    url="https://zameen.com/Property/batch-rollback-100001-1-1.html",
+                    city="karachi",
+                    card_data={"title": "Rollback me", "price": 50000},
+                    commit=False,
+                )
+                raise RuntimeError("write failed")
+
+        assert get_listing_by_zameen_id("batch-rollback") is None
+
+    def test_commit_failure_triggers_rollback(self, monkeypatch):
+        class FakeConnection:
+            def __init__(self):
+                self.in_transaction = False
+                self.rolled_back = False
+
+            def execute(self, sql):
+                self.in_transaction = True
+
+            def commit(self):
+                raise RuntimeError("commit failed")
+
+            def rollback(self):
+                self.rolled_back = True
+                self.in_transaction = False
+
+        conn = FakeConnection()
+        monkeypatch.setattr("app.db_listings._get_conn", lambda: conn)
+
+        with pytest.raises(RuntimeError, match="commit failed"):
+            with listing_write_batch():
+                pass
+
+        assert conn.rolled_back is True
 
 
 class TestUpsertListing:
@@ -463,6 +504,28 @@ class TestSearchListings:
         result = search_listings(city="lahore")
         assert result["total"] == 0
         assert result["results"] == []
+
+    def test_reposts_collapse_to_one_with_count(self):
+        # The same flat posted under two listing ids -> identical content_hash.
+        # Dedup keeps one representative and reports the group size as repost_count.
+        for zid in ("210001", "210002"):
+            upsert_listing(
+                zameen_id=zid,
+                url=f"https://zameen.com/Property/t-{zid}-1-1.html",
+                city="karachi", area_name="Clifton", area_slug="Karachi_Clifton",
+                card_data={"title": "Same Flat", "price": 75000, "bedrooms": 3,
+                           "bathrooms": 2, "area_size": "1000 sqft", "property_type": "Apartment"},
+            )
+        result = search_listings(city="karachi")
+        assert result["total"] == 1
+        assert len(result["results"]) == 1
+        assert result["results"][0]["repost_count"] == 2
+
+    def test_distinct_listings_have_no_repost_count(self):
+        self._seed(3)  # distinct titles/prices -> distinct content_hash -> no collapse
+        result = search_listings(city="karachi")
+        assert result["total"] == 3
+        assert all("repost_count" not in r for r in result["results"])
 
     def test_viewport_search_prioritizes_results_near_map_center(self):
         upsert_listing(
@@ -1108,6 +1171,14 @@ class TestGetCrawlStats:
         assert get_crawl_stats("karachi")["total_listings"] == 1
         assert get_crawl_stats("lahore")["total_listings"] == 1
         assert get_crawl_stats()["total_listings"] == 2
+
+    def test_includes_newest_listing(self):
+        upsert_listing(zameen_id="700010", url="https://zameen.com/Property/t-700010-1-1.html",
+                       city="karachi", card_data={"title": "N", "price": 50000,
+                                                  "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"})
+        stats = get_crawl_stats("karachi")
+        assert "newest_listing" in stats
+        assert stats["newest_listing"]  # non-null freshness timestamp
 
 
 class TestCrawlTypeState:

@@ -1,7 +1,7 @@
 # ZameenRentals — Claude Code Guide
 
 ## Project Overview
-Rental property search engine for Pakistan (Karachi, Lahore, Islamabad), scraping Zameen.com. FastAPI backend + single-file vanilla JS frontend. SQLite database for search history and caching.
+Rental property search engine for Pakistan (Karachi, Lahore, Islamabad), scraping Zameen.com. FastAPI backend + a Vite + Tailwind v4 modular vanilla-JS frontend (`frontend/src/*.js`) that builds into `static/`. SQLite database for search history and caching.
 
 ## Architecture
 ```
@@ -17,11 +17,29 @@ app/
   areas.json             → 366 Karachi areas with slugs, IDs, coordinates
   areas_lahore.json      → 462 Lahore areas
   areas_islamabad.json   → 303 Islamabad areas
-static/
-  index.html             → Entire frontend: HTML + Tailwind CSS + JS (~1100 lines)
+frontend/                → Vite project root (SOURCE — edit here, not in static/)
+  index.html             → HTML shell (loads /src/main.js + /src/style.css)
+  src/
+    main.js              → App entry: wires modules, search engine, init()
+    cards.js             → Listing card rendering, carousels, contact actions
+    filters.js           → Filter bar chips, dropdowns, area autocomplete
+    map.js / map-layers.js → Leaflet map, markers, coverage, mobile overlay
+    drawer.js            → Listing detail drawer + photo gallery
+    compare.js           → Compare decision tool modal
+    personalization*.js  → Saved searches/alerts/favorites/hidden + My-rentals UI
+    welcome.js / tour.js → First-run intent strip, help modal, Driver.js tour
+    state.js             → Global `S` filter state + `refs` shared handles
+    utils.js / icons.js / analytics.js / sw-register.js / install-prompt.js
+static/                  → BUILD OUTPUT (vite build → emptied + regenerated; do NOT hand-edit)
 tools/
   deep_discover.py       → 3-phase area crawler for Zameen.com
 ```
+
+## Frontend Build (Vite + Tailwind v4)
+- Source lives in `frontend/`; `vite build` outputs to `static/` (config: vite.config.js, `outDir: ../static`, `emptyOutDir: true`).
+- **Always edit `frontend/src/*` and `frontend/index.html`, then `npm run build`.** Editing `static/index.html` or `static/assets/*` directly is pointless — the next build wipes it.
+- Dev: `npm run dev` (Vite on :5173, proxies `/api` → :8000). Prod: FastAPI serves the built `static/`.
+- Tailwind v4 via `@tailwindcss/vite`; brand colors are CSS `@theme` vars (`--color-brand-50..900`) in `frontend/src/style.css`. New utility classes must appear in source for the scanner to emit them.
 
 ## Multi-City Architecture
 - `CITIES` dict in data.py: `{"karachi": {name, id, lat, lng, file}, "lahore": ..., "islamabad": ...}`

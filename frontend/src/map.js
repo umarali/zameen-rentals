@@ -822,6 +822,7 @@ export function initMobileMap(selectAreaFull, openDrawer, onViewportChange) {
   refs._selectAreaFull = selectAreaFull;
 
   $('#mapFab').addEventListener('click', () => {
+    refs._closeOtherOverlays?.('mapOverlay');
     $('#mapOverlay').classList.remove('hidden');
 
     if (!refs.mobileMap) {
@@ -868,9 +869,18 @@ export function initMobileMap(selectAreaFull, openDrawer, onViewportChange) {
     }
   });
 
-  $('#mapOverlayClose').addEventListener('click', () => {
+  function closeMapOverlay() {
     cancelExactLocationPrefetch();
     $('#mapOverlay').classList.add('hidden');
+  }
+  $('#mapOverlayClose').addEventListener('click', closeMapOverlay);
+  refs._registerOverlay?.({
+    name: 'mapOverlay',
+    isOpen: () => !$('#mapOverlay').classList.contains('hidden'),
+    close: closeMapOverlay,
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('#mapOverlay').classList.contains('hidden')) closeMapOverlay();
   });
 }
 

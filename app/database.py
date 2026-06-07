@@ -24,6 +24,7 @@ def _get_conn() -> sqlite3.Connection:
                 _conn.row_factory = sqlite3.Row
                 _conn.execute("PRAGMA foreign_keys=ON")
                 _conn.execute("PRAGMA journal_mode=WAL")
+                _conn.execute("PRAGMA synchronous=NORMAL")
                 _conn.execute("PRAGMA busy_timeout=5000")
     return _conn
 
@@ -111,6 +112,7 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_listings_type ON listings(property_type);
             CREATE INDEX IF NOT EXISTS idx_listings_active ON listings(is_active);
             CREATE INDEX IF NOT EXISTS idx_listings_zameen_id ON listings(zameen_id);
+            CREATE INDEX IF NOT EXISTS idx_listings_content_hash ON listings(content_hash);
             CREATE INDEX IF NOT EXISTS idx_listings_last_seen ON listings(last_seen_at);
             CREATE INDEX IF NOT EXISTS idx_listings_detail ON listings(detail_scraped_at);
             CREATE INDEX IF NOT EXISTS idx_listings_default ON listings(is_active, city, last_seen_at DESC);

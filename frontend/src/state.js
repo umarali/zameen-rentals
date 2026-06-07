@@ -31,7 +31,10 @@ export const NL_EXAMPLES = {
 export const S = {
   city: 'lahore', area: '', type: '', beds: '', bedsMax: '',
   priceMin: '', priceMax: '', furnished: false, sort: '',
-  sizeMarlaMin: '', sizeMarlaMax: '',
+  // Size is stored canonically in marla; sizeUnit is a display-only preference.
+  // Empty = use the city default ('sqyd' for Karachi, 'marla' otherwise); an
+  // explicit toggle sets it until the next city change.
+  sizeMarlaMin: '', sizeMarlaMax: '', sizeUnit: '',
 };
 
 /** Mutable runtime refs (not filter state). */
@@ -43,6 +46,7 @@ export const refs = {
   currentResults: [],
   allAreas: [],
   localListingTotals: {},
+  localListingNewest: {},
   searchMode: 'city',
   mapLayer: 'osm',
   userLocation: null,

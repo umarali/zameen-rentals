@@ -131,12 +131,22 @@ def _build_parse_query_response(q, city, result):
     areas = get_areas(city)
     if result.get("area") and result["area"] in areas:
         ql = q.lower()
-        query_tokens = set(ql.replace("-", " ").split()) - {"in", "for", "rent", "rental", "ke", "ka", "ki", "mein", "me"}
+        # rstrip('.') so "sq." tokenizes to "sq" (matches the noise set below).
+        query_tokens = {t.rstrip(".") for t in ql.replace("-", " ").split()} - {"in", "for", "rent", "rental", "ke", "ka", "ki", "mein", "me"}
         area_tokens = set(result["area"].lower().replace("-", " ").split())
         unmatched = query_tokens - area_tokens
-        noise = {"house", "flat", "apartment", "portion", "upper", "lower", "room", "bed", "bedroom", "furnished", "full", "ghar", "makan", "bala", "nichla", "kamra"}
+        noise = {"house", "flat", "apartment", "portion", "upper", "lower", "room", "bed", "bedroom", "furnished", "full", "ghar", "makan", "bala", "nichla", "kamra",
+                 # Size units and city names are consumed by other parsed fields —
+                 # they must not count as an "unmatched" area or they wrongly flag
+                 # a clean match (e.g. "5 marla house in DHA Lahore" or "240 sq yd
+                 # house in Clifton") as approximate. Includes the per-token
+                 # fragments of "sq yd" / "sq ft".
+                 "marla", "marlas", "kanal", "kanals", "sqft", "sqyd", "yard", "yards", "yd", "yds", "ft",
+                 "gaz", "gaj", "guz", "gajj", "sq", "square",
+                 "lahore", "karachi", "islamabad", "isb", "khi", "lhr"}
         unmatched -= noise
-        unmatched = {t for t in unmatched if not t.isdigit()}
+        # Drop bare numbers, including decimals like "5.5" (sizes/prices).
+        unmatched = {t for t in unmatched if not t.replace(".", "", 1).isdigit()}
         if unmatched:
             result["area_approximate"] = True
             result["area_query"] = " ".join(unmatched)
@@ -189,7 +199,8 @@ async def _maybe_enrich_nearby_exact_locations(*, city, lat, lng, radius_km, are
 
 @router.get("/api/health")
 async def health():
-    return {"status": "ok", "service": "ZameenRentals", "version": "1.0.0"}
+    from app import APP_VERSION  # lazy import avoids a circular import at module load
+    return {"status": "ok", "service": "ZameenRentals", "version": APP_VERSION}
 
 
 @router.get("/api/cities")

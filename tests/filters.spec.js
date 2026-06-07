@@ -209,7 +209,7 @@ test.describe("Price Filter", () => {
   test("custom price inputs appear when Custom clicked", async ({ page }) => {
     await page.locator("#priceChip").click();
     await expect(page.locator("#customPrice")).toBeHidden();
-    await page.locator('.chip[data-custom="1"]').click();
+    await page.locator('#priceGrid .chip[data-custom="1"]').click();
     await expect(page.locator("#customPrice")).toBeVisible();
     await expect(page.locator("#priceMin")).toBeVisible();
     await expect(page.locator("#priceMax")).toBeVisible();
@@ -219,11 +219,79 @@ test.describe("Price Filter", () => {
     page,
   }) => {
     await page.locator("#priceChip").click();
-    await page.locator('.chip[data-custom="1"]').click();
+    await page.locator('#priceGrid .chip[data-custom="1"]').click();
     await page.locator("#priceMin").fill("50000");
     await page.locator("#priceMax").fill("100000");
     await page.locator("#priceMax").press("Enter");
     await expect(page.locator("#dd-price")).not.toHaveClass(/open/);
+  });
+});
+
+test.describe("Size Filter", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+  });
+
+  test("clicking size chip opens dropdown", async ({ page }) => {
+    await page.locator("#sizeChip").click();
+    await expect(page.locator("#dd-size")).toHaveClass(/open/);
+  });
+
+  test("preset marla ranges available", async ({ page }) => {
+    await page.locator("#sizeChip").click();
+    const chips = page.locator("#sizeGrid .chip");
+    expect(await chips.count()).toBeGreaterThanOrEqual(5); // 4 presets + Custom
+  });
+
+  test("selecting a size preset updates chip and searches", async ({ page }) => {
+    await page.locator("#sizeChip").click();
+    await page.locator('#sizeGrid .chip[data-smin="5"][data-smax="10"]').click();
+    await expect(page.locator("#sizeChip")).toHaveClass(/has-value/);
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+  });
+
+  test("custom marla inputs appear when Custom clicked", async ({ page }) => {
+    await page.locator("#sizeChip").click();
+    await expect(page.locator("#customSize")).toBeHidden();
+    await page.locator('#sizeGrid .chip[data-custom="1"]').click();
+    await expect(page.locator("#customSize")).toBeVisible();
+    await expect(page.locator("#sizeMin")).toBeVisible();
+    await expect(page.locator("#sizeMax")).toBeVisible();
+  });
+
+  test("clearing size filter via chip X", async ({ page }) => {
+    await page.locator("#sizeChip").click();
+    await page.locator('#sizeGrid .chip[data-smin="10"][data-smax="20"]').click();
+    await expect(page.locator("#sizeChip")).toHaveClass(/has-value/);
+    await page.locator('#sizeChip [data-chip-clear="size"]').click();
+    await expect(page.locator("#sizeChip")).not.toHaveClass(/has-value/);
+  });
+
+  test("Lahore defaults to Marla presets", async ({ page }) => {
+    await page.locator("#sizeChip").click();
+    await expect(page.locator('#sizeUnitToggle [data-unit="marla"]')).toHaveClass(/active/);
+    await expect(page.locator("#sizeGrid")).toContainText("Marla");
+    await expect(page.locator("#sizeGrid")).not.toContainText("sq yd");
+  });
+
+  test("Karachi defaults the size unit to Sq Yd", async ({ page }) => {
+    await page.locator('.city-tab[data-city="karachi"]').click();
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    await page.locator("#sizeChip").click();
+    await expect(page.locator('#sizeUnitToggle [data-unit="sqyd"]')).toHaveClass(/active/);
+    await expect(page.locator("#sizeGrid")).toContainText("sq yd");
+    await expect(page.locator("#sizeGrid")).not.toContainText("Marla");
+  });
+
+  test("unit toggle switches presets and the chip label", async ({ page }) => {
+    await page.locator("#sizeChip").click();
+    await page.locator('#sizeUnitToggle [data-unit="sqyd"]').click();
+    await expect(page.locator('#sizeUnitToggle [data-unit="sqyd"]')).toHaveClass(/active/);
+    await expect(page.locator("#sizeGrid")).toContainText("sq yd");
+    // Selecting a sq-yd preset labels the chip in sq yd
+    await page.locator('#sizeGrid .chip[data-smin="9.6"][data-smax="20"]').click();
+    await expect(page.locator("#sizeChip")).toContainText("sq yd");
   });
 });
 

@@ -473,5 +473,5 @@ test("standalone tablet-width overlay still shows coverage", async ({
   const badge = page.locator("#mapCoverageBadgeMobile");
   await expect(badge).toBeVisible();
   await expect(badge).not.toHaveClass(/coverage-badge-compact/);
-  await expect(badge).toContainText("Map Coverage");
+  await expect(badge).toContainText("Areas on map");
 });

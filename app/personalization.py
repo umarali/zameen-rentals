@@ -576,7 +576,7 @@ def find_new_matches(*, limit_per_alert: int = 50) -> list[dict]:
     return new_matches
 
 
-def record_match_for_inserted_listing(listing_id: int, listing_row: dict) -> list[dict]:
+def record_match_for_inserted_listing(listing_id: int, listing_row: dict, *, commit: bool = True) -> list[dict]:
     """Hook invoked by upsert_listing on 'inserted' return. Returns new matches.
 
     The city pre-filter keeps this cheap, while the SQL matcher remains
@@ -649,7 +649,7 @@ def record_match_for_inserted_listing(listing_id: int, listing_row: dict) -> lis
         except Exception:
             logger.exception("Failed to record real-time match alert=%d listing=%d",
                              a["id"], listing_id)
-    if matches:
+    if matches and commit:
         conn.commit()
     return matches
 

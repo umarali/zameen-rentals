@@ -316,3 +316,38 @@ class TestRateLimiter:
         rl = RateLimiter(rate=2.0, burst=3)
         assert rl.rate == 2.0
         assert rl.burst == 3
+
+    def test_recovers_toward_target_after_429_streak_clears(self):
+        rl = RateLimiter(rate=2.0, burst=3)
+
+        for _ in range(5):
+            rl.record_429()
+        slowed_rate = rl.rate
+
+        for _ in range(50):
+            rl.record_success()
+
+        assert slowed_rate < 2.0
+        assert rl.rate == 2.0
+
+    def test_recovery_never_exceeds_lowered_target(self):
+        rl = RateLimiter(rate=2.0, burst=3)
+        rl.set_target_rate(0.5)
+
+        for _ in range(5):
+            rl.record_429()
+        for _ in range(50):
+            rl.record_success()
+
+        assert rl.target_rate == 0.5
+        assert rl.rate == 0.5
+
+    def test_429_backoff_never_raises_rate_above_target_below_minimum(self):
+        rl = RateLimiter(rate=2.0, burst=3, min_rate=0.3)
+        rl.set_target_rate(0.2)
+
+        for _ in range(5):
+            rl.record_429()
+
+        assert rl.target_rate == 0.2
+        assert rl.rate == 0.2

@@ -215,7 +215,7 @@ def _extract_listing_geography(html, zameen_id=None):
     return None
 
 
-async def fetch_listing_contact(listing_url, client=None, user_agent=None):
+async def fetch_listing_contact(listing_url, client=None, user_agent=None, request_limiter=None):
     """Fetch contact info using Zameen.com's showNumbers endpoint."""
     ck = cache_key(contact_url=listing_url)
     cached = cache_get(ck)
@@ -233,19 +233,32 @@ async def fetch_listing_contact(listing_url, client=None, user_agent=None):
     ua = user_agent or random.choice(USER_AGENTS)
     api_url = f"https://www.zameen.com/api/showNumbers?listingExternalID={zid}&isProject=false"
     headers = _contact_api_headers(ua, listing_url)
+    limiter = request_limiter or rate_limiter
 
     try:
         for attempt in range(3):
             try:
-                await rate_limiter.acquire()
+                await limiter.acquire()
                 resp = await client.get(api_url, headers=headers, timeout=15)
                 if resp.status_code == 200:
+                    if hasattr(limiter, "record_success"):
+                        limiter.record_success()
                     parsed = _parse_contact_payload(resp.json())
                     if parsed is not None:
                         cache_set(ck, parsed)
                     return parsed
                 if resp.status_code == 429:
-                    await asyncio.sleep((2 ** attempt) + random.uniform(1, 3))
+                    consecutive, slowed = (0, False)
+                    if hasattr(limiter, "record_429"):
+                        consecutive, slowed = limiter.record_429()
+                    wait = (2 ** attempt) + random.uniform(1, 3) + (consecutive * 2)
+                    logger.warning(
+                        "showNumbers 429 for %s (consecutive: %d), waiting %.0fs",
+                        zid, consecutive, wait
+                    )
+                    if slowed:
+                        logger.warning("Rate limiter slowed to %.2f req/sec", limiter.rate)
+                    await asyncio.sleep(wait)
                     continue
                 logger.warning("showNumbers returned %s for %s", resp.status_code, zid)
                 break
@@ -265,9 +278,14 @@ async def fetch_page(url, client):
             await rate_limiter.acquire()
             headers = {"User-Agent": random.choice(USER_AGENTS), "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.9", "Accept-Encoding": "gzip, deflate, br", "Connection": "keep-alive"}
             resp = await client.get(url, headers=headers, timeout=15, follow_redirects=True)
-            if resp.status_code == 200: return resp.text
+            if resp.status_code == 200:
+                rate_limiter.record_success()
+                return resp.text
             elif resp.status_code == 429:
-                await asyncio.sleep((2**attempt) + random.uniform(1,3))
+                consecutive, slowed = rate_limiter.record_429()
+                if slowed:
+                    logger.warning("Rate limiter slowed to %.2f req/sec", rate_limiter.rate)
+                await asyncio.sleep((2**attempt) + random.uniform(1,3) + (consecutive * 2))
             else:
                 logger.warning(f"HTTP {resp.status_code} for {url}")
                 await asyncio.sleep(1)

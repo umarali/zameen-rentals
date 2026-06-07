@@ -34,8 +34,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet"></noscript>
-  <script type="module" crossorigin src="/static/assets/index-DBGeLJRP.js"></script>
-  <link rel="stylesheet" crossorigin href="/static/assets/index-DTFQM1oE.css">
+  <script type="module" crossorigin src="/static/assets/index-t1YzFYbx.js"></script>
+  <link rel="stylesheet" crossorigin href="/static/assets/index-DRcj8-vb.css">
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
@@ -60,7 +60,7 @@
     <div class="flex items-center min-w-0 border border-gray-200 rounded-full bg-white px-4 pr-1 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
       <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
       <input id="nlInput" type="text" class="flex-1 min-w-0 w-full py-2.5 px-3 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Try: 2 bed flat DHA under 50k" autocomplete="off">
-      <button id="nlSearchBtn" class="w-8 h-8 rounded-full bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shrink-0 transition-colors disabled:opacity-50">
+      <button id="nlSearchBtn" type="button" aria-label="Search rentals" title="Search rentals" class="w-8 h-8 rounded-full bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shrink-0 transition-colors disabled:opacity-50">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
       </button>
     </div>
@@ -85,7 +85,7 @@
 <!-- ===== INFO BANNER ===== -->
 <div id="infoBanner" class="bg-brand-50 border-b border-brand-100 px-4 lg:px-6 py-2.5 flex items-center gap-3 text-xs text-brand-700">
   <svg class="w-4 h-4 shrink-0 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-  <span class="flex-1">Listings are real data sourced live from Zameen.com. If you spot incorrect info or unexpected results, please <button class="font-semibold underline underline-offset-2 hover:text-brand-900 transition-colors" onclick="document.getElementById('reportBtn').click()">let us know via feedback</button>.</span>
+  <span class="flex-1">Listings are sourced from Zameen.com and refreshed periodically — some may already be rented, so confirm with the agent before visiting. Spotted something off? <button class="font-semibold underline underline-offset-2 hover:text-brand-900 transition-colors" onclick="document.getElementById('reportBtn').click()">Let us know</button>.</span>
   <button id="infoBannerClose" aria-label="Dismiss" class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-brand-100 text-brand-400 hover:text-brand-600 transition-colors text-base leading-none">&times;</button>
 </div>
 <script>
@@ -117,6 +117,7 @@
   <button class="chip-filter shrink-0" data-filter="area" id="areaChip">Area <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
   <button class="chip-filter shrink-0" data-filter="type" id="typeChip">Type <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
   <button class="chip-filter shrink-0" data-filter="beds" id="bedsChip">Beds <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="size" id="sizeChip">Size <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
   <button class="chip-filter shrink-0" data-filter="price" id="priceChip">Price <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
   <button class="chip-filter shrink-0" data-filter="more" id="moreChip">More <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
 </div>
@@ -127,7 +128,7 @@
     <div class="text-sm font-semibold text-gray-700 mb-3">Select Area</div>
     <div class="flex items-center border border-gray-200 rounded-lg px-3 focus-within:border-brand-500 transition-colors">
       <input id="areaInput" type="text" class="flex-1 py-2.5 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Type area name..." autocomplete="off">
-      <button id="areaClear" class="hidden text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+      <button id="areaClear" type="button" aria-label="Clear area search" class="hidden text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
     </div>
     <div id="areaList" class="mt-2 max-h-52 overflow-y-auto scroll-thin"></div>
   </div>
@@ -182,6 +183,24 @@
       <button id="priceApply" class="w-full mt-2 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors">Apply</button>
     </div>
   </div>
+  <div id="dd-size" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm font-semibold text-gray-700">Property Size</div>
+      <div id="sizeUnitToggle" class="flex items-center bg-gray-100 rounded-lg p-0.5" role="group" aria-label="Size unit">
+        <button type="button" class="size-unit-btn text-xs font-semibold px-2.5 py-1 rounded-md transition-colors" data-unit="marla">Marla</button>
+        <button type="button" class="size-unit-btn text-xs font-semibold px-2.5 py-1 rounded-md transition-colors" data-unit="sqyd">Sq Yd</button>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2" id="sizeGrid"><!-- presets rendered by renderSizeFilter() per unit --></div>
+    <div id="customSize" class="hidden mt-3">
+      <div class="grid grid-cols-2 gap-2">
+        <input id="sizeMin" type="number" class="px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors" placeholder="Min (Marla)" min="0" step="0.5">
+        <input id="sizeMax" type="number" class="px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors" placeholder="Max (Marla)" min="0" step="0.5">
+      </div>
+      <p id="sizeUnitHint" class="text-[11px] text-gray-400 mt-2">1 Kanal = 20 Marla</p>
+      <button id="sizeApply" class="w-full mt-2 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors">Apply</button>
+    </div>
+  </div>
   <div id="dd-more" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
     <div class="text-sm font-semibold text-gray-700 mb-2">More Filters</div>
     <div class="flex items-center justify-between py-2">
@@ -210,6 +229,9 @@
   </div>
 </div>
 
+<!-- ===== UNDERSTOOD CHIPS (how we interpreted a natural-language search) ===== -->
+<div id="nlUnderstood" class="hidden items-center flex-wrap gap-1.5 bg-brand-50/60 border-b border-brand-100 px-4 lg:px-6 py-2 text-xs" aria-live="polite"></div>
+
 <!-- Mobile dropdown backdrop -->
 <div id="ddBackdrop" class="fixed inset-0 bg-black/30 z-[35] hidden"></div>
 
@@ -229,7 +251,8 @@
     <div id="listingsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-5"></div>
     <div id="listingsFooter"></div>
     <div class="text-center py-6 text-xs text-gray-400">
-      Powered by Zameen.com data
+      <span>Powered by Zameen.com data</span>
+      <span id="dataStatus" class="block mt-1 text-[11px] text-gray-300"></span>
     </div>
   </section>
   <section id="mapPanel" class="relative border-l border-gray-200 hidden lg:block z-0">
@@ -273,7 +296,7 @@
 <div id="feedbackModal" class="fixed z-[251] hidden top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] max-w-[92vw] bg-white rounded-2xl shadow-2xl p-6">
   <div class="flex items-center justify-between mb-4">
     <h3 class="text-base font-bold text-gray-700">Send Feedback</h3>
-    <button id="feedbackClose" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 text-lg transition-colors">&times;</button>
+    <button id="feedbackClose" type="button" aria-label="Close feedback" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 text-lg transition-colors">&times;</button>
   </div>
   <textarea id="feedbackMsg" class="w-full h-28 p-3 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors" placeholder="What's wrong? What could be better?"></textarea>
   <p class="text-[11px] text-gray-400 mt-2">Your current search context is attached automatically.</p>
@@ -287,7 +310,7 @@
 <div id="drawerOverlay" class="fixed inset-0 bg-black/40 z-[200] opacity-0 pointer-events-none transition-opacity duration-300"></div>
 <div id="drawer" class="fixed z-[201] bg-white overflow-y-auto overscroll-contain transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)] top-0 right-0 bottom-0 w-[480px] max-w-[95vw] shadow-2xl max-md:inset-0 max-md:w-full max-md:max-w-full max-md:h-[100dvh] max-md:max-h-none max-md:rounded-none">
   <div class="relative">
-    <button id="drawerClose" class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur hover:bg-gray-100 flex items-center justify-center text-gray-600 text-xl z-10 transition-colors shadow-sm">&times;</button>
+    <button id="drawerClose" type="button" aria-label="Close listing details" class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur hover:bg-gray-100 flex items-center justify-center text-gray-600 text-xl z-10 transition-colors shadow-sm">&times;</button>
     <div id="drawerImgArea"></div>
   </div>
   <div id="drawerContent" class="px-6 pb-8"></div>
@@ -297,10 +320,10 @@
 <div id="galleryModal" class="fixed inset-0 z-[300] bg-black hidden">
   <div class="absolute top-4 right-4 z-10 flex items-center gap-3">
     <span id="galleryCounter" class="text-white/80 text-sm font-medium"></span>
-    <button id="galleryClose" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl transition-colors">&times;</button>
+    <button id="galleryClose" type="button" aria-label="Close gallery" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl transition-colors">&times;</button>
   </div>
-  <button id="galleryPrev" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
-  <button id="galleryNext" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
+  <button id="galleryPrev" type="button" aria-label="Previous photo" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
+  <button id="galleryNext" type="button" aria-label="Next photo" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
   <div id="galleryImg" class="w-full h-full flex items-center justify-center p-12"><img class="max-w-full max-h-full object-contain" src="" alt=""></div>
 </div>
 
@@ -310,7 +333,7 @@
     <img src="/static/logo.svg" alt="" class="w-10 h-10 shrink-0 rounded-xl">
     <p id="installMsg" class="flex-1 text-sm text-gray-700 font-medium">Add ZameenRentals to your home screen for faster access</p>
     <button id="installBtn" class="px-4 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-full transition-colors shrink-0">Install</button>
-    <button id="installDismiss" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 text-lg shrink-0">&times;</button>
+    <button id="installDismiss" type="button" aria-label="Dismiss install prompt" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 text-lg shrink-0">&times;</button>
   </div>
 </div>
 

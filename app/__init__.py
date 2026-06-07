@@ -15,7 +15,11 @@ from starlette.requests import Request
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-app = FastAPI(title="ZameenRentals", version="1.0.0")
+# Single source of truth for the app version — surfaced via /api/health and the
+# OpenAPI docs, and shown as a small build indicator in the frontend footer.
+APP_VERSION = "1.1.0"
+
+app = FastAPI(title="ZameenRentals", version=APP_VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
 
 from app.cache import limiter as api_limiter  # noqa: E402
