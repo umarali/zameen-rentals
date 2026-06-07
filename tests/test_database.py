@@ -7,7 +7,7 @@ from app.db_listings import (
     upsert_listing, search_listings, get_listing_by_zameen_id,
     get_listings_needing_detail, mark_stale_listings, get_crawl_stats,
     content_hash, detail_hash, search_exact_listings_in_bounds, search_nearby_listings,
-    get_nearby_enrichment_candidates,
+    get_nearby_enrichment_candidates, listing_write_batch,
 )
 
 
@@ -21,6 +21,47 @@ class TestContentHash:
         h1 = content_hash(50000, "Test Flat", 2, 1, "5 Marla")
         h2 = content_hash(60000, "Test Flat", 2, 1, "5 Marla")
         assert h1 != h2
+
+
+class TestListingWriteBatch:
+    def test_rolls_back_failed_batch(self):
+        with pytest.raises(RuntimeError):
+            with listing_write_batch():
+                upsert_listing(
+                    zameen_id="batch-rollback",
+                    url="https://zameen.com/Property/batch-rollback-100001-1-1.html",
+                    city="karachi",
+                    card_data={"title": "Rollback me", "price": 50000},
+                    commit=False,
+                )
+                raise RuntimeError("write failed")
+
+        assert get_listing_by_zameen_id("batch-rollback") is None
+
+    def test_commit_failure_triggers_rollback(self, monkeypatch):
+        class FakeConnection:
+            def __init__(self):
+                self.in_transaction = False
+                self.rolled_back = False
+
+            def execute(self, sql):
+                self.in_transaction = True
+
+            def commit(self):
+                raise RuntimeError("commit failed")
+
+            def rollback(self):
+                self.rolled_back = True
+                self.in_transaction = False
+
+        conn = FakeConnection()
+        monkeypatch.setattr("app.db_listings._get_conn", lambda: conn)
+
+        with pytest.raises(RuntimeError, match="commit failed"):
+            with listing_write_batch():
+                pass
+
+        assert conn.rolled_back is True
 
 
 class TestUpsertListing:

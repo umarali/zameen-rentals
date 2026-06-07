@@ -1,5 +1,6 @@
 """Listing CRUD operations and local search queries."""
 import hashlib, json, logging, math, re
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 from app.database import _get_conn
@@ -9,6 +10,28 @@ logger = logging.getLogger("zameenrentals")
 _DISTANCE_SENTINEL = 999999999
 _FRESHNESS_SQL = "COALESCE(zameen_updated_at, zameen_posted_at, first_seen_at)"
 _STABLE_RECENCY_SQL = f"{_FRESHNESS_SQL} DESC, last_seen_at DESC, id DESC"
+
+
+@contextmanager
+def listing_write_batch():
+    """Group listing writes into one transaction when the caller owns the batch."""
+    conn = _get_conn()
+    already_in_transaction = conn.in_transaction
+    if not already_in_transaction:
+        conn.execute("BEGIN")
+    try:
+        yield conn
+        if not already_in_transaction:
+            conn.commit()
+    except BaseException:
+        if not already_in_transaction:
+            conn.rollback()
+        raise
+
+
+def _commit_if_needed(conn, commit):
+    if commit:
+        conn.commit()
 
 # Broader pattern: matches "2 days ago", "Added: 5 hours ago", "1 month", "yesterday".
 _ADDED_RE_BROAD = re.compile(r"(\d+)\s*(minute|hour|day|week|month|year)", re.IGNORECASE)
@@ -314,7 +337,8 @@ def _source_age_fields(existing, card_data, reference):
 
 
 def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
-                   lat=None, lng=None, card_data=None, detail_data=None):
+                   lat=None, lng=None, card_data=None, detail_data=None,
+                   commit=True):
     """Insert or update a listing. Returns 'inserted', 'updated', or 'unchanged'."""
     conn = _get_conn()
     scraped_at = datetime.utcnow()
@@ -359,7 +383,6 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                 now, now, posted_at, updated_at, c_hash
             ))
             new_id = cur.lastrowid
-            conn.commit()
             try:
                 from app.personalization import record_match_for_inserted_listing
                 inserted_row = {
@@ -381,9 +404,10 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                     "amenities_json": None,
                     "details_json": None,
                 }
-                record_match_for_inserted_listing(new_id, inserted_row)
+                record_match_for_inserted_listing(new_id, inserted_row, commit=False)
             except Exception:
                 logger.exception("Alert match hook failed for %s", zameen_id)
+            _commit_if_needed(conn, commit)
             return "inserted"
 
         added_text, updated_text, posted_at, updated_at, has_updated = _source_age_fields(
@@ -421,7 +445,7 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                 added_text, has_updated, updated_text, now, posted_at,
                 has_updated, updated_at, now, zameen_id
             ))
-            conn.commit()
+            _commit_if_needed(conn, commit)
             return "unchanged"
 
         # Card data changed
@@ -462,7 +486,7 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             area_name, area_slug, lat, lng, lat, lng, now, posted_at,
             has_updated, updated_at, now, c_hash, zameen_id
         ))
-        conn.commit()
+        _commit_if_needed(conn, commit)
         return "updated"
 
     if detail_data and existing:
@@ -565,7 +589,7 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             latitude, longitude, location_source,
             detail_scraped_at, d_hash, zameen_id
         ))
-        conn.commit()
+        _commit_if_needed(conn, commit)
         return "updated"
 
     return "unchanged"
