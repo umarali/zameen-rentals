@@ -49,6 +49,8 @@ async def shutdown():
 
 from app.routes import router  # noqa: E402
 app.include_router(router)
+from app.voice import router as voice_router  # noqa: E402
+app.include_router(voice_router)
 
 # Serve static files (favicon, etc.) — mounted AFTER routes so / still serves index.html
 _static_dir = Path(__file__).resolve().parent.parent / "static"
