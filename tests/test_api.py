@@ -786,3 +786,47 @@ class TestMultiAreaSearch:
         self._seed("810004", "Clifton")
         data = client.get("/api/search?city=karachi&areas=Clifton").json()
         assert data["total"] == 1
+
+
+class TestApproximateAreaFlag:
+    def _parse(self, client, monkeypatch, q):
+        async def regex_only(q, city="lahore"):
+            from app.parsing import parse_natural_query
+            return parse_natural_query(q, city=city)
+
+        monkeypatch.setattr("app.routes.parse_query_with_claude", regex_only)
+        return client.get("/api/parse-query", params={"q": q, "city": "karachi"}).json()["filters"]
+
+    def test_price_words_do_not_make_a_clean_area_approximate(self, client, monkeypatch):
+        f = self._parse(client, monkeypatch, "2 bed flat in clifton under 80k")
+        assert f["area"] == "Clifton"
+        assert "area_approximate" not in f
+
+    def test_every_named_area_counts_as_matched(self, client, monkeypatch):
+        f = self._parse(client, monkeypatch, "2 bed flat in DHA or Clifton under 80k")
+        assert f["areas"] == ["DHA Defence", "Clifton"]
+        assert "area_approximate" not in f
+
+    def test_misspelling_is_still_flagged(self, client, monkeypatch):
+        f = self._parse(client, monkeypatch, "flat in clifftn")
+        assert f["area"] == "Clifton"
+        assert f["area_approximate"] is True
+        assert f["area_query"] == "clifftn"
+
+
+@pytest.mark.parametrize("query", ["کلفٹن بلاک 5 میں 2 بیڈ فلیٹ", "furnished کلفٹن or DHA",
+                                   "ڈی ایچ اے فیز 6 میں گھر", "2 bed clifton block 5 under 80k"])
+def test_exact_area_mentions_are_not_marked_approximate(query):
+    from app.parsing import parse_natural_query
+    from app.routes import _build_parse_query_response
+    result = _build_parse_query_response(query, "karachi", parse_natural_query(query, "karachi"))
+    assert "area_approximate" not in result["filters"]
+
+
+def test_fuzzy_block_remains_marked_approximate():
+    from app.parsing import parse_natural_query
+    from app.routes import _build_parse_query_response
+    query = "flat in clifftn blok 5 under 80k"
+    filters = _build_parse_query_response(query, "karachi", parse_natural_query(query, "karachi"))["filters"]
+    assert filters["area"] == "Clifton Block 5"
+    assert filters["area_approximate"] is True

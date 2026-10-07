@@ -3,6 +3,7 @@ import asyncio
 import hmac
 import logging
 import os
+import re
 import time
 from threading import Lock as _Lock
 from difflib import SequenceMatcher
@@ -16,7 +17,7 @@ from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_area
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
-from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens
+from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE, _area_spans
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
 from app.db_listings import (
     decode_listing_json_field,
@@ -126,17 +127,28 @@ def _validate_viewport_bounds(south, west, north, east):
     return True
 
 
+_AMOUNT_TOKEN_RE = re.compile(r"[\d.,]+(?:k|lac|lacs|lakh|laakh|hazar|hazaar|thousand|cr|crore)?")
+
+
 def _build_parse_query_response(q, city, result):
     # Copy: the Claude path returns its cached dict.
     result = dict(result)
     parser = result.pop("parser", "regex")
     # Flag when the matched area differs from what the user typed
-    areas = get_areas(city)
-    if result.get("area") and result["area"] in areas:
+    effective_city = result.get("city_hint") or city
+    areas = get_areas(effective_city)
+    selected = result.get("areas") or [result.get("area")]
+    exact_mentions = {name for _, _, name in _area_spans(q.lower(), effective_city)}
+    exact_selection = all(name in exact_mentions for name in selected)
+    if result.get("area") and result["area"] in areas and not exact_selection:
         ql = q.lower()
         # rstrip('.') so "sq." tokenizes to "sq" (matches the noise set below).
         query_tokens = {t.rstrip(".") for t in ql.replace("-", " ").split()} - {"in", "for", "rent", "rental", "ke", "ka", "ki", "mein", "me"}
-        area_tokens = set(result["area"].lower().replace("-", " ").split())
+        # Every area the query named counts as matched ("DHA or Clifton").
+        area_tokens = {
+            t for name in (result.get("areas") or [result["area"]])
+            for t in name.lower().replace("-", " ").split()
+        }
         unmatched = query_tokens - area_tokens
         noise = {"house", "flat", "apartment", "portion", "upper", "lower", "room", "bed", "bedroom", "furnished", "full", "ghar", "makan", "bala", "nichla", "kamra",
                  # Size units and city names are consumed by other parsed fields —
@@ -148,8 +160,10 @@ def _build_parse_query_response(q, city, result):
                  "gaz", "gaj", "guz", "gajj", "sq", "square",
                  "lahore", "karachi", "islamabad", "isb", "khi", "lhr"}
         unmatched -= noise
-        # Drop bare numbers, including decimals like "5.5" (sizes/prices).
-        unmatched = {t for t in unmatched if not t.replace(".", "", 1).isdigit()}
+        # Filter words the parser consumed elsewhere ("under", "or", "tak").
+        unmatched -= _AREA_NOISE
+        # Drop numbers and amounts, including "5.5" and "80k" (sizes/prices).
+        unmatched = {t for t in unmatched if not _AMOUNT_TOKEN_RE.fullmatch(t)}
         if unmatched:
             result["area_approximate"] = True
             result["area_query"] = " ".join(unmatched)

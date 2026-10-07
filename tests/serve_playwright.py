@@ -1,6 +1,7 @@
 """Run browser tests with disposable data and no upstream scraping."""
 import os
 from pathlib import Path
+import signal
 import sys
 import tempfile
 
@@ -57,6 +58,10 @@ def main():
                             } if i % 3 == 0 else None,
                         )
         close_db()
+        # uvicorn re-raises SIGTERM/SIGINT after shutting down. Turn that into
+        # SystemExit so the TemporaryDirectory above is removed, not leaked.
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            signal.signal(sig, lambda *_: sys.exit(0))
         uvicorn.run(app, host="127.0.0.1", port=int(os.environ.get("PLAYWRIGHT_PORT", "8000")))
 
 
