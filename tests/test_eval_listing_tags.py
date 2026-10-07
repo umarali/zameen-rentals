@@ -28,6 +28,10 @@ class TestKeywords:
         tags = ev.keyword_tags("Brand new house with 10kv solar and separate gate")
         assert tags["backup_power"] and tags["separate_entrance"] and tags["newly_built"]
 
+    def test_separate_stairs_count(self):
+        assert ev.keyword_tags("Upper portion with separate stairs")["separate_entrance"]
+        assert ev.keyword_tags("Separate meters")["separate_entrance"] is None
+
     def test_stratum_is_rarest_hit(self):
         assert ev.stratum_of("brand new, solar, students welcome") == "tenant"
         assert ev.stratum_of("brand new with solar") == "backup_power"
@@ -213,3 +217,4 @@ def test_sample_from_csv_export(tmp_path):
     with open(out, newline="") as f:
         rows = list(csv.DictReader(f))
     assert [(r["zameen_id"], r["stratum"]) for r in rows] == [("1", "backup_power")]
+    assert "Electricity Backup" in (tmp_path / "labels.guide.txt").read_text()

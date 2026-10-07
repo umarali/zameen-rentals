@@ -52,13 +52,41 @@ CONTEXT_COLUMNS = ["city", "area_name", "property_type", "price", "bedrooms", "a
 PRECISION_BAR = 0.90
 CLEAR_RECALL_GAIN = 0.10   # a model must find this much more to beat a passing open-source rule
 OPEN_SOURCE = ("keywords", "amenities", "kw+amenities")
+
+# Written next to every sample. Labels must follow the same definitions the
+# models are asked (app/listing_tags.py QUESTIONS), or the comparison is unfair.
+LABEL_GUIDE = """\
+How to label (judge only what the listing states: title, description, amenities)
+
+tenant_fit: who the listing says may rent it
+  family    families only, or says no bachelors
+  bachelor  bachelors, students, working men or women, or singles welcome
+  either    says both families and bachelors are welcome
+  unclear   doesn't say. "Family home", "family apartment" or "family
+            environment" used as description is unclear, not family.
+
+backup_power: y if the listing states any backup power: the "Electricity
+  Backup" amenity, or solar, UPS, inverter or generator in the text.
+  "No load shedding area" alone is n.
+
+separate_entrance: y if the unit has its own entrance or gate, not shared
+  with another portion. Separate stairs to an upper portion count.
+  Separate meters alone are n.
+
+newly_built: y if it says brand new, newly built or constructed, never
+  lived in, or first tenant. "Renovated" and "Built in year" alone are n.
+
+Use y or n for the last three. Leave a row blank to skip it; blank rows
+are not scored.
+"""
 HAIKU_MODEL = "claude-haiku-4-5"
 
 # ── Keyword baseline (open source; also defines the sampling strata) ──
 
 _KEYWORDS = {
     "backup_power": re.compile(r"\b(solar|ups|inverter|generator|backup)\b", re.I),
-    "separate_entrance": re.compile(r"\b(separate|independent|own)\s+(gate|entrance|entry|door)\b", re.I),
+    "separate_entrance": re.compile(
+        r"\b(separate|independent|own)\s+(gate|entrance|entry|door|stairs?|staircase)\b", re.I),
     "newly_built": re.compile(r"\b(brand\s*new|newly\s+(built|constructed)|never\s+(lived|used))\b", re.I),
 }
 _BACHELOR = re.compile(r"\b(bachelors?|students?|working\s+(men|women|ladies)|boys|girls)\b", re.I)
@@ -97,6 +125,8 @@ def amenity_names(raw):
     return names
 
 
+# Zameen's amenity taxonomy has "Electricity Backup" (a checkbox) and nothing
+# for entrances, so separate_entrance from amenities scores zero by design.
 _AMENITY_BACKUP = re.compile(r"\b(solar|ups|inverter|generator|electricity\s+backup)\b", re.I)
 _AMENITY_ENTRANCE = re.compile(r"\b(separate|independent|private)\s+(entrance|entry|gate)\b", re.I)
 
@@ -174,7 +204,10 @@ def sample(args):
         for s, r in picked:
             writer.writerow([r["zameen_id"], s, populations[s], *[r[c] for c in CONTEXT_COLUMNS],
                              *[""] * len(LABEL_COLUMNS)])
-    print(f"{len(rows)} eligible listings; wrote {len(picked)} rows to {args.out}")
+    guide = Path(args.out).with_suffix(".guide.txt")
+    guide.write_text(LABEL_GUIDE)
+    print(f"{len(rows)} eligible listings; wrote {len(picked)} rows to {args.out}; "
+          f"labelling guide in {guide}")
     for s in STRATA:
         print(f"  {s:<18} population {populations[s]:>6}  sampled {sizes[s]:>4}")
 
