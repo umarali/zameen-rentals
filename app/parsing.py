@@ -115,11 +115,77 @@ def _parse_size_value(num: str, unit: str) -> Optional[float]:
     return v
 
 
+# --- Spoken numbers --------------------------------------------------------
+# Voice search transcribes "two bed" as "do bed" / "دو بیڈ" and "50 thousand"
+# as "pachas hazar" / "پچاس ہزار". Number words become digits only when a bed,
+# room, size or money unit follows, so "saath" ("with") and "do" stay words.
+_NUMBER_WORDS = {
+    # Roman Urdu
+    "ek": 1, "aik": 1, "do": 2, "teen": 3, "tin": 3, "char": 4, "chaar": 4,
+    "panch": 5, "paanch": 5, "chay": 6, "chhe": 6, "che": 6, "saat": 7, "aath": 8, "ath": 8,
+    "das": 10, "pandrah": 15, "bees": 20, "pachees": 25, "tees": 30, "paintees": 35,
+    "chalees": 40, "chalis": 40, "paintalees": 45, "pachas": 50, "pachaas": 50,
+    "pachpan": 55, "saath": 60, "sath": 60, "painsath": 65, "sattar": 70, "pachattar": 75,
+    "assi": 80, "assee": 80, "nabbe": 90, "nabbay": 90, "sau": 100,
+    # English
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+    "nine": 9, "ten": 10, "fifteen": 15, "twenty": 20, "twenty-five": 25, "thirty": 30,
+    "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
+    "hundred": 100,
+    # Urdu script
+    "ایک": 1, "دو": 2, "تین": 3, "چار": 4, "پانچ": 5, "چھ": 6, "سات": 7, "آٹھ": 8, "نو": 9,
+    "دس": 10, "پندرہ": 15, "بیس": 20, "پچیس": 25, "تیس": 30, "پینتیس": 35, "چالیس": 40,
+    "پینتالیس": 45, "پچاس": 50, "پچپن": 55, "ساٹھ": 60, "پینسٹھ": 65, "ستر": 70,
+    "پچھتر": 75, "اسی": 80, "نوے": 90, "سو": 100,
+}
+# Words that are a number on their own: dedh = 1.5, dhai = 2.5.
+_FRACTION_WORDS = {"dedh": 1.5, "derh": 1.5, "ڈیڑھ": 1.5, "dhai": 2.5, "adhai": 2.5, "ڈھائی": 2.5}
+# Modifiers before a number word: sade teen = 3.5, sawa do = 2.25.
+_NUMBER_MODIFIERS = {"sade": 0.5, "saade": 0.5, "ساڑھے": 0.5, "sawa": 0.25, "سوا": 0.25}
+_URDU_UNITS = {"ہزار": "hazar", "لاکھ": "lakh", "کروڑ": "crore"}
+_NUMBER_UNIT = (r"(?:bed(?:room)?s?|br|bhk|kamr\w*|rooms?|hazar|hazaar|thousand|k\b|"
+                r"lakh|lac|lacs|laakh|crore|cr\b|marla|kanal|بیڈ|کمر\w*|مرلہ|کنال)")
+_DIGIT_TABLE = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+
+
+def _format_number(value):
+    return str(int(value)) if value == int(value) else f"{value:g}"
+
+
+def _normalize_number_words(text: str) -> str:
+    """Rewrite spoken numbers as digits when a unit follows ("do bed" -> "2 bed")."""
+    text = text.translate(_DIGIT_TABLE)
+    for urdu, roman in _URDU_UNITS.items():
+        text = text.replace(urdu, f" {roman} ")
+    words = "|".join(re.escape(w) for w in sorted(_NUMBER_WORDS, key=len, reverse=True))
+    fractions = "|".join(re.escape(w) for w in _FRACTION_WORDS)
+    modifiers = "|".join(re.escape(w) for w in _NUMBER_MODIFIERS)
+    number = rf"(?:(?:({modifiers})\s+)?({words})|({fractions}))"
+    # A number word followed by a unit, or by "se/to/-" and a second number + unit.
+    pattern = re.compile(
+        rf"(?<!\w){number}(?=\s*(?:(?:se|to|-|سے)\s*(?:{number}|\d+)\s*)?{_NUMBER_UNIT})",
+        re.I,
+    )
+
+    def value(mod, word, frac):
+        if frac:
+            return _FRACTION_WORDS[frac.lower()]
+        return _NUMBER_WORDS[word.lower()] + (_NUMBER_MODIFIERS[mod.lower()] if mod else 0)
+
+    def repl(m):
+        return _format_number(value(m.group(1), m.group(2), m.group(3)))
+
+    # Run twice so both ends of a range ("tees se pachas hazar") are rewritten.
+    for _ in range(2):
+        text = pattern.sub(repl, text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def parse_natural_query(query: str, city: str = "lahore") -> dict:
     """Parse a natural language rental query into structured filters.
     Supports English, Roman Urdu, and Urdu script."""
     result = {}
-    q = query.strip()
+    q = _normalize_number_words(query.strip())
     if not q:
         return result
     ql = q.lower()
