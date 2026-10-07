@@ -130,6 +130,29 @@ def _validate_viewport_bounds(south, west, north, east):
 _AMOUNT_TOKEN_RE = re.compile(r"[\d.,]+(?:k|lac|lacs|lakh|laakh|hazar|hazaar|thousand|cr|crore)?")
 
 
+# "block 13", "phase 8", "sector 4" (also Urdu بلاک/فیز/سیکٹر) the user typed.
+_SUB_AREA_QUALIFIER_RE = re.compile(
+    r"(?<!\w)(block|blok|blk|phase|sector|sec|street|lane|بلاک|فیز|سیکٹر)\s*-?\s*(\d+[a-z]?)(?!\w)"
+)
+_QUALIFIER_WORDS = {"blok": "block", "blk": "block", "sec": "sector",
+                    "بلاک": "block", "فیز": "phase", "سیکٹر": "sector"}
+
+
+def _unmatched_sub_area(q, selected):
+    """The first typed block/phase/sector that none of the matched areas include.
+
+    "gulshan e iqbal block 13" matches the parent exactly, but Block 13 isn't a
+    known area, so the user is getting all of Gulshan-e-Iqbal.
+    """
+    area_tokens = [name.lower().replace("-", " ").split() for name in selected if name]
+    for m in _SUB_AREA_QUALIFIER_RE.finditer(q.lower()):
+        word = _QUALIFIER_WORDS.get(m.group(1), m.group(1))
+        pair = [word, m.group(2)]
+        if not any(tokens[i:i + 2] == pair for tokens in area_tokens for i in range(len(tokens) - 1)):
+            return m.group(0)
+    return None
+
+
 def _build_parse_query_response(q, city, result):
     # Copy: the Claude path returns its cached dict.
     result = dict(result)
@@ -167,7 +190,14 @@ def _build_parse_query_response(q, city, result):
         if unmatched:
             result["area_approximate"] = True
             result["area_query"] = " ".join(unmatched)
-    elif not result.get("area"):
+    if result.get("area") and result["area"] in areas:
+        qualifier = _unmatched_sub_area(q, selected)
+        if qualifier:
+            result["area_approximate"] = True
+            # Keep other unmatched words, then the qualifier as typed.
+            other = [w for w in result.get("area_query", "").split() if w not in qualifier.split()]
+            result["area_query"] = " ".join(other + [qualifier])
+    if not result.get("area"):
         # No confident area: offer "did you mean" choices instead of guessing.
         leftover = _strip_noise_tokens(q.lower())
         suggestions = suggest_areas(leftover, city=city) if len(leftover) >= 3 else []
