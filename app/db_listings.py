@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from app.database import _get_conn
 from app.data import PROPERTY_TYPES, canonical_area_name, location_id_for_area
+from app.listing_tags import attach_tags, tag_filter_clauses
 
 logger = logging.getLogger("zameenrentals")
 _DISTANCE_SENTINEL = 999999999
@@ -126,7 +127,8 @@ def area_filter_sql(city, area_names, *, alias=None):
 def _listing_filter_clauses(*, city="lahore", area=None, area_names=None, property_type=None,
                             bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
                             size_marla_min=None, size_marla_max=None,
-                            furnished=None, q=None, exact_only=False, geocoded_only=False):
+                            furnished=None, q=None, exact_only=False, geocoded_only=False,
+                            tenant=None, backup_power=None, separate_entrance=None):
     conditions = ["is_active = 1", "city = ?"]
     params = [city]
 
@@ -184,6 +186,10 @@ def _listing_filter_clauses(*, city="lahore", area=None, area_names=None, proper
     if q:
         conditions.append("id IN (SELECT rowid FROM listings_fts WHERE listings_fts MATCH ?)")
         params.append(q)
+    tag_conditions, tag_params = tag_filter_clauses(
+        tenant=tenant, backup_power=backup_power, separate_entrance=separate_entrance)
+    conditions.extend(tag_conditions)
+    params.extend(tag_params)
 
     return conditions, params
 
@@ -721,7 +727,8 @@ def search_listings(*, city="lahore", area=None, area_names=None, property_type=
                     bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
                     size_marla_min=None, size_marla_max=None,
                     furnished=None, sort=None, q=None, page=1, per_page=25,
-                    center_lat=None, center_lng=None):
+                    center_lat=None, center_lng=None,
+                    tenant=None, backup_power=None, separate_entrance=None):
     """Search listings from local DB. Returns dict matching current API shape."""
     conn = _get_conn()
     conditions, params = _listing_filter_clauses(
@@ -730,6 +737,7 @@ def search_listings(*, city="lahore", area=None, area_names=None, property_type=
         price_min=price_min, price_max=price_max,
         size_marla_min=size_marla_min, size_marla_max=size_marla_max,
         furnished=furnished, q=q,
+        tenant=tenant, backup_power=backup_power, separate_entrance=separate_entrance,
     )
     where = " AND ".join(conditions)
 
@@ -774,7 +782,7 @@ def search_listings(*, city="lahore", area=None, area_names=None, property_type=
         query_params
     ).fetchall()
 
-    results = [_row_to_listing(r) for r in rows]
+    results = attach_tags([_row_to_listing(r) for r in rows])
     return {
         "total": total,
         "page": page,

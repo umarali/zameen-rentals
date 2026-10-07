@@ -57,13 +57,53 @@ The test server disables live Zameen scraping and uses temporary push keys.
 Size-filtered searches currently use local listings only. Live fallback does
 not support size bounds, so it cannot supply results for those searches.
 
+### Listing tags (Jev)
+
+`tools/tag_listings.py` asks [TypeSafe Jev](https://api.typesafe.ai) four typed
+questions about each crawled listing: who may rent it (family, bachelor, either,
+unclear), and whether it states backup power, a separate entrance or a new
+build. Answers go in the `listing_tags` table. Search can filter on them
+(`tenant`, `backup_power`, `separate_entrance`) and returns a `tags` object per
+listing.
+
+Only confident answers count. A tenant answer needs confidence of at least 0.7
+and a feature needs probability of at least 0.8. Anything less is shown as
+unknown, so an unsure answer never hides a listing. The thresholds are in
+`app/listing_tags.py`.
+
+Setup: put `TYPESAFE_API_KEY` in `.env` (never with a `VITE_` prefix, which
+would ship it to browsers). Without the key nothing is tagged and search works
+as before. The model is pinned to `jev-1.13.0`; override with `TYPESAFE_MODEL`.
+
+```bash
+python3 tools/tag_listings.py --dry-run      # count and cost estimate, no API calls
+python3 tools/tag_listings.py --limit 2000   # run on a timer next to the crawler
+```
+
+The tagger only scores listings that are new, have changed (`content_hash`),
+or have gained a description. By default it skips listings without a
+description, because titles rarely say who may rent. A listing costs about 270
+input tokens from its title, or about 500 with a description, at $0.042 per
+million: roughly $0.40 to $0.60 for 30,000 listings.
+
+Check quality before adding filter chips to the UI:
+
+```bash
+python3 tools/eval_listing_tags.py sample --n 150 --out labels.csv
+# label tenant_fit and the y/n columns by hand, then:
+python3 tools/eval_listing_tags.py score labels.csv
+```
+
+`score` prints precision and recall for Jev and for a keyword baseline. Where
+the keywords do as well, that tag doesn't need Jev.
+
 ## API Endpoints
 
 | Endpoint | Description |
 |---|---|
 | `GET /` | Web app |
 | `GET /api/cities` | List all supported cities |
-| `GET /api/search` | Search listings (params: `city`, `area`, `property_type`, `bedrooms`, `price_min`, `price_max`, `furnished`, `sort`, `page`) |
+| `GET /api/search` | Search listings (params: `city`, `area`, `property_type`, `bedrooms`, `price_min`, `price_max`, `furnished`, `sort`, `page`, `tenant`, `backup_power`, `separate_entrance`) |
 | `GET /api/areas` | List all supported areas (param: `city`) |
 | `GET /api/property-types` | List all property types |
 | `GET /api/parse-query` | Parse natural language query into filters |
