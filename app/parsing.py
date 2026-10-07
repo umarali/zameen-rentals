@@ -185,6 +185,7 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
                 break
 
     # --- Price ---
+    m2 = None
     m = re.search(r'([\d.]+\s*(?:k|lac|lakh|lacs|laakh|hazar|hazaar|crore|cr)?)\s*(?:-|to|se|سے|تک)\s*([\d.]+\s*(?:k|lac|lakh|lacs|laakh|hazar|hazaar|crore|cr)?)', ql)
     if m:
         pmin = _parse_price_token(m.group(1))
@@ -232,7 +233,13 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
             result['area'] = lm
     # Last resort: fuzzy match via match_area on stripped query
     if 'area' not in result:
-        stripped = _strip_noise_tokens(ql, keep_digits=True)
+        # Remove only amounts actually consumed by the price parser. A budget
+        # must not compete with the block number in a fuzzy area query.
+        area_text = ql
+        for price_match in sorted((match for match in (m, m2) if match),
+                                  key=lambda match: match.start(), reverse=True):
+            area_text = area_text[:price_match.start()] + ' ' + area_text[price_match.end():]
+        stripped = _strip_noise_tokens(area_text, keep_digits=True)
         if len(stripped) >= 3:
             candidate = match_area(stripped, city=city)
             if candidate:
@@ -249,7 +256,7 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
     return result
 
 
-_AREA_JOINER_RE = re.compile(r'^\s*(?:,|/|&|\bor\b|\band\b|\bya\b|\baur\b|\bphir\b)[\s,]*(?:\bor\b|\bthen\b)?\s*$')
+_AREA_JOINER_RE = re.compile(r'^\s*(?:,|/|&|\bor\b|\band\b|\bya\b|\baur\b|\bphir\b|یا|اور)[\s,]*(?:\bor\b|\bthen\b)?\s*$')
 
 
 def _area_mentions(text, city):

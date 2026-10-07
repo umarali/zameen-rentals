@@ -17,7 +17,7 @@ from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_area
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
-from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE
+from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE, _area_spans
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
 from app.db_listings import (
     decode_listing_json_field,
@@ -135,8 +135,12 @@ def _build_parse_query_response(q, city, result):
     result = dict(result)
     parser = result.pop("parser", "regex")
     # Flag when the matched area differs from what the user typed
-    areas = get_areas(city)
-    if result.get("area") and result["area"] in areas:
+    effective_city = result.get("city_hint") or city
+    areas = get_areas(effective_city)
+    selected = result.get("areas") or [result.get("area")]
+    exact_mentions = {name for _, _, name in _area_spans(q.lower(), effective_city)}
+    exact_selection = all(name in exact_mentions for name in selected)
+    if result.get("area") and result["area"] in areas and not exact_selection:
         ql = q.lower()
         # rstrip('.') so "sq." tokenizes to "sq" (matches the noise set below).
         query_tokens = {t.rstrip(".") for t in ql.replace("-", " ").split()} - {"in", "for", "rent", "rental", "ke", "ka", "ki", "mein", "me"}

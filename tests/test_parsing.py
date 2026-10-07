@@ -1,4 +1,6 @@
 """Parser-level regressions for Roman Urdu rental queries."""
+import pytest
+
 from app.parsing import parse_natural_query
 
 
@@ -180,3 +182,25 @@ class TestBlockNumbers:
 
     def test_numbered_area_followed_by_other_words_still_matches(self):
         assert parse_natural_query("askari 5 house", city="lahore")["area"] == "Askari 5"
+
+
+class TestAreaReviewRegressions:
+    @pytest.mark.parametrize("budget", ["under 50000", "under 80k", "50k to 80k", "for 45000"])
+    def test_budget_does_not_override_fuzzy_block(self, budget):
+        result = parse_natural_query(f"flat in clifftn blok 5 {budget}", city="karachi")
+        assert result["area"] == "Clifton Block 5"
+        assert result["price_max"] is not None
+
+    @pytest.mark.parametrize("joiner", ["یا", "اور"])
+    def test_urdu_area_alternatives(self, joiner):
+        result = parse_natural_query(f"2 بیڈ کلفٹن {joiner} گلشن اقبال", city="karachi")
+        assert result["areas"] == ["Clifton", "Gulshan-e-Iqbal"]
+        assert result["bedrooms"] == 2
+
+    def test_all_known_urdu_aliases_survive_filter_prefixes(self):
+        from app.data import URDU_AREAS, get_areas
+        for alias, name in URDU_AREAS.items():
+            if name not in get_areas("karachi"):
+                continue  # The known dangling aliases are outside this branch's scope.
+            for query in (alias, f"2 بیڈ فلیٹ {alias} میں 50000 تک", f"furnished 5 marla {alias}"):
+                assert parse_natural_query(query, "karachi")["area"] == name, query
