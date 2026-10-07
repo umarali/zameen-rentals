@@ -67,6 +67,13 @@ if [[ "$SNAPSHOT" == *.gz ]]; then
 else
   cp "$SNAPSHOT" "$WORK/snapshot.db"
 fi
+# Backups made with SQLite's online-backup API keep the live database's WAL
+# flag, and a WAL-flagged file without its -shm can't be opened read-only.
+# Switch this private copy to rollback mode; the app re-enables WAL on open.
+if ! sqlite3 "$WORK/snapshot.db" 'PRAGMA journal_mode=DELETE;' >/dev/null 2>&1; then
+  echo "Snapshot is not a readable SQLite database: $SNAPSHOT" >&2
+  exit 1
+fi
 LISTINGS="$(verify "$WORK/snapshot.db")"
 echo "Snapshot OK: $LISTINGS listings"
 
