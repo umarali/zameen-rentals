@@ -6,7 +6,7 @@ echo "=== ZameenRentals Bootstrap ==="
 
 # System packages
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y caddy python3-venv rsync sqlite3 ufw
+DEBIAN_FRONTEND=noninteractive apt-get install -y caddy python3-venv rsync sqlite3 ufw lsof
 
 # Firewall: SSH and web only (DigitalOcean Droplets have no firewall by default).
 ufw allow OpenSSH
@@ -191,6 +191,8 @@ WantedBy=timers.target
 UNIT
 
 systemctl daemon-reload
+# Enabled for later boots only. The backup timer is started by deploy/deploy.sh
+# once the code and venv it runs from are installed.
 systemctl enable caddy zameenrentals-web zameenrentals-crawler zameenrentals-backup.timer
 systemctl restart caddy
 
