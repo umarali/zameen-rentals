@@ -186,3 +186,142 @@ class TestRealModel:
         result = asyncio.run(voice.transcribe((FIXTURES / "voice_ur_gulberg_10marla.wav").read_bytes(), "lahore"))
         assert result["language"] == "ur"
         assert "گلبرگ" in result["text"] and "10" in result["text"]
+
+
+class TestReviewResourceBounds:
+    def test_chunked_upload_stops_reading_at_limit(self, monkeypatch):
+        from starlette.requests import Request
+        monkeypatch.setattr(voice, "MAX_BODY_BYTES", 5)
+        consumed = []
+        async def receive():
+            consumed.append(1)
+            assert len(consumed) <= 2, "must reject without reading the remaining upload"
+            return {"type": "http.request", "body": b"1234", "more_body": True}
+        request = Request({"type": "http", "method": "POST", "path": "/", "headers": []}, receive)
+        async def run():
+            with pytest.raises(HTTPException) as exc:
+                await voice._process_recording(request, "lahore")
+            assert exc.value.status_code == 413
+        asyncio.run(run())
+        assert len(consumed) == 2
+
+    def test_slow_upload_times_out(self, monkeypatch):
+        from starlette.requests import Request
+        monkeypatch.setattr(voice, "UPLOAD_TIMEOUT_SECONDS", 0.01)
+        async def receive():
+            await asyncio.sleep(1)
+        request = Request({"type": "http", "method": "POST", "path": "/", "headers": []}, receive)
+        async def run():
+            with pytest.raises(HTTPException) as exc:
+                await voice._process_recording(request, "lahore")
+            assert exc.value.status_code == 408
+        asyncio.run(run())
+
+    def test_only_two_requests_are_admitted_before_reading_body(self, monkeypatch, enabled):
+        import threading
+        from starlette.requests import Request
+        slots = threading.BoundedSemaphore(2)
+        monkeypatch.setattr(voice, "_request_slots", slots)
+        entered = []
+        async def run():
+            release = asyncio.Event()
+            async def process(request, city):
+                entered.append(True)
+                await release.wait()
+                return {"text": "ok"}
+            monkeypatch.setattr(voice, "_process_recording", process)
+            request = Request({"type": "http", "method": "POST", "path": "/", "headers": [(b"content-type", b"audio/webm")]})
+            endpoint = voice.voice_transcribe.__wrapped__
+            first = asyncio.create_task(endpoint(request, "lahore"))
+            second = asyncio.create_task(endpoint(request, "lahore"))
+            try:
+                for _ in range(10):
+                    if len(entered) == 2:
+                        break
+                    await asyncio.sleep(0)
+                assert len(entered) == 2
+                with pytest.raises(HTTPException) as exc:
+                    await endpoint(request, "lahore")
+                assert exc.value.status_code == 503
+            finally:
+                release.set()
+                await asyncio.gather(first, second)
+            assert slots.acquire(blocking=False)
+            assert slots.acquire(blocking=False)
+            slots.release(); slots.release()
+        asyncio.run(run())
+
+    def test_cancellation_keeps_transcription_permit_until_thread_finishes(self, monkeypatch):
+        import threading
+        entered, release, finished = threading.Event(), threading.Event(), threading.Event()
+        def blocking(*args):
+            entered.set()
+            assert release.wait(2)
+            finished.set()
+            return {"text": "ok"}
+        monkeypatch.setattr(voice, "_transcribe_sync", blocking)
+        monkeypatch.setattr(voice, "BUSY_WAIT_SECONDS", 0.02)
+        async def run():
+            monkeypatch.setattr(voice, "_semaphore", asyncio.Semaphore(1))
+            first = asyncio.create_task(voice.transcribe(b"audio"))
+            try:
+                assert await asyncio.to_thread(entered.wait, 1)
+                first.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await first
+                with pytest.raises(HTTPException) as exc:
+                    await voice.transcribe(b"second")
+                assert exc.value.status_code == 503
+                assert not finished.is_set()
+            finally:
+                release.set()
+                assert await asyncio.to_thread(finished.wait, 1)
+            assert await voice.transcribe(b"third") == {"text": "ok"}
+        asyncio.run(run())
+
+    def test_decoder_stops_before_reading_whole_long_clip(self, monkeypatch):
+        import av
+        decoded = []
+        class Container:
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def decode(self, **kwargs):
+                for i in range(100):
+                    assert i <= voice.MAX_CLIP_SECONDS, "decoded beyond duration guard"
+                    frame = av.AudioFrame(format="s16", layout="mono", samples=16000)
+                    frame.sample_rate = 16000
+                    decoded.append(i)
+                    yield frame
+        monkeypatch.setattr(av, "open", lambda *a, **k: Container())
+        with pytest.raises(HTTPException) as exc:
+            voice._decode_bounded(b"compressed audio")
+        assert exc.value.status_code == 422
+        assert len(decoded) == voice.MAX_CLIP_SECONDS + 1
+
+    def test_decode_valid_wav_without_loading_model(self, monkeypatch):
+        monkeypatch.setattr(voice, "_get_model", lambda: pytest.fail("decoder must not load model"))
+        audio = voice._decode_bounded(_wav(1))
+        assert len(audio) == 16000
+        assert audio.dtype.name == "float32"
+
+    def test_model_error_still_schedules_unload(self, monkeypatch):
+        from types import SimpleNamespace
+        scheduled = []
+        def fail(*args): raise RuntimeError("inference failed")
+        monkeypatch.setattr(voice, "_get_model", lambda: SimpleNamespace(detect_language=fail))
+        monkeypatch.setattr(voice, "_schedule_unload", lambda: scheduled.append(True))
+        with pytest.raises(RuntimeError, match="inference failed"):
+            voice._transcribe_sync(_wav(1), "lahore")
+        assert scheduled == [True]
+
+    def test_disabled_endpoint_does_not_read_upload_or_import_model(self, client, monkeypatch):
+        import builtins
+        monkeypatch.delenv("VOICE_SEARCH_ENABLED", raising=False)
+        original = builtins.__import__
+        def guarded(name, *args, **kwargs):
+            assert name not in {"faster_whisper", "av"}, "disabled voice imported decoder/model"
+            return original(name, *args, **kwargs)
+        monkeypatch.setattr(builtins, "__import__", guarded)
+        async def fail(*args): pytest.fail("disabled voice read upload")
+        monkeypatch.setattr(voice, "_process_recording", fail)
+        assert client.post("/api/voice/transcribe", content=b"x", headers={"Content-Type": "audio/webm"}).status_code == 404

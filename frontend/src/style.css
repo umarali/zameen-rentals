@@ -1064,3 +1064,22 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
   background: #fff; color: var(--color-brand-600); border: 1px solid var(--color-brand-200);
 }
 .zr-tour .driver-popover-prev-btn:hover { background: var(--color-brand-50); }
+
+
+/* Voice errors can be a sentence, unlike the short parsing indicator. */
+#nlParsed.voice-status {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  #appHeader:has(#nlParsed.voice-status:not(.hidden)) {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+  #appHeader #nlParsed.voice-status {
+    order: 4;
+    flex: 1 0 100%;
+    width: 100%;
+    min-width: 0;
+  }
+}

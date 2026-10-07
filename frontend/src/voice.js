@@ -32,7 +32,8 @@ function showStatus(html) {
   const el = $('#nlParsed');
   if (!el) return;
   el.classList.remove('hidden');
-  el.classList.add('flex');
+  el.classList.add('flex', 'voice-status');
+  el.setAttribute('role', 'status');
   el.innerHTML = html;
 }
 
@@ -109,7 +110,7 @@ export async function initVoiceSearch({ anchor = $('#nlSearchBtn'), onTranscript
   const stop = () => {
     clearTimeout(maxTimer); clearInterval(tickTimer);
     stopWatching?.(); stopWatching = null;
-    if (recorder?.state === 'recording') recorder.stop();
+    if (recorder?.state === 'recording') { setState('busy'); recorder.stop(); }
   };
 
   const send = async (blob, durationMs) => {
@@ -137,6 +138,8 @@ export async function initVoiceSearch({ anchor = $('#nlSearchBtn'), onTranscript
   };
 
   const start = async () => {
+    // Disable immediately: getUserMedia can remain pending at the permission prompt.
+    setState('busy');
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -145,37 +148,64 @@ export async function initVoiceSearch({ anchor = $('#nlSearchBtn'), onTranscript
     } catch (err) {
       trackVoiceSearch({ phase: 'mic_error', error: err?.name || 'unknown' });
       showStatus(esc(micErrorMessage(err)));
+      setState('idle');
       return;
     }
-    const mimeType = MIME_TYPES.find(t => MediaRecorder.isTypeSupported?.(t));
-    recorder = new MediaRecorder(stream, { ...(mimeType && { mimeType }), audioBitsPerSecond: 32000 });
-    const chunks = [];
-    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
-    recorder.onstop = () => {
-      stream.getTracks().forEach(t => t.stop());
-      const durationMs = Math.round(performance.now() - startedAt);
-      const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'audio/webm' });
-      recorder = null;
-      if (durationMs < 400 || blob.size < 500) {
+    try {
+      const mimeType = MIME_TYPES.find(t => MediaRecorder.isTypeSupported?.(t));
+      recorder = new MediaRecorder(stream, { ...(mimeType && { mimeType }), audioBitsPerSecond: 32000 });
+      const activeRecorder = recorder;
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      recorder.onstop = () => {
+        clearTimeout(maxTimer); clearInterval(tickTimer);
+        stopWatching?.(); stopWatching = null;
+        stream.getTracks().forEach(t => t.stop());
+        const durationMs = Math.round(performance.now() - startedAt);
+        const blob = new Blob(chunks, { type: activeRecorder.mimeType || mimeType || 'audio/webm' });
+        recorder = null;
+        if (durationMs < 400 || blob.size < 500) {
+          setState('idle');
+          showStatus("Didn't catch that. Tap the mic and try again.");
+          return;
+        }
+        send(blob, durationMs);
+      };
+      recorder.onerror = () => {
+        // A delayed stop event from the failed recorder must not clear a retry.
+        activeRecorder.onstop = null;
+        activeRecorder.onerror = null;
+        stop();
+        stream.getTracks().forEach(t => t.stop());
+        recorder = null;
         setState('idle');
-        showStatus("Didn't catch that. Tap the mic and try again.");
-        return;
-      }
-      send(blob, durationMs);
-    };
-    startedAt = performance.now();
-    recorder.start();
-    setState('recording');
-    trackVoiceSearch({ phase: 'started' });
-    $('#nlSuggestions')?.classList.add('hidden');
-    const tick = () => {
-      const secs = Math.floor((performance.now() - startedAt) / 1000);
-      showStatus(`<span class="inline-flex items-center gap-1.5 text-red-600"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span><span class="hidden sm:inline">Listening...</span> 0:${String(secs).padStart(2, '0')}<span class="hidden sm:inline"> · tap to stop</span></span>`);
-    };
-    tick();
-    tickTimer = setInterval(tick, 500);
-    maxTimer = setTimeout(stop, MAX_MS);
-    stopWatching = watchSilence(stream, stop);
+        showStatus('Recording failed. Tap the mic and try again.');
+      };
+      startedAt = performance.now();
+      recorder.start();
+      setState('recording');
+      trackVoiceSearch({ phase: 'started' });
+      $('#nlSuggestions')?.classList.add('hidden');
+      const tick = () => {
+        const secs = Math.floor((performance.now() - startedAt) / 1000);
+        showStatus(`<span class="inline-flex items-center gap-1.5 text-red-600"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span><span class="hidden sm:inline">Listening...</span> 0:${String(secs).padStart(2, '0')}<span class="hidden sm:inline"> · tap to stop</span></span>`);
+      };
+      tick();
+      tickTimer = setInterval(tick, 500);
+      maxTimer = setTimeout(stop, MAX_MS);
+      // Recording still works if the optional audio analyser is unavailable.
+      try { stopWatching = watchSilence(stream, stop); } catch { /* use manual/maximum stop */ }
+    } catch (err) {
+      clearTimeout(maxTimer); clearInterval(tickTimer);
+      stopWatching?.(); stopWatching = null;
+      if (recorder) { recorder.onstop = null; recorder.onerror = null; }
+      if (recorder?.state === 'recording') recorder.stop();
+      recorder = null;
+      stream.getTracks().forEach(t => t.stop());
+      setState('idle');
+      showStatus('Could not start recording. Tap the mic and try again.');
+      trackVoiceSearch({ phase: 'mic_error', error: err?.name || 'recorder' });
+    }
   };
 
   btn.addEventListener('click', () => { recorder ? stop() : start(); });
