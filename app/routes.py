@@ -223,7 +223,10 @@ def _build_parse_query_response(q, city, result):
                 result["area_query"] = fallback
         if not result.get("area_approximate") and not exact_selection:
             # A numbered area ("... Askari 4") the user never typed that number for.
-            typed = set(re.findall(r"\d+", _normalize_number_words(q)))
+            # Bed/size/price numbers ("2 bed", "10 marla") aren't area evidence.
+            norm = _normalize_number_words(q).lower()
+            typed = {m.group() for m in re.finditer(r"\d+", norm)
+                     if not _UNIT_AFTER_NUMBER_RE.match(norm, m.end())}
             untyped = [n for name in selected if name
                        for n in re.findall(r"\d+", name) if n not in typed]
             if untyped:

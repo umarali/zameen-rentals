@@ -115,3 +115,51 @@ def test_ai_resolution_of_a_roman_alias_is_kept(claude_returns):
     claude_returns({"area": "Gulshan-e-Iqbal"})
     result = asyncio.run(parsing.parse_query_with_claude("gulshan mein ghar", city="karachi"))
     assert result["area"] == "Gulshan-e-Iqbal"
+
+
+# --- Several literal mentions (real-model review of #18) ---------------------
+
+QUERY = "near clifton bridge in dha 2 bed"
+
+
+def test_ai_phase_from_bed_count_resolves_to_the_in_area_flagged(claude_returns):
+    # The real model read "2 bed" as Phase 2. Never answer Clifton unflagged.
+    claude_returns({"area": "DHA Phase 2", "bedrooms": 2})
+    result = asyncio.run(parsing.parse_query_with_claude(QUERY, city="karachi"))
+    f = _build_parse_query_response(QUERY, "karachi", result)["filters"]
+    assert f["area"] == "DHA Defence"
+    assert f["area_approximate"] is True
+
+
+def test_ai_picking_the_landmark_mention_is_corrected_and_flagged(claude_returns):
+    claude_returns({"area": "Clifton"})
+    result = asyncio.run(parsing.parse_query_with_claude(QUERY, city="karachi"))
+    f = _build_parse_query_response(QUERY, "karachi", result)["filters"]
+    assert f["area"] == "DHA Defence"
+    assert f["area_approximate"] is True
+
+
+def test_regex_path_prefers_the_in_area_over_a_landmark_phrase():
+    result = parsing.parse_natural_query(QUERY, city="karachi")
+    assert result["area"] == "DHA Defence"
+    assert result["bedrooms"] == 2
+
+
+def test_urdu_mein_marks_the_area():
+    result = parsing.parse_natural_query("کلفٹن برج کے پاس ڈی ایچ اے میں فلیٹ", city="karachi")
+    assert result["area"] == "DHA Defence"
+
+
+def test_ambiguous_mentions_keep_an_area_but_flag_it():
+    q = "clifton dha flat"
+    f = _build_parse_query_response(q, "karachi", parsing.parse_natural_query(q, city="karachi"))["filters"]
+    assert f["area"] in ("Clifton", "DHA Defence")
+    assert f["area_approximate"] is True
+
+
+def test_bed_size_price_numbers_are_not_area_evidence():
+    # "2 bed" must not vouch for "DHA Phase 2": without a literal mention to
+    # override it, the untyped-number safety net has to flag the AI choice.
+    f = _build_parse_query_response("2 bed flat", "karachi",
+                                    {"area": "DHA Phase 2", "bedrooms": 2, "parser": "ai"})["filters"]
+    assert f["area_approximate"] is True
