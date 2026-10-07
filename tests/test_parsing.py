@@ -127,3 +127,31 @@ class TestMatchArea:
         suggestions = suggest_areas("johr", city="lahore")
         assert "Johar Town" in suggestions
         assert len(suggestions) <= 3
+
+
+class TestMultiAreaOffsets:
+    """Codex review 2026-10-07, finding 3: every area span and joiner check must
+    index the same string, even after bed/size/furnished text is consumed."""
+
+    def test_urdu_alternatives_after_bed_prefix(self):
+        result = parse_natural_query("2 bed کلفٹن or گلشن اقبال", city="karachi")
+        assert result["bedrooms"] == 2
+        assert result["areas"] == ["Clifton", "Gulshan-e-Iqbal"]
+        assert result["area"] == "Clifton"
+
+    def test_mixed_script_after_bed_prefix(self):
+        result = parse_natural_query("2 bed کلفٹن or DHA", city="karachi")
+        assert result["areas"] == ["Clifton", "DHA Defence"]
+
+    def test_mixed_script_after_furnished_and_size_prefix(self):
+        result = parse_natural_query("furnished 5 marla کلفٹن or DHA", city="karachi")
+        assert result["furnished"] is True
+        assert result["size_marla_min"] == 5.0
+        assert result["areas"] == ["Clifton", "DHA Defence"]
+
+    def test_english_only_control(self):
+        result = parse_natural_query("2 bed DHA or Clifton", city="karachi")
+        assert result["areas"] == ["DHA Defence", "Clifton"]
+
+    def test_unjoined_mentions_stay_single(self):
+        assert "areas" not in parse_natural_query("2 bed کلفٹن near DHA", city="karachi")

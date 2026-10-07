@@ -246,7 +246,9 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
                 result['area'] = candidate
 
     # "DHA or Clifton": several named areas joined by or/and/ya/aur/comma.
-    mentioned = _area_mentions(q, ql, city)
+    # Search the unconsumed query: `ql` has had bed/size/furnished text cut
+    # out, so its offsets don't line up with spans found in the original.
+    mentioned = _area_mentions(q.lower(), city)
     if len(mentioned) >= 2:
         result['areas'] = mentioned
         result['area'] = mentioned[0]
@@ -257,28 +259,28 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
 _AREA_JOINER_RE = re.compile(r'^\s*(?:,|/|&|\bor\b|\band\b|\bya\b|\baur\b|\bphir\b)[\s,]*(?:\bor\b|\bthen\b)?\s*$')
 
 
-def _area_mentions(q, ql, city):
-    """Distinct areas named in the query, in order, when joined like 'X or Y'.
+def _area_mentions(text, city):
+    """Distinct areas named in ``text``, in order, when joined like 'X or Y'.
 
     Only exact aliases and area names count; fuzzy matches never add a second
     area. Overlapping matches keep the longest (so 'dha phase 6' beats 'dha').
+    Every span and joiner check indexes ``text``, one lowercased string.
     """
     spans = []
     roman_map = ROMAN_URDU_AREAS_BY_CITY.get(city, {})
     for alias, area_name in roman_map.items():
-        for m in re.finditer(r'\b' + re.escape(alias) + r'\b', ql):
+        for m in re.finditer(r'\b' + re.escape(alias) + r'\b', text):
             spans.append((m.start(), m.end(), area_name))
     for name in get_areas(city):
         nl = ' '.join(name.lower().split())
         if len(nl) < 3:
             continue
-        for m in re.finditer(r'\b' + re.escape(nl) + r'\b', ql):
+        for m in re.finditer(r'\b' + re.escape(nl) + r'\b', text):
             spans.append((m.start(), m.end(), name))
     if city == "karachi":
         for ur_area, en_area in URDU_AREAS.items():
-            start = q.find(ur_area)
-            if start >= 0:
-                spans.append((start, start + len(ur_area), en_area))
+            for m in re.finditer(re.escape(ur_area), text):
+                spans.append((m.start(), m.end(), en_area))
     # Longest first, then drop anything overlapping a kept span.
     kept = []
     for start, end, name in sorted(spans, key=lambda s: (-(s[1] - s[0]), s[0])):
@@ -287,7 +289,7 @@ def _area_mentions(q, ql, city):
     kept.sort()
     areas = []
     for i, (start, end, name) in enumerate(kept):
-        if i and not _AREA_JOINER_RE.match(ql[kept[i - 1][1]:start]):
+        if i and not _AREA_JOINER_RE.match(text[kept[i - 1][1]:start]):
             break
         if name not in areas:
             areas.append(name)
