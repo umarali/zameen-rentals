@@ -34,6 +34,22 @@ class TestKeywords:
         assert ev.stratum_of("lovely flat") == "none"
 
 
+class TestAmenities:
+    def test_absent_values_are_dropped(self):
+        raw = json.dumps(["Solar Panels", "Electricity Backup: None", "Parking Spaces: 2"])
+        assert ev.amenity_names(raw) == ["Solar Panels", "Parking Spaces: 2"]
+
+    def test_amenity_tags(self):
+        assert ev.amenity_tags(json.dumps(["Electricity Backup: Generator"]))["backup_power"]
+        assert ev.amenity_tags(json.dumps(["Electricity Backup: None"]))["backup_power"] is None
+        assert ev.amenity_tags(json.dumps(["Separate Entrance"]))["separate_entrance"]
+        assert ev.amenity_tags("not json") == {"tenant_fit": None, "backup_power": None,
+                                               "separate_entrance": None, "newly_built": None}
+
+    def test_stratum_counts_amenities(self):
+        assert ev.stratum_of("lovely flat", json.dumps(["Solar Panels"])) == "backup_power"
+
+
 class TestStats:
     def test_wilson_lower_bound(self):
         assert ev.wilson_lower(0.9, 100) == pytest.approx(0.8256, abs=1e-3)
@@ -76,6 +92,13 @@ class TestVerdict:
     def test_model_wins_when_keywords_fail(self):
         assert ev.verdict({"keywords": _metrics(0.70, 0.9), "jev": _metrics(0.91, 0.4),
                            "haiku": _metrics(0.85, 0.8)})[0] == "jev"
+
+    def test_best_open_source_rule_sets_the_bar(self):
+        results = {"keywords": _metrics(0.93, 0.40), "amenities": _metrics(0.95, 0.60),
+                   "kw+amenities": _metrics(0.92, 0.70), "jev": _metrics(0.94, 0.75)}
+        assert ev.verdict(results) == ("kw+amenities", "open source passes, and no model finds clearly more")
+        results["jev"] = _metrics(0.94, 0.85)
+        assert ev.verdict(results)[0] == "jev"
 
     def test_nothing_ships_below_bar(self):
         assert ev.verdict({"keywords": _metrics(0.80, 0.9), "jev": _metrics(None, None)})[0] == "none"
@@ -160,7 +183,7 @@ class TestSample:
             upsert_listing(zameen_id=f"80000{i}", url=url, city="lahore",
                            detail_data={"description": desc})
         out = tmp_path / "labels.csv"
-        ev.sample(SimpleNamespace(n=4, out=str(out), seed=1, include_title_only=False))
+        ev.sample(SimpleNamespace(n=4, out=str(out), seed=1, include_title_only=False, from_csv=None))
         with open(out, newline="") as f:
             rows = list(csv.DictReader(f))
         strata = {r["stratum"]: r["stratum_population"] for r in rows}
@@ -173,3 +196,20 @@ def test_read_preds_skips_blank_lines(tmp_path):
     path = tmp_path / "p.jsonl"
     path.write_text(json.dumps({"zameen_id": "1"}) + "\n\n")
     assert list(ev._read_preds(path)) == ["1"]
+
+
+def test_sample_from_csv_export(tmp_path):
+    export = tmp_path / "export.csv"
+    with open(export, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["zameen_id", *ev.CONTEXT_COLUMNS])
+        w.writerow(["1", "lahore", "DHA", "House", "90000", "4", "1 Kanal",
+                    json.dumps(["Solar Panels"]), "Kanal house", "Lovely home"])
+        w.writerow(["2", "lahore", "DHA", "House", "90000", "4", "1 Kanal", "", "Kanal house", ""])
+        w.writerow(["3", "lahore", "DHA", "House", "90000", "4", "1 Kanal", "", "", "No title"])
+    out = tmp_path / "labels.csv"
+    ev.sample(SimpleNamespace(n=10, out=str(out), seed=1, include_title_only=False,
+                              from_csv=str(export)))
+    with open(out, newline="") as f:
+        rows = list(csv.DictReader(f))
+    assert [(r["zameen_id"], r["stratum"]) for r in rows] == [("1", "backup_power")]

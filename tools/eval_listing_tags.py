@@ -1,13 +1,15 @@
 """
-Decide, per tag, whether Jev, Claude Haiku or plain keywords should power it.
+Decide, per tag, whether Jev, Claude Haiku or open-source rules should power it.
 
 A tag ships only if the 95% Wilson lower bound on its precision is at least
-0.90. When keywords pass too, keywords win (open source) unless a model
-finds clearly more true tags.
+0.90. When an open-source rule passes too (keywords on title + description,
+the structured amenity list, or both), it wins unless a model finds clearly
+more true tags.
 
 Usage:
   # 1. Stratified sample of listings with descriptions, for hand labelling
   python tools/eval_listing_tags.py sample --n 350 --out labels.csv
+  python tools/eval_listing_tags.py sample --from-csv export.csv --out labels.csv
   # 2. A person fills tenant_fit (family/bachelor/either/unclear) and the y/n columns
   # 3. Predictions (cached; reruns skip listings already predicted)
   python tools/eval_listing_tags.py predict jev labels.csv --out preds_jev.jsonl
@@ -15,8 +17,8 @@ Usage:
   # 4. Report
   python tools/eval_listing_tags.py score labels.csv --pred jev=preds_jev.jsonl --pred haiku=preds_haiku.jsonl
 
-`sample` reads the database (ZAMEENRENTALS_DB_DIR); `predict` and `score`
-only read the CSV, so labels can be scored anywhere.
+`sample` reads the database (ZAMEENRENTALS_DB_DIR) or a CSV export with the
+CONTEXT_COLUMNS plus zameen_id; `predict` and `score` only read the labels CSV.
 
 Sampling: each listing falls in the stratum of the rarest tag its keywords
 hit, or "none". Hit strata are oversampled so rare tags appear at all; every
@@ -48,7 +50,8 @@ TAG_KEYS = ["bachelor_ok", "family_ok", *FEATURES]
 CONTEXT_COLUMNS = ["city", "area_name", "property_type", "price", "bedrooms", "area_size",
                    "amenities_json", "title", "description"]
 PRECISION_BAR = 0.90
-CLEAR_RECALL_GAIN = 0.10   # a model must find this much more to beat passing keywords
+CLEAR_RECALL_GAIN = 0.10   # a model must find this much more to beat a passing open-source rule
+OPEN_SOURCE = ("keywords", "amenities", "kw+amenities")
 HAIKU_MODEL = "claude-haiku-4-5"
 
 # ── Keyword baseline (open source; also defines the sampling strata) ──
@@ -74,8 +77,48 @@ def keyword_tags(text):
     return tags
 
 
-def stratum_of(text):
-    tags = keyword_tags(text)
+_NO_VALUE = {"", "none", "no", "0", "n/a", "na", "-"}
+
+
+def amenity_names(raw):
+    """Amenity labels that are present: "Solar Panels" yes, "Electricity Backup: None" no."""
+    if not raw:
+        return []
+    try:
+        items = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    names = []
+    for item in items if isinstance(items, list) else []:
+        text, sep, value = str(item).partition(":")
+        if sep and value.strip().lower() in _NO_VALUE:
+            continue
+        names.append(str(item).strip())
+    return names
+
+
+_AMENITY_BACKUP = re.compile(r"\b(solar|ups|inverter|generator|electricity\s+backup)\b", re.I)
+_AMENITY_ENTRANCE = re.compile(r"\b(separate|independent|private)\s+(entrance|entry|gate)\b", re.I)
+
+
+def amenity_tags(raw):
+    """Tags from the structured amenity list alone. It never says who may rent."""
+    text = "\n".join(amenity_names(raw))
+    return {
+        "tenant_fit": None,
+        "backup_power": True if _AMENITY_BACKUP.search(text) else None,
+        "separate_entrance": True if _AMENITY_ENTRANCE.search(text) else None,
+        "newly_built": None,
+    }
+
+
+def union_tags(a, b):
+    tenant = a["tenant_fit"] or b["tenant_fit"]
+    return {"tenant_fit": tenant, **{n: True if (a[n] or b[n]) else None for n in FEATURES}}
+
+
+def stratum_of(text, amenities_raw=None):
+    tags = union_tags(keyword_tags(text), amenity_tags(amenities_raw))
     if tags["tenant_fit"]:
         return "tenant"
     for name in ("separate_entrance", "backup_power", "newly_built"):
@@ -103,15 +146,23 @@ def allocate(populations, n, none_share=1 / 3):
     return sizes
 
 
+def _eligible_rows(args):
+    if args.from_csv:
+        rows = _read_csv(args.from_csv)
+    else:
+        from app.database import _get_conn, close_db
+        rows = _get_conn().execute("SELECT * FROM listings WHERE is_active = 1").fetchall()
+        close_db()
+    return [r for r in rows
+            if (r["title"] or "").strip()
+            and (args.include_title_only or (r["description"] or "").strip())]
+
+
 def sample(args):
-    from app.database import _get_conn, close_db
-    where = "is_active = 1 AND COALESCE(title, '') != ''"
-    if not args.include_title_only:
-        where += " AND COALESCE(description, '') != ''"
-    rows = _get_conn().execute(f"SELECT * FROM listings WHERE {where}").fetchall()
+    rows = _eligible_rows(args)
     by_stratum = {s: [] for s in STRATA}
     for r in rows:
-        by_stratum[stratum_of(_text(r))].append(r)
+        by_stratum[stratum_of(_text(r), r["amenities_json"])].append(r)
     populations = {s: len(v) for s, v in by_stratum.items()}
     sizes = allocate(populations, args.n)
     rng = random.Random(args.seed)
@@ -123,7 +174,6 @@ def sample(args):
         for s, r in picked:
             writer.writerow([r["zameen_id"], s, populations[s], *[r[c] for c in CONTEXT_COLUMNS],
                              *[""] * len(LABEL_COLUMNS)])
-    close_db()
     print(f"{len(rows)} eligible listings; wrote {len(picked)} rows to {args.out}")
     for s in STRATA:
         print(f"  {s:<18} population {populations[s]:>6}  sampled {sizes[s]:>4}")
@@ -322,14 +372,16 @@ def verdict(results):
                if m["precision_lb"] is not None and m["precision_lb"] >= PRECISION_BAR}
     if not passing:
         return "none", f"no system reaches precision lower bound {PRECISION_BAR:.2f}"
-    if "keywords" in passing:
-        kw_recall = passing["keywords"]["recall"] or 0
+    open_passing = [s for s in OPEN_SOURCE if s in passing]
+    if open_passing:
+        base = max(open_passing, key=lambda s: passing[s]["recall"] or 0)
+        base_recall = passing[base]["recall"] or 0
         better = {s: m for s, m in passing.items()
-                  if s != "keywords" and (m["recall"] or 0) >= kw_recall + CLEAR_RECALL_GAIN}
+                  if s not in OPEN_SOURCE and (m["recall"] or 0) >= base_recall + CLEAR_RECALL_GAIN}
         if not better:
-            return "keywords", "passes, and no model finds clearly more"
+            return base, "open source passes, and no model finds clearly more"
         best = max(better, key=lambda s: better[s]["recall"])
-        return best, f"recall {better[best]['recall']:.2f} vs keywords {kw_recall:.2f}"
+        return best, f"recall {better[best]['recall']:.2f} vs {base} {base_recall:.2f}"
     best = max(passing, key=lambda s: passing[s]["recall"] or 0)
     return best, "only passing system" if len(passing) == 1 else "highest recall of passing systems"
 
@@ -345,7 +397,12 @@ def score_rows(labels, preds_by_system):
     # Only rows every system predicted, so all columns score the same listings.
     common = [r for r in labelled
               if all(r["zameen_id"] in preds for preds in preds_by_system.values())]
-    systems = {"keywords": lambda r: _tag_values(keyword_tags(_text(r)))}
+    systems = {
+        "keywords": lambda r: _tag_values(keyword_tags(_text(r))),
+        "amenities": lambda r: _tag_values(amenity_tags(r["amenities_json"])),
+        "kw+amenities": lambda r: _tag_values(
+            union_tags(keyword_tags(_text(r)), amenity_tags(r["amenities_json"]))),
+    }
     for name, preds in preds_by_system.items():
         systems[name] = lambda r, preds=preds: _tag_values(public_tags(preds[r["zameen_id"]]))
     table = {}
@@ -371,10 +428,10 @@ def score(args):
     table, n_labelled, n_common = score_rows(labels, preds)
     print(f"\n{n_labelled} labelled rows, {n_common} predicted by every system. "
           f"Estimates are weighted by stratum population.\n")
-    print(f"{'tag':<18} {'system':<9} {'pred+':>5} {'gold+':>5}  {'prec':>5} {'lb95':>5} {'recall':>6} {'acc':>5}")
+    print(f"{'tag':<18} {'system':<12} {'pred+':>5} {'gold+':>5}  {'prec':>5} {'lb95':>5} {'recall':>6} {'acc':>5}")
     for key, by_system in table.items():
         for name, m in by_system.items():
-            print(f"{key:<18} {name:<9} {m['predicted']:>5} {m['gold']:>5}  {_fmt(m['precision'])} "
+            print(f"{key:<18} {name:<12} {m['predicted']:>5} {m['gold']:>5}  {_fmt(m['precision'])} "
                   f"{_fmt(m['precision_lb'])} {_fmt(m['recall']):>6} {_fmt(m['accuracy'])}")
         winner, why = verdict(by_system)
         print(f"{'':<18} → ship on {winner}: {why}\n")
@@ -389,6 +446,7 @@ def main():
     s = sub.add_parser("sample")
     s.add_argument("--n", type=int, default=350)
     s.add_argument("--out", required=True)
+    s.add_argument("--from-csv", help="sample from an exported CSV instead of the database")
     s.add_argument("--seed", type=int, default=7)
     s.add_argument("--include-title-only", action="store_true")
     p = sub.add_parser("predict")
