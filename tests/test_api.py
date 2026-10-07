@@ -830,3 +830,41 @@ def test_fuzzy_block_remains_marked_approximate():
     filters = _build_parse_query_response(query, "karachi", parse_natural_query(query, "karachi"))["filters"]
     assert filters["area"] == "Clifton Block 5"
     assert filters["area_approximate"] is True
+
+
+class TestUnmatchedSubAreaQualifier:
+    """A typed block/phase/sector that isn't in the matched area must be flagged,
+    even when the parent area itself matched exactly (main regression after #9)."""
+
+    def _parse(self, client, monkeypatch, q):
+        async def regex_only(q, city="lahore"):
+            from app.parsing import parse_natural_query
+            return parse_natural_query(q, city=city)
+
+        monkeypatch.setattr("app.routes.parse_query_with_claude", regex_only)
+        return client.get("/api/parse-query", params={"q": q, "city": "karachi"}).json()["filters"]
+
+    def test_missing_block_is_approximate(self, client, monkeypatch):
+        f = self._parse(client, monkeypatch, "gulshan e iqbal block 13")
+        assert f["area"] == "Gulshan-e-Iqbal"
+        assert f["area_approximate"] is True
+        assert f["area_query"] == "block 13"
+
+    def test_missing_block_with_other_filters(self, client, monkeypatch):
+        f = self._parse(client, monkeypatch, "house in gulshan e iqbal block 13 under 80k")
+        assert f["area_approximate"] is True
+        assert f["area_query"] == "block 13"
+
+    def test_existing_block_is_exact(self, client, monkeypatch):
+        f = self._parse(client, monkeypatch, "flat in clifton block 5")
+        assert f["area"] == "Clifton Block 5"
+        assert "area_approximate" not in f
+
+    def test_existing_phase_is_exact(self, client, monkeypatch):
+        f = self._parse(client, monkeypatch, "dha phase 8 flat")
+        assert f["area"] == "DHA Phase 8"
+        assert "area_approximate" not in f
+
+    def test_size_number_is_not_a_qualifier(self, client, monkeypatch):
+        f = self._parse(client, monkeypatch, "5 marla house in clifton")
+        assert "area_approximate" not in f
