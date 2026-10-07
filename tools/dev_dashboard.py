@@ -13,6 +13,8 @@ import re
 import sqlite3
 import subprocess
 import sys
+import threading
+from contextvars import ContextVar
 import time
 import urllib.request
 from datetime import datetime, timedelta
@@ -47,7 +49,16 @@ PROBLEM_RE = re.compile(
 LOG_TS_RE = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")
 
 
+_deadline = ContextVar("collection_deadline", default=None)
+
+
 def _run(cmd, cwd=None, timeout=10):
+    deadline = _deadline.get()
+    if deadline is not None:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("Dashboard refresh exceeded its time budget")
+        timeout = min(timeout, remaining)
     try:
         out = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
         return out.stdout if out.returncode == 0 else ""
@@ -233,7 +244,7 @@ def pr_status():
     return _pr_cache["rows"]
 
 
-def collect():
+def _collect():
     status = {"generated_at": datetime.now().isoformat(sep=" ", timespec="seconds"),
               "main_checkout": str(MAIN), "data_dir": str(DATA_DIR),
               "quick_tests": [{"label": l, "url": f"http://localhost:{APP_PORT}/?{q}"} for l, q in QUICK_TESTS]}
@@ -246,16 +257,50 @@ def collect():
     return status
 
 
+_collect_lock = threading.Lock()
+_status_cache = None
+
+
+def collect():
+    global _status_cache
+    if not _collect_lock.acquire(blocking=False):
+        return _status_cache or {"data": {"error": "Refresh in progress"},
+                                 "app": {"error": "Refresh in progress"}}
+    token = _deadline.set(time.monotonic() + 8)
+    try:
+        _status_cache = _collect()
+        return _status_cache
+    finally:
+        _deadline.reset(token)
+        _collect_lock.release()
+
+
+_start_lock = threading.Lock()
+_start_proc = None
+
+
 def start_app():
+    # Reserve the start until the child exits, including its pre-listen startup.
+    global _start_proc
+    with _start_lock:
+        if _start_proc is not None and _start_proc.poll() is None:
+            return 409, {"error": "The app is already starting or running."}
+        code, body, proc = _start_app()
+        if proc is not None:
+            _start_proc = proc
+        return code, body
+
+
+def _start_app():
     if APP_PORT in parse_lsof(_run(["lsof", "-nP", "-iTCP", "-sTCP:LISTEN"])):
-        return 409, {"error": f"Something is already listening on :{APP_PORT}."}
-    log = (DATA_DIR / "web.log").open("ab")
-    proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", str(APP_PORT)],
-        cwd=MAIN, env={**os.environ, "ZAMEENRENTALS_DB_DIR": str(DATA_DIR)},
-        stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
-    )
-    return 202, {"pid": proc.pid, "log": str(DATA_DIR / "web.log")}
+        return 409, {"error": f"Something is already listening on :{APP_PORT}."}, None
+    with (DATA_DIR / "web.log").open("ab") as log:
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", str(APP_PORT)],
+            cwd=MAIN, env={**os.environ, "ZAMEENRENTALS_DB_DIR": str(DATA_DIR)},
+            stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+        )
+    return 202, {"pid": proc.pid, "log": str(DATA_DIR / "web.log")}, proc
 
 
 # ── HTTP ──
@@ -270,7 +315,19 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _local_request(self):
+        # Loopback binding alone does not reject a DNS-rebound hostname.
+        port = self.server.server_address[1]
+        hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        origin = self.headers.get("Origin")
+        return (self.headers.get("Host") in hosts
+                and (origin is None or origin in {f"http://{host}" for host in hosts})
+                and self.headers.get("Sec-Fetch-Site") not in {"cross-site"})
+
     def do_GET(self):
+        if not self._local_request():
+            self._send(403, "forbidden", "text/plain")
+            return
         if self.path == "/":
             self._send(200, PAGE, "text/html; charset=utf-8")
         elif self.path == "/api/status":
@@ -281,7 +338,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         # The custom header forces a CORS preflight this server never answers,
         # so other websites can't trigger actions on localhost.
-        if self.path != "/api/start-app" or self.headers.get("X-ZR-Dash") != "1":
+        if not self._local_request() or self.path != "/api/start-app" or self.headers.get("X-ZR-Dash") != "1":
             self._send(403, "forbidden", "text/plain")
             return
         code, body = start_app()
@@ -381,8 +438,12 @@ function render(s) {
   const probs = (c.problems || []);
   $('problems').replaceChildren(probs.length ? el('ul', { class: 'log mono' }, ...probs.map(l => el('li', { text: l }))) : el('div', { class: 'muted', text: 'No errors, blocks or stops in the recent log.' }));
 }
+let loading = false;
 async function load() {
+  if (loading) return;
+  loading = true;
   try { render(await (await fetch('/api/status')).json()); } catch (e) { $('meta').textContent = 'Dashboard server unreachable: ' + e.message; }
+  finally { loading = false; }
 }
 $('refresh').onclick = load;
 $('startApp').onclick = async () => {

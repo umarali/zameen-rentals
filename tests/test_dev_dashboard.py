@@ -43,3 +43,88 @@ def test_analyze_log_counts_recent_requests_and_problems():
     assert out["problems"] == [lines[4]]
     assert out["last_pass"].endswith("1130 areas, 5 new, 9 updated")
     assert out["last_activity"] == "2026-10-07 12:59:40"
+
+
+import io
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
+from unittest.mock import Mock
+
+import pytest
+
+
+def test_start_app_serializes_clicks_before_child_listens(monkeypatch, tmp_path):
+    monkeypatch.setattr(dash, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(dash, "_start_proc", None)
+    monkeypatch.setattr(dash, "_run", lambda *a, **k: "")
+    child = SimpleNamespace(pid=123, poll=lambda: None)
+    spawn = Mock(return_value=child)
+    monkeypatch.setattr(dash.subprocess, "Popen", spawn)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        codes = list(pool.map(lambda _: dash.start_app()[0], range(2)))
+    assert sorted(codes) == [202, 409]
+    spawn.assert_called_once()
+    assert spawn.call_args.kwargs["stdout"].closed
+
+
+@pytest.mark.parametrize("method,host,origin,header,expected", [
+    ("POST", "127.0.0.1:8900", "https://evil.example", False, 403),  # form/no-cors
+    ("POST", "127.0.0.1:8900", "https://evil.example", True, 403),
+    ("POST", "evil.example:8900", "http://evil.example:8900", True, 403),  # rebinding
+    ("GET", "evil.example:8900", None, False, 403),
+    ("POST", "127.0.0.1:8900", "http://127.0.0.1:8900", True, 202),
+    ("POST", "localhost:8900", None, True, 202),
+])
+def test_http_origin_and_host_guards(monkeypatch, method, host, origin, header, expected):
+    # Exercise the actual HTTP parser without binding a port or starting an app.
+    lines = [f"{method} /api/start-app HTTP/1.0", f"Host: {host}"]
+    if origin:
+        lines.append(f"Origin: {origin}")
+    if header:
+        lines.append("X-ZR-Dash: 1")
+    request = ("\r\n".join(lines) + "\r\n\r\n").encode()
+    output = bytearray()
+    sock = SimpleNamespace(makefile=lambda *a: io.BytesIO(request), sendall=output.extend)
+    start = Mock(return_value=(202, {"pid": 123}))
+    monkeypatch.setattr(dash, "start_app", start)
+    dash.Handler(sock, ("127.0.0.1", 4567), SimpleNamespace(server_address=("127.0.0.1", 8900)))
+    assert bytes(output).splitlines()[0].split()[1] == str(expected).encode()
+    assert start.call_count == (1 if expected == 202 else 0)
+
+
+def test_concurrent_refresh_returns_cached_status_without_more_processes(monkeypatch):
+    entered, release = threading.Event(), threading.Event()
+    snapshot = {"data": {"missing": True}, "app": {"up": False}}
+    monkeypatch.setattr(dash, "_status_cache", snapshot)
+    def slow_collect():
+        entered.set()
+        assert release.wait(2)
+        return snapshot
+    collector = Mock(side_effect=slow_collect)
+    monkeypatch.setattr(dash, "_collect", collector)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        first = pool.submit(dash.collect)
+        try:
+            assert entered.wait(1)
+            assert dash.collect() is snapshot
+            collector.assert_called_once()
+        finally:
+            release.set()
+        assert first.result() is snapshot
+
+
+def test_subprocesses_share_the_refresh_time_budget(monkeypatch):
+    run = Mock(return_value=SimpleNamespace(returncode=0, stdout="ok"))
+    monkeypatch.setattr(dash.subprocess, "run", run)
+    monkeypatch.setattr(dash.time, "monotonic", lambda: 10)
+    token = dash._deadline.set(10.25)
+    try:
+        assert dash._run(["git", "status"]) == "ok"
+        assert run.call_args.kwargs["timeout"] == 0.25
+        dash._deadline.set(9)
+        with pytest.raises(TimeoutError):
+            dash._run(["git", "status"])
+        run.assert_called_once()
+    finally:
+        dash._deadline.reset(token)
