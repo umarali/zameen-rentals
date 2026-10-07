@@ -6,7 +6,7 @@ echo "=== ZameenRentals Bootstrap ==="
 
 # System packages
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y caddy python3-venv rsync sqlite3 ufw
+DEBIAN_FRONTEND=noninteractive apt-get install -y caddy python3-venv rsync sqlite3 ufw lsof
 
 # Firewall: SSH and web only (DigitalOcean Droplets have no firewall by default).
 ufw allow OpenSSH

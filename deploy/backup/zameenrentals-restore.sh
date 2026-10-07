@@ -29,12 +29,28 @@ WAIT_SECONDS="${ZR_WAIT_SECONDS:-60}"
 DB="$DATA_DIR/zameenrentals.db"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
+RESTORE_STARTED=0
+BACKUP_DIR=""
+cleanup() {
+  local status=$?
+  if (( status != 0 && RESTORE_STARTED )); then
+    # A failure while restarting must not leave a partially resumed restore.
+    for unit in zameenrentals-backup.timer zameenrentals-backup.service zameenrentals-crawler zameenrentals-web; do
+      "$SYSTEMCTL" stop "$unit" || echo "WARNING: could not stop $unit; check it manually." >&2
+    done
+    echo "Restore failed; restart was aborted. Check service status before recovery. Old files: ${BACKUP_DIR:-not moved}." >&2
+  fi
+  rm -rf "$WORK"
+}
+trap cleanup EXIT
 
 if [[ "$(id -u)" != 0 && "${ZR_RESTORE_ALLOW_NONROOT:-}" != 1 ]]; then
   echo "Run as root (sudo): it stops services and changes file ownership." >&2
   exit 1
 fi
+
+# Missing lsof is not evidence that the database is closed.
+command -v lsof >/dev/null || { echo "lsof is required; install it before restoring." >&2; exit 1; }
 
 verify() {  # verify <db-file>: integrity ok and at least one listing
   local result count
@@ -55,6 +71,7 @@ LISTINGS="$(verify "$WORK/snapshot.db")"
 echo "Snapshot OK: $LISTINGS listings"
 
 # 2. Stop every database user. The timer first, so it can't start a new job.
+RESTORE_STARTED=1
 "$SYSTEMCTL" stop zameenrentals-backup.timer
 "$SYSTEMCTL" stop zameenrentals-backup.service
 "$SYSTEMCTL" stop zameenrentals-crawler
@@ -62,7 +79,6 @@ echo "Snapshot OK: $LISTINGS listings"
 
 # 3. Wait until nothing has the database open.
 in_use() {
-  command -v lsof >/dev/null || return 1
   local files=()
   for f in "$DB" "$DB-wal" "$DB-shm"; do [[ -e "$f" ]] && files+=("$f"); done
   (( ${#files[@]} )) || return 1
@@ -79,11 +95,11 @@ if in_use; then
 fi
 
 # 4. Keep the old database and its WAL files together.
-BACKUP_DIR="$DATA_DIR/pre-restore-$STAMP"
+BACKUP_DIR=""
 moved=0
 for f in "$DB" "$DB-wal" "$DB-shm"; do
   if [[ -e "$f" ]]; then
-    mkdir -p "$BACKUP_DIR"
+    [[ -n "$BACKUP_DIR" ]] || BACKUP_DIR="$(mktemp -d "$DATA_DIR/pre-restore-$STAMP-XXXXXX")"
     mv "$f" "$BACKUP_DIR/"
     moved=1
   fi

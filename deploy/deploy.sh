@@ -22,7 +22,7 @@ rsync -avz --progress \
   --exclude '.git' --exclude 'node_modules' --exclude 'test-results' \
   --exclude 'playwright-report' --exclude '.pytest_cache' --exclude 'tools/qa_verify_out' \
   --exclude 'tests' --exclude '__pycache__' --exclude '.env' --exclude '.venv' \
-  --exclude 'data/*.db*' --exclude 'data/vapid_private.pem' --exclude 'data/vapid_public.txt' \
+  --exclude 'data' \
   --exclude 'deploy' --exclude '.claude' \
   --exclude 'package*.json' --exclude 'playwright.config.js' \
   ./ $HOST:/tmp/zameenrentals-deploy/
@@ -32,6 +32,7 @@ rsync -az -e "ssh -i $KEY" deploy/backup/zameenrentals-restore.sh $HOST:/tmp/zam
 
 # Move code and restart services
 "${SSH[@]}" bash -s << 'REMOTE'
+set -euo pipefail
 sudo rsync -a --delete \
   --exclude '.env' --exclude '.venv' --exclude 'data' \
   /tmp/zameenrentals-deploy/ /opt/zameenrentals/
@@ -45,7 +46,7 @@ sudo systemctl restart zameenrentals-crawler
 # now. user-data.sh enables it for boot but doesn't start it.
 sudo systemctl enable --now zameenrentals-backup.timer
 next_run="$(sudo systemctl show zameenrentals-backup.timer -p NextElapseUSecRealtime --value)"
-if ! sudo systemctl is-active --quiet zameenrentals-backup.timer || [ -z "$next_run" ]; then
+if ! sudo systemctl is-active --quiet zameenrentals-backup.timer || [ -z "$next_run" ] || [ "$next_run" = "n/a" ]; then
   echo "ERROR: zameenrentals-backup.timer is not active or has no next run" >&2
   exit 1
 fi

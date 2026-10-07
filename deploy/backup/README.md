@@ -59,15 +59,18 @@ It runs these steps in order:
    crawler, then the web service.
 3. Waits until no process has the database files open.
 4. Moves the old `.db`, `-wal` and `-shm` together into
-   `data/pre-restore-<UTC time>/`. Delete that folder once the restore is
-   confirmed.
+   `data/pre-restore-<UTC time>-<unique suffix>/`. Delete that folder once the
+   restore is confirmed.
 5. Installs the snapshot as `zrentals` and verifies it again in place.
 6. Starts web and crawler, then the backup timer, and checks all three are
    active.
 
-If a check fails, it stops with the services down and the old files kept, so
-nothing is half-restored. The same command seeds a fresh server; with no old
-database, step 4 does nothing.
+Missing `lsof` or an invalid snapshot aborts before stopping any service. After
+service shutdown begins, a failure attempts to stop all four units again,
+including any already restarted. Check the reported service status and recovery
+folder before intervening; a failed systemctl stop is reported explicitly.
+Old database files are preserved, never automatically rolled back. The same
+command seeds a fresh server; with no old database, step 4 does nothing.
 
 ## Reprovision (fresh instance)
 `deploy/user-data.sh` recreates the script + units and enables the timer for

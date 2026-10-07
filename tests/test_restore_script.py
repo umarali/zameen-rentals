@@ -168,3 +168,84 @@ def test_docs_use_the_restore_tool_not_a_raw_copy():
         assert "zameenrentals-restore" in text, doc
         assert "cp /tmp/zameenrentals" not in text, doc
         assert "install -o zrentals" not in text, doc
+
+
+def test_missing_lsof_fails_before_stopping_services(env, tmp_path):
+    # A controlled PATH with the prerequisite commands but deliberately no lsof.
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    for command in ("bash", "date", "mktemp", "id", "rm", "cp", "sqlite3", "head", "mv", "install", "mkdir", "grep", "sleep"):
+        (bindir / command).symlink_to(shutil.which(command))
+    env["vars"]["PATH"] = str(bindir)
+    snapshot = tmp_path / "snapshot.db"
+    _make_db(snapshot, 5)
+    _make_db(env["data"] / "zameenrentals.db", 2)
+    result = _run(env, snapshot)
+    assert result.returncode != 0
+    assert "lsof is required" in result.stderr
+    assert _calls(env) == []
+
+
+def test_failed_restart_stops_already_started_web_and_keeps_recovery(env, tmp_path):
+    db = env["data"] / "zameenrentals.db"
+    _make_db(db, 2)
+    snapshot = tmp_path / "snap.db"
+    _make_db(snapshot, 5)
+    stub = Path(env["vars"]["ZR_SYSTEMCTL"])
+    stub.write_text(f'''#!/bin/bash
+echo "$*" >> "{env['calls']}"
+[[ "$*" != "start zameenrentals-crawler" ]]
+''')
+    result = _run(env, snapshot)
+    assert result.returncode != 0
+    assert "Restore failed" in result.stderr
+    assert _calls(env)[-4:] == ["stop zameenrentals-backup.timer", "stop zameenrentals-backup.service",
+                               "stop zameenrentals-crawler", "stop zameenrentals-web"]
+    assert _count(next(env["data"].glob("pre-restore-*/zameenrentals.db"))) == 2
+
+
+def test_same_second_restores_preserve_both_recovery_copies(env, tmp_path):
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    date = bindir / "date"
+    date.write_text("#!/bin/bash\necho 20261007T120000Z\n")
+    date.chmod(0o755)
+    env["vars"]["PATH"] = str(bindir) + os.pathsep + os.environ["PATH"]
+    _make_db(env["data"] / "zameenrentals.db", 2)
+    snapshot = tmp_path / "snap.db"
+    _make_db(snapshot, 5)
+    assert _run(env, snapshot).returncode == 0
+    assert _run(env, snapshot).returncode == 0
+    assert sorted(_count(f) for f in env["data"].glob("pre-restore-*/zameenrentals.db")) == [2, 5]
+
+
+def test_deploy_aborts_before_starting_timer_if_dependency_install_fails(tmp_path):
+    script = (ROOT / "deploy" / "deploy.sh").read_text().split("<< 'REMOTE'\n", 1)[1].rsplit("\nREMOTE", 1)[0]
+    calls = tmp_path / "calls"
+    sudo = tmp_path / "sudo"
+    sudo.write_text(f'''#!/bin/bash
+echo "$*" >> "{calls}"
+case "$*" in *"pip install"*) exit 1;; esac
+exit 0
+''')
+    sudo.chmod(0o755)
+    result = subprocess.run(["bash"], input=script, text=True, capture_output=True,
+                            env={**os.environ, "PATH": str(tmp_path) + os.pathsep + os.environ["PATH"]})
+    assert result.returncode != 0
+    assert "backup.timer" not in calls.read_text()
+
+
+def test_deploy_excludes_nested_data_from_staging(tmp_path):
+    if not shutil.which("rsync"):
+        pytest.skip("needs rsync")
+    source, dest = tmp_path / "source", tmp_path / "dest"
+    (source / "data" / "rebuild").mkdir(parents=True)
+    (source / "data" / "rebuild" / "zameenrentals.db").write_text("private data")
+    dest.mkdir()
+    import shlex
+    text = (ROOT / "deploy" / "deploy.sh").read_text().split("# deploy/ is excluded", 1)[0]
+    tokens = shlex.split(text.replace("\\\n", " "))
+    excludes = [tokens[i + 1] for i, word in enumerate(tokens) if word == "--exclude"]
+    subprocess.run(["rsync", "-a", *[f"--exclude={value}" for value in excludes],
+                    str(source) + "/", str(dest)], check=True)
+    assert not (dest / "data").exists()
