@@ -128,3 +128,14 @@ def test_subprocesses_share_the_refresh_time_budget(monkeypatch):
         run.assert_called_once()
     finally:
         dash._deadline.reset(token)
+
+
+@pytest.mark.parametrize("output,unavailable", [("", True), ("[]", False)])
+def test_failed_pr_lookup_is_not_reported_as_no_open_prs(monkeypatch, output, unavailable):
+    monkeypatch.setattr(dash, "_pr_cache", {"at": 0, "rows": []})
+    monkeypatch.setattr(dash, "_run", lambda *args, **kwargs: output)
+    result = dash.pr_status()
+    if unavailable:
+        assert result == {"error": "Could not load pull requests."}
+    else:
+        assert result == []

@@ -237,9 +237,9 @@ def pr_status():
         out = _run(["gh", "pr", "list", "--repo", REPO, "--state", "open",
                     "--json", "number,title,headRefName,url,mergeStateStatus"], timeout=15)
         try:
-            _pr_cache["rows"] = json.loads(out) if out else []
+            _pr_cache["rows"] = json.loads(out) if out else {"error": "Could not load pull requests."}
         except ValueError:
-            _pr_cache["rows"] = []
+            _pr_cache["rows"] = {"error": "Could not read pull request response."}
         _pr_cache["at"] = time.time()
     return _pr_cache["rows"]
 
