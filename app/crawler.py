@@ -12,7 +12,7 @@ Architecture:
 
 Run: python -m app.crawler
 """
-import argparse, asyncio, logging, random, signal, sys, time
+import argparse, asyncio, logging, os, random, signal, sys, time
 from datetime import datetime
 
 import httpx
@@ -215,11 +215,16 @@ async def _backoff_enrichment_error(phase, consecutive_errors):
 
 
 def claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS,
-                    claim_lease_hours=CRAWL_CLAIM_LEASE_HOURS):
+                    claim_lease_hours=CRAWL_CLAIM_LEASE_HOURS, *, exclude_ids=()):
     """Atomically claim the next stale area, recovering expired worker leases."""
     conn = _get_conn()
     stale_window = f'-{max_age_hours} hours'
     lease_window = f'-{claim_lease_hours} hours'
+    excluded = tuple(exclude_ids)
+    exclusion_sql = (
+        " AND id NOT IN (" + ",".join("?" for _ in excluded) + ")"
+        if excluded else ""
+    )
     conn.execute("BEGIN IMMEDIATE")
     try:
         row = conn.execute("""
@@ -230,13 +235,14 @@ def claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS,
                     OR crawl_claimed_at < datetime('now', ?)
                   )
               AND (last_crawl_at IS NULL OR last_crawl_at < datetime('now', ?))
+            """ + exclusion_sql + """
             ORDER BY
                 CASE WHEN last_crawl_at IS NULL THEN 0 ELSE 1 END,
                 """ + city_priority_sql("city") + """,
                 priority ASC,
                 last_crawl_at ASC
             LIMIT 1
-        """, (lease_window, stale_window)).fetchone()
+        """, (lease_window, stale_window, *excluded)).fetchone()
         if row is None:
             conn.commit()
             return None
@@ -474,11 +480,18 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
             latest_refreshed_at = time.monotonic()
             logger.info("[Phase A] Card crawling...")
             phase_a_new, phase_a_updated = 0, 0
+            attempted_areas = set()
 
             while not _shutdown:
-                area = claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS)
+                # A full pass can exceed the refresh interval. Process each
+                # area once so details, contact refresh and cleanup get a turn.
+                area = claim_next_area(
+                    max_age_hours=CARD_CYCLE_INTERVAL_HOURS,
+                    exclude_ids=attempted_areas,
+                )
                 if not area:
                     break
+                attempted_areas.add(area["id"])
 
                 city = area["city"]
                 area_name = area["area_name"]
@@ -655,6 +668,31 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                 total_new, total_updated)
 
 
+def acquire_crawler_lock(db_dir=None):
+    """Take the one-crawler-per-database lock, or return None if another process holds it.
+
+    Two crawlers on one SQLite file contend for the write lock and fail areas
+    with "database is locked". The OS drops the lock when the process exits,
+    including on a crash, so there is no stale state to clean up. Keep the
+    returned file object alive for the life of the process.
+    """
+    import fcntl
+    from pathlib import Path
+    from app.database import _DB_DIR
+
+    lock_dir = Path(db_dir) if db_dir else _DB_DIR
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    handle = open(lock_dir / "crawler.lock", "w")
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        handle.close()
+        return None
+    handle.write(f"{os.getpid()}\n")
+    handle.flush()
+    return handle
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="ZameenRentals crawler/backfill worker")
     parser.add_argument("--backfill", action="store_true", help="Run the resumable enrichment worker instead of the full crawler")
@@ -675,6 +713,11 @@ def main(argv=None):
         parser.error("--concurrency must be between 1 and 32")
     if args.max_rate <= 0 or args.max_rate > 5.0:
         parser.error("--max-rate must be between 0 and 5.0")
+
+    lock = acquire_crawler_lock()
+    if lock is None:
+        parser.exit(1, "Another crawler is already running against this database "
+                       "(crawler.lock is held). Stop it with kill -TERM first.\n")
     if args.backfill and args.cards_only:
         parser.error("--cards-only cannot be combined with --backfill")
 

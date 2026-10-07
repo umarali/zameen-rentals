@@ -117,6 +117,16 @@ class TestParseQueryEndpoint:
 
 
 class TestSearchEndpoint:
+    def test_size_search_never_falls_back_to_unfiltered_live_results(self, client, monkeypatch):
+        async def unexpected_scrape(**kwargs):
+            pytest.fail("Live scraping cannot honor the size filter")
+
+        monkeypatch.setattr("app.routes.search_zameen", unexpected_scrape)
+        res = client.get("/api/search?city=lahore&size_marla_max=5")
+        assert res.status_code == 200
+        assert res.json()["results"] == []
+        assert res.json()["total"] == 0
+
     def _seed_listings(self):
         for i in range(5):
             upsert_listing(
@@ -718,3 +728,61 @@ class TestFrontendServing:
         assert res.status_code == 200
         assert "ZameenRentals" in res.text
         assert "<!DOCTYPE html>" in res.text
+
+
+class TestParserSourceAndSuggestions:
+    def test_regex_fallback_reports_regex(self, client, monkeypatch):
+        async def regex_only(q, city="lahore"):
+            from app.parsing import parse_natural_query
+            return parse_natural_query(q, city=city)
+
+        monkeypatch.setattr("app.routes.parse_query_with_claude", regex_only)
+        data = client.get("/api/parse-query?q=2+bed+in+Clifton&city=karachi").json()
+        assert data["parser"] == "regex"
+        assert "parser" not in data["filters"]
+
+    def test_ai_result_reports_ai_without_mutating_cache(self, client, monkeypatch):
+        cached = {"area": "Clifton", "parser": "ai"}
+
+        async def ai(q, city="lahore"):
+            return cached
+
+        monkeypatch.setattr("app.routes.parse_query_with_claude", ai)
+        for _ in range(2):
+            data = client.get("/api/parse-query?q=flat+clifton&city=karachi").json()
+            assert data["parser"] == "ai"
+        assert cached["parser"] == "ai"
+
+    def test_unmatched_area_offers_suggestions(self, client, monkeypatch):
+        async def regex_only(q, city="lahore"):
+            return {"property_type": "house"}
+
+        monkeypatch.setattr("app.routes.parse_query_with_claude", regex_only)
+        data = client.get("/api/parse-query?q=house+in+johr&city=lahore").json()
+        assert "area" not in data["filters"]
+        assert "Johar Town" in data["filters"]["area_suggestions"]
+
+
+class TestMultiAreaSearch:
+    def _seed(self, zid, area):
+        upsert_listing(
+            zameen_id=zid, url=f"https://www.zameen.com/Property/t-{zid}-1-1.html",
+            city="karachi", area_name=area, area_slug=f"Karachi_{area}",
+            card_data={"title": f"Flat {zid}", "price": 70000, "bedrooms": 2,
+                       "bathrooms": 2, "area_size": "1000 sqft"},
+        )
+
+    def test_areas_param_searches_each_area(self, client):
+        self._seed("810001", "DHA Defence")
+        self._seed("810002", "Clifton")
+        self._seed("810003", "Saddar")
+        res = client.get("/api/search?city=karachi&areas=DHA+Defence&areas=Clifton")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["total"] == 2
+        assert {r["zameen_id"] for r in data["results"]} == {"810001", "810002"}
+
+    def test_single_areas_value_matches_area_param(self, client):
+        self._seed("810004", "Clifton")
+        data = client.get("/api/search?city=karachi&areas=Clifton").json()
+        assert data["total"] == 1

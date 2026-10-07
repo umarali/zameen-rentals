@@ -15,7 +15,7 @@ from app.db_listings import (
 )
 from app.scraper import (
     parse_listings, extract_zameen_id, _is_property_photo_url, fetch_listing_contact,
-    _extract_listing_geography,
+    _extract_listing_geography, enrich_from_search_state,
 )
 
 logger = logging.getLogger("zameenrentals")
@@ -153,14 +153,25 @@ def _extract_total_count(soup):
 
 async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
                              client, session_headers, type_slug=None, type_label=None,
-                             page_delay=CARD_PAGE_DELAY):
-    """Crawl pages for one area under one URL pattern. Returns (new, updated, unchanged, pages)."""
+                             page_delay=CARD_PAGE_DELAY, observed=None):
+    """Crawl pages for one area under one URL pattern. Returns (new, updated, unchanged, pages).
+
+    If ``observed`` is a dict, it receives ``listings`` (cards seen), ``complete``
+    (every listing in the area was seen), ``types`` (property types seen) and
+    ``untyped`` (cards without an authoritative search-state type).
+    """
     new_count, updated_count, unchanged_count, pages_fetched = 0, 0, 0, 0
+    if observed is not None:
+        observed.update(listings=0, complete=False, types=set(), untyped=0)
     base_slug = type_slug or "Rentals"
     default_cap = 40
     max_pages = default_cap
+    needed_pages = None
 
-    for page_num in range(1, max_pages + 1):
+    # A while loop, not range(): max_pages can grow after page 1.
+    page_num = 0
+    while page_num < max_pages:
+        page_num += 1
         url = f"https://www.zameen.com/{base_slug}/{area_slug}-{area_id}-{page_num}.html"
 
         headers = {**session_headers}
@@ -178,11 +189,21 @@ async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
         if not listings:
             break
 
+        enrich_from_search_state(html, listings)
+
+        if observed is not None:
+            observed["listings"] += len(listings)
+            observed["types"].update(l.get("property_type") for l in listings)
+            observed["untyped"] += sum(
+                1 for l in listings if not (l.get("search_state") or {}).get("property_type")
+            )
+
         if page_num == 1:
             soup = BeautifulSoup(html, "html.parser")
             total = _extract_total_count(soup)
             if total:
                 needed = (total + 24) // 25
+                needed_pages = needed
                 # Dynamic cap: raise for high-density areas
                 if total > 900:
                     max_pages = min(needed, 80)
@@ -208,7 +229,7 @@ async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
                     zameen_id=zid, url=listing_url, city=city,
                     area_name=area_name, area_slug=area_slug,
                     lat=lat, lng=lng, card_data=card_data,
-                    commit=False,
+                    search_state=listing.get("search_state"), commit=False,
                 )
                 if result == "inserted":
                     new_count += 1
@@ -218,6 +239,11 @@ async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
                     unchanged_count += 1
 
         if len(listings) < 25 or page_num >= max_pages:
+            if observed is not None:
+                # Natural end of results, not the page cap: every listing was seen.
+                observed["complete"] = len(listings) < 25 or (
+                    needed_pages is not None and page_num >= needed_pages
+                )
             break
 
         await asyncio.sleep(random.uniform(*page_delay))
@@ -266,6 +292,7 @@ async def crawl_city_latest_cards(city, client, session_headers, *, pages=3,
         listings = parse_listings(html)
         if not listings:
             break
+        enrich_from_search_state(html, listings)
         with listing_write_batch():
             for listing in listings:
                 listing_url = listing.get("url", "")
@@ -283,6 +310,7 @@ async def crawl_city_latest_cards(city, client, session_headers, *, pages=3,
                     lat=lat,
                     lng=lng,
                     card_data=listing,
+                    search_state=listing.get("search_state"),
                     commit=False,
                 )
                 if result == "inserted":
@@ -307,6 +335,39 @@ def _get_empty_types(city, area_slug):
     return {r["property_type"] for r in rows}
 
 
+# Card-inferred property types -> type-specific URL slug. Penthouse and
+# Farm House have no type crawl, so they map to nothing.
+_INFERRED_TYPE_SLUGS = {
+    "House": "Rentals_Houses_Property",
+    "Apartment": "Rentals_Flats_Apartments",
+    "Upper Portion": "Rentals_Upper_Portions",
+    "Lower Portion": "Rentals_Lower_Portions",
+    "Room": "Rentals_Rooms",
+}
+_NO_TYPE_CRAWL = {"Penthouse", "Farm House"}
+
+
+def _type_slugs_worth_crawling(observed):
+    """Type slugs to crawl after the generic pass, or None to crawl them all.
+
+    Zameen returns 404 for an area/type pair with no listings, which made up
+    ~40% of first-pass requests. When the generic page held every listing in
+    the area, only types present among those cards can return results; type
+    crawls still run for them to set authoritative labels. Any card with an
+    unrecognised type falls back to crawling every type.
+    """
+    if observed.get("listings", 0) == 0:
+        return set()
+    if not observed.get("complete"):
+        return None
+    if observed.get("untyped", 1) == 0:
+        return set()  # every listing already has its search-state category
+    types = observed.get("types", set())
+    if any(t not in _INFERRED_TYPE_SLUGS and t not in _NO_TYPE_CRAWL for t in types):
+        return None
+    return {_INFERRED_TYPE_SLUGS[t] for t in types if t in _INFERRED_TYPE_SLUGS}
+
+
 def _update_type_state(city, area_slug, property_type, listings_found):
     """Track results per (area, property_type) combo."""
     conn = _get_conn()
@@ -328,9 +389,10 @@ async def crawl_area_cards(city, area_name, area_slug, area_id, lat, lng, client
     total_new, total_updated, total_unchanged, total_pages = 0, 0, 0, 0
 
     # 1. Crawl generic /Rentals/ first (catches everything, sets baseline)
+    observed = {}
     new, updated, unchanged, pages = await _crawl_single_type(
         city, area_name, area_slug, area_id, lat, lng,
-        client, session_headers, page_delay=page_delay
+        client, session_headers, page_delay=page_delay, observed=observed
     )
     total_new += new
     total_updated += updated
@@ -339,10 +401,13 @@ async def crawl_area_cards(city, area_name, area_slug, area_id, lat, lng, client
 
     # 2. Crawl each property-type-specific URL
     empty_types = _get_empty_types(city, area_slug)
+    worth_crawling = _type_slugs_worth_crawling(observed)
 
     for type_slug, type_label in CRAWL_PROPERTY_TYPES:
         if type_slug in empty_types:
             continue  # Skip types that previously returned 0 for this area
+        if worth_crawling is not None and type_slug not in worth_crawling:
+            continue  # Generic pass showed this type can't have results
 
         # Small delay between type crawls
         await asyncio.sleep(random.uniform(*type_delay))

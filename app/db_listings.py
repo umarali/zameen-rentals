@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 
 from app.database import _get_conn
-from app.data import PROPERTY_TYPES
+from app.data import PROPERTY_TYPES, canonical_area_name, location_id_for_area
 
 logger = logging.getLogger("zameenrentals")
 _DISTANCE_SENTINEL = 999999999
@@ -97,6 +97,32 @@ def city_priority_sql(column="city"):
     """
 
 
+def area_filter_sql(city, area_names, *, alias=None):
+    """SQL matching listings in any of ``area_names``, including their sub-areas.
+
+    Listings with a stored location path match when any level of the path is
+    one of the areas. Listings without a path yet fall back to ``area_name``.
+    """
+    col = f"{alias}." if alias else "listings."
+    names = list(dict.fromkeys(area_names))
+    ids = list(dict.fromkeys(
+        i for i in (location_id_for_area(city, n) for n in names) if i is not None
+    ))
+    name_marks = ",".join("?" for _ in names)
+    fallback = (
+        f"({col}area_name IN ({name_marks}) AND NOT EXISTS "
+        f"(SELECT 1 FROM listing_locations ll WHERE ll.zameen_id = {col}zameen_id))"
+    )
+    if not ids:
+        return fallback, names
+    id_marks = ",".join("?" for _ in ids)
+    return (
+        f"({col}zameen_id IN (SELECT zameen_id FROM listing_locations "
+        f"WHERE location_id IN ({id_marks})) OR {fallback})",
+        ids + names,
+    )
+
+
 def _listing_filter_clauses(*, city="lahore", area=None, area_names=None, property_type=None,
                             bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
                             size_marla_min=None, size_marla_max=None,
@@ -109,13 +135,10 @@ def _listing_filter_clauses(*, city="lahore", area=None, area_names=None, proper
     if geocoded_only:
         conditions.append("latitude IS NOT NULL AND longitude IS NOT NULL")
 
-    if area_names:
-        placeholders = ",".join("?" for _ in area_names)
-        conditions.append(f"area_name IN ({placeholders})")
-        params.extend(area_names)
-    elif area:
-        conditions.append("area_name = ?")
-        params.append(area)
+    if area_names or area:
+        clause, clause_params = area_filter_sql(city, area_names or [area])
+        conditions.append(clause)
+        params.extend(clause_params)
     if property_type:
         info = PROPERTY_TYPES.get(property_type.lower())
         if info:
@@ -338,8 +361,13 @@ def _source_age_fields(existing, card_data, reference):
 
 def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                    lat=None, lng=None, card_data=None, detail_data=None,
-                   commit=True):
-    """Insert or update a listing. Returns 'inserted', 'updated', or 'unchanged'."""
+                   search_state=None, commit=True):
+    """Insert or update a listing. Returns 'inserted', 'updated', or 'unchanged'.
+
+    ``search_state`` (from ``scraper.enrich_from_search_state``) is applied
+    with the card, before the alert hook runs, so new-listing alerts see the
+    authoritative type, coordinates and location path.
+    """
     conn = _get_conn()
     scraped_at = datetime.utcnow()
     now = scraped_at.isoformat()
@@ -350,6 +378,10 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
     ).fetchone()
 
     if card_data:
+        # Card-text inference says "Apartment"; search filters match the
+        # canonical "Apartment / Flat" label used by type-specific crawls.
+        if card_data.get("property_type") == "Apartment":
+            card_data = {**card_data, "property_type": PROPERTY_TYPES["apartment"]["label"]}
         c_hash = content_hash(
             card_data.get("price"), card_data.get("title"),
             card_data.get("bedrooms"), card_data.get("bathrooms"),
@@ -383,6 +415,11 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                 now, now, posted_at, updated_at, c_hash
             ))
             new_id = cur.lastrowid
+            if search_state:
+                _apply_search_state(conn, zameen_id, search_state, city=city)
+            stored = conn.execute(
+                "SELECT area_name, property_type FROM listings WHERE id = ?", (new_id,)
+            ).fetchone()
             try:
                 from app.personalization import record_match_for_inserted_listing
                 inserted_row = {
@@ -397,9 +434,9 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                     "area_size": card_data.get("area_size"),
                     "location": card_data.get("location"),
                     "image_url": card_data.get("image_url"),
-                    "property_type": card_data.get("property_type"),
+                    "property_type": stored["property_type"],
                     "city": city,
-                    "area_name": area_name,
+                    "area_name": stored["area_name"],
                     "is_active": 1,
                     "amenities_json": None,
                     "details_json": None,
@@ -418,7 +455,8 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             conn.execute("""
                 UPDATE listings SET
                     location = COALESCE(?, location),
-                    area_name = COALESCE(?, area_name),
+                    -- A stored location path decides the area, not crawl order.
+                    area_name = CASE WHEN EXISTS (SELECT 1 FROM listing_locations ll WHERE ll.zameen_id = listings.zameen_id) THEN area_name ELSE COALESCE(?, area_name) END,
                     area_slug = COALESCE(?, area_slug),
                     latitude = CASE
                         WHEN location_source = 'listing_exact' THEN latitude
@@ -445,6 +483,8 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                 added_text, has_updated, updated_text, now, posted_at,
                 has_updated, updated_at, now, zameen_id
             ))
+            if search_state:
+                _apply_search_state(conn, zameen_id, search_state, city=city)
             _commit_if_needed(conn, commit)
             return "unchanged"
 
@@ -456,9 +496,10 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             UPDATE listings SET
                 title = ?, price = ?, price_text = ?, bedrooms = ?, bathrooms = ?,
                 area_size = ?, location = ?, image_url = ?, images_json = ?,
-                property_type = ?, added_text = COALESCE(?, added_text),
+                property_type = COALESCE(?, property_type), added_text = COALESCE(?, added_text),
                 updated_text = CASE WHEN ? THEN ? ELSE updated_text END,
-                area_name = COALESCE(?, area_name), area_slug = COALESCE(?, area_slug),
+                area_name = CASE WHEN EXISTS (SELECT 1 FROM listing_locations ll WHERE ll.zameen_id = listings.zameen_id) THEN area_name ELSE COALESCE(?, area_name) END,
+                area_slug = COALESCE(?, area_slug),
                 latitude = CASE
                     WHEN location_source = 'listing_exact' THEN latitude
                     ELSE COALESCE(?, latitude)
@@ -486,6 +527,8 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
             area_name, area_slug, lat, lng, lat, lng, now, posted_at,
             has_updated, updated_at, now, c_hash, zameen_id
         ))
+        if search_state:
+            _apply_search_state(conn, zameen_id, search_state, city=city)
         _commit_if_needed(conn, commit)
         return "updated"
 
@@ -595,6 +638,85 @@ def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
     return "unchanged"
 
 
+def apply_search_state(zameen_id, search_state, *, city=None, commit=True):
+    """Store authoritative fields from a search page's embedded state.
+
+    ``search_state`` comes from ``scraper.enrich_from_search_state``: a
+    category-derived property type, exact coordinates, contact numbers and
+    the location path. Missing values never erase stored ones.
+    """
+    if not search_state:
+        return
+    conn = _get_conn()
+    _apply_search_state(conn, zameen_id, search_state, city=city)
+    _commit_if_needed(conn, commit)
+
+
+def _store_location_path(conn, zameen_id, city, path):
+    """Replace the listing's location path and file it under its deepest known area."""
+    conn.execute("DELETE FROM listing_locations WHERE zameen_id = ?", (zameen_id,))
+    conn.executemany(
+        "INSERT OR IGNORE INTO listing_locations (zameen_id, location_id, level) VALUES (?, ?, ?)",
+        [(zameen_id, p["location_id"], p["level"]) for p in path],
+    )
+    conn.executemany(
+        """
+        INSERT INTO locations (location_id, city, level, name, name_l1)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(location_id) DO UPDATE SET
+            level = excluded.level,
+            name = excluded.name,
+            name_l1 = COALESCE(excluded.name_l1, locations.name_l1)
+        """,
+        [(p["location_id"], city, p["level"], p["name"], p.get("name_l1"))
+         for p in path if p.get("name")],
+    )
+    city_level = min(p["level"] for p in path)
+    area_name = next(
+        (name for p in sorted(path, key=lambda p: -p["level"]) if p["level"] > city_level
+         for name in [canonical_area_name(city, p["location_id"])] if name),
+        None,
+    )
+    if area_name:
+        conn.execute("UPDATE listings SET area_name = ? WHERE zameen_id = ?",
+                     (area_name, zameen_id))
+
+
+def _apply_search_state(conn, zameen_id, search_state, *, city=None):
+    path = search_state.get("location_path")
+    if path:
+        if city is None:
+            row = conn.execute("SELECT city FROM listings WHERE zameen_id = ?",
+                               (zameen_id,)).fetchone()
+            city = row["city"] if row else None
+        if city:
+            _store_location_path(conn, zameen_id, city, path)
+    lat, lng = search_state.get("latitude"), search_state.get("longitude")
+    exact = lat is not None and lng is not None
+    conn.execute("""
+        UPDATE listings SET
+            property_type = COALESCE(?, property_type),
+            latitude = CASE WHEN ? THEN ? ELSE latitude END,
+            longitude = CASE WHEN ? THEN ? ELSE longitude END,
+            location_source = CASE WHEN ? THEN 'listing_exact' ELSE location_source END
+        WHERE zameen_id = ?
+    """, (search_state.get("property_type"), exact, lat, exact, lng, exact, zameen_id))
+    contact = search_state.get("contact")
+    if contact:
+        conn.execute("""
+            UPDATE listings SET
+                phone = ?, call_phone = ?, whatsapp_phone = ?,
+                contact_payload_json = ?, contact_fetched_at = ?, contact_source = ?,
+                agent_agency = COALESCE(?, agent_agency)
+            WHERE zameen_id = ?
+        """, (
+            contact.get("phone"), contact.get("call_phone"), contact.get("whatsapp_phone"),
+            json.dumps(contact["contact_payload"]) if contact.get("contact_payload") else None,
+            datetime.utcnow().isoformat(), contact.get("contact_source"),
+            contact.get("agent_agency"), zameen_id,
+        ))
+
+
 def search_listings(*, city="lahore", area=None, area_names=None, property_type=None,
                     bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
                     size_marla_min=None, size_marla_max=None,
@@ -635,16 +757,10 @@ def search_listings(*, city="lahore", area=None, area_names=None, property_type=
     else:
         order = _STABLE_RECENCY_SQL
 
-    # Collapse reposts: listings that share a content_hash are the same flat posted
-    # multiple times. We keep one representative per group (the freshest, matching the
-    # global ordering) and surface the group size as repost_count. Rows with no
-    # content_hash stay distinct (NULLIF + id fallback gives each its own group), so
-    # the collapse only ever merges genuine duplicates. Both the total and the page
-    # query group on the SAME expression, so "showing X of Y" stays honest.
-    grp_expr = "COALESCE(NULLIF(content_hash, ''), 'id:' || id)"
-
+    # content_hash detects edits to one listing; generic titles/prices can be
+    # identical across different homes. Only the unique source ID is identity.
     total = conn.execute(
-        f"SELECT COUNT(*) FROM (SELECT 1 FROM listings WHERE {where} GROUP BY {grp_expr})",
+        f"SELECT COUNT(*) FROM listings WHERE {where}",
         params
     ).fetchone()[0]
 
@@ -652,17 +768,8 @@ def search_listings(*, city="lahore", area=None, area_names=None, property_type=
     query_params = distance_params + params + [per_page, offset]
     rows = conn.execute(
         f"""
-        WITH base AS (
-            SELECT *, {distance_expr} AS distance_to_center, {grp_expr} AS _grp
-            FROM listings WHERE {where}
-        ),
-        ranked AS (
-            SELECT *,
-                   ROW_NUMBER() OVER (PARTITION BY _grp ORDER BY {_STABLE_RECENCY_SQL}) AS _rn,
-                   COUNT(*)     OVER (PARTITION BY _grp) AS _repost_count
-            FROM base
-        )
-        SELECT * FROM ranked WHERE _rn = 1 ORDER BY {order} LIMIT ? OFFSET ?
+        SELECT *, {distance_expr} AS distance_to_center
+        FROM listings WHERE {where} ORDER BY {order} LIMIT ? OFFSET ?
         """,
         query_params
     ).fetchall()

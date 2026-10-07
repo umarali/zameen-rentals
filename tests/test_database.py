@@ -505,9 +505,8 @@ class TestSearchListings:
         assert result["total"] == 0
         assert result["results"] == []
 
-    def test_reposts_collapse_to_one_with_count(self):
-        # The same flat posted under two listing ids -> identical content_hash.
-        # Dedup keeps one representative and reports the group size as repost_count.
+    def test_identical_card_fields_do_not_hide_distinct_source_listings(self):
+        # Generic titles, prices, beds and sizes are not property identity.
         for zid in ("210001", "210002"):
             upsert_listing(
                 zameen_id=zid,
@@ -517,9 +516,9 @@ class TestSearchListings:
                            "bathrooms": 2, "area_size": "1000 sqft", "property_type": "Apartment"},
             )
         result = search_listings(city="karachi")
-        assert result["total"] == 1
-        assert len(result["results"]) == 1
-        assert result["results"][0]["repost_count"] == 2
+        assert result["total"] == 2
+        assert {r["zameen_id"] for r in result["results"]} == {"210001", "210002"}
+        assert all("repost_count" not in r for r in result["results"])
 
     def test_distinct_listings_have_no_repost_count(self):
         self._seed(3)  # distinct titles/prices -> distinct content_hash -> no collapse
@@ -1194,3 +1193,59 @@ class TestCrawlTypeState:
         empty = _get_empty_types("karachi", "Karachi_Clifton")
         assert "Rentals_Rooms" in empty
         assert "Rentals_Houses_Property" not in empty
+
+
+class TestPropertyTypeLabels:
+    def _card(self, ptype):
+        return {"title": "2 bed flat", "price": 50000, "bedrooms": 2, "bathrooms": 1,
+                "area_size": "900 sqft", "property_type": ptype}
+
+    def test_inferred_apartment_matches_apartment_filter(self):
+        upsert_listing(zameen_id="pt-1", url="https://www.zameen.com/Property/pt-1.html",
+                       city="karachi", area_name="Clifton", card_data=self._card("Apartment"))
+        result = search_listings(city="karachi", property_type="apartment")
+        assert result["total"] == 1
+
+    def test_card_without_type_keeps_known_type(self):
+        url = "https://www.zameen.com/Property/pt-2.html"
+        upsert_listing(zameen_id="pt-2", url=url, city="karachi", area_name="Clifton",
+                       card_data=self._card("Upper Portion"))
+        upsert_listing(zameen_id="pt-2", url=url, city="karachi", area_name="Clifton",
+                       card_data={**self._card(None), "price": 55000})
+        assert get_listing_by_zameen_id("pt-2")["property_type"] == "Upper Portion"
+
+
+class TestApplySearchState:
+    URL = "https://www.zameen.com/Property/x-54783265-5-4.html"
+
+    def _seed(self):
+        upsert_listing(zameen_id="54783265", url=self.URL, city="karachi", area_name="Clifton",
+                       lat=24.81, lng=67.03,
+                       card_data={"title": "Flat", "price": 50000, "property_type": "Upper Portion"})
+
+    def test_stores_exact_location_type_and_contact(self):
+        from app.db_listings import apply_search_state
+        self._seed()
+        apply_search_state("54783265", {
+            "property_type": "Apartment / Flat", "latitude": 24.8266, "longitude": 67.0379,
+            "contact": {"phone": "+923001234567", "call_phone": "+923001234567",
+                        "whatsapp_phone": "+923001234567", "agent_agency": "GHL",
+                        "contact_source": "search_state",
+                        "contact_payload": {"phone": ["+923001234567"]}},
+        })
+        row = get_listing_by_zameen_id("54783265")
+        assert row["property_type"] == "Apartment / Flat"
+        assert (row["latitude"], row["longitude"]) == (24.8266, 67.0379)
+        assert row["location_source"] == "listing_exact"
+        assert row["whatsapp_phone"] == "+923001234567"
+        assert row["contact_source"] == "search_state"
+
+    def test_missing_values_keep_stored_ones(self):
+        from app.db_listings import apply_search_state
+        self._seed()
+        apply_search_state("54783265", {"property_type": None, "latitude": None,
+                                        "longitude": None, "contact": None})
+        row = get_listing_by_zameen_id("54783265")
+        assert row["property_type"] == "Upper Portion"
+        assert (row["latitude"], row["longitude"]) == (24.81, 67.03)
+        assert row["location_source"] == "area_centroid"

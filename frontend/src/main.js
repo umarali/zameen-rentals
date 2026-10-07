@@ -1087,7 +1087,23 @@ async function doNlSearch() {
     if (!r.ok) throw 0;
     const d = await r.json();
     const f = d.filters || {};
-    if (!Object.keys(f).length) { trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: false, filters: f }); parsed.innerHTML = 'Could not understand. Try "2 bed flat in DHA under 50k"'; return; }
+    const parsedKeys = Object.keys(f).filter(k => k !== 'area_suggestions');
+    if (!parsedKeys.length) {
+      trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: false, filters: f, parser: d.parser });
+      const suggestions = Array.isArray(f.area_suggestions) ? f.area_suggestions : [];
+      if (suggestions.length) {
+        parsed.innerHTML = 'Did you mean: ' + suggestions.map(name =>
+          `<button type="button" class="nl-suggestion underline text-brand-700 mx-1" data-area="${esc(name)}">${esc(name)}</button>`).join('') + '?';
+        parsed.querySelectorAll('.nl-suggestion').forEach(btn => btn.addEventListener('click', () => {
+          parsed.classList.add('hidden');
+          parsed.classList.remove('flex');
+          selectAreaFull(btn.dataset.area);
+        }));
+      } else {
+        parsed.innerHTML = 'Could not understand. Try "2 bed flat in DHA under 50k"';
+      }
+      return;
+    }
     // Interpreted filters are now shown as editable chips in #nlUnderstood
     // (rendered after state is applied below — see renderUnderstood).
     // City auto-switch (before area selection)
@@ -1113,7 +1129,7 @@ async function doNlSearch() {
     syncSizeChips();
     if (f.furnished) setToggle(true);
     if (f.sort) { S.sort = f.sort; $('#sortSelect').value = f.sort; }
-    trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: true, filters: f });
+    trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: true, filters: f, parser: d.parser });
     updateChips();
     refs._lastTriggeredBy = 'nl_search';
     doSearch();

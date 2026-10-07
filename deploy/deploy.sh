@@ -1,11 +1,13 @@
 #!/bin/bash
-# Quick deploy script: syncs code and restarts services
-# Usage: bash deploy/deploy.sh
+# Quick deploy script: syncs the LOCAL WORKING TREE (not git) and restarts services.
+# Usage:
+#   ZR_DEPLOY_HOST=root@<droplet-ip> ZR_DEPLOY_KEY=~/.ssh/id_ed25519 bash deploy/deploy.sh
+# The remote user needs passwordless sudo (root on a fresh Droplet, ubuntu on EC2).
 
 set -euo pipefail
 
-HOST="ubuntu@34.196.86.31"
-KEY="$HOME/.ssh/zameenrentals-key.pem"
+HOST="${ZR_DEPLOY_HOST:?Set ZR_DEPLOY_HOST, e.g. root@203.0.113.10}"
+KEY="${ZR_DEPLOY_KEY:-$HOME/.ssh/id_ed25519}"
 SSH=(ssh -i "$KEY" "$HOST")
 
 echo "=== Deploying to $HOST ==="

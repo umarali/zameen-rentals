@@ -58,3 +58,72 @@ class TestRomanUrduParsing:
         resp = _build_parse_query_response("240 sq yd house in Clifton", "karachi", r)
         assert resp["filters"].get("area") == "Clifton"
         assert resp["filters"].get("area_approximate") is not True
+
+
+class TestRegexBattery:
+    """Wrong results from the 2026-10-07 regex battery. A wrong area is worse than none."""
+
+    def test_johr_town_spelling_is_johar_town(self):
+        result = parse_natural_query("johr town mein 2 kamray ka flat", city="lahore")
+        assert result["area"] == "Johar Town"
+        assert result["bedrooms"] == 2
+        assert result["property_type"] == "apartment"
+
+    def test_jauhar_town_spelling_is_johar_town(self):
+        assert parse_natural_query("jauhar town ghar", city="lahore")["area"] == "Johar Town"
+
+    def test_price_words_do_not_become_an_area(self):
+        result = parse_natural_query("3 bed house 50 to 80 thousand", city="karachi")
+        assert "area" not in result
+        assert (result["price_min"], result["price_max"]) == (50000, 80000)
+
+    def test_bare_amount_after_for_is_max_price(self):
+        result = parse_natural_query("house for 45000", city="karachi")
+        assert result["price_max"] == 45000
+        assert result["property_type"] == "house"
+
+    def test_two_areas_joined_by_or(self):
+        result = parse_natural_query("DHA or Clifton flat under 80k", city="karachi")
+        assert result["areas"] == ["DHA Defence", "Clifton"]
+        assert result["area"] == "DHA Defence"
+        assert result["price_max"] == 80000
+
+    def test_single_area_has_no_areas_list(self):
+        assert "areas" not in parse_natural_query("flat in clifton", city="karachi")
+
+    def test_nipa_landmark_is_gulshan(self):
+        result = parse_natural_query("sasta kamra near nipa", city="karachi")
+        assert result["area"] == "Gulshan-e-Iqbal"
+
+    def test_islamabad_sub_sector(self):
+        result = parse_natural_query("G 11/3 lower portion", city="islamabad")
+        assert result["area"] == "G 11 G 11 3"
+        assert result["property_type"] == "lower_portion"
+
+    def test_islamabad_sub_sector_hyphenated(self):
+        assert parse_natural_query("g-11/3 flat", city="islamabad")["area"] == "G 11 G 11 3"
+
+
+class TestMatchArea:
+    def test_generic_word_alone_does_not_match(self):
+        from app.parsing import match_area
+        assert match_area("xyzzy town", city="lahore") is None
+
+    def test_unrelated_text_does_not_match(self):
+        from app.parsing import match_area
+        assert match_area("to thousand", city="karachi") is None
+
+    def test_misspelling_still_matches(self):
+        from app.parsing import match_area
+        assert match_area("gulbrg", city="lahore") == "Gulberg"
+
+    def test_double_spaced_names_match_single_spaced_query(self):
+        from app.parsing import match_area
+        assert match_area("defence dha phase 6", city="lahore") in {
+            "Defence  DHA  Phase 6", "Defence (DHA) Phase 6"}
+
+    def test_suggestions_for_unmatched_query(self):
+        from app.parsing import suggest_areas
+        suggestions = suggest_areas("johr", city="lahore")
+        assert "Johar Town" in suggestions
+        assert len(suggestions) <= 3

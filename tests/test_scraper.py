@@ -351,3 +351,72 @@ class TestRateLimiter:
 
         assert rl.target_rate == 0.2
         assert rl.rate == 0.2
+
+
+class TestEnrichFromSearchState:
+    import json as _json
+
+    URL_A = "https://www.zameen.com/Property/clifton_flat-54783265-5-4.html"
+    URL_B = "https://www.zameen.com/Property/clifton_house-54783266-5-4.html"
+
+    def _page(self, hits):
+        state = {"algolia": {"content": {"hits": hits, "nbHits": len(hits)}}}
+        return f"<html><script>window.state = {self._json.dumps(state)};</script></html>"
+
+    def _hit(self, ext_id, category, **extra):
+        return {
+            "externalID": ext_id,
+            "category": [{"level": 0, "name": "Homes"}, {"level": 1, "name": category}],
+            "hasExactGeography": True,
+            "geography": {"lat": 24.8266, "lng": 67.0379},
+            "phoneNumber": {"phone": "+923213932345", "mobile": "+923213932345",
+                            "whatsapp": "923213932345", "phoneNumbers": ["+923213932345"],
+                            "mobileNumbers": ["+923213932345"]},
+            "agency": {"name": "GHL"},
+            **extra,
+        }
+
+    def test_sets_authoritative_type_coords_and_contact(self):
+        from app.scraper import enrich_from_search_state
+        listings = [{"url": self.URL_A, "property_type": "House"}]
+        assert enrich_from_search_state(self._page([self._hit("54783265", "Flats")]), listings) == 1
+        listing = listings[0]
+        assert listing["property_type"] == "Apartment / Flat"
+        state = listing["search_state"]
+        assert (state["latitude"], state["longitude"]) == (24.8266, 67.0379)
+        assert state["contact"]["call_phone"] == "+923213932345"
+        assert state["contact"]["whatsapp_phone"] == "+923213932345"
+        assert state["contact"]["agent_agency"] == "GHL"
+        assert state["contact"]["contact_source"] == "search_state"
+
+    def test_maps_every_category_zameen_uses(self):
+        from app.scraper import enrich_from_search_state
+        expected = {"Flats": "Apartment / Flat", "Houses": "House", "Upper Portions": "Upper Portion",
+                    "Lower Portions": "Lower Portion", "Rooms": "Room", "Penthouse": "Penthouse",
+                    "Farm Houses": "Farm House"}
+        for category, label in expected.items():
+            listings = [{"url": self.URL_A}]
+            enrich_from_search_state(self._page([self._hit("54783265", category)]), listings)
+            assert listings[0]["property_type"] == label
+
+    def test_unknown_category_keeps_inferred_type(self):
+        from app.scraper import enrich_from_search_state
+        listings = [{"url": self.URL_A, "property_type": "House"}]
+        enrich_from_search_state(self._page([self._hit("54783265", "Offices")]), listings)
+        assert listings[0]["property_type"] == "House"
+        assert listings[0]["search_state"]["property_type"] is None
+
+    def test_inexact_geography_is_ignored(self):
+        from app.scraper import enrich_from_search_state
+        listings = [{"url": self.URL_A}]
+        hit = self._hit("54783265", "Flats", hasExactGeography=False)
+        enrich_from_search_state(self._page([hit]), listings)
+        assert listings[0]["search_state"]["latitude"] is None
+
+    def test_unmatched_cards_and_missing_state_are_untouched(self):
+        from app.scraper import enrich_from_search_state
+        listings = [{"url": self.URL_B, "property_type": "House"}]
+        assert enrich_from_search_state(self._page([self._hit("54783265", "Flats")]), listings) == 0
+        assert "search_state" not in listings[0]
+        assert enrich_from_search_state("<html>no state</html>", listings) == 0
+        assert enrich_from_search_state("<script>window.state = {broken</script>", listings) == 0

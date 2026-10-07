@@ -365,6 +365,130 @@ def _extract_property_type(card):
     return None
 
 
+# --- Embedded search state ---
+# Zameen search pages embed their Algolia results as JSON in `window.state`.
+# Each hit carries the authoritative category, exact coordinates and contact
+# numbers, which the card HTML lacks or only implies.
+
+_STATE_CATEGORY_LABELS = {
+    "Flats": PROPERTY_TYPES["apartment"]["label"],
+    "Houses": PROPERTY_TYPES["house"]["label"],
+    "Upper Portions": PROPERTY_TYPES["upper_portion"]["label"],
+    "Lower Portions": PROPERTY_TYPES["lower_portion"]["label"],
+    "Rooms": PROPERTY_TYPES["room"]["label"],
+    "Penthouse": PROPERTY_TYPES["penthouse"]["label"],
+    "Farm Houses": PROPERTY_TYPES["farm_house"]["label"],
+}
+
+
+def _state_hits(html):
+    """Return the Algolia hits embedded in a search page, or [] if absent."""
+    start = html.find("window.state")
+    brace = html.find("{", start) if start >= 0 else -1
+    if brace < 0:
+        return []
+    try:
+        state, _ = json.JSONDecoder().raw_decode(html, brace)
+        hits = state["algolia"]["content"]["hits"]
+    except (ValueError, KeyError, TypeError):
+        return []
+    return hits if isinstance(hits, list) else []
+
+
+def _state_property_type(hit):
+    categories = [c for c in hit.get("category") or [] if isinstance(c, dict)]
+    leaf = max(categories, key=lambda c: c.get("level", 0), default=None)
+    return _STATE_CATEGORY_LABELS.get(leaf.get("name")) if leaf else None
+
+
+def _state_contact(hit):
+    numbers = hit.get("phoneNumber") or {}
+    if not isinstance(numbers, dict):
+        return None
+    phones = []
+    for raw in (numbers.get("phoneNumbers") or []) + (numbers.get("mobileNumbers") or []) + [numbers.get("phone"), numbers.get("mobile")]:
+        phone = _normalize_phone(raw)
+        if phone and phone not in phones:
+            phones.append(phone)
+    mobile = _normalize_phone(numbers.get("mobile"))
+    whatsapp = _normalize_phone(numbers.get("whatsapp"))
+    if not whatsapp:
+        whatsapp = next((p for p in [mobile] + phones if p and _is_mobile_phone(p)), None)
+    call_phone = phones[0] if phones else None
+    if not call_phone and not whatsapp:
+        return None
+    agency = (hit.get("agency") or {}).get("name")
+    return {
+        "phone": call_phone,
+        "call_phone": call_phone,
+        "whatsapp_phone": whatsapp,
+        "agent_agency": agency,
+        "contact_source": "search_state",
+        "contact_payload": _sanitize_contact_payload(phones=phones, mobile=mobile, agency=agency),
+    }
+
+
+# Zameen location levels: 0 country, 1 province, 2 city, 3+ areas and sub-areas.
+_STATE_CITY_LEVEL = 2
+
+
+def _state_location_path(hit):
+    """Return the hit's location path from city level down, or [] if unusable.
+
+    ``location_id`` is Zameen's ``externalID``, the same ID ``app/areas_*.json``
+    stores for each area.
+    """
+    path = []
+    for loc in hit.get("location") or []:
+        if not isinstance(loc, dict):
+            return []
+        try:
+            location_id = int(loc["externalID"])
+            level = int(loc["level"])
+        except (KeyError, TypeError, ValueError):
+            return []
+        if level < _STATE_CITY_LEVEL:
+            continue
+        path.append({
+            "location_id": location_id,
+            "level": level,
+            "name": loc.get("name"),
+            "name_l1": loc.get("name_l1"),
+        })
+    return sorted(path, key=lambda p: p["level"])
+
+
+def enrich_from_search_state(html, listings):
+    """Overlay embedded search-state data onto parsed card listings, in place.
+
+    Sets an authoritative ``property_type`` and attaches ``search_state``
+    (exact coordinates, contact and location path) for each card whose ID
+    appears in the embedded hits. Returns how many cards were enriched.
+    """
+    hits = {str(h.get("externalID")): h for h in _state_hits(html) if isinstance(h, dict)}
+    if not hits:
+        return 0
+    enriched = 0
+    for listing in listings:
+        hit = hits.get(extract_zameen_id(listing.get("url", "")) or "")
+        if hit is None:
+            continue
+        ptype = _state_property_type(hit)
+        if ptype:
+            listing["property_type"] = ptype
+        geo = hit.get("geography") or {}
+        coords = _parse_coordinate_pair(geo.get("lat"), geo.get("lng")) if hit.get("hasExactGeography") else None
+        listing["search_state"] = {
+            "property_type": ptype,
+            "latitude": coords[0] if coords else None,
+            "longitude": coords[1] if coords else None,
+            "contact": _state_contact(hit),
+            "location_path": _state_location_path(hit),
+        }
+        enriched += 1
+    return enriched
+
+
 def parse_listings(html):
     soup = BeautifulSoup(html, "html.parser")
     listings = []

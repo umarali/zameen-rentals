@@ -1,0 +1,12 @@
+[Unit]
+Description=ZameenRentals daily SQLite backup to S3-compatible storage
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=zrentals
+Group=zrentals
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/zameenrentals/backup.env
+ExecStart=/opt/zameenrentals/.venv/bin/python /usr/local/bin/zameenrentals-backup.py

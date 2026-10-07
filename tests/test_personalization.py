@@ -54,6 +54,10 @@ def _insert_listing(zameen_id: str, **overrides) -> int:
 
 
 class TestNormalizeFilters:
+    def test_rejects_malformed_full_text_query(self):
+        with pytest.raises(ValueError, match="full-text"):
+            pers.normalize_filters({"q": '"'})
+
     def test_strips_unknown_and_empty(self):
         out = pers.normalize_filters({
             "city": "lahore", "bedrooms": "2", "price_max": "",
@@ -75,6 +79,46 @@ class TestNormalizeFilters:
     def test_invalid_dict_raises(self):
         with pytest.raises(ValueError):
             pers.normalize_filters("nope")  # type: ignore[arg-type]
+
+
+class TestPushTransport:
+    @pytest.mark.parametrize("endpoint", [
+        "https://fcm.googleapis.com/fcm/send/test",
+        "https://updates.push.services.mozilla.com/wpush/v2/test",
+        "https://web.push.apple.com/test",
+        "https://wns2-db5p.notify.windows.com/test",
+    ])
+    def test_browser_push_providers_accepted(self, endpoint):
+        pers.validate_push_endpoint(endpoint)
+
+    def test_legacy_unsafe_endpoint_never_reaches_transport(self, monkeypatch):
+        def unexpected_send(**kwargs):
+            pytest.fail("Unsafe endpoint reached the network transport")
+
+        monkeypatch.setattr("pywebpush.webpush", unexpected_send)
+        assert pers.send_push({"endpoint": "http://127.0.0.1/private"}, {}) is False
+
+    def test_redirects_disabled_and_timeout_bounded(self, monkeypatch):
+        from types import SimpleNamespace
+        seen = {}
+
+        def fake_request(self, method, url, **kwargs):
+            seen.update(kwargs)
+            return SimpleNamespace(status_code=302)
+
+        def fake_webpush(**kwargs):
+            assert kwargs["timeout"] == 10
+            return kwargs["requests_session"].post(
+                kwargs["subscription_info"]["endpoint"], timeout=kwargs["timeout"],
+            )
+
+        monkeypatch.setattr("requests.Session.request", fake_request)
+        monkeypatch.setattr("pywebpush.webpush", fake_webpush)
+        assert pers.send_push({
+            "endpoint": "https://fcm.googleapis.com/fcm/send/test",
+            "p256dh": "fake", "auth": "fake",
+        }, {}) is False
+        assert seen["allow_redirects"] is False
 
 
 class TestDeriveAlertLabel:
@@ -177,6 +221,28 @@ class TestAlertCRUD:
 
 
 class TestMatching:
+    def test_bad_legacy_query_does_not_block_other_alerts(self, monkeypatch):
+        bad = pers.create_alert(CLIENT_ID, label="Bad", filters={"city": "lahore"})
+        pers.create_alert(OTHER_CLIENT_ID, label="Good", filters={"city": "lahore"})
+        conn = _get_conn()
+        conn.execute("UPDATE alerts SET filters_json = ? WHERE id = ?",
+                     (json.dumps({"city": "lahore", "q": '"'}), bad["id"]))
+        conn.commit()
+        monkeypatch.setattr(pers, "record_match_for_inserted_listing", lambda *a, **k: [])
+        _insert_listing("LEGACY-QUERY-1")
+        summary = pers.run_match_cycle(dispatch=False)
+        assert summary["matches"] == 1
+        assert pers.list_matches(OTHER_CLIENT_ID)[0]["zameen_id"] == "LEGACY-QUERY-1"
+
+    def test_insert_hook_does_not_skip_an_earlier_missed_match(self, monkeypatch):
+        pers.create_alert(CLIENT_ID, label=None, filters={"city": "lahore"})
+        with monkeypatch.context() as patch:
+            patch.setattr(pers, "record_match_for_inserted_listing", lambda *a, **k: [])
+            _insert_listing("MISSED-1")
+        _insert_listing("HOOK-2")
+        pers.run_match_cycle(dispatch=False)
+        assert {m["zameen_id"] for m in pers.list_matches(CLIENT_ID)} == {"MISSED-1", "HOOK-2"}
+
     def test_new_listing_matches_alert(self):
         alert = pers.create_alert(CLIENT_ID, label=None,
                                   filters={"city": "lahore", "bedrooms": 2})
@@ -286,7 +352,7 @@ class TestMatching:
         alert = pers.create_alert(CLIENT_ID, label=None, filters={"city": "lahore"})
         pers.save_push_subscription(
             CLIENT_ID,
-            endpoint="https://example.test/push/dispatch",
+            endpoint="https://fcm.googleapis.com/fcm/send/dispatch",
             p256dh="fake-p256dh",
             auth="fake-auth",
         )
@@ -305,7 +371,7 @@ class TestMatching:
         alert = pers.create_alert(CLIENT_ID, label=None, filters={"city": "lahore"})
         pers.save_push_subscription(
             CLIENT_ID,
-            endpoint="https://example.test/push/retry",
+            endpoint="https://fcm.googleapis.com/fcm/send/retry",
             p256dh="fake-p256dh",
             auth="fake-auth",
         )
@@ -424,6 +490,29 @@ class TestVAPID:
 
 
 class TestPersonalizationAPI:
+    @pytest.mark.parametrize("endpoint", [
+        "http://127.0.0.1/push", "https://127.0.0.1/push",
+        "http://169.254.169.254/latest/meta-data/", "https://example.com/push",
+        "https://fcm.googleapis.com.evil.test/push",
+        "https://fcm.googleapis.com@evil.test/push",
+        "https://evilpush.apple.com/push", "https://fcm.googleapis.com:8443/push",
+        "https://evil.test\\x.push.apple.com/push",
+        "https://fcm.googleapis.com/push#fragment",
+    ])
+    def test_push_rejects_untrusted_destinations(self, client, endpoint):
+        res = client.post("/api/push/subscribe", headers={"X-Client-Id": CLIENT_ID}, json={
+            "endpoint": endpoint, "keys": {"p256dh": "fake", "auth": "fake"},
+        })
+        assert res.status_code == 400
+        assert pers.list_push_subscriptions(CLIENT_ID) == []
+
+    @pytest.mark.parametrize("keys", [[], "invalid", 42])
+    def test_push_rejects_invalid_key_container(self, client, keys):
+        res = client.post("/api/push/subscribe", headers={"X-Client-Id": CLIENT_ID}, json={
+            "endpoint": "https://fcm.googleapis.com/fcm/send/test", "keys": keys,
+        })
+        assert res.status_code == 400
+
     def test_touch_requires_client_id(self, client):
         res = client.post("/api/personalization/touch")
         assert res.status_code == 400
@@ -503,14 +592,14 @@ class TestPersonalizationAPI:
     def test_push_subscribe_then_unsubscribe(self, client):
         headers = {"X-Client-Id": CLIENT_ID}
         res = client.post("/api/push/subscribe", headers=headers, json={
-            "endpoint": "https://example.test/push/abc",
+            "endpoint": "https://fcm.googleapis.com/fcm/send/abc",
             "keys": {"p256dh": "fake-p256dh", "auth": "fake-auth"},
         })
         assert res.status_code == 200
         subs = pers.list_push_subscriptions(CLIENT_ID)
         assert len(subs) == 1
         res = client.post("/api/push/unsubscribe", headers=headers, json={
-            "endpoint": "https://example.test/push/abc",
+            "endpoint": "https://fcm.googleapis.com/fcm/send/abc",
         })
         assert res.status_code == 200
         assert pers.list_push_subscriptions(CLIENT_ID) == []
@@ -518,14 +607,14 @@ class TestPersonalizationAPI:
     def test_push_unsubscribe_cannot_remove_other_clients_endpoint(self, client):
         pers.save_push_subscription(
             CLIENT_ID,
-            endpoint="https://example.test/push/private",
+            endpoint="https://fcm.googleapis.com/fcm/send/private",
             p256dh="fake-p256dh",
             auth="fake-auth",
         )
         res = client.post(
             "/api/push/unsubscribe",
             headers={"X-Client-Id": OTHER_CLIENT_ID},
-            json={"endpoint": "https://example.test/push/private"},
+            json={"endpoint": "https://fcm.googleapis.com/fcm/send/private"},
         )
         assert res.status_code == 200
         assert len(pers.list_push_subscriptions(CLIENT_ID)) == 1

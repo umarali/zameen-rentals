@@ -1,0 +1,10 @@
+{
+  "Rules": [
+    {
+      "ID": "expire-zameenrentals-backups-180d",
+      "Filter": { "Prefix": "backups/" },
+      "Status": "Enabled",
+      "Expiration": { "Days": 180 }
+    }
+  ]
+}

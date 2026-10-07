@@ -4,6 +4,7 @@ import app.crawler as crawler_mod
 from app.crawler import claim_next_area, init_crawl_state, update_area_priorities
 from app.crawler_worker import (
     _build_browser_profile, _api_headers, _get_empty_types, _update_type_state,
+    _type_slugs_worth_crawling,
     crawl_city_latest_cards, crawl_detail_batch, infer_area_from_location,
     refresh_phones_batch,
 )
@@ -169,6 +170,20 @@ class TestLatestCityFeed:
 
 
 class TestAreaScheduling:
+    def test_cycle_does_not_revisit_attempted_areas(self):
+        init_crawl_state()
+        first = claim_next_area()
+        conn = _get_conn()
+        # A failed never-crawled area stays eligible, as does one that becomes
+        # stale again while the rest of a long cycle is still running.
+        conn.execute("UPDATE crawl_state SET crawl_status = 'error', crawl_claimed_at = NULL WHERE id = ?",
+                     (first["id"],))
+        conn.commit()
+        second = claim_next_area(exclude_ids={first["id"]})
+        assert second["id"] != first["id"]
+        all_ids = {r[0] for r in conn.execute("SELECT id FROM crawl_state")}
+        assert claim_next_area(exclude_ids=all_ids) is None
+
     def test_search_priority_stays_within_city(self):
         init_crawl_state()
 
@@ -485,3 +500,65 @@ class TestBackfillResilience:
 
         assert detail_calls == 2
         assert sleeps == [2]
+
+
+class TestTypeSlugsWorthCrawling:
+    def test_empty_area_skips_every_type(self):
+        assert _type_slugs_worth_crawling({"listings": 0, "complete": False, "types": set()}) == set()
+
+    def test_multi_page_area_crawls_every_type(self):
+        observed = {"listings": 25, "complete": False, "types": {"House"}}
+        assert _type_slugs_worth_crawling(observed) is None
+
+    def test_complete_area_crawls_only_present_types(self):
+        observed = {"listings": 7, "complete": True, "types": {"House", "Upper Portion", "Penthouse"}}
+        assert _type_slugs_worth_crawling(observed) == {
+            "Rentals_Houses_Property", "Rentals_Upper_Portions",
+        }
+
+    def test_unrecognised_type_falls_back_to_all(self):
+        observed = {"listings": 3, "complete": True, "types": {"House", None}}
+        assert _type_slugs_worth_crawling(observed) is None
+
+    def test_mapped_slugs_are_real_crawl_types(self):
+        observed = {"listings": 5, "complete": True,
+                    "types": {"House", "Apartment", "Upper Portion", "Lower Portion", "Room"}}
+        assert _type_slugs_worth_crawling(observed) == {slug for slug, _ in CRAWL_PROPERTY_TYPES}
+
+    def test_fully_typed_complete_area_needs_no_type_crawls(self):
+        observed = {"listings": 60, "complete": True, "types": {"House", "Apartment / Flat"}, "untyped": 0}
+        assert _type_slugs_worth_crawling(observed) == set()
+
+    def test_typed_but_capped_area_still_crawls_types(self):
+        observed = {"listings": 1000, "complete": False, "types": {"House"}, "untyped": 0}
+        assert _type_slugs_worth_crawling(observed) is None
+
+
+class TestCrawlerLock:
+    def test_second_lock_on_same_database_is_refused(self, tmp_path):
+        first = crawler_mod.acquire_crawler_lock(tmp_path)
+        assert first is not None
+        try:
+            assert crawler_mod.acquire_crawler_lock(tmp_path) is None
+        finally:
+            first.close()
+
+    def test_lock_is_free_again_after_release(self, tmp_path):
+        crawler_mod.acquire_crawler_lock(tmp_path).close()
+        again = crawler_mod.acquire_crawler_lock(tmp_path)
+        assert again is not None
+        again.close()
+
+    def test_second_crawler_process_exits_while_lock_held(self, tmp_path):
+        import os, subprocess, sys
+        held = crawler_mod.acquire_crawler_lock(tmp_path)
+        try:
+            env = {**os.environ, "ZAMEENRENTALS_DB_DIR": str(tmp_path)}
+            proc = subprocess.run(
+                [sys.executable, "-m", "app.crawler", "--cards-only", "--single-cycle"],
+                env=env, capture_output=True, text=True, timeout=60,
+            )
+        finally:
+            held.close()
+        assert proc.returncode == 1
+        assert "Another crawler is already running" in proc.stderr
