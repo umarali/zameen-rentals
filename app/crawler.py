@@ -682,12 +682,15 @@ def acquire_crawler_lock(db_dir=None):
 
     lock_dir = Path(db_dir) if db_dir else _DB_DIR
     lock_dir.mkdir(parents=True, exist_ok=True)
-    handle = open(lock_dir / "crawler.lock", "w")
+    # "a" mode: opening must not truncate, or a refused second crawler would
+    # erase the holder's PID before discovering the lock is taken.
+    handle = open(lock_dir / "crawler.lock", "a")
     try:
         fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         handle.close()
         return None
+    handle.truncate(0)
     handle.write(f"{os.getpid()}\n")
     handle.flush()
     return handle
