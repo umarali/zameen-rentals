@@ -191,6 +191,8 @@ WantedBy=timers.target
 UNIT
 
 systemctl daemon-reload
+# Enabled for later boots only. The backup timer is started by deploy/deploy.sh
+# once the code and venv it runs from are installed.
 systemctl enable caddy zameenrentals-web zameenrentals-crawler zameenrentals-backup.timer
 systemctl restart caddy
 

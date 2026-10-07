@@ -41,21 +41,39 @@ S3 lifecycle rule `expire-zameenrentals-backups-180d` expires objects under
 `backups/` after 180 days. Policy doc: [`s3-lifecycle.json`](s3-lifecycle.json).
 
 ## Restore
+Never copy a snapshot over the live database. SQLite keeps recent writes in
+`zameenrentals.db-wal` and `-shm`, every open connection maps them, and an old
+`-wal` beside a new database file can corrupt it. Use the restore tool, which
+`deploy/deploy.sh` installs as `/usr/local/bin/zameenrentals-restore`
+(source: [`zameenrentals-restore.sh`](zameenrentals-restore.sh)):
+
 ```bash
-aws s3 cp s3://zameenrentals/backups/zameenrentals-YYYY-MM-DD.db.gz /tmp/
-gunzip /tmp/zameenrentals-YYYY-MM-DD.db.gz
-# verify before swapping in:
-sqlite3 /tmp/zameenrentals-YYYY-MM-DD.db 'PRAGMA integrity_check; SELECT COUNT(*) FROM listings;'
-# on the box (as zrentals), pause the writer, swap, resume:
-sudo systemctl stop zameenrentals-crawler
-sudo -u zrentals cp /tmp/zameenrentals-YYYY-MM-DD.db /opt/zameenrentals/data/zameenrentals.db
-sudo systemctl start zameenrentals-crawler
+aws s3 cp s3://zameenrentals/backups/zameenrentals-YYYY-MM-DD.db.gz /tmp/   # or download from Spaces
+sudo zameenrentals-restore /tmp/zameenrentals-YYYY-MM-DD.db.gz
 ```
 
+It runs these steps in order:
+1. Verifies the snapshot (`PRAGMA integrity_check`, at least one listing) before
+   touching anything.
+2. Stops every database user: the backup timer, any running backup job, the
+   crawler, then the web service.
+3. Waits until no process has the database files open.
+4. Moves the old `.db`, `-wal` and `-shm` together into
+   `data/pre-restore-<UTC time>/`. Delete that folder once the restore is
+   confirmed.
+5. Installs the snapshot as `zrentals` and verifies it again in place.
+6. Starts web and crawler, then the backup timer, and checks all three are
+   active.
+
+If a check fails, it stops with the services down and the old files kept, so
+nothing is half-restored. The same command seeds a fresh server; with no old
+database, step 4 does nothing.
+
 ## Reprovision (fresh instance)
-`deploy/user-data.sh` recreates the script + units and enables the timer at
-boot; `boto3` is installed into the venv from `requirements.txt` on the first
-code deploy. The IAM role / instance profile and the S3 lifecycle rule are
+`deploy/user-data.sh` recreates the script + units and enables the timer for
+later boots; `deploy/deploy.sh` starts it once the code and venv are in place,
+and fails if it isn't active with a next run time. `boto3` is installed into the
+venv from `requirements.txt` on the first code deploy. The IAM role / instance profile and the S3 lifecycle rule are
 account-level and persist independently of the instance. To recreate them from
 scratch:
 

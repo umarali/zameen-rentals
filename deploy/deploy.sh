@@ -27,17 +27,29 @@ rsync -avz --progress \
   --exclude 'package*.json' --exclude 'playwright.config.js' \
   ./ $HOST:/tmp/zameenrentals-deploy/
 
+# deploy/ is excluded above; ship the restore tool on its own.
+rsync -az -e "ssh -i $KEY" deploy/backup/zameenrentals-restore.sh $HOST:/tmp/zameenrentals-restore.sh
+
 # Move code and restart services
 "${SSH[@]}" bash -s << 'REMOTE'
 sudo rsync -a --delete \
   --exclude '.env' --exclude '.venv' --exclude 'data' \
   /tmp/zameenrentals-deploy/ /opt/zameenrentals/
 sudo chown -R zrentals:zrentals /opt/zameenrentals
+sudo install -m 755 /tmp/zameenrentals-restore.sh /usr/local/bin/zameenrentals-restore
 sudo -u zrentals /opt/zameenrentals/.venv/bin/python -m pip install \
   --disable-pip-version-check -r /opt/zameenrentals/requirements.txt
 sudo systemctl restart zameenrentals-web
 sudo systemctl restart zameenrentals-crawler
-echo "=== Deploy complete ==="
+# The backup needs the venv and code installed above, so start its timer only
+# now. user-data.sh enables it for boot but doesn't start it.
+sudo systemctl enable --now zameenrentals-backup.timer
+next_run="$(sudo systemctl show zameenrentals-backup.timer -p NextElapseUSecRealtime --value)"
+if ! sudo systemctl is-active --quiet zameenrentals-backup.timer || [ -z "$next_run" ]; then
+  echo "ERROR: zameenrentals-backup.timer is not active or has no next run" >&2
+  exit 1
+fi
+echo "=== Deploy complete. Next backup: $next_run ==="
 sudo systemctl status zameenrentals-web --no-pager | head -5
 sudo systemctl status zameenrentals-crawler --no-pager | head -5
 REMOTE

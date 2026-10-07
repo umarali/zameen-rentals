@@ -97,16 +97,19 @@ Use the newest complete data you have, in this order of preference:
 sqlite3 data/rebuild/zameenrentals.db ".backup /tmp/zameenrentals-seed.db"
 ```
 
-Check the copy, then install it on the Droplet:
+Copy it to the Droplet and install it with the restore tool, which `deploy.sh`
+put in `/usr/local/bin` in step 4. Don't copy a file over the database
+directly: [`deploy/backup/README.md`](../deploy/backup/README.md#restore)
+explains why and lists what the tool does.
 
 ```bash
-sqlite3 /tmp/zameenrentals-seed.db 'PRAGMA integrity_check; SELECT city, COUNT(*) FROM listings GROUP BY city;'
 scp -i ~/.ssh/<your key> /tmp/zameenrentals-seed.db root@<droplet-ip>:/tmp/
-ssh root@<droplet-ip> '
-  systemctl stop zameenrentals-crawler zameenrentals-web
-  install -o zrentals -g zrentals -m 640 /tmp/zameenrentals-seed.db /opt/zameenrentals/data/zameenrentals.db
-  systemctl start zameenrentals-web zameenrentals-crawler'
+ssh root@<droplet-ip> 'zameenrentals-restore /tmp/zameenrentals-seed.db'
 ```
+
+It verifies the copy, stops the backup timer, the crawler and the web service,
+installs the copy, verifies it again, then starts all three. Expect
+`Restore complete: <N> listings. Services and backup timer are active.`
 
 Push notification keys (`data/vapid_*`) are generated on first start. Browsers
 subscribed under the old AWS keys need to subscribe again, unless you restore
@@ -124,10 +127,13 @@ certificate itself once DNS resolves to the Droplet.
 curl -s https://zameenrentals.emerssive.com/api/health
 curl -s 'https://zameenrentals.emerssive.com/api/search?city=karachi&area=DHA+Phase+6' | head -c 300
 ssh root@<droplet-ip> 'journalctl -u zameenrentals-crawler -n 20 --no-pager'
+ssh root@<droplet-ip> 'systemctl list-timers zameenrentals-backup.timer --no-pager'
 ssh root@<droplet-ip> 'systemctl start zameenrentals-backup.service; journalctl -u zameenrentals-backup -n 5 --no-pager'
 ```
 
-The last command runs one backup now; expect `OK: uploaded s3://zameenrentals-backups/...`.
+The timer line must show a time in the NEXT column; `deploy.sh` and the restore
+tool both start it. The last command runs one backup now; expect
+`OK: uploaded s3://zameenrentals-backups/...`.
 
 ## 8. Shut down AWS (you)
 
