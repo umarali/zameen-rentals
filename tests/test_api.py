@@ -868,3 +868,54 @@ class TestUnmatchedSubAreaQualifier:
     def test_size_number_is_not_a_qualifier(self, client, monkeypatch):
         f = self._parse(client, monkeypatch, "5 marla house in clifton")
         assert "area_approximate" not in f
+
+
+class TestHealthChecks:
+    URL = "https://www.zameen.com/Property/x-54700001-5-4.html"
+
+    def _seed(self, minutes_ago=0):
+        from datetime import datetime, timedelta
+        from app.database import _get_conn
+        from app.db_listings import upsert_listing
+        upsert_listing(zameen_id="54700001", url=self.URL, city="karachi", area_name="Clifton",
+                       card_data={"title": "Flat", "price": 50000})
+        seen = (datetime.utcnow() - timedelta(minutes=minutes_ago)).isoformat()
+        conn = _get_conn()
+        conn.execute("UPDATE listings SET last_seen_at = ? WHERE zameen_id = '54700001'", (seen,))
+        conn.commit()
+
+    def test_health_reports_listings_and_answers_head(self, client):
+        self._seed()
+        res = client.get("/api/health")
+        assert res.status_code == 200
+        assert res.json()["listings"] >= 1
+        assert client.head("/api/health").status_code == 200
+
+    def test_health_is_503_when_database_fails(self, client, monkeypatch):
+        import app.routes as routes
+        def broken():
+            raise RuntimeError("database is locked")
+        monkeypatch.setattr(routes, "_listing_freshness", broken)
+        res = client.get("/api/health")
+        assert res.status_code == 503
+        assert res.json()["database"] == "unavailable"
+
+    def test_crawler_health_ok_when_fresh(self, client):
+        self._seed(minutes_ago=3)
+        res = client.get("/api/health/crawler")
+        assert res.status_code == 200
+        assert res.json()["status"] == "ok"
+        assert client.head("/api/health/crawler").status_code == 200
+
+    def test_crawler_health_is_503_when_stale(self, client):
+        self._seed(minutes_ago=180)
+        res = client.get("/api/health/crawler")
+        assert res.status_code == 503
+        body = res.json()
+        assert body["status"] == "stale"
+        assert body["newest_listing_seen_minutes_ago"] > body["max_minutes"]
+
+    def test_crawler_health_is_503_with_no_listings(self, client):
+        res = client.get("/api/health/crawler")
+        assert res.status_code == 503
+        assert res.json()["newest_listing_seen_minutes_ago"] is None
