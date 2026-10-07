@@ -629,6 +629,27 @@ def _get_instructor_client():
     return _instructor_client
 
 
+def _reconcile_ai_area(query: str, result: dict, city: str) -> dict:
+    """Make the model's area agree with the areas the query names literally.
+
+    Claude picks from the full area list, so it can return a valid but wrong
+    name ("askari 5" -> "Gulistan-e-Jauhar Askari 4"). When the query names
+    areas exactly (names or aliases), a choice outside them is replaced by
+    the first one. With no literal mention (a landmark, a description), the
+    model's choice stands. "X or Y" also sets ``areas`` like the regex parser.
+    """
+    result = dict(result)
+    text = _normalize_number_words(query).lower()
+    mentioned = [name for _, _, name in _area_spans(text, city)]
+    if mentioned and result.get("area") not in mentioned:
+        result["area"] = mentioned[0]
+    joined = _area_mentions(text, city)
+    if len(joined) >= 2:
+        result["areas"] = joined
+        result["area"] = joined[0]
+    return result
+
+
 async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
     """Use Instructor + Claude Haiku to parse a natural language rental query."""
     client = _get_instructor_client()
@@ -672,6 +693,8 @@ async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
             lm = resolve_landmark(query, city=effective_city)
             if lm:
                 result["area"] = lm
+
+        result = _reconcile_ai_area(query, result, effective_city)
 
         # Validate bedrooms_max > bedrooms
         if "bedrooms_max" in result and "bedrooms" in result:

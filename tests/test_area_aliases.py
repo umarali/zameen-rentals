@@ -64,3 +64,11 @@ def test_suggestions_never_offer_the_city_or_weak_matches():
     from app.parsing import suggest_areas
     assert suggest_areas("kemari", city="karachi") == []
     assert "Johar Town" in suggest_areas("johr", city="lahore")
+
+
+def test_full_area_name_containing_a_fallback_alias_is_exact():
+    from app.routes import _build_parse_query_response
+    q = "2 bed flat in navy housing scheme karsaz"
+    f = _build_parse_query_response(q, "karachi", parse_natural_query(q, "karachi"))["filters"]
+    assert f["area"] == "Navy Housing Scheme Karsaz"
+    assert "area_approximate" not in f

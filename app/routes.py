@@ -20,7 +20,7 @@ from app.data import (
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
-from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE, _UNIT_AFTER_NUMBER_RE, _area_spans
+from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE, _UNIT_AFTER_NUMBER_RE, _area_spans, _normalize_number_words
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
 from app.db_listings import (
     decode_listing_json_field,
@@ -161,7 +161,9 @@ def _fallback_alias_used(q, city, selected):
     text = q.lower()
     aliases = {**URDU_AREAS, **ROMAN_URDU_AREAS_BY_CITY.get(city, {})}
     for alias in sorted(PARENT_FALLBACK_ALIASES.get(city, ()), key=len, reverse=True):
-        if aliases.get(alias) not in selected:
+        target = aliases.get(alias)
+        # Typing the area's own full name isn't a fallback ("navy housing scheme karsaz").
+        if target not in selected or " ".join(target.lower().split()) in text:
             continue
         m = re.search(r"(?<!\w)" + re.escape(alias) + r"(?!\w)", text)
         # "dha 3 bed": the 3 belongs to the bedroom count, not the alias.
@@ -219,6 +221,14 @@ def _build_parse_query_response(q, city, result):
             if fallback:
                 result["area_approximate"] = True
                 result["area_query"] = fallback
+        if not result.get("area_approximate") and not exact_selection:
+            # A numbered area ("... Askari 4") the user never typed that number for.
+            typed = set(re.findall(r"\d+", _normalize_number_words(q)))
+            untyped = [n for name in selected if name
+                       for n in re.findall(r"\d+", name) if n not in typed]
+            if untyped:
+                result["area_approximate"] = True
+                result["area_query"] = _strip_noise_tokens(q.lower(), keep_digits=True) or q
     if not result.get("area"):
         # No confident area: offer "did you mean" choices instead of guessing.
         leftover = _strip_noise_tokens(q.lower())
