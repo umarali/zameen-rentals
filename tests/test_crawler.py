@@ -543,6 +543,15 @@ class TestCrawlerLock:
         finally:
             first.close()
 
+    def test_refused_attempt_keeps_holder_pid(self, tmp_path):
+        import os
+        first = crawler_mod.acquire_crawler_lock(tmp_path)
+        try:
+            assert crawler_mod.acquire_crawler_lock(tmp_path) is None
+            assert (tmp_path / "crawler.lock").read_text().strip() == str(os.getpid())
+        finally:
+            first.close()
+
     def test_lock_is_free_again_after_release(self, tmp_path):
         crawler_mod.acquire_crawler_lock(tmp_path).close()
         again = crawler_mod.acquire_crawler_lock(tmp_path)
