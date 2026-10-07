@@ -24,6 +24,7 @@ import {
 import { openDrawer, initDrawerListeners } from './drawer.js';
 import { getStoredMapLayer } from './map-layers.js';
 import { initWelcome } from './welcome.js';
+import { initVoiceSearch } from './voice.js';
 import {
   initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen,
   trackCitySwitch, trackFilterChange, trackMapMarkerClick, trackApiError, trackScrollDepth, trackFeedbackSubmitted,
@@ -1335,6 +1336,7 @@ function initNlListeners() {
     }
   });
   document.addEventListener('click', e => { if (!e.target.closest('#nlSuggestions') && !e.target.closest('#nlInput')) $('#nlSuggestions').classList.add('hidden'); });
+  initVoiceSearch({ onTranscript: t => { $('#nlInput').value = t; $('#nlSuggestions').classList.add('hidden'); doNlSearch(); } });
 }
 
 function initNearbyControls() {

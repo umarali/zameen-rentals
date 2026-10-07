@@ -9,3 +9,5 @@ slowapi
 pywebpush
 cryptography
 boto3
+faster-whisper==1.2.1
+av<19  # faster-whisper 1.2.1 calls av.open(metadata_errors=...), removed in PyAV 19
