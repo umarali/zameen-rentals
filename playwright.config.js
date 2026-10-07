@@ -37,6 +37,9 @@ module.exports = defineConfig({
     port: PORT,
     timeout: 15_000,
     reuseExistingServer: false,
+    // Default shutdown is SIGKILL, which skips serve_playwright.py's cleanup
+    // and leaks its temporary data directory.
+    gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
   },
   projects: [
     {
