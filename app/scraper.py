@@ -381,18 +381,58 @@ _STATE_CATEGORY_LABELS = {
 }
 
 
-def _state_hits(html):
-    """Return the Algolia hits embedded in a search page, or [] if absent."""
-    start = html.find("window.state")
+def _window_state(html):
+    """The JSON object Zameen pages embed as `window.state`, or {} if absent."""
+    start = (html or "").find("window.state")
     brace = html.find("{", start) if start >= 0 else -1
     if brace < 0:
-        return []
+        return {}
     try:
         state, _ = json.JSONDecoder().raw_decode(html, brace)
-        hits = state["algolia"]["content"]["hits"]
-    except (ValueError, KeyError, TypeError):
+    except ValueError:
+        return {}
+    return state if isinstance(state, dict) else {}
+
+
+def _state_hits(html):
+    """Return the Algolia hits embedded in a search page, or [] if absent."""
+    try:
+        hits = _window_state(html)["algolia"]["content"]["hits"]
+    except (KeyError, TypeError):
         return []
     return hits if isinstance(hits, list) else []
+
+
+def detail_from_state(html):
+    """Description, amenities and contact names from a detail page's embedded state.
+
+    Zameen renders these client-side, so the HTML selectors in the detail
+    parsers find nothing; the same fields sit in `window.state.property.data`.
+    Returns only the fields that are present.
+    """
+    data = ((_window_state(html).get("property") or {}).get("data")) or {}
+    if not isinstance(data, dict):
+        return {}
+    out = {}
+    desc = data.get("description")
+    if isinstance(desc, str) and desc.strip():
+        out["description"] = desc.strip()[:2000]
+    amenities = []
+    for group in data.get("amenities") or []:
+        for item in (group or {}).get("amenities") or []:
+            text = str((item or {}).get("text") or "").strip()
+            value = str((item or {}).get("value") or "").strip()
+            label = f"{text}: {value}" if text and value else text
+            if label and len(label) < 60 and label not in amenities:
+                amenities.append(label)
+    if amenities:
+        out["amenities"] = amenities
+    if data.get("contactName"):
+        out["agent_name"] = str(data["contactName"]).strip()
+    agency = (data.get("agency") or {}).get("name") if isinstance(data.get("agency"), dict) else None
+    if agency:
+        out["agent_agency"] = str(agency).strip()
+    return out
 
 
 def _state_property_type(hit):
@@ -755,6 +795,9 @@ async def fetch_listing_detail(listing_url):
         except Exception:
             continue
 
+    # The HTML selectors above no longer match Zameen's client-rendered
+    # markup; the embedded state carries these fields reliably.
+    result.update(detail_from_state(html))
     result.pop("contact_payload", None)
     cache_set(ck, result)
     return result
