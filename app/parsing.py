@@ -70,9 +70,16 @@ _AREA_NOISE = frozenset({
 })
 
 
-def _strip_noise_tokens(text: str) -> str:
-    """Remove known filter-noise tokens from text, leaving potential area words."""
-    return ' '.join(t for t in text.split() if t not in _AREA_NOISE and not t.isdigit() and len(t) > 1)
+def _strip_noise_tokens(text: str, keep_digits: bool = False) -> str:
+    """Remove known filter-noise tokens from text, leaving potential area words.
+
+    ``keep_digits`` keeps bare numbers such as the 5 in "clifton blok 5";
+    match_area only lets a number decide between areas that contain one.
+    """
+    return ' '.join(
+        t for t in text.split()
+        if t not in _AREA_NOISE and (t.isdigit() and keep_digits or not t.isdigit() and len(t) > 1)
+    )
 
 
 _BED_RANGE_RE = re.compile(r'(\d+)\s*(?:-|to|se)\s*(\d+)\s*(?:bed(?:room)?s?|br|bhk|kamr[eao]|کمر[ےوں]|بیڈ)')
@@ -213,25 +220,11 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
                 if pmin is not None: result['price_min'] = pmin
 
     # --- Area ---
-    # Urdu script (Karachi only for now)
-    if city == "karachi":
-        for ur_area, en_area in sorted(URDU_AREAS.items(), key=lambda x: -len(x[0])):
-            if ur_area in q:
-                result['area'] = en_area
-                break
-    # Roman Urdu aliases (city-aware)
-    if 'area' not in result:
-        roman_map = ROMAN_URDU_AREAS_BY_CITY.get(city, {})
-        for alias, area_name in sorted(roman_map.items(), key=lambda x: -len(x[0])):
-            if re.search(r'\b' + re.escape(alias) + r'\b', ql):
-                result['area'] = area_name
-                break
-    # Direct area name match
-    if 'area' not in result:
-        for name in sorted(areas.keys(), key=lambda x: -len(x)):
-            if name.lower() in ql:
-                result['area'] = name
-                break
+    # Exact Urdu names, Roman Urdu aliases and area names, longest match first,
+    # so "clifton block 5" beats the shorter alias "clifton".
+    spans = _area_spans(q.lower(), city)
+    if spans:
+        result['area'] = spans[0][2]
     # Landmark resolution
     if 'area' not in result:
         lm = resolve_landmark(q, city=city)
@@ -239,7 +232,7 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
             result['area'] = lm
     # Last resort: fuzzy match via match_area on stripped query
     if 'area' not in result:
-        stripped = _strip_noise_tokens(ql)
+        stripped = _strip_noise_tokens(ql, keep_digits=True)
         if len(stripped) >= 3:
             candidate = match_area(stripped, city=city)
             if candidate:
@@ -263,8 +256,28 @@ def _area_mentions(text, city):
     """Distinct areas named in ``text``, in order, when joined like 'X or Y'.
 
     Only exact aliases and area names count; fuzzy matches never add a second
-    area. Overlapping matches keep the longest (so 'dha phase 6' beats 'dha').
-    Every span and joiner check indexes ``text``, one lowercased string.
+    area. Every span and joiner check indexes ``text``, one lowercased string.
+    """
+    kept = _area_spans(text, city)
+    areas = []
+    for i, (start, end, name) in enumerate(kept):
+        if i and not _AREA_JOINER_RE.match(text[kept[i - 1][1]:start]):
+            break
+        if name not in areas:
+            areas.append(name)
+    return areas
+
+
+_UNIT_AFTER_NUMBER_RE = re.compile(
+    r'\s*(?:marla|kanal|gaz|gaj|guz|gajj|sq|square|yards?|bed|beds|bedroom|bedrooms|br|bhk|kamr'
+    r'|lac|lacs|lakh|laakh|k\b|hazar|hazaar|thousand|crore|cr\b|بیڈ|کمر|مرلہ)'
+)
+
+
+def _area_spans(text, city):
+    """Non-overlapping exact area mentions in ``text`` as (start, end, area), in order.
+
+    Overlapping matches keep the longest (so 'dha phase 6' beats 'dha').
     """
     spans = []
     roman_map = ROMAN_URDU_AREAS_BY_CITY.get(city, {})
@@ -281,19 +294,18 @@ def _area_mentions(text, city):
         for ur_area, en_area in URDU_AREAS.items():
             for m in re.finditer(re.escape(ur_area), text):
                 spans.append((m.start(), m.end(), en_area))
+    # "askari 5 marla": the 5 is a size, so the area is Askari, not Askari 5.
+    spans = [
+        (start, end, name) for start, end, name in spans
+        if not (text[start:end].split()[-1].isdigit() and _UNIT_AFTER_NUMBER_RE.match(text, end))
+    ]
     # Longest first, then drop anything overlapping a kept span.
     kept = []
     for start, end, name in sorted(spans, key=lambda s: (-(s[1] - s[0]), s[0])):
         if all(end <= ks or start >= ke for ks, ke, _ in kept):
             kept.append((start, end, name))
     kept.sort()
-    areas = []
-    for i, (start, end, name) in enumerate(kept):
-        if i and not _AREA_JOINER_RE.match(text[kept[i - 1][1]:start]):
-            break
-        if name not in areas:
-            areas.append(name)
-    return areas
+    return kept
 
 
 def match_area(query, city="lahore"):
@@ -339,10 +351,16 @@ def match_area(query, city="lahore"):
             n_tokens = _distinctive_tokens(_norm(name))
             if not n_tokens:
                 continue
-            matched = [max(_token_ratio(t, nt) for nt in n_tokens) for t in q_tokens]
+            # A number must match exactly in a numbered area ("block 5" is
+            # never "Block 1") and is ignored for unnumbered ones (a price).
+            n_numbered = any(t.isdigit() for t in n_tokens)
+            considered = [t for t in q_tokens if n_numbered or not t.isdigit()]
+            if not considered:
+                continue
+            matched = [max(_token_ratio(t, nt) for nt in n_tokens) for t in considered]
             if min(matched) < _TOKEN_MATCH_MIN:
                 continue
-            score = sum(matched) / max(len(q_tokens), len(n_tokens))
+            score = sum(matched) / max(len(considered), len(n_tokens))
             if score > best_score:
                 best_score, best = score, name
         if best_score >= 0.5:
@@ -361,6 +379,7 @@ _GENERIC_AREA_TOKENS = frozenset({
     'housing', 'road', 'area', 'garden', 'gardens', 'park', 'enclave', 'extension',
     'ext', 'commercial', 'cooperative', 'co', 'operative', 'the', 'new', 'old',
     'e', 'i', 'of', 'and', 'amp', 'residency', 'homes', 'villas', 'avenue',
+    'blok', 'blk', 'sec',
 })
 _TOKEN_MATCH_MIN = 0.8
 

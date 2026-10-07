@@ -155,3 +155,28 @@ class TestMultiAreaOffsets:
 
     def test_unjoined_mentions_stay_single(self):
         assert "areas" not in parse_natural_query("2 bed کلفٹن near DHA", city="karachi")
+
+
+class TestBlockNumbers:
+    """A block number the user typed must not be dropped or swapped (fe report 2026-10-07)."""
+
+    def test_exact_block_name_beats_shorter_alias(self):
+        assert parse_natural_query("flat in clifton block 5", city="karachi")["area"] == "Clifton Block 5"
+
+    def test_misspelled_block_keeps_its_number(self):
+        assert parse_natural_query("flat in clifftn blok 5", city="karachi")["area"] == "Clifton Block 5"
+
+    def test_price_digits_do_not_block_a_misspelled_area(self):
+        assert parse_natural_query("flat in clifftn under 50000", city="karachi")["area"] == "Clifton"
+
+    def test_unknown_block_number_does_not_pick_another_block(self):
+        from app.parsing import match_area
+        assert match_area("clifton blok 99", city="karachi") in (None, "Clifton")
+
+    def test_trailing_number_of_a_size_is_not_part_of_the_area(self):
+        result = parse_natural_query("furnished house askari 5 marla", city="lahore")
+        assert result["area"] == "Askari"
+        assert result["size_marla_min"] == 5.0
+
+    def test_numbered_area_followed_by_other_words_still_matches(self):
+        assert parse_natural_query("askari 5 house", city="lahore")["area"] == "Askari 5"
