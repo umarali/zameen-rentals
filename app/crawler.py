@@ -36,7 +36,10 @@ logger = logging.getLogger("zameenrentals.crawler")
 _shutdown = False
 
 # ── Crawl schedule configuration ──
-CARD_CYCLE_INTERVAL_HOURS = 1    # Re-crawl areas every 1 hour (was 4)
+# Full sweep of every area. The latest-listings refresh (LATEST_REFRESH_MINUTES)
+# catches new listings quickly, so the sweep only has to pick up edits and
+# removals. An hourly sweep of ~1,130 areas never finished at a polite rate.
+CARD_CYCLE_INTERVAL_HOURS = 12
 CRAWL_CLAIM_LEASE_HOURS = 4      # Recover areas left in-progress after a worker crash
 DETAIL_BATCH_SIZE = 15           # Detail pages per iteration
 PHONE_BATCH_SIZE = 25            # Phone API calls per iteration
@@ -425,7 +428,9 @@ async def run_backfill_worker(*, detail_batch=DETAIL_BATCH_SIZE, phone_batch=PHO
 
 async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_SPEED_MULTIPLIER,
                       concurrency=DEFAULT_ENRICHMENT_CONCURRENCY,
-                      max_rate=DEFAULT_MAX_RATE):
+                      max_rate=DEFAULT_MAX_RATE,
+                      area_refresh_hours=CARD_CYCLE_INTERVAL_HOURS,
+                      phone_refresh=False):
     """Main crawler loop with scheduled cycles and rest periods."""
     init_db()
     init_personalization_schema()
@@ -486,7 +491,7 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                 # A full pass can exceed the refresh interval. Process each
                 # area once so details, contact refresh and cleanup get a turn.
                 area = claim_next_area(
-                    max_age_hours=CARD_CYCLE_INTERVAL_HOURS,
+                    max_age_hours=area_refresh_hours,
                     exclude_ids=attempted_areas,
                 )
                 if not area:
@@ -598,10 +603,14 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                     break
 
                 # ── Phase C: Phone refresh via API ──
-                logger.info("[Phase C] Phone number refresh...")
+                # Off by default: search pages already carry each listing's
+                # numbers (scraper.enrich_from_search_state), so calling
+                # showNumbers per listing is redundant load on Zameen.
                 phone_total = 0
                 phone_errors = 0
-                for _ in range(10):  # Up to 10 batches per cycle
+                if phone_refresh:
+                    logger.info("[Phase C] Phone number refresh...")
+                for _ in range(10 if phone_refresh else 0):  # Up to 10 batches per cycle
                     if _shutdown:
                         break
                     try:
@@ -624,7 +633,8 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                     phone_total += count
                     await asyncio.sleep(random.uniform(2, 5))
 
-                logger.info("[Phase C complete] %d phone numbers refreshed", phone_total)
+                if phone_refresh:
+                    logger.info("[Phase C complete] %d phone numbers refreshed", phone_total)
 
                 if _shutdown:
                     break
@@ -652,7 +662,7 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
             break
 
         # ── Rest between cycles ──
-        if all_areas_crawled_recently(CARD_CYCLE_INTERVAL_HOURS):
+        if all_areas_crawled_recently(area_refresh_hours):
             rest_seconds = CYCLE_REST_MINUTES * 60 + random.uniform(0, 300)
             logger.info("All areas fresh — resting %.0f minutes until next cycle", rest_seconds / 60)
             # Sleep in small increments so we can respond to shutdown
@@ -708,6 +718,8 @@ def main(argv=None):
     parser.add_argument("--phone-batch", type=int, default=PHONE_BATCH_SIZE, help="Phone rows per refresh batch")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_ENRICHMENT_CONCURRENCY, help="Concurrent in-flight detail/phone enrichments per batch")
     parser.add_argument("--max-rate", type=float, default=DEFAULT_MAX_RATE, help="Maximum outbound crawler requests per second before adaptive/robots backoff")
+    parser.add_argument("--area-refresh-hours", type=float, default=CARD_CYCLE_INTERVAL_HOURS, help="Re-sweep each area after this many hours; new listings come from the latest-listings refresh in between")
+    parser.add_argument("--phone-refresh", action="store_true", help="Also run the per-listing showNumbers phone refresh (off by default; search pages carry phones)")
     args = parser.parse_args(argv)
 
     if args.card_speed <= 0 or args.card_speed > 5.0:
@@ -716,6 +728,8 @@ def main(argv=None):
         parser.error("--concurrency must be between 1 and 32")
     if args.max_rate <= 0 or args.max_rate > 5.0:
         parser.error("--max-rate must be between 0 and 5.0")
+    if args.area_refresh_hours <= 0:
+        parser.error("--area-refresh-hours must be positive")
 
     lock = acquire_crawler_lock()
     if lock is None:
@@ -743,6 +757,8 @@ def main(argv=None):
                 card_speed=args.card_speed,
                 concurrency=args.concurrency,
                 max_rate=args.max_rate,
+                area_refresh_hours=args.area_refresh_hours,
+                phone_refresh=args.phone_refresh,
             )
         )
 

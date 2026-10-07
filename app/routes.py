@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, _ENGLISH_TO_URDU
 from app.cache import limiter
@@ -250,10 +250,56 @@ async def _maybe_enrich_nearby_exact_locations(*, city, lat, lng, radius_km, are
     return any(result is True for result in results)
 
 
-@router.get("/api/health")
+# The crawler refreshes each city's newest listings every few minutes, so the
+# newest last_seen_at stays recent while it works. Older than this means it
+# has stopped, crashed or is being blocked.
+_CRAWLER_STALE_MINUTES = int(os.getenv("ZR_HEALTH_CRAWLER_MAX_MINUTES", "60"))
+
+
+def _listing_freshness():
+    """(active listings, minutes since the crawler last saw any listing or None)."""
+    from datetime import datetime
+    from app.database import _get_conn
+
+    count, newest = _get_conn().execute(
+        "SELECT COUNT(*), MAX(last_seen_at) FROM listings WHERE is_active = 1"
+    ).fetchone()
+    age = None
+    if newest:
+        age = (datetime.utcnow() - datetime.fromisoformat(newest)).total_seconds() / 60
+    return count, age
+
+
+# HEAD too: uptime monitors often probe with it.
+@router.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
+    """Web app and database. 503 when the database can't be queried."""
     from app import APP_VERSION  # lazy import avoids a circular import at module load
-    return {"status": "ok", "service": "ZameenRentals", "version": APP_VERSION}
+    try:
+        listings, _ = _listing_freshness()
+    except Exception:
+        logger.exception("Health check: database query failed")
+        return JSONResponse(status_code=503, content={
+            "status": "error", "service": "ZameenRentals", "version": APP_VERSION, "database": "unavailable",
+        })
+    return {"status": "ok", "service": "ZameenRentals", "version": APP_VERSION, "listings": listings}
+
+
+@router.api_route("/api/health/crawler", methods=["GET", "HEAD"])
+async def crawler_health():
+    """Data freshness. 503 when the crawler hasn't seen a listing recently."""
+    try:
+        _, age = _listing_freshness()
+    except Exception:
+        logger.exception("Crawler health check: database query failed")
+        return JSONResponse(status_code=503, content={"status": "error", "database": "unavailable"})
+    body = {
+        "newest_listing_seen_minutes_ago": round(age, 1) if age is not None else None,
+        "max_minutes": _CRAWLER_STALE_MINUTES,
+    }
+    if age is None or age > _CRAWLER_STALE_MINUTES:
+        return JSONResponse(status_code=503, content={"status": "stale", **body})
+    return {"status": "ok", **body}
 
 
 @router.get("/api/cities")

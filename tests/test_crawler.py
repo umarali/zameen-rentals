@@ -571,3 +571,28 @@ class TestCrawlerLock:
             held.close()
         assert proc.returncode == 1
         assert "Another crawler is already running" in proc.stderr
+
+
+class TestCrawlerOptions:
+    def _capture(self, monkeypatch, argv):
+        seen = {}
+        async def fake_run_crawler(**kwargs):
+            seen.update(kwargs)
+        monkeypatch.setattr(crawler_mod, "run_crawler", fake_run_crawler)
+        monkeypatch.setattr(crawler_mod, "acquire_crawler_lock", lambda *a, **k: object())
+        crawler_mod.main(argv)
+        return seen
+
+    def test_defaults_sweep_twice_a_day_without_phone_calls(self, monkeypatch):
+        seen = self._capture(monkeypatch, [])
+        assert seen["area_refresh_hours"] == 12
+        assert seen["phone_refresh"] is False
+
+    def test_flags_pass_through(self, monkeypatch):
+        seen = self._capture(monkeypatch, ["--area-refresh-hours", "6", "--phone-refresh"])
+        assert seen["area_refresh_hours"] == 6
+        assert seen["phone_refresh"] is True
+
+    def test_non_positive_refresh_rejected(self, monkeypatch):
+        with pytest.raises(SystemExit):
+            self._capture(monkeypatch, ["--area-refresh-hours", "0"])
