@@ -13,11 +13,14 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
-from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, _ENGLISH_TO_URDU
+from app.data import (
+    KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, _ENGLISH_TO_URDU,
+    PARENT_FALLBACK_ALIASES, ROMAN_URDU_AREAS_BY_CITY, URDU_AREAS,
+)
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
-from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE, _area_spans
+from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE, _UNIT_AFTER_NUMBER_RE, _area_spans
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
 from app.db_listings import (
     decode_listing_json_field,
@@ -153,6 +156,20 @@ def _unmatched_sub_area(q, selected):
     return None
 
 
+def _fallback_alias_used(q, city, selected):
+    """The parent-fallback alias the query used for a selected area, if any."""
+    text = q.lower()
+    aliases = {**URDU_AREAS, **ROMAN_URDU_AREAS_BY_CITY.get(city, {})}
+    for alias in sorted(PARENT_FALLBACK_ALIASES.get(city, ()), key=len, reverse=True):
+        if aliases.get(alias) not in selected:
+            continue
+        m = re.search(r"(?<!\w)" + re.escape(alias) + r"(?!\w)", text)
+        # "dha 3 bed": the 3 belongs to the bedroom count, not the alias.
+        if m and not (alias[-1].isdigit() and _UNIT_AFTER_NUMBER_RE.match(text, m.end())):
+            return alias
+    return None
+
+
 def _build_parse_query_response(q, city, result):
     # Copy: the Claude path returns its cached dict.
     result = dict(result)
@@ -197,6 +214,11 @@ def _build_parse_query_response(q, city, result):
             # Keep other unmatched words, then the qualifier as typed.
             other = [w for w in result.get("area_query", "").split() if w not in qualifier.split()]
             result["area_query"] = " ".join(other + [qualifier])
+        elif not result.get("area_approximate"):
+            fallback = _fallback_alias_used(q, effective_city, selected)
+            if fallback:
+                result["area_approximate"] = True
+                result["area_query"] = fallback
     if not result.get("area"):
         # No confident area: offer "did you mean" choices instead of guessing.
         leftover = _strip_noise_tokens(q.lower())

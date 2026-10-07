@@ -415,14 +415,17 @@ def suggest_areas(query, city="lahore", limit=3):
     if not q_tokens:
         return []
     scored = []
+    city_name = CITIES.get(city, {}).get("name")
     for name in get_areas(city):
+        if name == city_name:
+            continue
         nn = _norm(name)
         n_tokens = _distinctive_tokens(nn)
         if not n_tokens:
             continue
         token_score = sum(max(_token_ratio(t, nt) for nt in n_tokens) for t in q_tokens) / len(q_tokens)
         score = max(token_score, SequenceMatcher(None, qn, nn).ratio())
-        if score >= 0.6:
+        if score >= 0.75:
             scored.append((-score, len(name), name))
     return [name for _, _, name in sorted(scored)[:limit]]
 
