@@ -291,7 +291,13 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
     # so "clifton block 5" beats the shorter alias "clifton".
     spans = _area_spans(q.lower(), city)
     if spans:
-        result['area'] = spans[0][2]
+        area, ambiguous, others = _choose_mention(q.lower(), spans)
+        result['area'] = area
+        # "clifton dha flat": two areas, nothing says which; keep one but flag it.
+        # ("X or Y" is handled below as a multi-area search instead.)
+        if ambiguous and len(_area_mentions(q.lower(), city)) < 2:
+            result['area_approximate'] = True
+            result['area_query'] = " ".join(others)
     # Landmark resolution
     if 'area' not in result:
         lm = resolve_landmark(q, city=city)
@@ -323,6 +329,41 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
 
 
 _AREA_JOINER_RE = re.compile(r'^\s*(?:,|/|&|\bor\b|\band\b|\bya\b|\baur\b|\bphir\b|یا|اور)[\s,]*(?:\bor\b|\bthen\b)?\s*$')
+
+
+# Which literal mention is the area being asked for? "near clifton bridge in
+# dha": Clifton is a landmark reference, DHA is where the user wants to rent.
+_LOCATIVE_BEFORE_RE = re.compile(r"(?:^|\s)(?:in|mein|me|main|at)\s*$")
+_LOCATIVE_AFTER_RE = re.compile(r"\s*(?:mein|me|main|میں)(?!\w)")
+_LANDMARK_AFTER_RE = re.compile(
+    r"\s*(?:bridge|chowrangi|chowk|hospital|road|mall|market|park|flyover|underpass|station"
+    r"|university|college|school|masjid|mosque|stadium|beach|برج|چورنگی|چوک|ہسپتال|روڈ)(?!\w)"
+)
+_PROXIMITY_BEFORE_RE = re.compile(r"(?:near|nazdeek|paas|qareeb)\s*$")
+
+
+def _choose_mention(text, spans):
+    """Pick the area the user means among literal mentions.
+
+    Returns (area, ambiguous, others): ``ambiguous`` is True when no mention
+    clearly wins; ``others`` is the text of the mentions not chosen.
+    """
+    best = {}
+    for start, end, name in spans:
+        score = 0
+        if _LOCATIVE_BEFORE_RE.search(text[:start]) or _LOCATIVE_AFTER_RE.match(text, end):
+            score += 2
+        if _LANDMARK_AFTER_RE.match(text, end):
+            score -= 2
+        if _PROXIMITY_BEFORE_RE.search(text[:start]):
+            score -= 1
+        if name not in best or score > best[name][0]:
+            best[name] = (score, start, text[start:end])
+    ranked = sorted(best.items(), key=lambda kv: (-kv[1][0], kv[1][1]))
+    area = ranked[0][0]
+    ambiguous = len(ranked) > 1 and ranked[1][1][0] == ranked[0][1][0]
+    others = [mention for name, (_, _, mention) in ranked[1:]]
+    return area, ambiguous, others
 
 
 def _area_mentions(text, city):
@@ -629,6 +670,42 @@ def _get_instructor_client():
     return _instructor_client
 
 
+def _reconcile_ai_area(query: str, result: dict, city: str) -> dict:
+    """Make the model's area agree with the areas the query names literally.
+
+    Claude picks from the full area list, so it can return a valid but wrong
+    name ("askari 5" -> "Gulistan-e-Jauhar Askari 4"). When the query names
+    areas exactly (names or aliases), a choice outside them is replaced by
+    the first one. With no literal mention (a landmark, a description), the
+    model's choice stands. "X or Y" also sets ``areas`` like the regex parser.
+    """
+    result = dict(result)
+    text = _normalize_number_words(query).lower()
+    joined = _area_mentions(text, city)
+    if len(joined) >= 2:
+        result["areas"] = joined
+        result["area"] = joined[0]
+        return result
+    spans = _area_spans(text, city)
+    names = list(dict.fromkeys(name for _, _, name in spans))
+    if not names:
+        return result  # nothing named literally: the model's resolution stands
+    ai_area = result.get("area")
+    if len(names) == 1:
+        result["area"] = names[0]
+        return result
+    chosen, ambiguous, others = _choose_mention(text, spans)
+    if ai_area == chosen and not ambiguous:
+        return result
+    # Several mentions and the model disagrees (or nothing clearly wins):
+    # keep a literal mention, preferring the model's if it is one, and flag it.
+    result["area"] = ai_area if (ambiguous and ai_area in names) else chosen
+    result["area_approximate"] = True
+    mention_text = {name: text[start:end] for start, end, name in reversed(spans)}
+    result["area_query"] = " ".join(mention_text[n] for n in names if n != result["area"])
+    return result
+
+
 async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
     """Use Instructor + Claude Haiku to parse a natural language rental query."""
     client = _get_instructor_client()
@@ -672,6 +749,8 @@ async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
             lm = resolve_landmark(query, city=effective_city)
             if lm:
                 result["area"] = lm
+
+        result = _reconcile_ai_area(query, result, effective_city)
 
         # Validate bedrooms_max > bedrooms
         if "bedrooms_max" in result and "bedrooms" in result:
