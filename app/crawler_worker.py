@@ -15,7 +15,7 @@ from app.db_listings import (
 )
 from app.scraper import (
     parse_listings, extract_zameen_id, _is_property_photo_url, fetch_listing_contact,
-    _extract_listing_geography, enrich_from_search_state,
+    _extract_listing_geography, enrich_from_search_state, detail_from_state,
 )
 
 logger = logging.getLogger("zameenrentals")
@@ -549,6 +549,10 @@ def _parse_detail_html(soup, html=None, zameen_id=None):
                     result["agent_name"] = seller["name"]
         except Exception:
             continue
+
+    # Description, amenities and contact names live in the page's embedded
+    # state; the HTML selectors above no longer find them.
+    result.update(detail_from_state(html or ""))
 
     geography = _extract_listing_geography(html or "", zameen_id)
     if geography:
