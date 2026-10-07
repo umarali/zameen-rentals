@@ -139,6 +139,30 @@ def test_empty_snapshot_is_rejected(env, tmp_path):
     assert _calls(env) == []
 
 
+def test_wal_flagged_snapshot_like_real_backups_restores(env, tmp_path):
+    # zameenrentals-backup.py uses the online-backup API, which copies the live
+    # database's WAL flag. Without its -shm, such a file can't be opened
+    # read-only, so verification must not depend on that.
+    live = tmp_path / "live.db"
+    _make_db(live, 4)
+    src = sqlite3.connect(live)
+    src.execute("PRAGMA journal_mode=WAL")
+    snapshot = tmp_path / "zameenrentals-2026-10-07.db"
+    dst = sqlite3.connect(snapshot)
+    src.backup(dst)
+    dst.close()
+    src.close()
+    raw = snapshot.read_bytes()
+    assert raw[18:20] == b"\x02\x02"  # header says WAL, as in real backups
+    gz = tmp_path / "zameenrentals-2026-10-07.db.gz"
+    gz.write_bytes(gzip.compress(raw))
+
+    result = _run(env, gz)
+
+    assert result.returncode == 0, result.stderr
+    assert _count(env["data"] / "zameenrentals.db") == 4
+
+
 def test_gzipped_snapshot_seeds_a_fresh_server(env, tmp_path):
     raw = tmp_path / "snap.db"
     _make_db(raw, 3)
