@@ -65,9 +65,9 @@ tenant_fit: who the listing says may rent it
   unclear   doesn't say. "Family home", "family apartment" or "family
             environment" used as description is unclear, not family.
 
-backup_power: y if the listing states any backup power: the "Electricity
-  Backup" amenity, or solar, UPS, inverter or generator in the text.
-  "No load shedding area" alone is n.
+backup_power: y if the listing states any backup power: the
+  "Electricity Backup" amenity, or solar, UPS, inverter or generator in
+  the text. "No load shedding area" alone is n.
 
 separate_entrance: y if the unit has its own entrance or gate, not shared
   with another portion. Separate stairs to an upper portion count.
