@@ -1,6 +1,10 @@
 // @ts-check
 const { defineConfig } = require("@playwright/test");
 
+// Override when 8000 is taken by a dev server: PLAYWRIGHT_PORT=8100 npx playwright test
+const PORT = Number(process.env.PLAYWRIGHT_PORT || 8000);
+const ORIGIN = `http://127.0.0.1:${PORT}`;
+
 module.exports = defineConfig({
   testDir: "./tests",
   fullyParallel: false,
@@ -9,7 +13,8 @@ module.exports = defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   use: {
-    baseURL: "http://127.0.0.1:8000",
+    headless: true,
+    baseURL: ORIGIN,
     actionTimeout: 15_000,
     serviceWorkers: "block",
     trace: "on-first-retry",
@@ -19,7 +24,7 @@ module.exports = defineConfig({
     storageState: {
       cookies: [],
       origins: [{
-        origin: "http://127.0.0.1:8000",
+        origin: ORIGIN,
         localStorage: [
           { name: "zr_welcomed", value: "1" },
           { name: "zr_tour_done", value: "1" },
@@ -28,10 +33,10 @@ module.exports = defineConfig({
     },
   },
   webServer: {
-    command: "ZAMEENRENTALS_PLAYWRIGHT=1 uvicorn main:app --port 8000",
-    port: 8000,
+    command: "python3 tests/serve_playwright.py",
+    port: PORT,
     timeout: 15_000,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
   projects: [
     {

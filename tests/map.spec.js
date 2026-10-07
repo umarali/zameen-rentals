@@ -56,9 +56,9 @@ test.describe("Desktop Map", () => {
   test("coverage badge shows a legend for map markers", async ({ page }) => {
     const badge = page.locator("#mapCoverageBadge");
     await expect(badge).toBeVisible();
-    await expect(badge).toContainText("Green: covered area");
+    await expect(badge).toContainText("Green: has listings");
     await expect(badge).toContainText("Grey: preview only");
-    await expect(badge).toContainText("Red: exact listing pin");
+    await expect(badge).toContainText("Red: exact listing");
   });
 
   test("coverage badge uses normalized visible-area counts from viewport search", async ({ page }) => {
@@ -102,7 +102,7 @@ test.describe("Desktop Map", () => {
     });
 
     await page.reload();
-    await expect(page.locator("#mapCoverageBadge")).toContainText("2 covered / 2 visible");
+    await expect(page.locator("#mapCoverageBadge")).toContainText("2 of 2 areas have listings");
   });
 
   test("map layer toggle switches to satellite and persists after reload", async ({ page }) => {

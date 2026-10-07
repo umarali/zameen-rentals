@@ -56,6 +56,14 @@ test.describe("Feedback Modal", () => {
     await expect(page.locator("#feedbackModal")).toHaveClass(/hidden/);
   });
 
+  test("Escape key closes modal", async ({ page }) => {
+    await page.locator("#reportBtn").click();
+    await expect(page.locator("#feedbackModal")).not.toHaveClass(/hidden/);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#feedbackModal")).toHaveClass(/hidden/);
+    await expect(page.locator("#feedbackOverlay")).toHaveClass(/hidden/);
+  });
+
   test("successful submission shows toast and closes modal", async ({
     page,
   }) => {

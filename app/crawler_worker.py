@@ -9,10 +9,13 @@ from bs4 import BeautifulSoup
 from app.cache import RateLimiter
 from app.data import USER_AGENTS, PROPERTY_TYPES, CITIES, CITY_AREAS, CRAWL_PROPERTY_TYPES
 from app.database import _get_conn
-from app.db_listings import upsert_listing, get_listings_needing_detail, city_priority_sql
+from app.db_listings import (
+    upsert_listing, get_listings_needing_detail, city_priority_sql,
+    listing_write_batch,
+)
 from app.scraper import (
     parse_listings, extract_zameen_id, _is_property_photo_url, fetch_listing_contact,
-    _extract_listing_geography,
+    _extract_listing_geography, enrich_from_search_state,
 )
 
 logger = logging.getLogger("zameenrentals")
@@ -21,6 +24,7 @@ logger = logging.getLogger("zameenrentals")
 crawler_rate_limiter = RateLimiter(rate=1.0, burst=2)
 CARD_TYPE_DELAY = (0.5, 2.0)
 CARD_PAGE_DELAY = (0.5, 1.5)
+DEFAULT_ENRICHMENT_CONCURRENCY = 8
 
 # ── Browser profile simulation ──
 
@@ -93,29 +97,23 @@ def _api_headers(ua, referer_url):
 
 # ── Fetch with retry + adaptive backoff ──
 
-_consecutive_429s = 0
-
 async def _fetch(url, client, headers, timeout=20):
     """Fetch a URL with retry, adaptive rate limiting, and proper backoff."""
-    global _consecutive_429s
-
     for attempt in range(3):
         try:
             await crawler_rate_limiter.acquire()
             resp = await client.get(url, headers=headers, timeout=timeout, follow_redirects=True)
 
             if resp.status_code == 200:
-                _consecutive_429s = max(0, _consecutive_429s - 1)
+                crawler_rate_limiter.record_success()
                 return resp.text
             elif resp.status_code == 429:
-                _consecutive_429s += 1
+                consecutive, slowed = crawler_rate_limiter.record_429()
                 # Adaptive: slow down more as 429s accumulate
-                wait = (2 ** attempt) + random.uniform(2, 5) + (_consecutive_429s * 2)
-                logger.warning("429 on %s (consecutive: %d), waiting %.0fs", url, _consecutive_429s, wait)
+                wait = (2 ** attempt) + random.uniform(2, 5) + (consecutive * 2)
+                logger.warning("429 on %s (consecutive: %d), waiting %.0fs", url, consecutive, wait)
                 await asyncio.sleep(wait)
-                # Slow down the rate limiter if we keep getting 429s
-                if _consecutive_429s >= 3:
-                    crawler_rate_limiter.rate = max(0.3, crawler_rate_limiter.rate * 0.7)
+                if slowed:
                     logger.warning("Rate limiter slowed to %.2f req/sec", crawler_rate_limiter.rate)
             elif resp.status_code == 404:
                 return None  # Page doesn't exist — don't retry
@@ -155,14 +153,25 @@ def _extract_total_count(soup):
 
 async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
                              client, session_headers, type_slug=None, type_label=None,
-                             page_delay=CARD_PAGE_DELAY):
-    """Crawl pages for one area under one URL pattern. Returns (new, updated, unchanged, pages)."""
+                             page_delay=CARD_PAGE_DELAY, observed=None):
+    """Crawl pages for one area under one URL pattern. Returns (new, updated, unchanged, pages).
+
+    If ``observed`` is a dict, it receives ``listings`` (cards seen), ``complete``
+    (every listing in the area was seen), ``types`` (property types seen) and
+    ``untyped`` (cards without an authoritative search-state type).
+    """
     new_count, updated_count, unchanged_count, pages_fetched = 0, 0, 0, 0
+    if observed is not None:
+        observed.update(listings=0, complete=False, types=set(), untyped=0)
     base_slug = type_slug or "Rentals"
     default_cap = 40
     max_pages = default_cap
+    needed_pages = None
 
-    for page_num in range(1, max_pages + 1):
+    # A while loop, not range(): max_pages can grow after page 1.
+    page_num = 0
+    while page_num < max_pages:
+        page_num += 1
         url = f"https://www.zameen.com/{base_slug}/{area_slug}-{area_id}-{page_num}.html"
 
         headers = {**session_headers}
@@ -180,11 +189,21 @@ async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
         if not listings:
             break
 
+        enrich_from_search_state(html, listings)
+
+        if observed is not None:
+            observed["listings"] += len(listings)
+            observed["types"].update(l.get("property_type") for l in listings)
+            observed["untyped"] += sum(
+                1 for l in listings if not (l.get("search_state") or {}).get("property_type")
+            )
+
         if page_num == 1:
             soup = BeautifulSoup(html, "html.parser")
             total = _extract_total_count(soup)
             if total:
                 needed = (total + 24) // 25
+                needed_pages = needed
                 # Dynamic cap: raise for high-density areas
                 if total > 900:
                     max_pages = min(needed, 80)
@@ -194,30 +213,37 @@ async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
             else:
                 max_pages = 1 if len(listings) < 25 else default_cap
 
-        for listing in listings:
-            listing_url = listing.get("url", "")
-            zid = extract_zameen_id(listing_url)
-            if not zid:
-                continue
+        with listing_write_batch():
+            for listing in listings:
+                listing_url = listing.get("url", "")
+                zid = extract_zameen_id(listing_url)
+                if not zid:
+                    continue
 
-            card_data = listing
-            # Override property_type when crawling type-specific URLs
-            if type_label:
-                card_data["property_type"] = type_label
+                card_data = listing
+                # Override property_type when crawling type-specific URLs
+                if type_label:
+                    card_data["property_type"] = type_label
 
-            result = upsert_listing(
-                zameen_id=zid, url=listing_url, city=city,
-                area_name=area_name, area_slug=area_slug,
-                lat=lat, lng=lng, card_data=card_data
-            )
-            if result == "inserted":
-                new_count += 1
-            elif result == "updated":
-                updated_count += 1
-            else:
-                unchanged_count += 1
+                result = upsert_listing(
+                    zameen_id=zid, url=listing_url, city=city,
+                    area_name=area_name, area_slug=area_slug,
+                    lat=lat, lng=lng, card_data=card_data,
+                    search_state=listing.get("search_state"), commit=False,
+                )
+                if result == "inserted":
+                    new_count += 1
+                elif result == "updated":
+                    updated_count += 1
+                else:
+                    unchanged_count += 1
 
         if len(listings) < 25 or page_num >= max_pages:
+            if observed is not None:
+                # Natural end of results, not the page cap: every listing was seen.
+                observed["complete"] = len(listings) < 25 or (
+                    needed_pages is not None and page_num >= needed_pages
+                )
             break
 
         await asyncio.sleep(random.uniform(*page_delay))
@@ -266,29 +292,33 @@ async def crawl_city_latest_cards(city, client, session_headers, *, pages=3,
         listings = parse_listings(html)
         if not listings:
             break
-        for listing in listings:
-            listing_url = listing.get("url", "")
-            zid = extract_zameen_id(listing_url)
-            if not zid:
-                continue
-            inferred = infer_area_from_location(city, listing.get("location"))
-            area_name, area_slug, lat, lng = inferred or (None, None, None, None)
-            result = upsert_listing(
-                zameen_id=zid,
-                url=listing_url,
-                city=city,
-                area_name=area_name,
-                area_slug=area_slug,
-                lat=lat,
-                lng=lng,
-                card_data=listing,
-            )
-            if result == "inserted":
-                new_count += 1
-            elif result == "updated":
-                updated_count += 1
-            else:
-                unchanged_count += 1
+        enrich_from_search_state(html, listings)
+        with listing_write_batch():
+            for listing in listings:
+                listing_url = listing.get("url", "")
+                zid = extract_zameen_id(listing_url)
+                if not zid:
+                    continue
+                inferred = infer_area_from_location(city, listing.get("location"))
+                area_name, area_slug, lat, lng = inferred or (None, None, None, None)
+                result = upsert_listing(
+                    zameen_id=zid,
+                    url=listing_url,
+                    city=city,
+                    area_name=area_name,
+                    area_slug=area_slug,
+                    lat=lat,
+                    lng=lng,
+                    card_data=listing,
+                    search_state=listing.get("search_state"),
+                    commit=False,
+                )
+                if result == "inserted":
+                    new_count += 1
+                elif result == "updated":
+                    updated_count += 1
+                else:
+                    unchanged_count += 1
         if len(listings) < 25 or page_num >= pages:
             break
         await asyncio.sleep(random.uniform(*page_delay))
@@ -303,6 +333,39 @@ def _get_empty_types(city, area_slug):
         (city, area_slug)
     ).fetchall()
     return {r["property_type"] for r in rows}
+
+
+# Card-inferred property types -> type-specific URL slug. Penthouse and
+# Farm House have no type crawl, so they map to nothing.
+_INFERRED_TYPE_SLUGS = {
+    "House": "Rentals_Houses_Property",
+    "Apartment": "Rentals_Flats_Apartments",
+    "Upper Portion": "Rentals_Upper_Portions",
+    "Lower Portion": "Rentals_Lower_Portions",
+    "Room": "Rentals_Rooms",
+}
+_NO_TYPE_CRAWL = {"Penthouse", "Farm House"}
+
+
+def _type_slugs_worth_crawling(observed):
+    """Type slugs to crawl after the generic pass, or None to crawl them all.
+
+    Zameen returns 404 for an area/type pair with no listings, which made up
+    ~40% of first-pass requests. When the generic page held every listing in
+    the area, only types present among those cards can return results; type
+    crawls still run for them to set authoritative labels. Any card with an
+    unrecognised type falls back to crawling every type.
+    """
+    if observed.get("listings", 0) == 0:
+        return set()
+    if not observed.get("complete"):
+        return None
+    if observed.get("untyped", 1) == 0:
+        return set()  # every listing already has its search-state category
+    types = observed.get("types", set())
+    if any(t not in _INFERRED_TYPE_SLUGS and t not in _NO_TYPE_CRAWL for t in types):
+        return None
+    return {_INFERRED_TYPE_SLUGS[t] for t in types if t in _INFERRED_TYPE_SLUGS}
 
 
 def _update_type_state(city, area_slug, property_type, listings_found):
@@ -326,9 +389,10 @@ async def crawl_area_cards(city, area_name, area_slug, area_id, lat, lng, client
     total_new, total_updated, total_unchanged, total_pages = 0, 0, 0, 0
 
     # 1. Crawl generic /Rentals/ first (catches everything, sets baseline)
+    observed = {}
     new, updated, unchanged, pages = await _crawl_single_type(
         city, area_name, area_slug, area_id, lat, lng,
-        client, session_headers, page_delay=page_delay
+        client, session_headers, page_delay=page_delay, observed=observed
     )
     total_new += new
     total_updated += updated
@@ -337,10 +401,13 @@ async def crawl_area_cards(city, area_name, area_slug, area_id, lat, lng, client
 
     # 2. Crawl each property-type-specific URL
     empty_types = _get_empty_types(city, area_slug)
+    worth_crawling = _type_slugs_worth_crawling(observed)
 
     for type_slug, type_label in CRAWL_PROPERTY_TYPES:
         if type_slug in empty_types:
             continue  # Skip types that previously returned 0 for this area
+        if worth_crawling is not None and type_slug not in worth_crawling:
+            continue  # Generic pass showed this type can't have results
 
         # Small delay between type crawls
         await asyncio.sleep(random.uniform(*type_delay))
@@ -368,7 +435,12 @@ async def fetch_phone_via_api(zameen_id, listing_url, client, ua):
     """Fetch phone number using Zameen.com's internal showNumbers API.
     This is the same API the browser calls when you click 'Call'."""
     try:
-        return await fetch_listing_contact(listing_url, client=client, user_agent=ua)
+        return await fetch_listing_contact(
+            listing_url,
+            client=client,
+            user_agent=ua,
+            request_limiter=crawler_rate_limiter,
+        )
     except Exception as e:
         logger.error("showNumbers error for %s: %s", zameen_id, e)
         return None
@@ -487,7 +559,8 @@ def _parse_detail_html(soup, html=None, zameen_id=None):
 
 # ── Detail + phone batch processing ──
 
-async def crawl_detail_batch(limit=10, client=None, session_ua=None):
+async def crawl_detail_batch(limit=10, client=None, session_ua=None,
+                             concurrency=DEFAULT_ENRICHMENT_CONCURRENCY):
     """Scrape detail pages and fetch phone numbers via API for listings that need enrichment."""
     listings = get_listings_needing_detail(limit)
     if not listings:
@@ -499,49 +572,65 @@ async def crawl_detail_batch(limit=10, client=None, session_ua=None):
 
     ua = session_ua or random.choice(USER_AGENTS)
     updated = 0
+    semaphore = asyncio.Semaphore(max(1, int(concurrency or 1)))
 
-    try:
-        for listing in listings:
+    async def fetch_detail_payload(listing):
+        async with semaphore:
             url = listing["url"]
             zid = listing["zameen_id"]
 
-            # 1. Fetch detail page HTML (for description, features, amenities, images)
-            detail_headers = _api_headers(ua, "https://www.zameen.com/")
-            detail_headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-            detail_headers["sec-fetch-dest"] = "document"
-            detail_headers["sec-fetch-mode"] = "navigate"
-            detail_headers.pop("X-Requested-With", None)
-            detail_headers.pop("Content-Type", None)
+            try:
+                # 1. Fetch detail page HTML (for description, features, amenities, images)
+                detail_headers = _api_headers(ua, "https://www.zameen.com/")
+                detail_headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+                detail_headers["sec-fetch-dest"] = "document"
+                detail_headers["sec-fetch-mode"] = "navigate"
+                detail_headers.pop("X-Requested-With", None)
+                detail_headers.pop("Content-Type", None)
 
-            html = await _fetch(url, client, detail_headers)
-            detail_data = {}
-            if html:
-                soup = BeautifulSoup(html, "html.parser")
-                detail_data = _parse_detail_html(soup, html=html, zameen_id=zid)
+                html = await _fetch(url, client, detail_headers)
+                detail_data = {}
+                if html:
+                    soup = BeautifulSoup(html, "html.parser")
+                    detail_data = _parse_detail_html(soup, html=html, zameen_id=zid)
 
-            # 2. Fetch phone via showNumbers API (separate call, like a real browser click)
-            await asyncio.sleep(random.uniform(0.3, 1.0))  # Simulate user reading page before clicking
-            phone_data = await fetch_phone_via_api(zid, url, client, ua)
-            if phone_data:
-                detail_data["phone"] = phone_data.get("phone")
-                detail_data["call_phone"] = phone_data.get("call_phone")
-                detail_data["whatsapp_phone"] = phone_data.get("whatsapp_phone")
-                detail_data["contact_payload"] = phone_data.get("contact_payload")
-                detail_data["contact_source"] = phone_data.get("contact_source")
-                if phone_data.get("agent_agency") and not detail_data.get("agent_agency"):
-                    detail_data["agent_agency"] = phone_data["agent_agency"]
+                # 2. Fetch phone via showNumbers API (separate call, like a real browser click)
+                await asyncio.sleep(random.uniform(0.3, 1.0))
+                phone_data = await fetch_phone_via_api(zid, url, client, ua)
+                if phone_data:
+                    detail_data["phone"] = phone_data.get("phone")
+                    detail_data["call_phone"] = phone_data.get("call_phone")
+                    detail_data["whatsapp_phone"] = phone_data.get("whatsapp_phone")
+                    detail_data["contact_payload"] = phone_data.get("contact_payload")
+                    detail_data["contact_source"] = phone_data.get("contact_source")
+                    if phone_data.get("agent_agency") and not detail_data.get("agent_agency"):
+                        detail_data["agent_agency"] = phone_data["agent_agency"]
 
-            # 3. Upsert detail data
-            if detail_data:
+                return zid, url, detail_data
+            except Exception:
+                logger.exception("Detail enrichment failed for %s", zid)
+                return zid, url, None
+
+    try:
+        results = await asyncio.gather(
+            *(fetch_detail_payload(listing) for listing in listings),
+            return_exceptions=True,
+        )
+        with listing_write_batch():
+            for task_result in results:
+                if isinstance(task_result, BaseException):
+                    logger.error("Detail enrichment task failed: %s", task_result)
+                    continue
+                zid, url, detail_data = task_result
+                if not detail_data:
+                    continue
                 result = upsert_listing(
                     zameen_id=zid, url=url, city="",
-                    detail_data=detail_data
+                    detail_data=detail_data,
+                    commit=False,
                 )
                 if result == "updated":
                     updated += 1
-
-            # Random delay between listings
-            await asyncio.sleep(random.uniform(0.5, 2.0))
 
     finally:
         if own_client:
@@ -552,7 +641,8 @@ async def crawl_detail_batch(limit=10, client=None, session_ua=None):
 
 # ── Phone-only batch (for refreshing phones without re-scraping detail pages) ──
 
-async def refresh_phones_batch(limit=20, client=None, session_ua=None):
+async def refresh_phones_batch(limit=20, client=None, session_ua=None,
+                               concurrency=DEFAULT_ENRICHMENT_CONCURRENCY):
     """Refresh phone numbers via API for listings with stale or missing phones."""
     conn = _get_conn()
     rows = conn.execute("""
@@ -578,13 +668,31 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None):
     ua = session_ua or random.choice(USER_AGENTS)
     updated = 0
     now = datetime.utcnow().isoformat()
+    semaphore = asyncio.Semaphore(max(1, int(concurrency or 1)))
+
+    async def fetch_phone_payload(row):
+        async with semaphore:
+            zid, url = row["zameen_id"], row["url"]
+            try:
+                return row, await fetch_phone_via_api(zid, url, client, ua)
+            except Exception:
+                logger.exception("Phone refresh failed for %s", zid)
+                return row, None
 
     try:
-        for row in rows:
-            zid, url = row["zameen_id"], row["url"]
-            phone_data = await fetch_phone_via_api(zid, url, client, ua)
-
-            if phone_data:
+        results = await asyncio.gather(
+            *(fetch_phone_payload(row) for row in rows),
+            return_exceptions=True,
+        )
+        with listing_write_batch():
+            for task_result in results:
+                if isinstance(task_result, BaseException):
+                    logger.error("Phone refresh task failed: %s", task_result)
+                    continue
+                row, phone_data = task_result
+                if not phone_data:
+                    continue
+                zid = row["zameen_id"]
                 phone = row["phone"]
                 if "phone" in phone_data:
                     phone = phone_data.get("phone")
@@ -605,10 +713,7 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None):
                     json.dumps(phone_data.get("contact_payload")) if phone_data.get("contact_payload") else None,
                     now, phone_data.get("contact_source"), phone_data.get("agent_agency"), zid,
                 ))
-                conn.commit()
                 updated += 1
-
-            await asyncio.sleep(random.uniform(1.0, 3.0))  # Spread phone API calls
     finally:
         if own_client:
             await client.aclose()

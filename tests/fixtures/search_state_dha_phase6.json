@@ -1,0 +1,136 @@
+[
+ {
+  "externalID": "54734894",
+  "location": [
+   {
+    "level": 0,
+    "name": "Pakistan",
+    "name_l1": "پاکستان",
+    "externalID": "1521",
+    "id": 2
+   },
+   {
+    "level": 1,
+    "name": "Sindh",
+    "name_l1": "سندھ",
+    "externalID": "1523",
+    "id": 5
+   },
+   {
+    "level": 2,
+    "name": "Karachi",
+    "name_l1": "کراچی",
+    "externalID": "2",
+    "id": 11
+   },
+   {
+    "level": 3,
+    "name": "DHA Defence",
+    "name_l1": "ڈی ایچ اے ڈیفینس",
+    "externalID": "213",
+    "id": 229
+   },
+   {
+    "level": 4,
+    "name": "DHA Phase 6",
+    "name_l1": "ڈی ایچ اے فیز 6",
+    "externalID": "1483",
+    "id": 6428
+   }
+  ]
+ },
+ {
+  "externalID": "54730326",
+  "location": [
+   {
+    "level": 0,
+    "name": "Pakistan",
+    "name_l1": "پاکستان",
+    "externalID": "1521",
+    "id": 2
+   },
+   {
+    "level": 1,
+    "name": "Sindh",
+    "name_l1": "سندھ",
+    "externalID": "1523",
+    "id": 5
+   },
+   {
+    "level": 2,
+    "name": "Karachi",
+    "name_l1": "کراچی",
+    "externalID": "2",
+    "id": 11
+   },
+   {
+    "level": 3,
+    "name": "DHA Defence",
+    "name_l1": "ڈی ایچ اے ڈیفینس",
+    "externalID": "213",
+    "id": 229
+   },
+   {
+    "level": 4,
+    "name": "DHA Phase 6",
+    "name_l1": "ڈی ایچ اے فیز 6",
+    "externalID": "1483",
+    "id": 6428
+   },
+   {
+    "level": 5,
+    "name": "Nishat Commercial Area",
+    "name_l1": "نشاط کمرشل ایریا",
+    "externalID": "8491",
+    "id": 10419
+   }
+  ]
+ },
+ {
+  "externalID": "54754114",
+  "location": [
+   {
+    "level": 0,
+    "name": "Pakistan",
+    "name_l1": "پاکستان",
+    "externalID": "1521",
+    "id": 2
+   },
+   {
+    "level": 1,
+    "name": "Sindh",
+    "name_l1": "سندھ",
+    "externalID": "1523",
+    "id": 5
+   },
+   {
+    "level": 2,
+    "name": "Karachi",
+    "name_l1": "کراچی",
+    "externalID": "2",
+    "id": 11
+   },
+   {
+    "level": 3,
+    "name": "DHA Defence",
+    "name_l1": "ڈی ایچ اے ڈیفینس",
+    "externalID": "213",
+    "id": 229
+   },
+   {
+    "level": 4,
+    "name": "DHA Phase 6",
+    "name_l1": "ڈی ایچ اے فیز 6",
+    "externalID": "1483",
+    "id": 6428
+   },
+   {
+    "level": 5,
+    "name": "Bukhari Commercial Area",
+    "name_l1": "بخاری کمرشل ایریا",
+    "externalID": "6674",
+    "id": 10029
+   }
+  ]
+ }
+]

@@ -182,7 +182,7 @@ test.describe("End-to-End User Flows", () => {
     await page.locator("#typeChip").click();
     await page.locator('#typeGrid .chip[data-type="penthouse"]').click();
     await page.locator("#priceChip").click();
-    await page.locator('.chip[data-custom="1"]').click();
+    await page.locator('#priceGrid .chip[data-custom="1"]').click();
     await page.locator("#priceMin").fill("1");
     await page.locator("#priceMax").fill("100");
     await page.locator("#priceMax").press("Enter");

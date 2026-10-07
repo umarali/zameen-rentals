@@ -12,7 +12,7 @@ Architecture:
 
 Run: python -m app.crawler
 """
-import argparse, asyncio, logging, random, signal, sys, time
+import argparse, asyncio, logging, os, random, signal, sys, time
 from datetime import datetime
 
 import httpx
@@ -22,7 +22,7 @@ from app.data import CITIES, CITY_AREAS
 from app.db_listings import mark_stale_listings, get_crawl_stats, city_priority_sql
 from app.crawler_worker import (
     crawl_area_cards, crawl_city_latest_cards, crawl_detail_batch, refresh_phones_batch,
-    _build_browser_profile, crawler_rate_limiter,
+    _build_browser_profile, crawler_rate_limiter, DEFAULT_ENRICHMENT_CONCURRENCY,
 )
 from app.personalization import init_personalization_schema, run_match_cycle
 
@@ -46,6 +46,7 @@ MAX_CONSECUTIVE_ERRORS = 5       # Pause crawling after this many errors in a ro
 CARD_SPEED_MULTIPLIER = 1.0
 LATEST_CITY_PAGES = 3            # Newest-first pages per city in the fast refresh lane
 LATEST_REFRESH_MINUTES = 5       # Keep every city close to Zameen's newest listings
+DEFAULT_MAX_RATE = 1.0
 
 
 def _handle_signal(sig, frame):
@@ -61,10 +62,16 @@ signal.signal(signal.SIGTERM, _handle_signal)
 # ── robots.txt compliance ──
 
 _robots_cache = {}
+_robots_rate_cap = None
 
 async def check_robots_txt(client, ua):
     """Fetch and cache robots.txt, check if we're allowed to crawl."""
+    global _robots_rate_cap
     if "zameen.com" in _robots_cache:
+        if _robots_rate_cap:
+            crawler_rate_limiter.set_target_rate(
+                min(crawler_rate_limiter.target_rate, _robots_rate_cap)
+            )
         return _robots_cache["zameen.com"]
 
     try:
@@ -101,9 +108,14 @@ async def check_robots_txt(client, ua):
             # Respect crawl-delay but cap at a reasonable maximum
             if crawl_delay and crawl_delay > 0:
                 effective_delay = min(crawl_delay, 5.0)  # Cap at 5 seconds max
-                crawler_rate_limiter.rate = 1.0 / effective_delay
+                _robots_rate_cap = 1.0 / effective_delay
+                crawler_rate_limiter.set_target_rate(
+                    min(crawler_rate_limiter.target_rate, _robots_rate_cap)
+                )
                 logger.info("robots.txt Crawl-delay: %.0fs (using %.1fs, rate: %.2f/sec)",
                             crawl_delay, effective_delay, crawler_rate_limiter.rate)
+            else:
+                _robots_rate_cap = None
 
             for path in disallowed:
                 if path in ("/Rentals/", "/Property/", "/"):
@@ -182,12 +194,37 @@ def _scale_delay_range(delay_range, speed_multiplier):
     return (max(min_delay, low / speed_multiplier), max(min_delay, high / speed_multiplier))
 
 
+def _reset_crawler_rate(max_rate):
+    crawler_rate_limiter.reset(max_rate)
+
+
+async def _backoff_enrichment_error(phase, consecutive_errors):
+    if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+        logger.error(
+            "[%s] %d consecutive batch errors; pausing 5 minutes",
+            phase,
+            consecutive_errors,
+        )
+        await asyncio.sleep(300)
+        return 0
+
+    delay = min(30, 2 ** consecutive_errors)
+    logger.warning("[%s] Retrying after batch error in %ds", phase, delay)
+    await asyncio.sleep(delay)
+    return consecutive_errors
+
+
 def claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS,
-                    claim_lease_hours=CRAWL_CLAIM_LEASE_HOURS):
+                    claim_lease_hours=CRAWL_CLAIM_LEASE_HOURS, *, exclude_ids=()):
     """Atomically claim the next stale area, recovering expired worker leases."""
     conn = _get_conn()
     stale_window = f'-{max_age_hours} hours'
     lease_window = f'-{claim_lease_hours} hours'
+    excluded = tuple(exclude_ids)
+    exclusion_sql = (
+        " AND id NOT IN (" + ",".join("?" for _ in excluded) + ")"
+        if excluded else ""
+    )
     conn.execute("BEGIN IMMEDIATE")
     try:
         row = conn.execute("""
@@ -198,13 +235,14 @@ def claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS,
                     OR crawl_claimed_at < datetime('now', ?)
                   )
               AND (last_crawl_at IS NULL OR last_crawl_at < datetime('now', ?))
+            """ + exclusion_sql + """
             ORDER BY
                 CASE WHEN last_crawl_at IS NULL THEN 0 ELSE 1 END,
                 """ + city_priority_sql("city") + """,
                 priority ASC,
                 last_crawl_at ASC
             LIMIT 1
-        """, (lease_window, stale_window)).fetchone()
+        """, (lease_window, stale_window, *excluded)).fetchone()
         if row is None:
             conn.commit()
             return None
@@ -282,7 +320,9 @@ async def refresh_latest_city_feeds(client, session_headers, *, pages=LATEST_CIT
 
 
 async def run_backfill_worker(*, detail_batch=DETAIL_BATCH_SIZE, phone_batch=PHONE_BATCH_SIZE,
-                              watch=False, poll_seconds=300):
+                              watch=False, poll_seconds=300,
+                              concurrency=DEFAULT_ENRICHMENT_CONCURRENCY,
+                              max_rate=DEFAULT_MAX_RATE):
     """Drain detail/contact enrichment for existing listings.
 
     When `watch` is False this runs once until no more work remains.
@@ -309,25 +349,54 @@ async def run_backfill_worker(*, detail_batch=DETAIL_BATCH_SIZE, phone_batch=PHO
         logger.info("=== Backfill cycle %d | UA: %s... ===", cycle_count, session_ua[:60])
 
         async with httpx.AsyncClient() as client:
+            _reset_crawler_rate(max_rate)
             robots = await check_robots_txt(client, session_ua)
             if robots is None:
                 logger.error("Backfill blocked by robots.txt — sleeping 1 hour")
                 await asyncio.sleep(3600)
                 continue
 
-            crawler_rate_limiter.rate = min(1.0, max(crawler_rate_limiter.rate, 0.2))
-
             detail_total = 0
+            detail_errors = 0
             while not _shutdown:
-                count = await crawl_detail_batch(limit=detail_batch, client=client, session_ua=session_ua)
+                try:
+                    count = await crawl_detail_batch(
+                        limit=detail_batch,
+                        client=client,
+                        session_ua=session_ua,
+                        concurrency=concurrency,
+                    )
+                    detail_errors = 0
+                except Exception:
+                    detail_errors += 1
+                    logger.exception("[Backfill detail] Batch failed")
+                    detail_errors = await _backoff_enrichment_error(
+                        "Backfill detail", detail_errors
+                    )
+                    continue
                 if count == 0:
                     break
                 detail_total += count
                 await asyncio.sleep(random.uniform(0.5, 2.0))
 
             phone_total = 0
+            phone_errors = 0
             while not _shutdown:
-                count = await refresh_phones_batch(limit=phone_batch, client=client, session_ua=session_ua)
+                try:
+                    count = await refresh_phones_batch(
+                        limit=phone_batch,
+                        client=client,
+                        session_ua=session_ua,
+                        concurrency=concurrency,
+                    )
+                    phone_errors = 0
+                except Exception:
+                    phone_errors += 1
+                    logger.exception("[Backfill phone] Batch failed")
+                    phone_errors = await _backoff_enrichment_error(
+                        "Backfill phone", phone_errors
+                    )
+                    continue
                 if count == 0:
                     break
                 phone_total += count
@@ -354,7 +423,9 @@ async def run_backfill_worker(*, detail_batch=DETAIL_BATCH_SIZE, phone_batch=PHO
 
 # ── Main crawl loop ──
 
-async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_SPEED_MULTIPLIER):
+async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_SPEED_MULTIPLIER,
+                      concurrency=DEFAULT_ENRICHMENT_CONCURRENCY,
+                      max_rate=DEFAULT_MAX_RATE):
     """Main crawler loop with scheduled cycles and rest periods."""
     init_db()
     init_personalization_schema()
@@ -391,15 +462,12 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
 
         # Check robots.txt at start of each cycle
         async with httpx.AsyncClient() as client:
+            _reset_crawler_rate(max_rate)
             robots = await check_robots_txt(client, session_ua)
             if robots is None:
                 logger.error("Crawling disallowed by robots.txt — sleeping 1 hour")
                 await asyncio.sleep(3600)
                 continue
-
-        # Reset rate limiter to base speed at cycle start (recover from previous 429 slowdowns)
-        # robots.txt check above may have set a lower rate — that's preserved via the check
-        crawler_rate_limiter.rate = min(1.0, max(crawler_rate_limiter.rate, 0.2))
 
         # Update priorities at cycle start
         update_area_priorities()
@@ -412,11 +480,18 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
             latest_refreshed_at = time.monotonic()
             logger.info("[Phase A] Card crawling...")
             phase_a_new, phase_a_updated = 0, 0
+            attempted_areas = set()
 
             while not _shutdown:
-                area = claim_next_area(max_age_hours=CARD_CYCLE_INTERVAL_HOURS)
+                # A full pass can exceed the refresh interval. Process each
+                # area once so details, contact refresh and cleanup get a turn.
+                area = claim_next_area(
+                    max_age_hours=CARD_CYCLE_INTERVAL_HOURS,
+                    exclude_ids=attempted_areas,
+                )
                 if not area:
                     break
+                attempted_areas.add(area["id"])
 
                 city = area["city"]
                 area_name = area["area_name"]
@@ -493,12 +568,25 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                 # ── Phase B: Detail backfill ──
                 logger.info("[Phase B] Detail backfill...")
                 detail_total = 0
+                detail_errors = 0
                 for _ in range(20):  # Up to 20 batches per cycle
                     if _shutdown:
                         break
-                    count = await crawl_detail_batch(
-                        limit=DETAIL_BATCH_SIZE, client=client, session_ua=session_ua
-                    )
+                    try:
+                        count = await crawl_detail_batch(
+                            limit=DETAIL_BATCH_SIZE,
+                            client=client,
+                            session_ua=session_ua,
+                            concurrency=concurrency,
+                        )
+                        detail_errors = 0
+                    except Exception:
+                        detail_errors += 1
+                        logger.exception("[Phase B] Detail batch failed")
+                        detail_errors = await _backoff_enrichment_error(
+                            "Phase B", detail_errors
+                        )
+                        continue
                     if count == 0:
                         break
                     detail_total += count
@@ -512,12 +600,25 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                 # ── Phase C: Phone refresh via API ──
                 logger.info("[Phase C] Phone number refresh...")
                 phone_total = 0
+                phone_errors = 0
                 for _ in range(10):  # Up to 10 batches per cycle
                     if _shutdown:
                         break
-                    count = await refresh_phones_batch(
-                        limit=PHONE_BATCH_SIZE, client=client, session_ua=session_ua
-                    )
+                    try:
+                        count = await refresh_phones_batch(
+                            limit=PHONE_BATCH_SIZE,
+                            client=client,
+                            session_ua=session_ua,
+                            concurrency=concurrency,
+                        )
+                        phone_errors = 0
+                    except Exception:
+                        phone_errors += 1
+                        logger.exception("[Phase C] Phone batch failed")
+                        phone_errors = await _backoff_enrichment_error(
+                            "Phase C", phone_errors
+                        )
+                        continue
                     if count == 0:
                         break
                     phone_total += count
@@ -567,6 +668,31 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
                 total_new, total_updated)
 
 
+def acquire_crawler_lock(db_dir=None):
+    """Take the one-crawler-per-database lock, or return None if another process holds it.
+
+    Two crawlers on one SQLite file contend for the write lock and fail areas
+    with "database is locked". The OS drops the lock when the process exits,
+    including on a crash, so there is no stale state to clean up. Keep the
+    returned file object alive for the life of the process.
+    """
+    import fcntl
+    from pathlib import Path
+    from app.database import _DB_DIR
+
+    lock_dir = Path(db_dir) if db_dir else _DB_DIR
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    handle = open(lock_dir / "crawler.lock", "w")
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        handle.close()
+        return None
+    handle.write(f"{os.getpid()}\n")
+    handle.flush()
+    return handle
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="ZameenRentals crawler/backfill worker")
     parser.add_argument("--backfill", action="store_true", help="Run the resumable enrichment worker instead of the full crawler")
@@ -577,10 +703,21 @@ def main(argv=None):
     parser.add_argument("--poll-seconds", type=int, default=300, help="Sleep between watch cycles when --watch is enabled")
     parser.add_argument("--detail-batch", type=int, default=DETAIL_BATCH_SIZE, help="Detail rows per backfill batch")
     parser.add_argument("--phone-batch", type=int, default=PHONE_BATCH_SIZE, help="Phone rows per refresh batch")
+    parser.add_argument("--concurrency", type=int, default=DEFAULT_ENRICHMENT_CONCURRENCY, help="Concurrent in-flight detail/phone enrichments per batch")
+    parser.add_argument("--max-rate", type=float, default=DEFAULT_MAX_RATE, help="Maximum outbound crawler requests per second before adaptive/robots backoff")
     args = parser.parse_args(argv)
 
     if args.card_speed <= 0 or args.card_speed > 5.0:
         parser.error("--card-speed must be between 0 and 5.0")
+    if args.concurrency < 1 or args.concurrency > 32:
+        parser.error("--concurrency must be between 1 and 32")
+    if args.max_rate <= 0 or args.max_rate > 5.0:
+        parser.error("--max-rate must be between 0 and 5.0")
+
+    lock = acquire_crawler_lock()
+    if lock is None:
+        parser.exit(1, "Another crawler is already running against this database "
+                       "(crawler.lock is held). Stop it with kill -TERM first.\n")
     if args.backfill and args.cards_only:
         parser.error("--cards-only cannot be combined with --backfill")
 
@@ -591,6 +728,8 @@ def main(argv=None):
                 phone_batch=args.phone_batch,
                 watch=args.watch,
                 poll_seconds=args.poll_seconds,
+                concurrency=args.concurrency,
+                max_rate=args.max_rate,
             )
         )
     else:
@@ -599,6 +738,8 @@ def main(argv=None):
                 cards_only=args.cards_only,
                 single_cycle=args.single_cycle,
                 card_speed=args.card_speed,
+                concurrency=args.concurrency,
+                max_rate=args.max_rate,
             )
         )
 

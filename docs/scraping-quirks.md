@@ -61,3 +61,36 @@ Pakistani prices come in various formats:
 - "Rs. 1.5 Lac" = 150,000 PKR
 
 The `parse_price()` function handles all these variations.
+
+## Embedded search state (checked 2026-10-07)
+
+Search pages embed their results as JSON in `window.state.algolia.content.hits`,
+25 per page, with `nbHits` and `nbPages` alongside. Each hit has:
+
+- `category`: the leaf (highest `level`) is the property type: Flats, Houses,
+  Upper Portions, Lower Portions, Rooms, Penthouse, Farm Houses.
+- `geography` with `hasExactGeography`.
+- `phoneNumber`: phone, mobile, WhatsApp. These are the same numbers the
+  `showNumbers` call returns.
+- `createdAt` and `updatedAt` as Unix timestamps, `isVerified`, `agency.product`,
+  `photoCount`, and Urdu `title_l1` and `shortDescription_l1`.
+
+`scraper.enrich_from_search_state()` overlays type, coordinates and contact
+details onto the cards parsed from HTML. When every listing in an area has a
+category, the crawler skips the type-specific URLs.
+
+Listing detail pages embed `window.state.property.data`, which includes amenities.
+
+Despite the "algolia" key, the active backend is Elasticsearch. The page
+config contains credentials for that cluster. Do not use them: querying a
+backend with embedded credentials isn't the same as reading public pages.
+
+## Nearby places
+
+The detail page's Nearby tab calls
+`GET /api/places?latitude=&longitude=&category=&radius=` (radius in metres).
+Categories are `EDUCATION`, `FOOD_BEVERAGE`, `MEDICAL_HEALTH` and
+`FITNESS_RECREATION`. The response is `data[]` with `name`, `location`
+(`latitude`, `longitude`), `matched_categories` and `id`. The IDs follow
+Geoapify's format, which is built on OpenStreetMap, so the same data can be
+pulled from OpenStreetMap directly without going through Zameen.

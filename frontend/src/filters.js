@@ -37,8 +37,121 @@ function setChipVal(el, val, def) {
 function countFilters() {
   let n = 0;
   if (S.area) n++; if (S.type) n++; if (S.beds) n++;
-  if (S.priceMin || S.priceMax) n++; if (S.furnished) n++; if (S.sort) n++;
+  if (S.priceMin || S.priceMax) n++; if (S.sizeMarlaMin || S.sizeMarlaMax) n++;
+  if (S.furnished) n++; if (S.sort) n++;
   return n;
+}
+
+// ===== Property size: city-aware units =====
+// Size is stored canonically in MARLA (S.sizeMarlaMin/Max) and always sent to the
+// API as marla. The unit is a display-only preference — Marla for Lahore/Islamabad,
+// Square Yards for Karachi — switchable per the user. 1 Marla = 25 Sq Yd, matching
+// the backend's area_size conversion.
+const SQYD_PER_MARLA = 25;
+
+export function cityDefaultSizeUnit(city = S.city) {
+  return city === 'karachi' ? 'sqyd' : 'marla';
+}
+function currentSizeUnit() {
+  return S.sizeUnit || cityDefaultSizeUnit();
+}
+function marlaToUnit(marla, unit) {
+  const v = Number(marla);
+  return unit === 'sqyd' ? Math.round(v * SQYD_PER_MARLA) : v;
+}
+function unitToMarla(val, unit) {
+  if (val === '' || val == null) return '';
+  const v = Number(val);
+  if (!Number.isFinite(v)) return '';
+  return String(unit === 'sqyd' ? v / SQYD_PER_MARLA : v);
+}
+
+// Preset buckets per unit. min/max are CANONICAL MARLA (so search params and chip
+// matching stay unit-agnostic); the label is shown in the unit.
+const SIZE_PRESETS = {
+  // Max-only buckets use min:'' (not '0') — a sent size_marla_min=0 is an ACTIVE
+  // backend filter (gate is `if size_marla_min:`), which would drop NULL/unparseable
+  // sizes; '' means "no lower bound" and is omitted from the query.
+  marla: [
+    { min: '',   max: '5',  label: '≤ 5 Marla' },
+    { min: '5',  max: '10', label: '5–10 Marla' },
+    { min: '10', max: '20', label: '10–20 Marla' },
+    { min: '20', max: '',   label: '1 Kanal+' },
+  ],
+  sqyd: [
+    { min: '',    max: '4.8', label: '≤ 120 sq yd' },
+    { min: '4.8', max: '9.6', label: '120–240 sq yd' },
+    { min: '9.6', max: '20',  label: '240–500 sq yd' },
+    { min: '20',  max: '',    label: '500+ sq yd' },
+  ],
+};
+
+function _fmtSizeBound(marla, unit) {
+  if (unit === 'sqyd') return `${marlaToUnit(marla, 'sqyd')} sq yd`;
+  const v = Number(marla);
+  return (v >= 20 && v % 20 === 0) ? `${v / 20} Kanal` : `${v} Marla`;
+}
+
+// Human label for a canonical marla range, rendered in the current display unit.
+export function sizeChipLabel(min, max, unit = currentSizeUnit()) {
+  const mn = (min && Number(min) > 0) ? Number(min) : null;
+  const mx = (max && Number(max) > 0) ? Number(max) : null;
+  if (mn != null && mx != null) {
+    return unit === 'sqyd'
+      ? `${marlaToUnit(mn, 'sqyd')}–${marlaToUnit(mx, 'sqyd')} sq yd`
+      : `${mn}–${mx} Marla`;
+  }
+  if (mx != null) return `≤ ${_fmtSizeBound(mx, unit)}`;
+  if (mn != null) return unit === 'sqyd' ? `${marlaToUnit(mn, 'sqyd')}+ sq yd` : `${_fmtSizeBound(mn, unit)}+`;
+  return '';
+}
+
+// (Re)render the size dropdown's unit toggle + preset chips for the active unit,
+// then reflect the current selection. Call on init, city change, and unit switch.
+export function renderSizeFilter() {
+  const grid = $('#sizeGrid');
+  if (!grid) return;
+  const unit = currentSizeUnit();
+  grid.innerHTML = SIZE_PRESETS[unit].map(p =>
+    `<span class="chip" data-smin="${p.min}" data-smax="${p.max}">${p.label}</span>`
+  ).join('') + '<span class="chip" data-custom="1">Custom</span>';
+  $$('#sizeUnitToggle [data-unit]').forEach(b => {
+    const on = b.dataset.unit === unit;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+  const hint = $('#sizeUnitHint');
+  if (hint) hint.textContent = unit === 'sqyd' ? '1 Marla ≈ 25 sq yd' : '1 Kanal = 20 Marla';
+  const unitLabel = unit === 'sqyd' ? 'Sq Yd' : 'Marla';
+  if ($('#sizeMin')) $('#sizeMin').placeholder = `Min (${unitLabel})`;
+  if ($('#sizeMax')) $('#sizeMax').placeholder = `Max (${unitLabel})`;
+  syncSizeChips();
+}
+
+export function syncSizeChips() {
+  const unit = currentSizeUnit();
+  let matched = false;
+  $$('#sizeGrid .chip').forEach(c => {
+    if (c.dataset.custom) return;
+    const m = (c.dataset.smin || '') === (S.sizeMarlaMin || '') && (c.dataset.smax || '') === (S.sizeMarlaMax || '');
+    c.classList.toggle('active', m); if (m) matched = true;
+  });
+  const cc = $('#sizeGrid [data-custom="1"]');
+  if (!cc) return;
+  if (!matched && (S.sizeMarlaMin || S.sizeMarlaMax)) {
+    cc.classList.add('active'); $('#customSize').classList.remove('hidden');
+    $('#sizeMin').value = S.sizeMarlaMin ? marlaToUnit(S.sizeMarlaMin, unit) : '';
+    $('#sizeMax').value = S.sizeMarlaMax ? marlaToUnit(S.sizeMarlaMax, unit) : '';
+  } else {
+    cc.classList.remove('active'); if (!matched) $('#customSize').classList.add('hidden');
+  }
+}
+
+export function setSizeUnit(unit) {
+  if (unit !== 'marla' && unit !== 'sqyd') return;
+  S.sizeUnit = unit;
+  renderSizeFilter();
+  updateChips();
 }
 
 // #nlInput follows a clear-on-apply model: it represents the next NL query
@@ -67,16 +180,21 @@ export function updateChips() {
   }
   setChipVal($('#priceChip'), pl, 'Price');
 
+  setChipVal($('#sizeChip'), sizeChipLabel(S.sizeMarlaMin, S.sizeMarlaMax), 'Size');
+
   const mc = (S.furnished ? 1 : 0) + (S.sort ? 1 : 0);
   setChipVal($('#moreChip'), mc ? 'More (' + mc + ')' : '', 'More');
 
   $('#clearAllBtn').classList.toggle('hidden', !hasActiveFilters);
   $('#appHeader')?.classList.toggle('header-has-clear', hasActiveFilters);
+
+  // Keep the "Understood:" chip row (if showing) consistent with filter changes.
+  refs._refreshUnderstood?.();
 }
 
 // ===== DROPDOWNS =====
 
-const ddMap = { area: 'dd-area', type: 'dd-type', beds: 'dd-beds', price: 'dd-price', more: 'dd-more', radius: 'dd-radius' };
+const ddMap = { area: 'dd-area', type: 'dd-type', beds: 'dd-beds', size: 'dd-size', price: 'dd-price', more: 'dd-more', radius: 'dd-radius' };
 
 // Element to restore focus to when the active dropdown closes. Captured on
 // open so Esc / click-outside / Apply all return keyboard users to the chip.
@@ -171,7 +289,7 @@ export function syncPriceChips() {
     const m = c.dataset.pmin === S.priceMin && c.dataset.pmax === S.priceMax;
     c.classList.toggle('active', m); if (m) matched = true;
   });
-  const cc = $('[data-custom="1"]');
+  const cc = $('#priceGrid [data-custom="1"]');
   if (!matched && (S.priceMin || S.priceMax)) {
     cc.classList.add('active'); $('#customPrice').classList.remove('hidden');
     $('#priceMin').value = S.priceMin; $('#priceMax').value = S.priceMax;
@@ -199,6 +317,7 @@ export function clearFilter(f, { resetMapView, doSearch } = {}) {
   if (f === 'type') { S.type = ''; $$('#typeGrid .chip').forEach(c => c.classList.remove('active')); }
   if (f === 'beds') { S.beds = ''; S.bedsMax = ''; $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === '')); }
   if (f === 'price') { S.priceMin = ''; S.priceMax = ''; $$('#priceGrid .chip').forEach(c => c.classList.remove('active')); $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = ''; }
+  if (f === 'size') { S.sizeMarlaMin = ''; S.sizeMarlaMax = ''; $$('#sizeGrid .chip').forEach(c => c.classList.remove('active')); $('#customSize').classList.add('hidden'); $('#sizeMin').value = ''; $('#sizeMax').value = ''; }
   if (f === 'more') { S.furnished = false; S.sort = ''; setToggle(false); $('#sortSelect').value = ''; }
   clearNlInput();
   updateChips(); doSearch?.();
@@ -246,6 +365,8 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === ''));
     $$('#priceGrid .chip').forEach(c => c.classList.remove('active'));
     $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = '';
+    $$('#sizeGrid .chip').forEach(c => c.classList.remove('active'));
+    $('#customSize').classList.add('hidden'); $('#sizeMin').value = ''; $('#sizeMax').value = '';
     setToggle(false); $('#sortSelect').value = '';
     $$('#presetRow .chip').forEach(c => c.classList.remove('active'));
     clearNlInput();
@@ -339,6 +460,35 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
   $$('#customPrice input').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { clearNlInput(); closeDD(); doSearch(); } }));
   $('#priceApply').addEventListener('click', () => { S.priceMin = $('#priceMin').value; S.priceMax = $('#priceMax').value; clearNlInput(); updateChips(); closeDD(); doSearch(); });
 
+  // Size — presets are JS-rendered per unit (see renderSizeFilter); chips carry
+  // canonical marla in data-smin/smax so this handler stays unit-agnostic.
+  $('#sizeUnitToggle').addEventListener('click', e => {
+    const b = e.target.closest('[data-unit]');
+    if (b) setSizeUnit(b.dataset.unit);
+  });
+  $('#sizeGrid').addEventListener('click', e => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    if (c.dataset.custom) {
+      $$('#sizeGrid .chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active'); $('#customSize').classList.remove('hidden');
+      S.sizeMarlaMin = unitToMarla($('#sizeMin').value, currentSizeUnit());
+      S.sizeMarlaMax = unitToMarla($('#sizeMax').value, currentSizeUnit());
+      updateChips(); return;
+    }
+    $('#customSize').classList.add('hidden');
+    const prevSize = `${S.sizeMarlaMin}-${S.sizeMarlaMax}`;
+    if (c.classList.contains('active')) { c.classList.remove('active'); S.sizeMarlaMin = ''; S.sizeMarlaMax = ''; }
+    else { $$('#sizeGrid .chip').forEach(x => x.classList.remove('active')); c.classList.add('active'); S.sizeMarlaMin = c.dataset.smin; S.sizeMarlaMax = c.dataset.smax; }
+    const newSize = `${S.sizeMarlaMin}-${S.sizeMarlaMax}`;
+    if (prevSize !== newSize) trackFilterChange({ filter: 'size', value: newSize, previousValue: prevSize, mode: refs.searchMode, city: S.city });
+    clearNlInput();
+    updateChips(); closeDD(); doSearch();
+  });
+  $('#sizeMin').addEventListener('input', () => { S.sizeMarlaMin = unitToMarla($('#sizeMin').value, currentSizeUnit()); updateChips(); });
+  $('#sizeMax').addEventListener('input', () => { S.sizeMarlaMax = unitToMarla($('#sizeMax').value, currentSizeUnit()); updateChips(); });
+  $$('#customSize input').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { clearNlInput(); closeDD(); doSearch(); } }));
+  $('#sizeApply').addEventListener('click', () => { S.sizeMarlaMin = unitToMarla($('#sizeMin').value, currentSizeUnit()); S.sizeMarlaMax = unitToMarla($('#sizeMax').value, currentSizeUnit()); clearNlInput(); updateChips(); closeDD(); doSearch(); });
+
   // Furnished
   $('#furnishedToggle').addEventListener('click', () => {
     const prev = S.furnished;
@@ -367,6 +517,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     $$('#typeGrid .chip').forEach(x => x.classList.toggle('active', x.dataset.type === S.type));
     $$('#bedRow .chip').forEach(x => x.classList.toggle('active', x.dataset.beds === S.beds));
     syncPriceChips();
+    syncSizeChips();
     clearNlInput();
     updateChips(); closeDD(); doSearch();
   });

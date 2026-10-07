@@ -90,7 +90,7 @@ export function trackSearchOutcome({ success, data, mode, page, triggeredBy, vis
   }
 }
 
-export function trackNlSearch({ phase, queryLength, parseSuccess, filters }) {
+export function trackNlSearch({ phase, queryLength, parseSuccess, filters, parser }) {
   if (phase === 'submitted') {
     track('nl_search_submitted', { query_length: queryLength });
   } else if (phase === 'parsed') {
@@ -98,12 +98,15 @@ export function trackNlSearch({ phase, queryLength, parseSuccess, filters }) {
     track('nl_search_parsed', {
       query_length: queryLength,
       parse_success: parseSuccess,
+      parser: parser || null,
       approximate_area: Boolean(f.area_approximate),
+      area_count: Array.isArray(f.areas) ? f.areas.length : (f.area ? 1 : 0),
+      area_suggestions_shown: Array.isArray(f.area_suggestions) ? f.area_suggestions.length : 0,
       has_area: Boolean(f.area),
       has_budget: Boolean(f.price_min || f.price_max),
       has_bedrooms: Boolean(f.bedrooms),
       has_property_type: Boolean(f.property_type),
-      parsed_fields_count: Object.keys(f).filter(k => !['area_approximate', 'area_query'].includes(k) && f[k]).length,
+      parsed_fields_count: Object.keys(f).filter(k => !['area_approximate', 'area_query', 'area_suggestions', 'areas'].includes(k) && f[k]).length,
     });
   }
 }

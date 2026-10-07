@@ -19,17 +19,43 @@ Supports **Karachi** (366 areas), **Lahore** (462 areas), and **Islamabad** (303
 ## Tech Stack
 
 - **Backend:** Python, FastAPI, httpx, BeautifulSoup
-- **Frontend:** Vanilla HTML/CSS/JS, Tailwind CSS (CDN), Leaflet.js
+- **Frontend:** Modular vanilla JavaScript, Vite, Tailwind CSS v4, Leaflet.js
 - **Data Source:** Zameen.com public listings
 
 ## Getting Started
 
 ```bash
 pip install -r requirements.txt
+npm ci
+npm run build
 uvicorn main:app --reload --port 8000
 ```
 
 Open [http://localhost:8000](http://localhost:8000)
+
+Edit frontend source in `frontend/`; `npm run build` regenerates `static/`.
+
+### Database and tests
+
+The app stores SQLite data and push keys in `data/`. Set
+`ZAMEENRENTALS_DB_DIR` to use a different directory. If the database is missing
+but its `-wal` or `-shm` recovery files remain, startup stops to preserve them.
+Restore a verified complete backup before using that directory.
+
+```bash
+pip install pytest pytest-asyncio
+python3 -m pytest -q
+npx playwright install chromium --only-shell
+npm test
+```
+
+Browser tests run headlessly against a temporary database with sample listings
+in all three cities. They start their own server on port 8000 and refuse to
+reuse an existing app server. Stop any local server on that port first.
+The test server disables live Zameen scraping and uses temporary push keys.
+
+Size-filtered searches currently use local listings only. Live fallback does
+not support size bounds, so it cannot supply results for those searches.
 
 ## API Endpoints
 

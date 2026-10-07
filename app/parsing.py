@@ -65,7 +65,8 @@ _AREA_NOISE = frozenset({
     'mein', 'me', 'main', 'ka', 'ke', 'ki', 'in', 'for', 'se',
     'rent', 'rental', 'rentals',
     'marla', 'kanal', 'hazar', 'hazaar', 'lac', 'lakh', 'lacs', 'crore',
-    'near',
+    'gaz', 'gaj', 'guz', 'gajj', 'yard', 'yards', 'sqyd', 'sq', 'square',
+    'near', 'thousand', 'to', 'or', 'and', 'aur', 'ya', 'the', 'with', 'wala', 'wali',
 })
 
 
@@ -77,20 +78,33 @@ def _strip_noise_tokens(text: str) -> str:
 _BED_RANGE_RE = re.compile(r'(\d+)\s*(?:-|to|se)\s*(\d+)\s*(?:bed(?:room)?s?|br|bhk|kamr[eao]|کمر[ےوں]|بیڈ)')
 _BED_SINGLE_RE = re.compile(r'(\d+)\s*(?:bed(?:room)?s?|br|bhk|kamr[eao]|کمر[ےوں]|بیڈ)')
 
+# Units: marla/kanal (Punjab) + square-yard family / gaz (Karachi). Longer forms
+# are listed before "yards?" so they match fully.
+# Bare "yards" is intentionally excluded — it's ambiguous with distance
+# ("100 yards from beach"). Karachi size is captured via gaz / sq yd / square yards.
+_SIZE_UNIT_PAT = r'(kanal|marla|gaz|gaj|guz|gajj|square\s*yards?|sq\.?\s*yards?|sq\.?\s*yd)'
 _SIZE_RANGE_RE = re.compile(
-    r'([\d.]+)\s*(kanal|marla)\s*(?:se|to|-)\s*([\d.]+)\s*(kanal|marla)', re.I
+    rf'([\d.]+)\s*{_SIZE_UNIT_PAT}\s*(?:se|to|-)\s*([\d.]+)\s*{_SIZE_UNIT_PAT}', re.I
 )
-_SIZE_SINGLE_RE = re.compile(r'([\d.]+)\s*(kanal|marla)', re.I)
+_SIZE_SINGLE_RE = re.compile(rf'([\d.]+)\s*{_SIZE_UNIT_PAT}', re.I)
+
+# Square-yard family — all mean "sq yd". 1 Marla = 25 Sq Yd (matches the backend
+# area_size conversion), so sq-yd values are divided by 25 to reach marla.
+_SQYD_UNITS = {'gaz', 'gaj', 'guz', 'gajj', 'yard', 'yards',
+               'sqyd', 'sqyard', 'sqyards', 'squareyard', 'squareyards'}
 
 
 def _parse_size_value(num: str, unit: str) -> Optional[float]:
-    """Convert a number + unit (marla/kanal) to marla."""
+    """Convert a number + unit (marla/kanal/square-yard) to marla."""
     try:
         v = float(num)
     except ValueError:
         return None
-    if unit.lower() == 'kanal':
+    u = re.sub(r'[\s.]', '', unit.lower())  # "sq. yd" -> "sqyd"
+    if u == 'kanal':
         return v * 20
+    if u in _SQYD_UNITS:
+        return v / 25.0
     return v
 
 
@@ -180,6 +194,13 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
             if m:
                 pmax = _parse_price_token(m.group(1))
                 if pmax is not None: result['price_max'] = pmax
+            else:
+                # "house for 45000", "budget 60k": a plain amount is a ceiling.
+                # Needs 4+ digits or a unit so "flat for 2 people" isn't a price.
+                m = re.search(r'\b(?:for|budget(?:\s*of)?)\s*(?:rs\.?\s*)?(\d{4,9}|[\d.]+\s*(?:k|lac|lakh|lacs|laakh|hazar|hazaar|crore|cr)\b)', ql)
+                if m:
+                    pmax = _parse_price_token(m.group(1))
+                    if pmax is not None: result['price_max'] = pmax
 
         m2 = re.search(r'(?:above|over|min(?:imum)?|from|zyada|زیادہ|se\s*zyada|سے\s*زیادہ)\s*([\d.]+\s*(?:k|lac|lakh|lacs|laakh|hazar|hazaar|crore|cr)?)', ql)
         if m2:
@@ -224,7 +245,53 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
             if candidate:
                 result['area'] = candidate
 
+    # "DHA or Clifton": several named areas joined by or/and/ya/aur/comma.
+    mentioned = _area_mentions(q, ql, city)
+    if len(mentioned) >= 2:
+        result['areas'] = mentioned
+        result['area'] = mentioned[0]
+
     return result
+
+
+_AREA_JOINER_RE = re.compile(r'^\s*(?:,|/|&|\bor\b|\band\b|\bya\b|\baur\b|\bphir\b)[\s,]*(?:\bor\b|\bthen\b)?\s*$')
+
+
+def _area_mentions(q, ql, city):
+    """Distinct areas named in the query, in order, when joined like 'X or Y'.
+
+    Only exact aliases and area names count; fuzzy matches never add a second
+    area. Overlapping matches keep the longest (so 'dha phase 6' beats 'dha').
+    """
+    spans = []
+    roman_map = ROMAN_URDU_AREAS_BY_CITY.get(city, {})
+    for alias, area_name in roman_map.items():
+        for m in re.finditer(r'\b' + re.escape(alias) + r'\b', ql):
+            spans.append((m.start(), m.end(), area_name))
+    for name in get_areas(city):
+        nl = ' '.join(name.lower().split())
+        if len(nl) < 3:
+            continue
+        for m in re.finditer(r'\b' + re.escape(nl) + r'\b', ql):
+            spans.append((m.start(), m.end(), name))
+    if city == "karachi":
+        for ur_area, en_area in URDU_AREAS.items():
+            start = q.find(ur_area)
+            if start >= 0:
+                spans.append((start, start + len(ur_area), en_area))
+    # Longest first, then drop anything overlapping a kept span.
+    kept = []
+    for start, end, name in sorted(spans, key=lambda s: (-(s[1] - s[0]), s[0])):
+        if all(end <= ks or start >= ke for ks, ke, _ in kept):
+            kept.append((start, end, name))
+    kept.sort()
+    areas = []
+    for i, (start, end, name) in enumerate(kept):
+        if i and not _AREA_JOINER_RE.match(ql[kept[i - 1][1]:start]):
+            break
+        if name not in areas:
+            areas.append(name)
+    return areas
 
 
 def match_area(query, city="lahore"):
@@ -240,6 +307,10 @@ def match_area(query, city="lahore"):
         for ur, en in URDU_AREAS.items():
             if q in ur or ur in q: return en
     ql = q.lower()
+    qn = _norm(ql)
+    # An exact area name always wins over aliases that merely contain it.
+    for name in areas:
+        if _norm(name) == qn: return name
     # 3. Roman Urdu alias match (city-aware)
     roman_map = ROMAN_URDU_AREAS_BY_CITY.get(city, {})
     if roman_map:
@@ -248,36 +319,84 @@ def match_area(query, city="lahore"):
         for alias, area_name in sorted(roman_map.items(), key=lambda x: -len(x[0])):
             if alias in ql or ql in alias:
                 return area_name
-    # 4. Exact English match (case-insensitive)
-    for name in areas:
-        if name.lower() == ql: return name
     # 5. Substring match — prefer shorter (more specific) matches
     candidates = []
     for name in areas:
-        nl = name.lower()
-        if ql in nl or nl in ql:
+        nl = _norm(name)
+        if (len(qn) >= 3 and qn in nl) or (len(nl) >= 3 and nl in qn):
             candidates.append(name)
     if candidates:
         candidates.sort(key=lambda n: abs(len(n) - len(q)))
         return candidates[0]
-    # 6. Token overlap
-    qt = set(re.findall(r'\w+', ql))
-    best, best_score = None, 0
-    for name in areas:
-        nt = set(re.findall(r'\w+', name.lower()))
-        score = len(qt & nt)
-        if nt and score > 0:
-            ratio = score / max(len(qt), len(nt))
-            if ratio > best_score:
-                best_score, best = ratio, name
-    if best_score >= 0.3:
-        return best
-    # 7. Sequence matching
+    # 6. Distinctive-token match. Generic words ("town", "block") never decide
+    # the area on their own: "johr town" must not become "Agrics Town".
+    q_tokens = _distinctive_tokens(qn)
+    if q_tokens:
+        best, best_score = None, 0.0
+        for name in areas:
+            n_tokens = _distinctive_tokens(_norm(name))
+            if not n_tokens:
+                continue
+            matched = [max(_token_ratio(t, nt) for nt in n_tokens) for t in q_tokens]
+            if min(matched) < _TOKEN_MATCH_MIN:
+                continue
+            score = sum(matched) / max(len(q_tokens), len(n_tokens))
+            if score > best_score:
+                best_score, best = score, name
+        if best_score >= 0.5:
+            return best
+    # 7. Whole-string similarity, strict: a wrong area is worse than none.
     best, best_ratio = None, 0.0
     for name in areas:
-        r = SequenceMatcher(None, ql, name.lower()).ratio()
+        r = SequenceMatcher(None, qn, _norm(name)).ratio()
         if r > best_ratio: best_ratio, best = r, name
-    return best if best_ratio >= 0.5 else None
+    return best if best_ratio >= 0.8 else None
+
+
+# Words shared by many area names; they can't identify an area by themselves.
+_GENERIC_AREA_TOKENS = frozenset({
+    'town', 'block', 'phase', 'sector', 'society', 'colony', 'city', 'scheme',
+    'housing', 'road', 'area', 'garden', 'gardens', 'park', 'enclave', 'extension',
+    'ext', 'commercial', 'cooperative', 'co', 'operative', 'the', 'new', 'old',
+    'e', 'i', 'of', 'and', 'amp', 'residency', 'homes', 'villas', 'avenue',
+})
+_TOKEN_MATCH_MIN = 0.8
+
+
+def _norm(text):
+    """Lowercase and collapse whitespace ('Defence  DHA  Phase 6' -> 'defence dha phase 6')."""
+    return ' '.join(text.lower().split())
+
+
+def _distinctive_tokens(text):
+    return {t for t in re.findall(r'\w+', text) if t not in _GENERIC_AREA_TOKENS}
+
+
+def _token_ratio(a, b):
+    if a == b:
+        return 1.0
+    if a.isdigit() or b.isdigit():
+        return 0.0
+    return SequenceMatcher(None, a, b).ratio()
+
+
+def suggest_areas(query, city="lahore", limit=3):
+    """Closest area names for a "did you mean" prompt when match_area finds nothing."""
+    qn = _norm(query)
+    q_tokens = _distinctive_tokens(qn)
+    if not q_tokens:
+        return []
+    scored = []
+    for name in get_areas(city):
+        nn = _norm(name)
+        n_tokens = _distinctive_tokens(nn)
+        if not n_tokens:
+            continue
+        token_score = sum(max(_token_ratio(t, nt) for nt in n_tokens) for t in q_tokens) / len(q_tokens)
+        score = max(token_score, SequenceMatcher(None, qn, nn).ratio())
+        if score >= 0.6:
+            scored.append((-score, len(name), name))
+    return [name for _, _, name in sorted(scored)[:limit]]
 
 
 def parse_price(text):
@@ -471,6 +590,7 @@ async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
         if "city_hint" in result and result["city_hint"] not in CITIES:
             result.pop("city_hint", None)
 
+        result["parser"] = "ai"
         cache_set(ck, result)
         return result
     except Exception as e:

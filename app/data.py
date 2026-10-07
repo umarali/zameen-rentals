@@ -40,6 +40,34 @@ def get_areas(city="lahore"):
     """Get areas dict for a city."""
     return CITY_AREAS.get(city, CITY_AREAS["karachi"])
 
+
+# Zameen location ID -> area names. Lahore has duplicate spellings of some
+# areas (e.g. "Defence  DHA  Phase 3" and "Defence (DHA) Phase 3", both 1454).
+_AREA_NAMES_BY_ID = {}
+for _ck, _areas in CITY_AREAS.items():
+    _by_id = _AREA_NAMES_BY_ID.setdefault(_ck, {})
+    for _name, (_slug, _id, _lat, _lng) in _areas.items():
+        _by_id.setdefault(_id, []).append(_name)
+
+
+def area_names_for_location_id(city, location_id):
+    """Every known area name for a Zameen location ID in a city."""
+    return list(_AREA_NAMES_BY_ID.get(city, {}).get(location_id, []))
+
+
+def canonical_area_name(city, location_id):
+    """The cleanest known name for a location ID, or None if it isn't a known area."""
+    names = _AREA_NAMES_BY_ID.get(city, {}).get(location_id)
+    if not names:
+        return None
+    return min(names, key=lambda n: ("%" in n or "  " in n, len(n), n))
+
+
+def location_id_for_area(city, area_name):
+    """The Zameen location ID for an area name, or None if the name is unknown."""
+    info = CITY_AREAS.get(city, {}).get(area_name)
+    return info[1] if info else None
+
 PROPERTY_TYPES = {
     "house": {"label": "House", "slug": "Rentals_Houses_Property"},
     "apartment": {"label": "Apartment / Flat", "slug": "Rentals_Flats_Apartments"},
@@ -271,6 +299,9 @@ ROMAN_URDU_AREAS_LAHORE = {
     "mm alam": "Gulberg", "mm alam road": "Gulberg",
     # Johar Town
     "johar": "Johar Town", "johar town": "Johar Town",
+    "johr": "Johar Town", "johr town": "Johar Town",
+    "jauhar": "Johar Town", "jauhar town": "Johar Town",
+    "jouhar": "Johar Town", "jouhar town": "Johar Town",
     "johar town phase 1": "Johar Town Phase 1", "johar town phase 2": "Johar Town Phase 2",
     # Model Town
     "model town": "Model Town", "model town lahore": "Model Town",
@@ -357,6 +388,21 @@ ROMAN_URDU_AREAS_ISLAMABAD = {
 }
 
 # City-indexed Roman Urdu area lookup (for match_area and parse_natural_query)
+def _islamabad_sub_sector_aliases():
+    """'g 11/3', 'g-11/3', 'g11/3' -> 'G 11 G 11 3' for every sub-sector in the area file."""
+    import re as _re
+    aliases = {}
+    for name in CITY_AREAS["islamabad"]:
+        m = _re.fullmatch(r"([A-Z]) (\d+) \1 \2 (\d)", name)
+        if m:
+            letter, sector, sub = m.group(1).lower(), m.group(2), m.group(3)
+            for sep in (" ", "-", ""):
+                aliases[f"{letter}{sep}{sector}/{sub}"] = name
+    return aliases
+
+
+ROMAN_URDU_AREAS_ISLAMABAD.update(_islamabad_sub_sector_aliases())
+
 ROMAN_URDU_AREAS_BY_CITY = {
     "karachi": ROMAN_URDU_AREAS,
     "lahore": ROMAN_URDU_AREAS_LAHORE,
@@ -368,6 +414,7 @@ LANDMARKS = {
     "karachi": {
         "jinnah airport": "Cantt", "karachi airport": "Cantt",
         "aga khan hospital": "Saddar", "aga khan": "Saddar",
+        "nipa chowrangi": "Gulshan-e-Iqbal", "nipa": "Gulshan-e-Iqbal",
         "dow university": "Saddar",
         "dolmen mall clifton": "Clifton", "dolmen mall": "Clifton",
         "lucky one mall": "Gulshan-e-Iqbal",

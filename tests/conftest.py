@@ -4,7 +4,7 @@ import pytest
 
 # Force a test database so we don't pollute production data
 _test_db_dir = tempfile.mkdtemp()
-os.environ.setdefault("ZAMEENRENTALS_DB_DIR", _test_db_dir)
+os.environ["ZAMEENRENTALS_DB_DIR"] = _test_db_dir
 
 # Patch the database module to use the test directory BEFORE any app imports
 import app.database as db_mod
@@ -16,14 +16,14 @@ db_mod._conn = None  # Reset connection
 @pytest.fixture(autouse=True)
 def fresh_db():
     """Reset the database for each test."""
-    db_mod._conn = None
-    if db_mod._DB_PATH.exists():
-        db_mod._DB_PATH.unlink()
+    db_mod.close_db()
+    for suffix in ("", "-wal", "-shm"):
+        type(db_mod._DB_PATH)(str(db_mod._DB_PATH) + suffix).unlink(missing_ok=True)
     db_mod.init_db()
     yield
     db_mod.close_db()
-    if db_mod._DB_PATH.exists():
-        db_mod._DB_PATH.unlink()
+    for suffix in ("", "-wal", "-shm"):
+        type(db_mod._DB_PATH)(str(db_mod._DB_PATH) + suffix).unlink(missing_ok=True)
 
 
 @pytest.fixture

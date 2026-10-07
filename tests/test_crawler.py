@@ -1,9 +1,12 @@
 """Tests for crawler worker functions — browser profiles, API headers, phone extraction."""
 import pytest
+import app.crawler as crawler_mod
 from app.crawler import claim_next_area, init_crawl_state, update_area_priorities
 from app.crawler_worker import (
     _build_browser_profile, _api_headers, _get_empty_types, _update_type_state,
-    crawl_city_latest_cards, infer_area_from_location, refresh_phones_batch,
+    _type_slugs_worth_crawling,
+    crawl_city_latest_cards, crawl_detail_batch, infer_area_from_location,
+    refresh_phones_batch,
 )
 from app.database import _get_conn, log_search
 from app.db_listings import upsert_listing, get_listing_by_zameen_id
@@ -167,6 +170,20 @@ class TestLatestCityFeed:
 
 
 class TestAreaScheduling:
+    def test_cycle_does_not_revisit_attempted_areas(self):
+        init_crawl_state()
+        first = claim_next_area()
+        conn = _get_conn()
+        # A failed never-crawled area stays eligible, as does one that becomes
+        # stale again while the rest of a long cycle is still running.
+        conn.execute("UPDATE crawl_state SET crawl_status = 'error', crawl_claimed_at = NULL WHERE id = ?",
+                     (first["id"],))
+        conn.commit()
+        second = claim_next_area(exclude_ids={first["id"]})
+        assert second["id"] != first["id"]
+        all_ids = {r[0] for r in conn.execute("SELECT id FROM crawl_state")}
+        assert claim_next_area(exclude_ids=all_ids) is None
+
     def test_search_priority_stays_within_city(self):
         init_crawl_state()
 
@@ -307,6 +324,33 @@ class TestAreaScheduling:
         assert area["area_name"] == "Gulberg"
 
 
+class TestDetailBatch:
+    @pytest.mark.asyncio
+    async def test_skips_task_failure_outside_worker_try(self, monkeypatch):
+        upsert_listing(
+            zameen_id="809999",
+            url="https://www.zameen.com/Property/test-809999-1-1.html",
+            city="karachi",
+            card_data={"title": "Semaphore failure", "price": 90000},
+        )
+
+        class FailingSemaphore:
+            def __init__(self, value):
+                pass
+
+            async def __aenter__(self):
+                raise RuntimeError("semaphore acquire failed")
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        monkeypatch.setattr("app.crawler_worker.asyncio.Semaphore", FailingSemaphore)
+
+        updated = await crawl_detail_batch(limit=1, client=object())
+
+        assert updated == 0
+
+
 class TestRefreshPhonesBatch:
     @pytest.mark.asyncio
     async def test_uses_contact_fetched_at_and_persists_whatsapp_without_call_phone(self, monkeypatch):
@@ -374,3 +418,147 @@ class TestRefreshPhonesBatch:
 
         assert updated == 2
         assert seen == ["810010", "810011"]
+
+    @pytest.mark.asyncio
+    async def test_skips_task_failure_outside_worker_try(self, monkeypatch):
+        upsert_listing(
+            zameen_id="810020",
+            url="https://www.zameen.com/Property/test-810020-1-1.html",
+            city="karachi",
+            card_data={"title": "Semaphore failure", "price": 90000},
+        )
+
+        class FailingSemaphore:
+            def __init__(self, value):
+                pass
+
+            async def __aenter__(self):
+                raise RuntimeError("semaphore acquire failed")
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        monkeypatch.setattr("app.crawler_worker.asyncio.Semaphore", FailingSemaphore)
+
+        updated = await refresh_phones_batch(limit=1, client=object())
+
+        assert updated == 0
+
+
+class TestBackfillResilience:
+    @pytest.mark.asyncio
+    async def test_retries_batch_error_instead_of_exiting(self, monkeypatch):
+        detail_calls = 0
+        sleeps = []
+
+        class FakeClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, tb):
+                return False
+
+        async def fake_check_robots_txt(client, ua):
+            return "allow"
+
+        async def fake_detail_batch(**kwargs):
+            nonlocal detail_calls
+            detail_calls += 1
+            if detail_calls == 1:
+                raise RuntimeError("database is locked")
+            return 0
+
+        async def fake_phone_batch(**kwargs):
+            return 0
+
+        async def fake_sleep(seconds):
+            sleeps.append(seconds)
+
+        stats = {
+            "total_listings": 0,
+            "areas_crawled": 0,
+            "areas_total": 0,
+            "detail_coverage": 0.0,
+        }
+        monkeypatch.setattr(crawler_mod, "_shutdown", False)
+        monkeypatch.setattr(crawler_mod, "init_db", lambda: None)
+        monkeypatch.setattr(crawler_mod, "init_personalization_schema", lambda: None)
+        monkeypatch.setattr(crawler_mod, "init_crawl_state", lambda: None)
+        monkeypatch.setattr(crawler_mod, "get_crawl_stats", lambda: stats)
+        monkeypatch.setattr(crawler_mod, "_build_browser_profile", lambda: ("ua", {}))
+        monkeypatch.setattr(crawler_mod, "check_robots_txt", fake_check_robots_txt)
+        monkeypatch.setattr(crawler_mod, "crawl_detail_batch", fake_detail_batch)
+        monkeypatch.setattr(crawler_mod, "refresh_phones_batch", fake_phone_batch)
+        monkeypatch.setattr(crawler_mod.httpx, "AsyncClient", lambda: FakeClient())
+        monkeypatch.setattr(crawler_mod.asyncio, "sleep", fake_sleep)
+
+        await crawler_mod.run_backfill_worker(
+            detail_batch=1,
+            phone_batch=1,
+            concurrency=1,
+        )
+
+        assert detail_calls == 2
+        assert sleeps == [2]
+
+
+class TestTypeSlugsWorthCrawling:
+    def test_empty_area_skips_every_type(self):
+        assert _type_slugs_worth_crawling({"listings": 0, "complete": False, "types": set()}) == set()
+
+    def test_multi_page_area_crawls_every_type(self):
+        observed = {"listings": 25, "complete": False, "types": {"House"}}
+        assert _type_slugs_worth_crawling(observed) is None
+
+    def test_complete_area_crawls_only_present_types(self):
+        observed = {"listings": 7, "complete": True, "types": {"House", "Upper Portion", "Penthouse"}}
+        assert _type_slugs_worth_crawling(observed) == {
+            "Rentals_Houses_Property", "Rentals_Upper_Portions",
+        }
+
+    def test_unrecognised_type_falls_back_to_all(self):
+        observed = {"listings": 3, "complete": True, "types": {"House", None}}
+        assert _type_slugs_worth_crawling(observed) is None
+
+    def test_mapped_slugs_are_real_crawl_types(self):
+        observed = {"listings": 5, "complete": True,
+                    "types": {"House", "Apartment", "Upper Portion", "Lower Portion", "Room"}}
+        assert _type_slugs_worth_crawling(observed) == {slug for slug, _ in CRAWL_PROPERTY_TYPES}
+
+    def test_fully_typed_complete_area_needs_no_type_crawls(self):
+        observed = {"listings": 60, "complete": True, "types": {"House", "Apartment / Flat"}, "untyped": 0}
+        assert _type_slugs_worth_crawling(observed) == set()
+
+    def test_typed_but_capped_area_still_crawls_types(self):
+        observed = {"listings": 1000, "complete": False, "types": {"House"}, "untyped": 0}
+        assert _type_slugs_worth_crawling(observed) is None
+
+
+class TestCrawlerLock:
+    def test_second_lock_on_same_database_is_refused(self, tmp_path):
+        first = crawler_mod.acquire_crawler_lock(tmp_path)
+        assert first is not None
+        try:
+            assert crawler_mod.acquire_crawler_lock(tmp_path) is None
+        finally:
+            first.close()
+
+    def test_lock_is_free_again_after_release(self, tmp_path):
+        crawler_mod.acquire_crawler_lock(tmp_path).close()
+        again = crawler_mod.acquire_crawler_lock(tmp_path)
+        assert again is not None
+        again.close()
+
+    def test_second_crawler_process_exits_while_lock_held(self, tmp_path):
+        import os, subprocess, sys
+        held = crawler_mod.acquire_crawler_lock(tmp_path)
+        try:
+            env = {**os.environ, "ZAMEENRENTALS_DB_DIR": str(tmp_path)}
+            proc = subprocess.run(
+                [sys.executable, "-m", "app.crawler", "--cards-only", "--single-cycle"],
+                env=env, capture_output=True, text=True, timeout=60,
+            )
+        finally:
+            held.close()
+        assert proc.returncode == 1
+        assert "Another crawler is already running" in proc.stderr

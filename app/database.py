@@ -5,7 +5,8 @@ from pathlib import Path
 
 logger = logging.getLogger("zameenrentals")
 
-_DB_DIR = Path(__file__).resolve().parent.parent / "data"
+_DB_DIR = Path(os.environ.get("ZAMEENRENTALS_DB_DIR") or
+               Path(__file__).resolve().parent.parent / "data")
 _DB_PATH = _DB_DIR / "zameenrentals.db"
 _conn = None
 _lock = threading.Lock()
@@ -19,11 +20,19 @@ def _get_conn() -> sqlite3.Connection:
     if _conn is None:
         with _lock:
             if _conn is None:
+                if not _DB_PATH.exists() and any(
+                    Path(str(_DB_PATH) + suffix).exists() for suffix in ("-wal", "-shm")
+                ):
+                    raise RuntimeError(
+                        f"Database missing at {_DB_PATH}, but SQLite recovery files exist. "
+                        "Preserve them and restore a complete backup before starting."
+                    )
                 os.makedirs(_DB_DIR, exist_ok=True)
                 _conn = sqlite3.connect(str(_DB_PATH), check_same_thread=False)
                 _conn.row_factory = sqlite3.Row
                 _conn.execute("PRAGMA foreign_keys=ON")
                 _conn.execute("PRAGMA journal_mode=WAL")
+                _conn.execute("PRAGMA synchronous=NORMAL")
                 _conn.execute("PRAGMA busy_timeout=5000")
     return _conn
 
@@ -111,6 +120,7 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_listings_type ON listings(property_type);
             CREATE INDEX IF NOT EXISTS idx_listings_active ON listings(is_active);
             CREATE INDEX IF NOT EXISTS idx_listings_zameen_id ON listings(zameen_id);
+            CREATE INDEX IF NOT EXISTS idx_listings_content_hash ON listings(content_hash);
             CREATE INDEX IF NOT EXISTS idx_listings_last_seen ON listings(last_seen_at);
             CREATE INDEX IF NOT EXISTS idx_listings_detail ON listings(detail_scraped_at);
             CREATE INDEX IF NOT EXISTS idx_listings_default ON listings(is_active, city, last_seen_at DESC);
@@ -166,6 +176,27 @@ def init_db():
                 created_at  TEXT NOT NULL DEFAULT (datetime('now')),
                 message     TEXT NOT NULL,
                 context     TEXT
+            );
+
+            -- ── Zameen location hierarchy ──
+            -- Each listing's path from city down to its most specific location,
+            -- from the search page's embedded JSON. Area filters match any level,
+            -- so a parent area includes its children regardless of crawl order.
+            CREATE TABLE IF NOT EXISTS listing_locations (
+                zameen_id    TEXT NOT NULL,
+                location_id  INTEGER NOT NULL,
+                level        INTEGER NOT NULL,
+                PRIMARY KEY (zameen_id, location_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_listing_locations_location
+                ON listing_locations(location_id);
+
+            CREATE TABLE IF NOT EXISTS locations (
+                location_id  INTEGER PRIMARY KEY,
+                city         TEXT NOT NULL,
+                level        INTEGER NOT NULL,
+                name         TEXT NOT NULL,
+                name_l1      TEXT
             );
             """)
 

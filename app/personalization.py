@@ -7,14 +7,17 @@ the client_id loses the state, same as clearing localStorage.
 import json
 import logging
 import re
+import sqlite3
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import urlsplit
 
-from app.database import _get_conn
-from app.data import PROPERTY_TYPES
+from app.database import _get_conn, _DB_DIR
+from app.data import PROPERTY_TYPES, location_id_for_area
+from app.db_listings import area_filter_sql
 
 logger = logging.getLogger("zameenrentals")
 
@@ -233,6 +236,14 @@ def normalize_filters(raw: dict) -> dict:
 
     # City is the only required field; default to lahore (matches frontend).
     out.setdefault("city", "lahore")
+    if out.get("q"):
+        try:
+            _get_conn().execute(
+                "SELECT rowid FROM listings_fts WHERE listings_fts MATCH ? LIMIT 1",
+                (out["q"],),
+            ).fetchone()
+        except sqlite3.OperationalError as exc:
+            raise ValueError("Invalid full-text search query") from exc
     return out
 
 
@@ -412,8 +423,9 @@ def _build_match_clauses(filters: dict, *, listings_alias: str = "l") -> tuple[l
         conds.append(f"{a}.city = ?")
         params.append(filters["city"])
     if filters.get("area"):
-        conds.append(f"{a}.area_name = ?")
-        params.append(filters["area"])
+        clause, clause_params = area_filter_sql(filters.get("city"), [filters["area"]], alias=a)
+        conds.append(clause)
+        params.extend(clause_params)
     if filters.get("property_type"):
         info = PROPERTY_TYPES.get(filters["property_type"].lower())
         if info:
@@ -473,8 +485,13 @@ def listing_matches_alert(listing_row: dict, filters: dict) -> bool:
     if city and listing_row.get("city") != city:
         return False
     area = filters.get("area")
-    if area and listing_row.get("area_name") != area:
-        return False
+    if area:
+        location_ids = listing_row.get("location_ids")
+        if location_ids:
+            if location_id_for_area(listing_row.get("city"), area) not in location_ids:
+                return False
+        elif listing_row.get("area_name") != area:
+            return False
     pt = filters.get("property_type")
     if pt:
         info = PROPERTY_TYPES.get(pt.lower())
@@ -546,7 +563,12 @@ def find_new_matches(*, limit_per_alert: int = 50) -> list[dict]:
             ORDER BY l.id ASC
             LIMIT ?
         """
-        rows = conn.execute(sql, [a["id"], *params, limit_per_alert]).fetchall()
+        try:
+            rows = conn.execute(sql, [a["id"], *params, limit_per_alert]).fetchall()
+        except sqlite3.OperationalError:
+            # A malformed legacy alert must not prevent other clients' matches.
+            logger.exception("Failed to scan alert %d", a["id"])
+            continue
         for row in rows:
             try:
                 conn.execute(
@@ -576,7 +598,7 @@ def find_new_matches(*, limit_per_alert: int = 50) -> list[dict]:
     return new_matches
 
 
-def record_match_for_inserted_listing(listing_id: int, listing_row: dict) -> list[dict]:
+def record_match_for_inserted_listing(listing_id: int, listing_row: dict, *, commit: bool = True) -> list[dict]:
     """Hook invoked by upsert_listing on 'inserted' return. Returns new matches.
 
     The city pre-filter keeps this cheap, while the SQL matcher remains
@@ -634,9 +656,8 @@ def record_match_for_inserted_listing(listing_id: int, listing_row: dict) -> lis
             if cur.rowcount == 0:
                 continue
             conn.execute(
-                "UPDATE alerts SET last_seen_id = MAX(COALESCE(last_seen_id, 0), ?), "
-                "last_matched_at = datetime('now') WHERE id = ?",
-                (listing_id, a["id"]),
+                "UPDATE alerts SET last_matched_at = datetime('now') WHERE id = ?",
+                (a["id"],),
             )
             matches.append({
                 "alert_id": a["id"],
@@ -649,7 +670,7 @@ def record_match_for_inserted_listing(listing_id: int, listing_row: dict) -> lis
         except Exception:
             logger.exception("Failed to record real-time match alert=%d listing=%d",
                              a["id"], listing_id)
-    if matches:
+    if matches and commit:
         conn.commit()
     return matches
 
@@ -947,11 +968,33 @@ def previous_visit_at(client_id: str) -> str | None:
 # ── Push subscriptions + dispatch ────────────────────────────────────────────
 
 
+def validate_push_endpoint(endpoint: str) -> None:
+    """Only browser push providers may receive server-side push requests."""
+    try:
+        url = urlsplit(endpoint)
+        host = url.hostname or ""
+        trusted = (
+            host == "fcm.googleapis.com"
+            or host == "updates.push.services.mozilla.com"
+            or host.endswith(".push.apple.com")
+            or host.endswith(".notify.windows.com")
+        )
+        valid = (trusted and url.scheme == "https" and url.port in (None, 443)
+                 and not url.username and not url.password and not url.fragment
+                 and "\\" not in endpoint
+                 and not any(c.isspace() or ord(c) < 32 for c in endpoint))
+    except (ValueError, TypeError):
+        valid = False
+    if not valid:
+        raise ValueError("Unsupported push endpoint")
+
+
 def save_push_subscription(client_id: str, *, endpoint: str, p256dh: str, auth: str,
                             user_agent: str | None = None) -> dict:
-    ensure_client(client_id)
+    validate_push_endpoint(endpoint)
     if not endpoint or not p256dh or not auth:
         raise ValueError("endpoint, p256dh, and auth are required")
+    ensure_client(client_id)
     conn = _get_conn()
     now = datetime.utcnow().isoformat()
     conn.execute(
@@ -1047,7 +1090,7 @@ def list_pending_push_matches(*, limit: int = 500) -> list[dict]:
 
 # ── VAPID key handling ───────────────────────────────────────────────────────
 
-_VAPID_DIR = Path(__file__).resolve().parent.parent / "data"
+_VAPID_DIR = _DB_DIR
 _VAPID_PRIVATE_PATH = _VAPID_DIR / "vapid_private.pem"
 _VAPID_PUBLIC_PATH = _VAPID_DIR / "vapid_public.txt"
 
@@ -1111,24 +1154,39 @@ def vapid_public_key() -> str:
 def send_push(subscription: dict, payload: dict, *, ttl: int = 86400) -> bool:
     """Send a single push. Returns True if delivered, False to mark stale."""
     try:
+        validate_push_endpoint(subscription.get("endpoint", ""))
+    except ValueError:
+        logger.warning("Skipping subscription with unsupported push endpoint")
+        return False
+    try:
         from pywebpush import WebPushException, webpush
+        from requests import Session
     except ImportError:
         logger.warning("pywebpush not installed — skipping push dispatch")
         return False
 
     keys = ensure_vapid_keys()
     try:
-        webpush(
-            subscription_info={
-                "endpoint": subscription["endpoint"],
-                "keys": {"p256dh": subscription["p256dh"], "auth": subscription["auth"]},
-            },
-            data=json.dumps(payload),
-            vapid_private_key=keys["private_pem"],
-            vapid_claims={"sub": keys["subject"]},
-            ttl=ttl,
-        )
-        return True
+        # Redirects must not bypass endpoint validation, including for old rows.
+        class PushSession(Session):
+            def request(self, method, url, **kwargs):
+                kwargs["allow_redirects"] = False
+                return super().request(method, url, **kwargs)
+
+        with PushSession() as session:
+            response = webpush(
+                subscription_info={
+                    "endpoint": subscription["endpoint"],
+                    "keys": {"p256dh": subscription["p256dh"], "auth": subscription["auth"]},
+                },
+                data=json.dumps(payload),
+                vapid_private_key=keys["private_pem"],
+                vapid_claims={"sub": keys["subject"]},
+                ttl=ttl,
+                timeout=10,
+                requests_session=session,
+            )
+        return 200 <= response.status_code < 300
     except WebPushException as exc:
         status = getattr(getattr(exc, "response", None), "status_code", None)
         if status in (404, 410):

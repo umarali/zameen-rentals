@@ -1,4 +1,4 @@
-# ZameenRentals — Claude Code Guide
+# ZameenRentals — Codex Guide
 
 ## Project Overview
 Rental property search engine for Pakistan (Karachi, Lahore, Islamabad), scraping Zameen.com. FastAPI backend + a Vite + Tailwind v4 modular vanilla-JS frontend (`frontend/src/*.js`) that builds into `static/`. SQLite database for search history and caching.
@@ -10,7 +10,7 @@ app/
   __init__.py            → FastAPI app, middleware, CORS, DB lifecycle
   routes.py              → API endpoints (/api/search, /api/parse-query, /api/areas, /api/cities, etc.)
   scraper.py             → HTTP fetching, HTML parsing, search orchestration
-  parsing.py             → NLP query parsing (regex + Claude Haiku via Instructor), URL building
+  parsing.py             → NLP query parsing (regex + Codex Haiku via Instructor), URL building
   data.py                → Multi-city area definitions, property types, Roman Urdu/Urdu translations
   cache.py               → In-memory cache with 5min TTL, rate limiter (2 req/sec)
   database.py            → SQLite: listing cache, search history, popular/recent searches
@@ -51,7 +51,7 @@ tools/
 
 ## Key Patterns
 - **Area matching**: Fuzzy multi-strategy (exact → substring → token overlap → SequenceMatcher). See `match_area(query, city)` in parsing.py.
-- **NLP parsing**: Tries Claude Haiku via Instructor first, falls back to regex. Supports English, Roman Urdu, Urdu script. Roman Urdu aliases currently only for Karachi.
+- **NLP parsing**: Tries Codex Haiku via Instructor first, falls back to regex. Supports English, Roman Urdu, Urdu script. Roman Urdu aliases currently only for Karachi.
 - **URL construction**: `build_url()` maps city+filters to Zameen.com URL structure.
 - **Property type detection**: `_extract_property_type()` infers from card text. When a type filter is active, the label is overridden.
 - **Frontend state**: Single `S` object holds all filter state including `city`. `loadCityData()` handles city switching (clears markers, re-fetches areas, re-centers map).
@@ -72,7 +72,7 @@ tools/
 ### Running locally
 ```bash
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=...   # optional, for Claude NLP parsing
+export ANTHROPIC_API_KEY=...   # optional, for Codex NLP parsing
 uvicorn main:app --reload --port 8000
 ```
 

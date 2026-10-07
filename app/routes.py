@@ -16,7 +16,7 @@ from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_area
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
-from app.parsing import parse_natural_query
+from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
 from app.db_listings import (
     decode_listing_json_field,
@@ -127,20 +127,39 @@ def _validate_viewport_bounds(south, west, north, east):
 
 
 def _build_parse_query_response(q, city, result):
+    # Copy: the Claude path returns its cached dict.
+    result = dict(result)
+    parser = result.pop("parser", "regex")
     # Flag when the matched area differs from what the user typed
     areas = get_areas(city)
     if result.get("area") and result["area"] in areas:
         ql = q.lower()
-        query_tokens = set(ql.replace("-", " ").split()) - {"in", "for", "rent", "rental", "ke", "ka", "ki", "mein", "me"}
+        # rstrip('.') so "sq." tokenizes to "sq" (matches the noise set below).
+        query_tokens = {t.rstrip(".") for t in ql.replace("-", " ").split()} - {"in", "for", "rent", "rental", "ke", "ka", "ki", "mein", "me"}
         area_tokens = set(result["area"].lower().replace("-", " ").split())
         unmatched = query_tokens - area_tokens
-        noise = {"house", "flat", "apartment", "portion", "upper", "lower", "room", "bed", "bedroom", "furnished", "full", "ghar", "makan", "bala", "nichla", "kamra"}
+        noise = {"house", "flat", "apartment", "portion", "upper", "lower", "room", "bed", "bedroom", "furnished", "full", "ghar", "makan", "bala", "nichla", "kamra",
+                 # Size units and city names are consumed by other parsed fields —
+                 # they must not count as an "unmatched" area or they wrongly flag
+                 # a clean match (e.g. "5 marla house in DHA Lahore" or "240 sq yd
+                 # house in Clifton") as approximate. Includes the per-token
+                 # fragments of "sq yd" / "sq ft".
+                 "marla", "marlas", "kanal", "kanals", "sqft", "sqyd", "yard", "yards", "yd", "yds", "ft",
+                 "gaz", "gaj", "guz", "gajj", "sq", "square",
+                 "lahore", "karachi", "islamabad", "isb", "khi", "lhr"}
         unmatched -= noise
-        unmatched = {t for t in unmatched if not t.isdigit()}
+        # Drop bare numbers, including decimals like "5.5" (sizes/prices).
+        unmatched = {t for t in unmatched if not t.replace(".", "", 1).isdigit()}
         if unmatched:
             result["area_approximate"] = True
             result["area_query"] = " ".join(unmatched)
-    return {"query": q, "filters": result}
+    elif not result.get("area"):
+        # No confident area: offer "did you mean" choices instead of guessing.
+        leftover = _strip_noise_tokens(q.lower())
+        suggestions = suggest_areas(leftover, city=city) if len(leftover) >= 3 else []
+        if suggestions:
+            result["area_suggestions"] = suggestions
+    return {"query": q, "filters": result, "parser": parser}
 
 
 async def _refresh_exact_location_candidate(candidate):
@@ -189,7 +208,8 @@ async def _maybe_enrich_nearby_exact_locations(*, city, lat, lng, radius_km, are
 
 @router.get("/api/health")
 async def health():
-    return {"status": "ok", "service": "ZameenRentals", "version": "1.0.0"}
+    from app import APP_VERSION  # lazy import avoids a circular import at module load
+    return {"status": "ok", "service": "ZameenRentals", "version": APP_VERSION}
 
 
 @router.get("/api/cities")
@@ -281,12 +301,18 @@ async def api_parse_query(request: Request, q: str = Query(..., min_length=1), c
 
 @router.get("/api/search")
 @limiter.limit(_SEARCH_RATE_LIMIT)
-async def search(request: Request, city: str = Query("lahore"), area: Optional[str]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), bedrooms_max: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), size_marla_min: Optional[float]=Query(None, ge=0), size_marla_max: Optional[float]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
+async def search(request: Request, city: str = Query("lahore"), area: Optional[str]=Query(None), areas: Optional[list[str]]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), bedrooms_max: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), size_marla_min: Optional[float]=Query(None, ge=0), size_marla_max: Optional[float]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
     try:
         _validate_price_range(price_min, price_max)
+        # "DHA or Clifton": several areas. One area stays on the single-area path.
+        area_names = _normalize_area_names(areas) if areas else []
+        if len(area_names) == 1:
+            area, area_names = area_names[0], []
+        elif area_names:
+            area = None
         # Serve from in-memory cache for the default (no-filter, page=1) query.
         # log_search is intentionally skipped on cache hits to avoid inflating search history counts.
-        is_default = _is_default_search(area, property_type, bedrooms, bedrooms_max,
+        is_default = not area_names and _is_default_search(area, property_type, bedrooms, bedrooms_max,
                                         price_min, price_max, size_marla_min, size_marla_max,
                                         furnished, sort, page)
         if is_default:
@@ -297,7 +323,7 @@ async def search(request: Request, city: str = Query("lahore"), area: Optional[s
 
         # Try local DB first (instant results from crawler data)
         local_result = search_listings(
-            city=city, area=area, property_type=property_type,
+            city=city, area=area, area_names=area_names or None, property_type=property_type,
             bedrooms=bedrooms, bedrooms_max=bedrooms_max,
             price_min=price_min, price_max=price_max,
             size_marla_min=size_marla_min, size_marla_max=size_marla_max,
@@ -308,10 +334,16 @@ async def search(request: Request, city: str = Query("lahore"), area: Optional[s
             if is_default:
                 with _DEFAULT_SEARCH_LOCK:
                     _DEFAULT_SEARCH_CACHE[city] = (local_result, time.monotonic() + _DEFAULT_SEARCH_TTL)
-            log_search(city=city, area=area, property_type=property_type, bedrooms=bedrooms,
+            log_search(city=city, area=area or (area_names[0] if area_names else None),
+                       property_type=property_type, bedrooms=bedrooms,
                        price_min=price_min, price_max=price_max, furnished=furnished,
                        sort=sort, result_count=local_result["total"])
             return local_result
+
+        # The upstream scraper cannot apply size bounds or several areas. Keep
+        # the local empty result instead of returning homes outside the request.
+        if size_marla_min or size_marla_max or area_names:
+            return {**local_result, "source": "local"}
 
         if _PLAYWRIGHT_SERVER:
             return {
@@ -897,8 +929,13 @@ async def push_subscribe(request: Request):
     body = await request.json()
     if not isinstance(body, dict):
         raise HTTPException(status_code=400, detail="Body must be an object")
-    endpoint = (body.get("endpoint") or "").strip()
     keys = body.get("keys") or {}
+    if not isinstance(keys, dict) or not all(
+        isinstance(value, str)
+        for value in (body.get("endpoint"), keys.get("p256dh"), keys.get("auth"))
+    ):
+        raise HTTPException(status_code=400, detail="endpoint and push keys must be strings")
+    endpoint = body["endpoint"].strip()
     p256dh = (keys.get("p256dh") or "").strip()
     auth = (keys.get("auth") or "").strip()
     if not endpoint or not p256dh or not auth:

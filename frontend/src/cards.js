@@ -67,8 +67,8 @@ export function renderCard(item, idx) {
     if (hasMulti) {
       imgHtml = `<div class="relative aspect-square sm:aspect-[4/3] overflow-hidden bg-gray-100 group" data-carousel>
         <div class="flex h-full transition-transform duration-300" data-slides>${imgs.slice(0, 5).map(u => `<img class="w-full h-full object-cover shrink-0 card-img-zoom" src="${escA(u)}" alt="" loading="lazy" onerror="this.src=''">`).join('')}</div>
-        <button data-prev class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
-        <button data-next class="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
+        <button data-prev type="button" aria-label="Previous photo" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
+        <button data-next type="button" aria-label="Next photo" class="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
         <div class="absolute bottom-1.5 sm:bottom-2 left-1/2 -translate-x-1/2 flex gap-1">${imgs.slice(0, 5).map((_, i) => `<span class="carousel-dot w-1.5 h-1.5 rounded-full bg-white/60 ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>
       </div>`;
     } else {
@@ -94,6 +94,8 @@ export function renderCard(item, idx) {
 
   const zameenId = item.zameen_id || extractZameenIdFromUrl(item.url);
   const zameenIdAttr = zameenId ? `data-zameen-id="${escA(zameenId)}"` : '';
+  // How many times this same listing was posted (from the backend dedup query).
+  const repostCount = Number(item.repost_count || 0);
   const favorited = isFavorite(zameenId);
   const compared = compareHas(zameenId);
   const isNew = isNewSinceLastVisit(item.first_seen_at || item.posted_at);
@@ -117,6 +119,7 @@ export function renderCard(item, idx) {
       ${item.location ? `<div class="flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 mb-1 sm:mb-2">${pinIcon('w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0')}<span class="line-clamp-1">${esc(item.location)}</span></div>` : ''}
       ${distanceLabel ? `<div class="text-[10px] sm:text-xs font-semibold text-brand-600 mb-1 sm:mb-2">${esc(distanceLabel)}</div>` : ''}
       ${badges.length ? `<div class="flex flex-wrap gap-1.5 sm:gap-3 text-[10px] sm:text-xs text-gray-500">${badges.join('')}</div>` : ''}
+      ${repostCount > 1 ? `<div class="mt-1"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full" title="The same listing was posted ${repostCount} times by agents — showing it once" aria-label="Listed ${repostCount} times">Listed ${repostCount}&times;</span></div>` : ''}
       ${(() => {
         const addedRel = item.posted_at ? fmtRelative(item.posted_at) : '';
         const addedLine = addedRel ? `Added ${addedRel}` : (item.added || '');

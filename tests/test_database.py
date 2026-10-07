@@ -7,7 +7,7 @@ from app.db_listings import (
     upsert_listing, search_listings, get_listing_by_zameen_id,
     get_listings_needing_detail, mark_stale_listings, get_crawl_stats,
     content_hash, detail_hash, search_exact_listings_in_bounds, search_nearby_listings,
-    get_nearby_enrichment_candidates,
+    get_nearby_enrichment_candidates, listing_write_batch,
 )
 
 
@@ -21,6 +21,47 @@ class TestContentHash:
         h1 = content_hash(50000, "Test Flat", 2, 1, "5 Marla")
         h2 = content_hash(60000, "Test Flat", 2, 1, "5 Marla")
         assert h1 != h2
+
+
+class TestListingWriteBatch:
+    def test_rolls_back_failed_batch(self):
+        with pytest.raises(RuntimeError):
+            with listing_write_batch():
+                upsert_listing(
+                    zameen_id="batch-rollback",
+                    url="https://zameen.com/Property/batch-rollback-100001-1-1.html",
+                    city="karachi",
+                    card_data={"title": "Rollback me", "price": 50000},
+                    commit=False,
+                )
+                raise RuntimeError("write failed")
+
+        assert get_listing_by_zameen_id("batch-rollback") is None
+
+    def test_commit_failure_triggers_rollback(self, monkeypatch):
+        class FakeConnection:
+            def __init__(self):
+                self.in_transaction = False
+                self.rolled_back = False
+
+            def execute(self, sql):
+                self.in_transaction = True
+
+            def commit(self):
+                raise RuntimeError("commit failed")
+
+            def rollback(self):
+                self.rolled_back = True
+                self.in_transaction = False
+
+        conn = FakeConnection()
+        monkeypatch.setattr("app.db_listings._get_conn", lambda: conn)
+
+        with pytest.raises(RuntimeError, match="commit failed"):
+            with listing_write_batch():
+                pass
+
+        assert conn.rolled_back is True
 
 
 class TestUpsertListing:
@@ -463,6 +504,27 @@ class TestSearchListings:
         result = search_listings(city="lahore")
         assert result["total"] == 0
         assert result["results"] == []
+
+    def test_identical_card_fields_do_not_hide_distinct_source_listings(self):
+        # Generic titles, prices, beds and sizes are not property identity.
+        for zid in ("210001", "210002"):
+            upsert_listing(
+                zameen_id=zid,
+                url=f"https://zameen.com/Property/t-{zid}-1-1.html",
+                city="karachi", area_name="Clifton", area_slug="Karachi_Clifton",
+                card_data={"title": "Same Flat", "price": 75000, "bedrooms": 3,
+                           "bathrooms": 2, "area_size": "1000 sqft", "property_type": "Apartment"},
+            )
+        result = search_listings(city="karachi")
+        assert result["total"] == 2
+        assert {r["zameen_id"] for r in result["results"]} == {"210001", "210002"}
+        assert all("repost_count" not in r for r in result["results"])
+
+    def test_distinct_listings_have_no_repost_count(self):
+        self._seed(3)  # distinct titles/prices -> distinct content_hash -> no collapse
+        result = search_listings(city="karachi")
+        assert result["total"] == 3
+        assert all("repost_count" not in r for r in result["results"])
 
     def test_viewport_search_prioritizes_results_near_map_center(self):
         upsert_listing(
@@ -1109,6 +1171,14 @@ class TestGetCrawlStats:
         assert get_crawl_stats("lahore")["total_listings"] == 1
         assert get_crawl_stats()["total_listings"] == 2
 
+    def test_includes_newest_listing(self):
+        upsert_listing(zameen_id="700010", url="https://zameen.com/Property/t-700010-1-1.html",
+                       city="karachi", card_data={"title": "N", "price": 50000,
+                                                  "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"})
+        stats = get_crawl_stats("karachi")
+        assert "newest_listing" in stats
+        assert stats["newest_listing"]  # non-null freshness timestamp
+
 
 class TestCrawlTypeState:
     def test_table_exists(self):
@@ -1123,3 +1193,59 @@ class TestCrawlTypeState:
         empty = _get_empty_types("karachi", "Karachi_Clifton")
         assert "Rentals_Rooms" in empty
         assert "Rentals_Houses_Property" not in empty
+
+
+class TestPropertyTypeLabels:
+    def _card(self, ptype):
+        return {"title": "2 bed flat", "price": 50000, "bedrooms": 2, "bathrooms": 1,
+                "area_size": "900 sqft", "property_type": ptype}
+
+    def test_inferred_apartment_matches_apartment_filter(self):
+        upsert_listing(zameen_id="pt-1", url="https://www.zameen.com/Property/pt-1.html",
+                       city="karachi", area_name="Clifton", card_data=self._card("Apartment"))
+        result = search_listings(city="karachi", property_type="apartment")
+        assert result["total"] == 1
+
+    def test_card_without_type_keeps_known_type(self):
+        url = "https://www.zameen.com/Property/pt-2.html"
+        upsert_listing(zameen_id="pt-2", url=url, city="karachi", area_name="Clifton",
+                       card_data=self._card("Upper Portion"))
+        upsert_listing(zameen_id="pt-2", url=url, city="karachi", area_name="Clifton",
+                       card_data={**self._card(None), "price": 55000})
+        assert get_listing_by_zameen_id("pt-2")["property_type"] == "Upper Portion"
+
+
+class TestApplySearchState:
+    URL = "https://www.zameen.com/Property/x-54783265-5-4.html"
+
+    def _seed(self):
+        upsert_listing(zameen_id="54783265", url=self.URL, city="karachi", area_name="Clifton",
+                       lat=24.81, lng=67.03,
+                       card_data={"title": "Flat", "price": 50000, "property_type": "Upper Portion"})
+
+    def test_stores_exact_location_type_and_contact(self):
+        from app.db_listings import apply_search_state
+        self._seed()
+        apply_search_state("54783265", {
+            "property_type": "Apartment / Flat", "latitude": 24.8266, "longitude": 67.0379,
+            "contact": {"phone": "+923001234567", "call_phone": "+923001234567",
+                        "whatsapp_phone": "+923001234567", "agent_agency": "GHL",
+                        "contact_source": "search_state",
+                        "contact_payload": {"phone": ["+923001234567"]}},
+        })
+        row = get_listing_by_zameen_id("54783265")
+        assert row["property_type"] == "Apartment / Flat"
+        assert (row["latitude"], row["longitude"]) == (24.8266, 67.0379)
+        assert row["location_source"] == "listing_exact"
+        assert row["whatsapp_phone"] == "+923001234567"
+        assert row["contact_source"] == "search_state"
+
+    def test_missing_values_keep_stored_ones(self):
+        from app.db_listings import apply_search_state
+        self._seed()
+        apply_search_state("54783265", {"property_type": None, "latitude": None,
+                                        "longitude": None, "contact": None})
+        row = get_listing_by_zameen_id("54783265")
+        assert row["property_type"] == "Upper Portion"
+        assert (row["latitude"], row["longitude"]) == (24.81, 67.03)
+        assert row["location_source"] == "area_centroid"

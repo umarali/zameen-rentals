@@ -215,7 +215,7 @@ def _extract_listing_geography(html, zameen_id=None):
     return None
 
 
-async def fetch_listing_contact(listing_url, client=None, user_agent=None):
+async def fetch_listing_contact(listing_url, client=None, user_agent=None, request_limiter=None):
     """Fetch contact info using Zameen.com's showNumbers endpoint."""
     ck = cache_key(contact_url=listing_url)
     cached = cache_get(ck)
@@ -233,19 +233,32 @@ async def fetch_listing_contact(listing_url, client=None, user_agent=None):
     ua = user_agent or random.choice(USER_AGENTS)
     api_url = f"https://www.zameen.com/api/showNumbers?listingExternalID={zid}&isProject=false"
     headers = _contact_api_headers(ua, listing_url)
+    limiter = request_limiter or rate_limiter
 
     try:
         for attempt in range(3):
             try:
-                await rate_limiter.acquire()
+                await limiter.acquire()
                 resp = await client.get(api_url, headers=headers, timeout=15)
                 if resp.status_code == 200:
+                    if hasattr(limiter, "record_success"):
+                        limiter.record_success()
                     parsed = _parse_contact_payload(resp.json())
                     if parsed is not None:
                         cache_set(ck, parsed)
                     return parsed
                 if resp.status_code == 429:
-                    await asyncio.sleep((2 ** attempt) + random.uniform(1, 3))
+                    consecutive, slowed = (0, False)
+                    if hasattr(limiter, "record_429"):
+                        consecutive, slowed = limiter.record_429()
+                    wait = (2 ** attempt) + random.uniform(1, 3) + (consecutive * 2)
+                    logger.warning(
+                        "showNumbers 429 for %s (consecutive: %d), waiting %.0fs",
+                        zid, consecutive, wait
+                    )
+                    if slowed:
+                        logger.warning("Rate limiter slowed to %.2f req/sec", limiter.rate)
+                    await asyncio.sleep(wait)
                     continue
                 logger.warning("showNumbers returned %s for %s", resp.status_code, zid)
                 break
@@ -265,9 +278,14 @@ async def fetch_page(url, client):
             await rate_limiter.acquire()
             headers = {"User-Agent": random.choice(USER_AGENTS), "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.9", "Accept-Encoding": "gzip, deflate, br", "Connection": "keep-alive"}
             resp = await client.get(url, headers=headers, timeout=15, follow_redirects=True)
-            if resp.status_code == 200: return resp.text
+            if resp.status_code == 200:
+                rate_limiter.record_success()
+                return resp.text
             elif resp.status_code == 429:
-                await asyncio.sleep((2**attempt) + random.uniform(1,3))
+                consecutive, slowed = rate_limiter.record_429()
+                if slowed:
+                    logger.warning("Rate limiter slowed to %.2f req/sec", rate_limiter.rate)
+                await asyncio.sleep((2**attempt) + random.uniform(1,3) + (consecutive * 2))
             else:
                 logger.warning(f"HTTP {resp.status_code} for {url}")
                 await asyncio.sleep(1)
@@ -345,6 +363,130 @@ def _extract_property_type(card):
         if re.search(pattern, text):
             return label
     return None
+
+
+# --- Embedded search state ---
+# Zameen search pages embed their Algolia results as JSON in `window.state`.
+# Each hit carries the authoritative category, exact coordinates and contact
+# numbers, which the card HTML lacks or only implies.
+
+_STATE_CATEGORY_LABELS = {
+    "Flats": PROPERTY_TYPES["apartment"]["label"],
+    "Houses": PROPERTY_TYPES["house"]["label"],
+    "Upper Portions": PROPERTY_TYPES["upper_portion"]["label"],
+    "Lower Portions": PROPERTY_TYPES["lower_portion"]["label"],
+    "Rooms": PROPERTY_TYPES["room"]["label"],
+    "Penthouse": PROPERTY_TYPES["penthouse"]["label"],
+    "Farm Houses": PROPERTY_TYPES["farm_house"]["label"],
+}
+
+
+def _state_hits(html):
+    """Return the Algolia hits embedded in a search page, or [] if absent."""
+    start = html.find("window.state")
+    brace = html.find("{", start) if start >= 0 else -1
+    if brace < 0:
+        return []
+    try:
+        state, _ = json.JSONDecoder().raw_decode(html, brace)
+        hits = state["algolia"]["content"]["hits"]
+    except (ValueError, KeyError, TypeError):
+        return []
+    return hits if isinstance(hits, list) else []
+
+
+def _state_property_type(hit):
+    categories = [c for c in hit.get("category") or [] if isinstance(c, dict)]
+    leaf = max(categories, key=lambda c: c.get("level", 0), default=None)
+    return _STATE_CATEGORY_LABELS.get(leaf.get("name")) if leaf else None
+
+
+def _state_contact(hit):
+    numbers = hit.get("phoneNumber") or {}
+    if not isinstance(numbers, dict):
+        return None
+    phones = []
+    for raw in (numbers.get("phoneNumbers") or []) + (numbers.get("mobileNumbers") or []) + [numbers.get("phone"), numbers.get("mobile")]:
+        phone = _normalize_phone(raw)
+        if phone and phone not in phones:
+            phones.append(phone)
+    mobile = _normalize_phone(numbers.get("mobile"))
+    whatsapp = _normalize_phone(numbers.get("whatsapp"))
+    if not whatsapp:
+        whatsapp = next((p for p in [mobile] + phones if p and _is_mobile_phone(p)), None)
+    call_phone = phones[0] if phones else None
+    if not call_phone and not whatsapp:
+        return None
+    agency = (hit.get("agency") or {}).get("name")
+    return {
+        "phone": call_phone,
+        "call_phone": call_phone,
+        "whatsapp_phone": whatsapp,
+        "agent_agency": agency,
+        "contact_source": "search_state",
+        "contact_payload": _sanitize_contact_payload(phones=phones, mobile=mobile, agency=agency),
+    }
+
+
+# Zameen location levels: 0 country, 1 province, 2 city, 3+ areas and sub-areas.
+_STATE_CITY_LEVEL = 2
+
+
+def _state_location_path(hit):
+    """Return the hit's location path from city level down, or [] if unusable.
+
+    ``location_id`` is Zameen's ``externalID``, the same ID ``app/areas_*.json``
+    stores for each area.
+    """
+    path = []
+    for loc in hit.get("location") or []:
+        if not isinstance(loc, dict):
+            return []
+        try:
+            location_id = int(loc["externalID"])
+            level = int(loc["level"])
+        except (KeyError, TypeError, ValueError):
+            return []
+        if level < _STATE_CITY_LEVEL:
+            continue
+        path.append({
+            "location_id": location_id,
+            "level": level,
+            "name": loc.get("name"),
+            "name_l1": loc.get("name_l1"),
+        })
+    return sorted(path, key=lambda p: p["level"])
+
+
+def enrich_from_search_state(html, listings):
+    """Overlay embedded search-state data onto parsed card listings, in place.
+
+    Sets an authoritative ``property_type`` and attaches ``search_state``
+    (exact coordinates, contact and location path) for each card whose ID
+    appears in the embedded hits. Returns how many cards were enriched.
+    """
+    hits = {str(h.get("externalID")): h for h in _state_hits(html) if isinstance(h, dict)}
+    if not hits:
+        return 0
+    enriched = 0
+    for listing in listings:
+        hit = hits.get(extract_zameen_id(listing.get("url", "")) or "")
+        if hit is None:
+            continue
+        ptype = _state_property_type(hit)
+        if ptype:
+            listing["property_type"] = ptype
+        geo = hit.get("geography") or {}
+        coords = _parse_coordinate_pair(geo.get("lat"), geo.get("lng")) if hit.get("hasExactGeography") else None
+        listing["search_state"] = {
+            "property_type": ptype,
+            "latitude": coords[0] if coords else None,
+            "longitude": coords[1] if coords else None,
+            "contact": _state_contact(hit),
+            "location_path": _state_location_path(hit),
+        }
+        enriched += 1
+    return enriched
 
 
 def parse_listings(html):

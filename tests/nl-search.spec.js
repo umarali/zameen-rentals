@@ -64,6 +64,25 @@ test.describe("Natural Language Search", () => {
     await expect(page.locator("#areaChip")).toHaveClass(/has-value/);
   });
 
+  test("shows editable 'Understood:' chips; removing one clears that filter", async ({ page }) => {
+    await page.locator("#nlInput").fill("2 bed flat in DHA");
+    await page.locator("#nlInput").press("Enter");
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+
+    const understood = page.locator("#nlUnderstood");
+    await expect(understood).toBeVisible();
+    await expect(understood).toContainText("Understood:");
+
+    const bedsRemove = understood.locator('[data-chip-remove="beds"]');
+    await expect(bedsRemove).toBeVisible();
+    await expect(page.locator("#bedsChip")).toHaveClass(/has-value/);
+
+    // Removing the chip clears that filter and re-renders the row.
+    await bedsRemove.click();
+    await expect(page.locator("#bedsChip")).not.toHaveClass(/has-value/);
+    await expect(understood.locator('[data-chip-remove="beds"]')).toHaveCount(0);
+  });
+
   test("submitting NL query via button click works", async ({ page }) => {
     await page.locator("#nlInput").fill("house in Clifton");
     await page.locator("#nlSearchBtn").click();
@@ -95,10 +114,11 @@ test.describe("Natural Language Search", () => {
       "house in gulshan e iqbal block 13"
     );
     await page.locator("#nlInput").press("Enter");
-    // Should show approximate match notice briefly
-    const parsed = page.locator("#nlParsed");
-    await expect(parsed).toBeVisible({ timeout: 10000 });
-    await expect(parsed).toContainText(/Couldn't find/);
+    // The approximate-match notice now lives in the persistent, editable
+    // "Understood:" chip row (#nlUnderstood) alongside the interpreted filters.
+    const understood = page.locator("#nlUnderstood");
+    await expect(understood).toBeVisible({ timeout: 10000 });
+    await expect(understood).toContainText(/No exact match for/);
   });
 
   test("failed NL parse shows error message", async ({ page }) => {
