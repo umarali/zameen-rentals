@@ -1086,3 +1086,19 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
     min-width: 0;
   }
 }
+
+/* Mobile touch targets and safe-area spacing from the responsive layout. */
+@media (max-width: 1023px) {
+  #nlInput { font-size: 16px; }
+  .filter-dd {
+    max-height: 70dvh;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+  }
+  .filter-dd .chip { min-height: 44px; padding: 10px 16px; font-size: 14px; }
+  .filter-dd input, .filter-dd select { font-size: 16px; min-height: 44px; }
+  #ddBackdrop { backdrop-filter: blur(4px); }
+  #galleryModal .absolute.top-4 { top: calc(16px + env(safe-area-inset-top, 0px)); }
+  .area-opt, #nlSuggestions .nl-ex, #nlSuggestions .pop-search { min-height: 44px; }
+  #mapCarousel { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+}

@@ -107,7 +107,7 @@ export function renderCard(item, idx) {
   const hideIcon = HIDE_SVG;
   const compareIcon = COMPARE_SVG;
 
-  return `<div class="card-wrap relative rounded-xl overflow-hidden bg-white border-2 border-transparent cursor-pointer transition-all hover:shadow-lg hover:border-gray-100" data-idx="${idx}" data-url="${escA(item.url || '')}" ${zameenIdAttr} ${areaAttr}>
+  return `<div class="card-wrap relative rounded-xl overflow-hidden bg-white border-2 border-transparent cursor-pointer transition-all hover:shadow-lg hover:border-gray-100 active:scale-[0.99]" data-idx="${idx}" data-url="${escA(item.url || '')}" ${zameenIdAttr} ${areaAttr}>
     ${imgHtml}
     ${newBadge}
     <div class="p-2 sm:p-3">
