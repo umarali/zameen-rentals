@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
 from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, _ENGLISH_TO_URDU
+from app.listing_tags import attach_tags
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
@@ -367,7 +368,8 @@ async def search(request: Request, city: str = Query("lahore"), area: Optional[s
             with _DEFAULT_SEARCH_LOCK:
                 cached = _DEFAULT_SEARCH_CACHE.get(city)
             if cached and cached[1] > time.monotonic():
-                return {**cached[0], "source": "local"}
+                return {**cached[0], "source": "local",
+                        "results": attach_tags([dict(item) for item in cached[0]["results"]])}
 
         # Try local DB first (instant results from crawler data)
         local_result = search_listings(

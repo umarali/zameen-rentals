@@ -7,6 +7,7 @@ DecisionProvider, so another decision API can replace Jev without touching them.
 """
 import asyncio
 import logging
+import math
 import os
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -60,26 +61,83 @@ def noul(instructions):
     return {"type": "noul", "instructions": instructions}
 
 
-def _parse_answer(raw):
+def _number(value, *, probability=False):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("Expected a numeric value")
+    if not math.isfinite(value) or (probability and not 0 <= value <= 1):
+        raise ValueError("Invalid numeric range")
+    return float(value)
+
+
+def _parse_answer(raw, question=None):
+    if not isinstance(raw, dict):
+        raise ValueError("Answer must be an object")
     kind = raw.get("type")
+    if question and kind != question["type"]:
+        raise ValueError("Answer type differs from requested question")
     if kind == "noul":
-        p = float(raw["noul"])
-        # Jev returns no confidence for noul; distance from a coin flip stands in.
+        p = _number(raw["noul"], probability=True)
         return Answer("noul", p, abs(p - 0.5) * 2)
-    if kind in ("choice", "score"):
-        return Answer(kind, raw[kind], float(raw.get("confidence", 0.0)),
-                      raw.get("probabilities") or {})
-    raise DecisionError(f"Unknown answer type {kind!r}", retryable=False)
+    if kind not in ("choice", "score"):
+        raise ValueError("Unknown answer type")
+    confidence = _number(raw["confidence"], probability=True)
+    probabilities = raw.get("probabilities", {})
+    if not isinstance(probabilities, dict):
+        raise ValueError("Probabilities must be an object")
+    probabilities = {k: _number(v, probability=True) for k, v in probabilities.items()}
+    if probabilities and not math.isclose(sum(probabilities.values()), 1.0, abs_tol=0.02):
+        raise ValueError("Probabilities must sum to one")
+    value = raw[kind]
+    if kind == "choice":
+        if not isinstance(value, str) or not value:
+            raise ValueError("Choice must be a nonempty string")
+        if question and value not in question["criteria"]:
+            raise ValueError("Choice is not an allowed option")
+        expected = set(question["criteria"]) if question else None
+    else:
+        value = _number(value)
+        if value < 0 or (question and value > len(question["criteria"]) - 1):
+            raise ValueError("Score is outside the rubric")
+        expected = {str(i) for i in range(len(question["criteria"]))} if question else None
+    if expected is not None and probabilities and set(probabilities) != expected:
+        raise ValueError("Probability keys differ from the requested criteria")
+    return Answer(kind, value, confidence, probabilities)
 
 
-def parse_decision(payload):
+def parse_decision(payload, questions=None):
     try:
-        answers = {name: _parse_answer(raw) for name, raw in payload["answers"].items()}
-    except (KeyError, TypeError, ValueError) as exc:
-        raise DecisionError(f"Malformed decision response: {exc}", retryable=False) from exc
-    usage = payload.get("usage") or {}
-    return Decision(model=payload.get("model", ""), answers=answers,
-                    input_tokens=int(usage.get("input_tokens") or 0))
+        if not isinstance(payload, dict) or not isinstance(payload.get("answers"), dict):
+            raise ValueError("Decision answers must be an object")
+        raw_answers = payload["answers"]
+        if questions is not None and set(raw_answers) != set(questions):
+            raise ValueError("Response must answer exactly the requested questions")
+        answers = {name: _parse_answer(raw, questions[name] if questions else None)
+                   for name, raw in raw_answers.items()}
+        usage = payload.get("usage", {})
+        if not isinstance(usage, dict):
+            raise ValueError("Usage must be an object")
+        tokens = usage.get("input_tokens", 0)
+        if isinstance(tokens, bool) or not isinstance(tokens, int) or tokens < 0:
+            raise ValueError("Token usage must be a nonnegative integer")
+        model = payload.get("model", "")
+        if not isinstance(model, str) or (questions is not None and not model):
+            raise ValueError("Model must be a nonempty string")
+        return Decision(model=model, answers=answers, input_tokens=tokens)
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        raise DecisionError("Malformed decision response", retryable=False) from exc
+
+
+def validate_decision(decision, questions):
+    """Validate even alternate providers before their answers reach storage."""
+    try:
+        payload = {"model": decision.model, "usage": {"input_tokens": decision.input_tokens},
+                   "answers": {name: {"type": a.type, a.type: a.value,
+                                       "confidence": a.confidence,
+                                       "probabilities": a.probabilities}
+                               for name, a in decision.answers.items()}}
+        return parse_decision(payload, questions)
+    except (AttributeError, TypeError) as exc:
+        raise DecisionError("Malformed provider decision", retryable=False) from exc
 
 
 class JevClient:
@@ -98,12 +156,18 @@ class JevClient:
             try:
                 resp = await self._client.post(self._url, json=body, headers=headers)
             except httpx.TransportError as exc:
-                error = DecisionError(f"Jev transport error: {exc}")
+                error = DecisionError(f"Jev transport error: {type(exc).__name__}")
             else:
                 if resp.status_code == 200:
-                    return parse_decision(resp.json())
+                    try:
+                        decision = parse_decision(resp.json(), questions)
+                    except ValueError as exc:
+                        raise DecisionError("Jev returned invalid JSON", retryable=False) from exc
+                    if self.model != "jev-latest" and self.model != "jev-preview" and decision.model != self.model:
+                        raise DecisionError("Jev returned an unexpected model", retryable=False)
+                    return decision
                 retryable = resp.status_code == 429 or resp.status_code >= 500
-                error = DecisionError(f"Jev HTTP {resp.status_code}: {resp.text[:200]}",
+                error = DecisionError(f"Jev HTTP {resp.status_code}",
                                       retryable=retryable)
             if not error.retryable or attempt == self._retries:
                 raise error

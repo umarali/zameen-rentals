@@ -28,6 +28,7 @@ import argparse
 import asyncio
 import csv
 import json
+import hashlib
 import math
 import random
 import re
@@ -42,8 +43,8 @@ from dotenv import load_dotenv  # noqa: E402
 
 load_dotenv()
 
-from app.decisions import DecisionError, jev_from_env  # noqa: E402
-from app.listing_tags import FEATURES, QUESTIONS, TENANT_FITS, listing_state, public_tags  # noqa: E402
+from app.decisions import DecisionError, JEV_MODEL, jev_from_env, validate_decision  # noqa: E402
+from app.listing_tags import FEATURES, QUESTIONS, TENANT_FITS, listing_state, public_tags, guard_decision, tag_version, _amenity_names  # noqa: E402
 
 LABEL_COLUMNS = ["tenant_fit", *FEATURES]
 TAG_KEYS = ["bachelor_ok", "family_ok", *FEATURES]
@@ -79,7 +80,7 @@ newly_built: y if it says brand new, newly built or constructed, never
 Use y or n for the last three. Leave a row blank to skip it; blank rows
 are not scored.
 """
-HAIKU_MODEL = "claude-haiku-4-5"
+HAIKU_MODEL = "claude-haiku-4-5-20251001"
 
 # ── Keyword baseline (open source; also defines the sampling strata) ──
 
@@ -110,18 +111,12 @@ _NO_VALUE = {"", "none", "no", "0", "n/a", "na", "-"}
 
 def amenity_names(raw):
     """Amenity labels that are present: "Solar Panels" yes, "Electricity Backup: None" no."""
-    if not raw:
-        return []
-    try:
-        items = json.loads(raw)
-    except (TypeError, ValueError):
-        return []
     names = []
-    for item in items if isinstance(items, list) else []:
-        text, sep, value = str(item).partition(":")
-        if sep and value.strip().lower() in _NO_VALUE:
+    for item in _amenity_names(raw):
+        _, sep, value = item.partition(":")
+        if sep and value.strip().lower() in _NO_VALUE | {"false", "نہیں"}:
             continue
-        names.append(str(item).strip())
+        names.append(item)
     return names
 
 
@@ -222,16 +217,33 @@ def _context_row(label_row):
     return row
 
 
+def prediction_hash(row, model):
+    payload = {"context": {k: row.get(k) for k in CONTEXT_COLUMNS},
+               "model": model, "tag_version": tag_version(), "eval_version": 2,
+               "state": listing_state(_context_row(row)),
+               "system": _haiku_system() if model == HAIKU_MODEL else None}
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+def current_predictions(records, rows, model):
+    return {r["zameen_id"]: records[r["zameen_id"]] for r in rows
+            if r["zameen_id"] in records
+            and records[r["zameen_id"]].get("prediction_hash") == prediction_hash(r, model)}
+
+
 async def predict_jev(rows, provider, concurrency=4):
     sem = asyncio.Semaphore(concurrency)
 
     async def one(row):
         async with sem:
             started = time.perf_counter()
-            decision = await provider.decide(listing_state(_context_row(row)), QUESTIONS)
+            context = _context_row(row)
+            decision = await provider.decide(listing_state(context), QUESTIONS)
+            decision = guard_decision(context, validate_decision(decision, QUESTIONS))
             a = decision.answers
             return {
                 "zameen_id": row["zameen_id"],
+                "prediction_hash": prediction_hash(row, getattr(provider, "model", JEV_MODEL)),
                 "tenant_fit": a["tenant_fit"].value,
                 "tenant_fit_confidence": a["tenant_fit"].confidence,
                 **{name: a[name].value for name in FEATURES},
@@ -289,8 +301,20 @@ async def predict_haiku(rows, client, concurrency=4):
                 messages=[{"role": "user", "content": listing_state(_context_row(row))}],
                 output_format=HaikuTags,
             )
-            return haiku_record(row["zameen_id"], response.parsed_output, response.usage,
-                                (time.perf_counter() - started) * 1000)
+            record = haiku_record(row["zameen_id"], response.parsed_output, response.usage,
+                                  (time.perf_counter() - started) * 1000)
+            # Apply the same publication guard as Jev so comparisons are fair.
+            from app.decisions import Answer, Decision
+            decision = Decision(model=HAIKU_MODEL, answers={
+                "tenant_fit": Answer("choice", record["tenant_fit"], 1.0),
+                **{n: Answer("noul", record[n], 1.0) for n in FEATURES},
+            })
+            guarded = guard_decision(_context_row(row), decision)
+            record.update(tenant_fit=guarded.answers["tenant_fit"].value,
+                          tenant_fit_confidence=guarded.answers["tenant_fit"].confidence,
+                          **{n: guarded.answers[n].value for n in FEATURES})
+            record["prediction_hash"] = prediction_hash(row, HAIKU_MODEL)
+            return record
 
     return await asyncio.gather(*(one(r) for r in rows))
 
@@ -309,7 +333,8 @@ def _read_preds(path):
 
 async def predict(args):
     rows = _read_csv(args.labels)
-    done = _read_preds(args.out)
+    model = JEV_MODEL if args.model == "jev" else HAIKU_MODEL
+    done = current_predictions(_read_preds(args.out), rows, model)
     todo = [r for r in rows if r["zameen_id"] not in done]
     if args.model == "jev":
         provider = jev_from_env()
@@ -368,6 +393,7 @@ def weighted_metrics(items):
     total_w = sum(w for *_, w in items)
     accuracy = sum(w for p, g, w in items if bool(p) == bool(g)) / total_w if total_w else None
     return {
+        "evaluated": len(items),
         "predicted": len(pos),
         "gold": sum(1 for _, g, _ in items if g),
         "precision": precision,
@@ -422,11 +448,16 @@ def verdict(results):
 def score_rows(labels, preds_by_system):
     """Per tag, per system metrics. labels: CSV dicts; preds_by_system: {name: {zameen_id: record}}."""
     labelled = [r for r in labels if any((r[c] or "").strip() for c in LABEL_COLUMNS)]
-    per_stratum = {}
-    for r in labelled:
-        per_stratum[r["stratum"]] = per_stratum.get(r["stratum"], 0) + 1
-    weight = {s: int(next(r["stratum_population"] for r in labelled if r["stratum"] == s)) / n
-              for s, n in per_stratum.items()}
+    # A blank is unknown, not a labelled negative. Reject typos rather than
+    # silently converting them to negatives.
+    for row in labelled:
+        tenant = (row["tenant_fit"] or "").strip().lower()
+        if tenant and tenant not in TENANT_FITS:
+            raise ValueError(f"Invalid tenant label for {row['zameen_id']}")
+        for field in FEATURES:
+            value = (row[field] or "").strip().lower()
+            if value not in {"", "y", "yes", "1", "true", "n", "no", "0", "false"}:
+                raise ValueError(f"Invalid {field} label for {row['zameen_id']}")
     # Only rows every system predicted, so all columns score the same listings.
     common = [r for r in labelled
               if all(r["zameen_id"] in preds for preds in preds_by_system.values())]
@@ -441,8 +472,20 @@ def score_rows(labels, preds_by_system):
     table = {}
     for key in TAG_KEYS:
         table[key] = {}
+        field = "tenant_fit" if key in ("bachelor_ok", "family_ok") else key
+        eligible = [r for r in common if (r[field] or "").strip()]
+        per_stratum = {}
+        populations = {}
+        for r in eligible:
+            stratum = r["stratum"]
+            population = int(r["stratum_population"])
+            if population <= 0 or (stratum in populations and populations[stratum] != population):
+                raise ValueError("Inconsistent stratum population")
+            populations[stratum] = population
+            per_stratum[stratum] = per_stratum.get(stratum, 0) + 1
+        weight = {s: populations[s] / n for s, n in per_stratum.items()}
         for name, predict_fn in systems.items():
-            items = [(predict_fn(r)[key], gold_values(r)[key], weight[r["stratum"]]) for r in common]
+            items = [(predict_fn(r)[key], gold_values(r)[key], weight[r["stratum"]]) for r in eligible]
             table[key][name] = weighted_metrics(items)
     return table, len(labelled), len(common)
 
@@ -456,7 +499,12 @@ def score(args):
     preds = {}
     for spec in args.pred or []:
         name, _, path = spec.partition("=")
-        preds[name] = _read_preds(path)
+        if name not in {"jev", "haiku"}:
+            raise ValueError("Prediction system must be jev or haiku")
+        model = JEV_MODEL if name == "jev" else HAIKU_MODEL
+        records = _read_preds(path)
+        preds[name] = current_predictions(records, labels, model)
+        print(f"{name}: {len(records) - len(preds[name])} stale or unrelated predictions excluded")
         _print_usage(name, list(preds[name].values()))
     table, n_labelled, n_common = score_rows(labels, preds)
     print(f"\n{n_labelled} labelled rows, {n_common} predicted by every system. "

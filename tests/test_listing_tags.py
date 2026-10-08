@@ -11,6 +11,14 @@ from app.listing_tags import (
 )
 
 
+@pytest.fixture(autouse=True)
+def reset_api_limiter():
+    from app.cache import limiter
+    limiter.reset()
+    yield
+    limiter.reset()
+
+
 def _listing(zameen_id, *, title="10 Marla Upper Portion", description=None, price=65000,
              city="lahore", amenities=None):
     url = f"https://www.zameen.com/Property/test-{zameen_id}-1-1.html"
