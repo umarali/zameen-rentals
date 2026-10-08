@@ -13,6 +13,15 @@ def main():
         os.environ["ZAMEENRENTALS_DB_DIR"] = directory
         os.environ["ZAMEENRENTALS_PLAYWRIGHT"] = "1"
         from app import app
+        import app.routes as routes
+
+        # Nearby queries with fewer than one page of exact pins normally enrich
+        # listings upstream. Fixture URLs are synthetic: exercise the real DB
+        # query without sending those URLs to Zameen.com.
+        async def no_nearby_enrichment(**kwargs):
+            return False
+
+        routes._maybe_enrich_nearby_exact_locations = no_nearby_enrichment
         from app.database import init_db, close_db
         from app.personalization import init_personalization_schema
         from app.data import CITY_AREAS, PROPERTY_TYPES
