@@ -113,8 +113,8 @@ export function renderSizeFilter() {
   if (!grid) return;
   const unit = currentSizeUnit();
   grid.innerHTML = SIZE_PRESETS[unit].map(p =>
-    `<span class="chip" data-smin="${p.min}" data-smax="${p.max}">${p.label}</span>`
-  ).join('') + '<span class="chip" data-custom="1">Custom</span>';
+    `<button type="button" class="chip" data-smin="${p.min}" data-smax="${p.max}">${p.label}</button>`
+  ).join('') + '<button type="button" class="chip" data-custom="1">Custom</button>';
   $$('#sizeUnitToggle [data-unit]').forEach(b => {
     const on = b.dataset.unit === unit;
     b.classList.toggle('active', on);
@@ -301,6 +301,7 @@ export function syncPriceChips() {
 export function setToggle(on) {
   const t = $('#furnishedToggle');
   t.classList.toggle('toggle-on', on);
+  t.setAttribute('aria-checked', String(on));
   t.querySelector('.toggle-knob').style.transform = on ? 'translateX(20px)' : 'translateX(0)';
   S.furnished = on;
 }
@@ -338,7 +339,26 @@ export function selectArea(name, fromMap, { highlightMarker, doSearch } = {}) {
 
 // ===== INIT FILTER LISTENERS =====
 
+// Dropdown option chips are toggle buttons; the many call sites only flip
+// `.active`, so mirror that class into aria-pressed in one place.
+function syncChipPressed(chip) {
+  chip.setAttribute('aria-pressed', String(chip.classList.contains('active')));
+}
+
+function watchChipPressedState() {
+  $$('.filter-dd .chip').forEach(syncChipPressed);
+  const obs = new MutationObserver(records => {
+    for (const r of records) {
+      if (r.type === 'attributes' && r.target.classList?.contains('chip')) syncChipPressed(r.target);
+      else if (r.type === 'childList') r.target.querySelectorAll?.('.chip').forEach(syncChipPressed);
+    }
+  });
+  $$('.filter-dd').forEach(dd => obs.observe(dd, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] }));
+}
+
 export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull, resetMapView }) {
+  watchChipPressedState();
+
   // Chip → open dropdown or clear
   $$('[data-filter]').forEach(el => el.addEventListener('click', e => {
     const clearBtn = e.target.closest('[data-chip-clear]');

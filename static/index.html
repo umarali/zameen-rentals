@@ -34,8 +34,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet"></noscript>
-  <script type="module" crossorigin src="/static/assets/index-B5wubo2h.js"></script>
-  <link rel="stylesheet" crossorigin href="/static/assets/index-B3LXMssv.css">
+  <script type="module" crossorigin src="/static/assets/index-CvruBWyf.js"></script>
+  <link rel="stylesheet" crossorigin href="/static/assets/index-B0LDUrbO.css">
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
@@ -135,45 +135,45 @@
   <div id="dd-type" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
     <div class="text-sm font-semibold text-gray-700 mb-3">Property Type</div>
     <div class="flex flex-wrap gap-2" id="typeGrid">
-      <span class="chip" data-type="house">House</span>
-      <span class="chip" data-type="apartment">Apartment</span>
-      <span class="chip" data-type="upper_portion">Upper Portion</span>
-      <span class="chip" data-type="lower_portion">Lower Portion</span>
-      <span class="chip" data-type="room">Room</span>
-      <span class="chip" data-type="penthouse">Penthouse</span>
-      <span class="chip" data-type="farm_house">Farm House</span>
+      <button type="button" class="chip" data-type="house">House</button>
+      <button type="button" class="chip" data-type="apartment">Apartment</button>
+      <button type="button" class="chip" data-type="upper_portion">Upper Portion</button>
+      <button type="button" class="chip" data-type="lower_portion">Lower Portion</button>
+      <button type="button" class="chip" data-type="room">Room</button>
+      <button type="button" class="chip" data-type="penthouse">Penthouse</button>
+      <button type="button" class="chip" data-type="farm_house">Farm House</button>
     </div>
   </div>
   <div id="dd-beds" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
     <div class="text-sm font-semibold text-gray-700 mb-3">Bedrooms</div>
     <div class="flex gap-2" id="bedRow">
-      <span class="chip active" data-beds="">Any</span>
-      <span class="chip" data-beds="1">1</span>
-      <span class="chip" data-beds="2">2</span>
-      <span class="chip" data-beds="3">3</span>
-      <span class="chip" data-beds="4">4</span>
-      <span class="chip" data-beds="5">5+</span>
+      <button type="button" class="chip active" data-beds="">Any</button>
+      <button type="button" class="chip" data-beds="1">1</button>
+      <button type="button" class="chip" data-beds="2">2</button>
+      <button type="button" class="chip" data-beds="3">3</button>
+      <button type="button" class="chip" data-beds="4">4</button>
+      <button type="button" class="chip" data-beds="5">5+</button>
     </div>
   </div>
   <div id="dd-radius" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
     <div class="text-sm font-semibold text-gray-700 mb-3">Nearby Radius</div>
     <div class="flex gap-2" id="radiusOptions">
-      <span class="chip" data-radius-km="1">1 km</span>
-      <span class="chip" data-radius-km="2">2 km</span>
-      <span class="chip active" data-radius-km="5">5 km</span>
-      <span class="chip" data-radius-km="10">10 km</span>
-      <span class="chip" data-radius-km="20">20 km</span>
+      <button type="button" class="chip" data-radius-km="1">1 km</button>
+      <button type="button" class="chip" data-radius-km="2">2 km</button>
+      <button type="button" class="chip active" data-radius-km="5">5 km</button>
+      <button type="button" class="chip" data-radius-km="10">10 km</button>
+      <button type="button" class="chip" data-radius-km="20">20 km</button>
     </div>
   </div>
   <div id="dd-price" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
     <div class="text-sm font-semibold text-gray-700 mb-3">Price Range</div>
     <div class="flex flex-wrap gap-2" id="priceGrid">
-      <span class="chip" data-pmin="0" data-pmax="30000">Under 30K</span>
-      <span class="chip" data-pmin="30000" data-pmax="60000">30-60K</span>
-      <span class="chip" data-pmin="60000" data-pmax="100000">60-100K</span>
-      <span class="chip" data-pmin="100000" data-pmax="200000">100-200K</span>
-      <span class="chip" data-pmin="200000" data-pmax="">200K+</span>
-      <span class="chip" data-custom="1">Custom</span>
+      <button type="button" class="chip" data-pmin="0" data-pmax="30000">Under 30K</button>
+      <button type="button" class="chip" data-pmin="30000" data-pmax="60000">30-60K</button>
+      <button type="button" class="chip" data-pmin="60000" data-pmax="100000">60-100K</button>
+      <button type="button" class="chip" data-pmin="100000" data-pmax="200000">100-200K</button>
+      <button type="button" class="chip" data-pmin="200000" data-pmax="">200K+</button>
+      <button type="button" class="chip" data-custom="1">Custom</button>
     </div>
     <div id="customPrice" class="hidden mt-3">
       <div class="grid grid-cols-2 gap-2">
@@ -204,10 +204,10 @@
   <div id="dd-more" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
     <div class="text-sm font-semibold text-gray-700 mb-2">More Filters</div>
     <div class="flex items-center justify-between py-2">
-      <span class="text-sm text-gray-600">Furnished Only</span>
-      <div id="furnishedToggle" class="w-11 h-6 rounded-full bg-gray-300 relative cursor-pointer toggle-track">
-        <div class="toggle-knob absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow"></div>
-      </div>
+      <span id="furnishedLabel" class="text-sm text-gray-600">Furnished Only</span>
+      <button type="button" id="furnishedToggle" role="switch" aria-checked="false" aria-labelledby="furnishedLabel" class="w-11 h-6 rounded-full bg-gray-300 relative cursor-pointer toggle-track">
+        <span class="toggle-knob block absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow"></span>
+      </button>
     </div>
     <hr class="my-2 border-gray-200">
     <div class="text-sm font-semibold text-gray-700 mb-2">Sort By</div>
@@ -221,10 +221,10 @@
     <hr class="my-2 border-gray-200">
     <div class="text-sm font-semibold text-gray-700 mb-2">Quick Presets</div>
     <div class="flex flex-wrap gap-2" id="presetRow">
-      <span class="chip" data-type="apartment" data-beds="1" data-pmin="0" data-pmax="40000">Budget 1BR</span>
-      <span class="chip" data-type="house" data-beds="3" data-pmin="50000" data-pmax="150000">Family Home</span>
-      <span class="chip" data-type="apartment" data-beds="3" data-pmin="150000" data-pmax="">Luxury Flat</span>
-      <span class="chip" data-type="room" data-beds="1" data-pmin="0" data-pmax="30000">Studio/Room</span>
+      <button type="button" class="chip" data-type="apartment" data-beds="1" data-pmin="0" data-pmax="40000">Budget 1BR</button>
+      <button type="button" class="chip" data-type="house" data-beds="3" data-pmin="50000" data-pmax="150000">Family Home</button>
+      <button type="button" class="chip" data-type="apartment" data-beds="3" data-pmin="150000" data-pmax="">Luxury Flat</button>
+      <button type="button" class="chip" data-type="room" data-beds="1" data-pmin="0" data-pmax="30000">Studio/Room</button>
     </div>
   </div>
 </div>
@@ -241,18 +241,18 @@
     <div class="flex items-center justify-between mb-4">
       <div>
         <h2 id="listingsTitle" class="text-base font-bold text-gray-700">Rentals in Lahore</h2>
-        <p id="resultsMeta" class="mt-1 text-xs text-gray-400">Browse the map or use filters to refine results</p>
+        <p id="resultsMeta" class="mt-1 text-xs text-gray-500">Browse the map or use filters to refine results</p>
       </div>
       <div class="flex items-center gap-2">
-        <span id="resultsCount" class="text-xs text-gray-400"></span>
-        <span id="dataSource" class="text-xs text-gray-300 hidden"></span>
+        <span id="resultsCount" class="text-xs text-gray-500"></span>
+        <span id="dataSource" class="text-xs text-gray-500 hidden"></span>
       </div>
     </div>
     <div id="listingsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-5"></div>
     <div id="listingsFooter"></div>
-    <div class="text-center py-6 text-xs text-gray-400">
+    <div class="text-center py-6 text-xs text-gray-500">
       <span>Powered by Zameen.com data</span>
-      <span id="dataStatus" class="block mt-1 text-[11px] text-gray-300"></span>
+      <span id="dataStatus" class="block mt-1 text-xs text-gray-500"></span>
     </div>
   </section>
   <section id="mapPanel" class="relative border-l border-gray-200 hidden lg:block z-0">

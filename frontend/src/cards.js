@@ -65,17 +65,17 @@ export function renderCard(item, idx) {
   let imgHtml;
   if (mainImg) {
     if (hasMulti) {
-      imgHtml = `<div class="relative aspect-square sm:aspect-[4/3] overflow-hidden bg-gray-100 group" data-carousel>
+      imgHtml = `<div class="relative aspect-[4/3] overflow-hidden bg-gray-100 group" data-carousel>
         <div class="flex h-full transition-transform duration-300" data-slides>${imgs.slice(0, 5).map(u => `<img class="w-full h-full object-cover shrink-0 card-img-zoom" src="${escA(u)}" alt="" loading="lazy" onerror="this.src=''">`).join('')}</div>
         <button data-prev type="button" aria-label="Previous photo" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
         <button data-next type="button" aria-label="Next photo" class="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
         <div class="absolute bottom-1.5 sm:bottom-2 left-1/2 -translate-x-1/2 flex gap-1">${imgs.slice(0, 5).map((_, i) => `<span class="carousel-dot w-1.5 h-1.5 rounded-full bg-white/60 ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>
       </div>`;
     } else {
-      imgHtml = `<div class="relative aspect-square sm:aspect-[4/3] overflow-hidden bg-gray-100"><img class="w-full h-full object-cover card-img-zoom" src="${escA(mainImg)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'img-fallback h-full\\'></div>'"></div>`;
+      imgHtml = `<div class="relative aspect-[4/3] overflow-hidden bg-gray-100"><img class="w-full h-full object-cover card-img-zoom" src="${escA(mainImg)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'img-fallback h-full\\'></div>'"></div>`;
     }
   } else {
-    imgHtml = `<div class="img-fallback aspect-square sm:aspect-[4/3]"></div>`;
+    imgHtml = `<div class="img-fallback aspect-[4/3]"></div>`;
   }
 
   const badges = [];
@@ -112,13 +112,13 @@ export function renderCard(item, idx) {
     ${newBadge}
     <div class="p-2 sm:p-3">
       <div class="flex items-center justify-between gap-1 sm:gap-2 mb-0.5 sm:mb-1">
-        <div class="text-sm sm:text-base font-bold text-gray-800">${esc(fmtPrice(item.price, item.price_text))}</div>
+        <div class="text-sm sm:text-base font-bold text-gray-800">${esc(fmtPrice(item.price, item.price_text))}${(item.price || item.price_text) ? '<span class="ml-0.5 text-xs font-medium text-gray-500">/mo</span>' : ''}</div>
         ${typeLabel}
       </div>
       <div class="text-xs sm:text-sm text-gray-600 line-clamp-1 mb-0.5 sm:mb-1">${esc(item.title || 'Rental Property')}</div>
-      ${item.location ? `<div class="flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 mb-1 sm:mb-2">${pinIcon('w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0')}<span class="line-clamp-1">${esc(item.location)}</span></div>` : ''}
-      ${distanceLabel ? `<div class="text-[10px] sm:text-xs font-semibold text-brand-600 mb-1 sm:mb-2">${esc(distanceLabel)}</div>` : ''}
-      ${badges.length ? `<div class="flex flex-wrap gap-1.5 sm:gap-3 text-[10px] sm:text-xs text-gray-500">${badges.join('')}</div>` : ''}
+      ${item.location ? `<div class="flex items-center gap-1 text-xs text-gray-500 mb-1 sm:mb-2">${pinIcon('w-3 h-3 shrink-0')}<span class="line-clamp-1">${esc(item.location)}</span></div>` : ''}
+      ${distanceLabel ? `<div class="text-xs font-semibold text-brand-600 mb-1 sm:mb-2">${esc(distanceLabel)}</div>` : ''}
+      ${badges.length ? `<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">${badges.join('')}</div>` : ''}
       ${repostCount > 1 ? `<div class="mt-1"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full" title="The same listing was posted ${repostCount} times by agents — showing it once" aria-label="Listed ${repostCount} times">Listed ${repostCount}&times;</span></div>` : ''}
       ${(() => {
         const addedRel = item.posted_at ? fmtRelative(item.posted_at) : '';
@@ -126,20 +126,20 @@ export function renderCard(item, idx) {
         const updatedRel = item.updated_at ? fmtRelative(item.updated_at) : '';
         if (!addedLine && !updatedRel) return '';
         return `<div class="mt-2 leading-tight">
-          ${addedLine ? `<div class="text-[11px] text-gray-500">${esc(addedLine)}</div>` : ''}
-          ${updatedRel ? `<div class="hidden sm:block text-[10px] text-gray-400">Updated ${esc(updatedRel)}</div>` : ''}
+          ${addedLine ? `<div class="text-xs text-gray-500">${esc(addedLine)}</div>` : ''}
+          ${updatedRel ? `<div class="hidden sm:block text-xs text-gray-500">Updated ${esc(updatedRel)}</div>` : ''}
         </div>`;
       })()}
       ${item.url ? `<div class="card-action-row pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 border-t border-gray-100">
         <div class="card-action-group">
-          <button data-action="favorite" ${zameenIdAttr} aria-pressed="${favorited ? 'true' : 'false'}" class="action-btn fav-btn w-8 h-8 rounded-full transition-colors ${favorited ? 'text-rose-500 bg-rose-50 hover:bg-rose-100' : 'text-gray-400 hover:text-rose-500 hover:bg-rose-50'}" title="${favorited ? 'Remove from favorites' : 'Save to favorites'}" aria-label="${favorited ? 'Remove from favorites' : 'Save to favorites'}">${favorited ? favIconFilled : favIconHollow}</button>
-          <button data-action="hide" ${zameenIdAttr} class="action-btn hide-btn w-8 h-8 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Hide this listing — it won't show up in your results" aria-label="Hide this listing">${hideIcon}</button>
-          <button data-action="compare" ${zameenIdAttr} aria-pressed="${compared ? 'true' : 'false'}" class="action-btn compare-btn w-8 h-8 rounded-full transition-colors ${compared ? 'text-brand-600 bg-brand-50 hover:bg-brand-100' : 'text-gray-400 hover:text-brand-600 hover:bg-brand-50'}" title="${compared ? 'Remove from compare' : 'Add to compare'}" aria-label="${compared ? 'Remove from compare' : 'Add to compare'}">${compareIcon}</button>
+          <button data-action="favorite" ${zameenIdAttr} aria-pressed="${favorited ? 'true' : 'false'}" class="action-btn fav-btn w-8 h-8 rounded-full transition-colors ${favorited ? 'text-rose-500 bg-rose-50 hover:bg-rose-100' : 'text-gray-500 hover:text-rose-500 hover:bg-rose-50'}" title="${favorited ? 'Remove from favorites' : 'Save to favorites'}" aria-label="${favorited ? 'Remove from favorites' : 'Save to favorites'}">${favorited ? favIconFilled : favIconHollow}</button>
+          <button data-action="hide" ${zameenIdAttr} class="action-btn hide-btn w-8 h-8 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Hide this listing — it won't show up in your results" aria-label="Hide this listing">${hideIcon}</button>
+          <button data-action="compare" ${zameenIdAttr} aria-pressed="${compared ? 'true' : 'false'}" class="action-btn compare-btn w-8 h-8 rounded-full transition-colors ${compared ? 'text-brand-600 bg-brand-50 hover:bg-brand-100' : 'text-gray-500 hover:text-brand-600 hover:bg-brand-50'}" title="${compared ? 'Remove from compare' : 'Add to compare'}" aria-label="${compared ? 'Remove from compare' : 'Add to compare'}">${compareIcon}</button>
         </div>
         <div class="card-action-group">
-          <a data-action="open" href="${escA(item.url)}" target="_blank" rel="noopener" class="action-btn w-8 h-8 rounded-full text-gray-400 hover:text-brand-500 hover:bg-brand-50 transition-colors" title="Open on Zameen.com" aria-label="Open on Zameen.com">${externalIcon()}</a>
-          <button data-action="call" data-url="${escA(item.url)}" ${contactAttrs} class="action-btn w-8 h-8 rounded-full text-gray-400 hover:text-brand-500 hover:bg-brand-50 transition-colors" title="Call" aria-label="Call">${callIcon()}</button>
-          <button data-action="whatsapp" data-url="${escA(item.url)}" ${contactAttrs} class="action-btn w-8 h-8 rounded-full text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors" title="WhatsApp" aria-label="WhatsApp">${whatsappIcon()}</button>
+          <a data-action="open" href="${escA(item.url)}" target="_blank" rel="noopener" class="action-btn w-8 h-8 rounded-full text-gray-500 hover:text-brand-500 hover:bg-brand-50 transition-colors" title="Open on Zameen.com" aria-label="Open on Zameen.com">${externalIcon()}</a>
+          <button data-action="call" data-url="${escA(item.url)}" ${contactAttrs} class="action-btn w-8 h-8 rounded-full text-gray-500 hover:text-brand-500 hover:bg-brand-50 transition-colors" title="Call" aria-label="Call">${callIcon()}</button>
+          <button data-action="whatsapp" data-url="${escA(item.url)}" ${contactAttrs} class="action-btn w-8 h-8 rounded-full text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors" title="WhatsApp" aria-label="WhatsApp">${whatsappIcon()}</button>
         </div>
       </div>` : ''}
     </div>
@@ -169,7 +169,7 @@ export function updateFavoriteButton(zameenId, favorited) {
     btn.classList.toggle('text-rose-500', favorited);
     btn.classList.toggle('bg-rose-50', favorited);
     btn.classList.toggle('hover:bg-rose-100', favorited);
-    btn.classList.toggle('text-gray-400', !favorited);
+    btn.classList.toggle('text-gray-500', !favorited);
     btn.classList.toggle('hover:text-rose-500', !favorited);
     btn.classList.toggle('hover:bg-rose-50', !favorited);
     btn.innerHTML = favorited ? FAV_FILLED_SVG : FAV_HOLLOW_SVG;
@@ -186,7 +186,7 @@ export function updateCompareButton(zameenId, compared) {
     btn.classList.toggle('text-brand-600', compared);
     btn.classList.toggle('bg-brand-50', compared);
     btn.classList.toggle('hover:bg-brand-100', compared);
-    btn.classList.toggle('text-gray-400', !compared);
+    btn.classList.toggle('text-gray-500', !compared);
     btn.classList.toggle('hover:text-brand-600', !compared);
     btn.classList.toggle('hover:bg-brand-50', !compared);
   });
@@ -218,6 +218,21 @@ export function initCarousels() {
     }
     el.querySelector('[data-prev]')?.addEventListener('click', e => { e.stopPropagation(); go(idx - 1); });
     el.querySelector('[data-next]')?.addEventListener('click', e => { e.stopPropagation(); go(idx + 1); });
+    // Touch swipe: the hover-revealed arrows never show on touch screens.
+    // Only a clearly horizontal swipe changes photo, so vertical scrolling is untouched.
+    let startX = null, startY = null;
+    el.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) { startX = null; return; }
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+    }, { passive: true });
+    el.addEventListener('touchend', e => {
+      if (startX == null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      startX = null;
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      go(idx + (dx < 0 ? 1 : -1));
+    }, { passive: true });
     el.dataset.carouselReady = '1';
   });
 }
@@ -256,7 +271,7 @@ function openContact(action, listingUrl, contact) {
   }
   if (action === 'whatsapp' && whatsappPhone) {
     const waNum = whatsappPhone.replace(/^0/, '92').replace(/[^0-9]/g, '');
-    window.open(`https://wa.me/${waNum}?text=${encodeURIComponent('Hi, I am interested in this property: ' + listingUrl)}`, '_blank');
+    window.open(`https://wa.me/${waNum}?text=${encodeURIComponent('Salaam, is this property still available? ' + listingUrl)}`, '_blank');
     return true;
   }
   return false;
@@ -301,7 +316,7 @@ export async function contactFromData(action, listingUrl, { callPhone = '', what
 
 export function skeletonCard() {
   return `<div class="rounded-xl overflow-hidden bg-white border border-gray-100">
-    <div class="aspect-square sm:aspect-[4/3] skeleton"></div>
+    <div class="aspect-[4/3] skeleton"></div>
     <div class="p-2 sm:p-3 space-y-2">
       <div class="skeleton h-4 sm:h-5 w-1/2"></div>
       <div class="skeleton h-3 sm:h-4 w-3/4"></div>
