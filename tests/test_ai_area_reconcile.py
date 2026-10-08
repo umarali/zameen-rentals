@@ -70,7 +70,7 @@ class _FakeClient:
         self.messages = self
         self._data = data
 
-    def create(self, **kwargs):
+    async def create(self, **kwargs):
         return _FakeFilters(self._data)
 
 

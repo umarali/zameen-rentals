@@ -1,0 +1,248 @@
+FFFFFFFFFFFF                                                             [100%]
+=================================== FAILURES ===================================
+____________________ test_reject_invalid_probability[-0.1] _____________________
+tests/test_strict_audit.py:13: in test_reject_invalid_probability
+    with pytest.raises(DecisionError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'app.decisions.DecisionError'>
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,064 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+_____________________ test_reject_invalid_probability[1.1] _____________________
+tests/test_strict_audit.py:13: in test_reject_invalid_probability
+    with pytest.raises(DecisionError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'app.decisions.DecisionError'>
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,128 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+_____________________ test_reject_invalid_probability[inf] _____________________
+tests/test_strict_audit.py:13: in test_reject_invalid_probability
+    with pytest.raises(DecisionError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'app.decisions.DecisionError'>
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,137 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+_____________________ test_reject_invalid_probability[nan] _____________________
+tests/test_strict_audit.py:13: in test_reject_invalid_probability
+    with pytest.raises(DecisionError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE <class 'app.decisions.DecisionError'>
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,143 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+_______________ test_malformed_response_is_typed_error[payload0] _______________
+tests/test_strict_audit.py:19: in test_malformed_response_is_typed_error
+    parse_decision(payload)
+app/decisions.py:77: in parse_decision
+    answers = {name: _parse_answer(raw) for name, raw in payload["answers"].items()}
+                                                         ^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'list' object has no attribute 'items'
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,151 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+_______________ test_malformed_response_is_typed_error[payload1] _______________
+tests/test_strict_audit.py:19: in test_malformed_response_is_typed_error
+    parse_decision(payload)
+app/decisions.py:77: in parse_decision
+    answers = {name: _parse_answer(raw) for name, raw in payload["answers"].items()}
+                     ^^^^^^^^^^^^^^^^^^
+app/decisions.py:64: in _parse_answer
+    kind = raw.get("type")
+           ^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'get'
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,158 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+_______________ test_malformed_response_is_typed_error[payload2] _______________
+tests/test_strict_audit.py:19: in test_malformed_response_is_typed_error
+    parse_decision(payload)
+app/decisions.py:82: in parse_decision
+    input_tokens=int(usage.get("input_tokens") or 0))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   ValueError: invalid literal for int() with base 10: 'bad'
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,166 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+_______________________ test_invalid_json_is_typed_error _______________________
+tests/test_strict_audit.py:28: in test_invalid_json_is_typed_error
+    asyncio.run(run())
+/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/asyncio/runners.py:194: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/asyncio/base_events.py:720: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/test_strict_audit.py:26: in run
+    await client.decide('synthetic',{})
+app/decisions.py:104: in decide
+    return parse_decision(resp.json())
+                          ^^^^^^^^^^^
+/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/site-packages/httpx/_models.py:832: in json
+    return jsonlib.loads(self.content, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/json/decoder.py:345: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/json/decoder.py:363: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,174 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 13:57:03,175 INFO HTTP Request: POST https://api.typesafe.ai/v1/systemone "HTTP/1.1 200 OK"
+------------------------------ Captured log call -------------------------------
+INFO     httpx:_client.py:1740 HTTP Request: POST https://api.typesafe.ai/v1/systemone "HTTP/1.1 200 OK"
+____________________ test_description_edits_require_rescore ____________________
+tests/test_strict_audit.py:34: in test_description_edits_require_rescore
+    assert [r['zameen_id'] for r in listings_needing_tags(limit=10)] == ['800001']
+E   AssertionError: assert [] == ['800001']
+E     
+E     Right contains one more item: '800001'
+E     Use -v to get more diff
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,212 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 13:57:03,213 ERROR Failed to load alerts for inserted listing 1
+Traceback (most recent call last):
+  File "/private/tmp/zameen-jev-audit/app/personalization.py", line 609, in record_match_for_inserted_listing
+    alerts = conn.execute(
+             ~~~~~~~~~~~~^
+        "SELECT id, client_id, filters_json, paused, notify_push, notify_inapp, "
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+         f"%\"city\":\"{listing_row.get('city')}\"%"),
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: alerts
+------------------------------ Captured log call -------------------------------
+ERROR    zameenrentals:personalization.py:617 Failed to load alerts for inserted listing 1
+Traceback (most recent call last):
+  File "/private/tmp/zameen-jev-audit/app/personalization.py", line 609, in record_match_for_inserted_listing
+    alerts = conn.execute(
+             ~~~~~~~~~~~~^
+        "SELECT id, client_id, filters_json, paused, notify_push, notify_inapp, "
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+         f"%\"city\":\"{listing_row.get('city')}\"%"),
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: alerts
+________________ test_stale_tags_do_not_filter_updated_listing _________________
+tests/test_strict_audit.py:41: in test_stale_tags_do_not_filter_updated_listing
+    assert result['total'] == 0
+E   assert 1 == 0
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,221 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 13:57:03,221 ERROR Failed to load alerts for inserted listing 1
+Traceback (most recent call last):
+  File "/private/tmp/zameen-jev-audit/app/personalization.py", line 609, in record_match_for_inserted_listing
+    alerts = conn.execute(
+             ~~~~~~~~~~~~^
+        "SELECT id, client_id, filters_json, paused, notify_push, notify_inapp, "
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+         f"%\"city\":\"{listing_row.get('city')}\"%"),
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: alerts
+------------------------------ Captured log call -------------------------------
+ERROR    zameenrentals:personalization.py:617 Failed to load alerts for inserted listing 1
+Traceback (most recent call last):
+  File "/private/tmp/zameen-jev-audit/app/personalization.py", line 609, in record_match_for_inserted_listing
+    alerts = conn.execute(
+             ~~~~~~~~~~~~^
+        "SELECT id, client_id, filters_json, paused, notify_push, notify_inapp, "
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+         f"%\"city\":\"{listing_row.get('city')}\"%"),
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: alerts
+____________________ test_negative_amenity_value_preserved _____________________
+tests/test_strict_audit.py:46: in test_negative_amenity_value_preserved
+    assert 'Electricity Backup: None' in state or 'Amenities: Electricity Backup' not in state
+E   AssertionError: assert ('Electricity Backup: None' in 'Rental listing in Lahore, Johar Town.\nType: Upper Portion. Rent: PKR 65,000/month. Beds: 3. Size: 10 Marla.\nTitle: 10 Marla Upper Portion\nDescription: Apartment.\nAmenities: Electricity Backup' or 'Amenities: ...icity Backup' not in 'Rental list...icity Backup'
+E     
+E     'Amenities: Electricity Backup' is contained here:
+E       Apartment.
+E       Amenities: Electricity Backup)
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,229 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 13:57:03,230 ERROR Failed to load alerts for inserted listing 1
+Traceback (most recent call last):
+  File "/private/tmp/zameen-jev-audit/app/personalization.py", line 609, in record_match_for_inserted_listing
+    alerts = conn.execute(
+             ~~~~~~~~~~~~^
+        "SELECT id, client_id, filters_json, paused, notify_push, notify_inapp, "
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+         f"%\"city\":\"{listing_row.get('city')}\"%"),
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: alerts
+------------------------------ Captured log call -------------------------------
+ERROR    zameenrentals:personalization.py:617 Failed to load alerts for inserted listing 1
+Traceback (most recent call last):
+  File "/private/tmp/zameen-jev-audit/app/personalization.py", line 609, in record_match_for_inserted_listing
+    alerts = conn.execute(
+             ~~~~~~~~~~~~^
+        "SELECT id, client_id, filters_json, paused, notify_push, notify_inapp, "
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+         f"%\"city\":\"{listing_row.get('city')}\"%"),
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: alerts
+______________ test_partial_gold_does_not_count_blank_as_negative ______________
+tests/test_strict_audit.py:51: in test_partial_gold_does_not_count_blank_as_negative
+    assert table['backup_power']['keywords']['precision'] is None
+E   assert 0.0 is None
+---------------------------- Captured stderr setup -----------------------------
+2026-10-08 13:57:03,237 INFO Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+------------------------------ Captured log setup ------------------------------
+INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p5j17ppj1zlbcjd_tn05jy0c0000gn/T/tmp_280ve17/test_zameenrentals.db
+=========================== short test summary info ============================
+FAILED tests/test_strict_audit.py::test_reject_invalid_probability[-0.1] - Fa...
+FAILED tests/test_strict_audit.py::test_reject_invalid_probability[1.1] - Fai...
+FAILED tests/test_strict_audit.py::test_reject_invalid_probability[inf] - Fai...
+FAILED tests/test_strict_audit.py::test_reject_invalid_probability[nan] - Fai...
+FAILED tests/test_strict_audit.py::test_malformed_response_is_typed_error[payload0]
+FAILED tests/test_strict_audit.py::test_malformed_response_is_typed_error[payload1]
+FAILED tests/test_strict_audit.py::test_malformed_response_is_typed_error[payload2]
+FAILED tests/test_strict_audit.py::test_invalid_json_is_typed_error - json.de...
+FAILED tests/test_strict_audit.py::test_description_edits_require_rescore - A...
+FAILED tests/test_strict_audit.py::test_stale_tags_do_not_filter_updated_listing
+FAILED tests/test_strict_audit.py::test_negative_amenity_value_preserved - As...
+FAILED tests/test_strict_audit.py::test_partial_gold_does_not_count_blank_as_negative
+12 failed, 13 warnings in 0.23s
