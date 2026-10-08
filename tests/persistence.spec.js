@@ -44,6 +44,30 @@ test.describe("LocalStorage Persistence", () => {
     ).toHaveClass(/active/);
   });
 
+  test("city is saved before its area lookup completes", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    await page.route("**/api/areas?city=islamabad", async route => {
+      await gate;
+      await route.continue();
+    });
+    const lookup = page.waitForRequest("**/api/areas?city=islamabad");
+    try {
+      await page.locator('.city-tab[data-city="islamabad"]').click();
+      await lookup;
+      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("rk_s") || "{}"));
+      expect(saved.city).toBe("islamabad");
+      expect(new URL(page.url()).searchParams.get("city")).toBe("islamabad");
+    } finally {
+      release();
+    }
+    await page.unrouteAll({ behavior: "wait" });
+    await page.reload();
+    await expect(page.locator('.city-tab[data-city="islamabad"]')).toHaveClass(/active/);
+  });
+
   test("area persists across reload", async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector(".card-wrap", { timeout: 30000 });

@@ -1,4 +1,4 @@
-The Jev audit findings are now implemented as fixes in `../zameenrental-jev` on `feat/jev-listing-tags`. English/Urdu search improvements are on `fix/english-urdu-search-reliability`. Both branches include current main. The Jev changes update PR #14; the search changes are a separate PR. Neither PR has been merged or deployed.
+The Jev and English/Urdu search fixes from PRs #14 and #22 are combined with the UI branches in the [tested integration](../integration-validation-2026-10-08.md). The notes below record validation of the individual fixes before integration.
 
 Jev now invalidates tags whenever the classifier's source fields change. An atomic SQL comparison prevents an old in-flight response from restoring stale tags. Insert, replace and delete paths are covered. Existing databases gain nullable version/hash columns without dropping their tag table; legacy tags are hidden until rescored. Reads and filters require the current model and pipeline version. Even the default browse cache refreshes tags before responding.
 

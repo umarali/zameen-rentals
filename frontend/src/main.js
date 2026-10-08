@@ -1171,6 +1171,8 @@ function initCityTabs() {
     setToggle(false); $('#sortSelect').value = '';
     updateCityTabs(); updateChips(); updateNlExamples(); updateNearbyControls();
     refs._lastTriggeredBy = 'city_change';
+    // Persist the user's selection before async city lookups can be interrupted.
+    saveSearch();
     loadCityData();
   }));
 }

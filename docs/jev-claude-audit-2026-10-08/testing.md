@@ -33,23 +33,22 @@ PLAYWRIGHT_PORT=8127 npx playwright test tests/search-languages.spec.js tests/nl
 
 Playwright is configured headlessly. The Python checks cover both English/Urdu fallback parsing and the Claude SDK boundary with mocked HTTP, including deadline cancellation and failures. Live Claude parsing is a separate check: once the API account has credits, run the normal app with its configured key and repeat these queries. `/api/parse-query` returns `parser: "ai"` when Claude actually answered. A regex result is not evidence that the live AI worked.
 
-Jev fixes live in the existing sibling worktree `../zameenrental-jev`, on `feat/jev-listing-tags`. They do not appear in main merely because the other worktree changed. Run its targeted deterministic tests:
+The integrated tree includes the Jev fixes. From the repository root, run its targeted deterministic tests:
 
 ```bash
-cd ../zameenrental-jev
 ANTHROPIC_API_KEY='' python -m pytest tests/test_decisions.py tests/test_listing_tags.py tests/test_eval_listing_tags.py tests/test_strict_audit.py tests/test_jev_hardening.py -q
 ```
 
 These tests use disposable databases and fake providers. They verify that edited listings lose their old tags, stale in-flight answers cannot restore them, cached browse results refresh tags, invalid API replies are rejected, and unlabelled evaluation fields are excluded. No live listings are tagged.
 
-For a live Jev smoke check, return to `zameenrental` and run:
+For a live Jev smoke check, run from the same repository root:
 
 ```bash
-python tools/eval_jev_smoke.py --source ../zameenrental-jev --out /tmp/jev-smoke-results.json
+python tools/eval_jev_smoke.py --source . --out /tmp/jev-smoke-results.json
 ```
 
 This uses the existing TypeSafe key and sends 15 synthetic English/Urdu descriptions through the current questions and publication guard. It does not read or update production listing data. It exits nonzero if a case fails or the run is incomplete. All 15 passed during this fix, but this small synthetic set is not a representative accuracy benchmark.
 
-The Jev branch currently exposes tags through `/api/search` parameters such as `tenant=bachelor`, `backup_power=true` and `separate_entrance=true`. It has no tag controls in the frontend yet. A regular browser search therefore cannot verify those filters visually. The API tests above exercise them directly.
+Jev currently exposes tags through `/api/search` parameters such as `tenant=bachelor`, `backup_power=true` and `separate_entrance=true`. It has no tag controls in the frontend yet. A regular browser search therefore cannot verify those filters visually. The API tests above exercise them directly.
 
-On eventual deployment, legacy tags intentionally become unavailable until rescored under the new pipeline version. Normal browsing still works. No production migration, retagging, merge or deployment was performed here.
+On eventual deployment, legacy tags intentionally become unavailable until rescored under the new pipeline version. Normal browsing still works. The branch integration does not run a production migration, retagging or deployment.
