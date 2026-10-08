@@ -30,7 +30,7 @@ class _Client:
         self.data = data
         self.calls = []
 
-    def create_with_completion(self, **kwargs):
+    async def create_with_completion(self, **kwargs):
         self.calls.append(kwargs)
         return _Filters(self.data), _Completion()
 
@@ -121,12 +121,12 @@ class TestSpendControls:
             messages = None
             def __init__(self):
                 self.messages = self
-            def create_with_completion(self, **kwargs):
+            async def create_with_completion(self, **kwargs):
                 raise RuntimeError("credit balance is too low")
         monkeypatch.setattr(parsing, "_get_instructor_client", lambda: Broken())
         result = _parse("2 bed flat in clifton")
         assert result["area"] == "Clifton" and result.get("parser", "regex") == "regex"
-        assert "credit balance" in parsing.last_call["error"]
+        assert parsing.last_call["error"] == "RuntimeError"
 
 
 class TestAreaNumberBedrooms:

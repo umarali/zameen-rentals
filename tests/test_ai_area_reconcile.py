@@ -80,7 +80,7 @@ class _FakeClient:
         self._data = data
         self.calls = []
 
-    def create_with_completion(self, **kwargs):
+    async def create_with_completion(self, **kwargs):
         self.calls.append(kwargs)
         return _FakeFilters(self._data), _FakeCompletion()
 

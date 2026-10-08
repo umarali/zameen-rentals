@@ -55,7 +55,7 @@ main {
   min-height: 0;
 }
 
-#mapContainer, #mapContainerMobile { isolation: isolate; }
+#mapContainer, #mapContainerMobile, #drawerMiniMap { isolation: isolate; }
 
 /* ===== Branding ===== */
 .brand-link {
@@ -109,7 +109,7 @@ main {
   margin-left: auto;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #127b5a;
+  color: var(--color-brand-500);
   border: 1px solid rgba(18, 123, 90, 0.3);
   background: rgba(18, 123, 90, 0.08);
   padding: 0.3rem 0.7rem;
@@ -198,7 +198,7 @@ main {
   padding: 0;
 }
 .compare-tray-btn {
-  background: #127b5a;
+  background: var(--color-brand-500);
   color: white;
   border-radius: 999px;
   padding: 0.45rem 0.9rem;
@@ -350,17 +350,17 @@ main {
 .area-label:hover { --area-label-scale: 1.05; background: #1f2937; color: #fff; border-color: #1f2937; }
 .area-label:hover .area-badge { background: #fff; color: #1f2937; }
 .area-label:hover::after { border-top-color: #1f2937; }
-.area-label-active { --area-label-scale: 1.08; background: #127b5a; color: #fff; border-color: #0f654a; box-shadow: 0 4px 6px -1px rgba(18,123,90,.3); }
-.area-label-active:hover { background: #127b5a; color: #fff; border-color: #0f654a; }
-.area-label-active::after { border-top-color: #127b5a; }
-.area-label-active:hover::after { border-top-color: #127b5a; }
+.area-label-active { --area-label-scale: 1.08; background: var(--color-brand-500); color: #fff; border-color: var(--color-brand-600); box-shadow: 0 4px 6px -1px rgba(18,123,90,.3); }
+.area-label-active:hover { background: var(--color-brand-500); color: #fff; border-color: var(--color-brand-600); }
+.area-label-active::after { border-top-color: var(--color-brand-500); }
+.area-label-active:hover::after { border-top-color: var(--color-brand-500); }
 .area-badge {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 18px; height: 18px; padding: 0 4px;
-  border-radius: 9px; background: #127b5a; color: #fff;
+  border-radius: 9px; background: var(--color-brand-500); color: #fff;
   font-size: 10px; font-weight: 700; margin-left: 0; line-height: 1;
 }
-.area-label-active .area-badge { background: #fff; color: #127b5a; }
+.area-label-active .area-badge { background: #fff; color: var(--color-brand-500); }
 .area-dot {
   width: 10px;
   height: 10px;
@@ -369,10 +369,10 @@ main {
   box-shadow: 0 1px 2px rgba(0,0,0,0.18);
 }
 .area-dot-live {
-  background: #127b5a;
+  background: var(--color-brand-500);
 }
 .area-dot-active {
-  background: #0f654a;
+  background: var(--color-brand-600);
   box-shadow: 0 0 0 3px rgba(18,123,90,0.18), 0 1px 2px rgba(0,0,0,0.18);
 }
 .coverage-dot {
@@ -404,7 +404,7 @@ main {
 }
 .coverage-chip.live {
   background: #eaf8f1;
-  color: #127b5a;
+  color: var(--color-brand-500);
 }
 .coverage-legend {
   display: flex;
@@ -429,7 +429,7 @@ main {
   flex: none;
 }
 .coverage-legend-dot.live {
-  background: #127b5a;
+  background: var(--color-brand-500);
   box-shadow: 0 0 0 2px rgba(18, 123, 90, 0.14);
 }
 .coverage-legend-dot.preview {
@@ -684,8 +684,10 @@ html.app-standalone #mapCoverageBadgeMobile.coverage-mobile-inline.coverage-badg
 .scroll-thin::-webkit-scrollbar-track { background: transparent; }
 
 /* ===== Filter dropdowns ===== */
-.filter-dd { transform: translateY(-8px); opacity: 0; pointer-events: none; transition: transform .2s ease, opacity .2s ease; }
-.filter-dd.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+/* visibility keeps closed dropdowns out of the Tab order; its delayed
+   transition lets the fade-out finish before the panel disappears. */
+.filter-dd { transform: translateY(-8px); opacity: 0; visibility: hidden; pointer-events: none; transition: transform .2s ease, opacity .2s ease, visibility 0s linear .2s; }
+.filter-dd.open { transform: translateY(0); opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
 
 /* ===== Image carousel ===== */
 .carousel-dot { transition: all .2s; }
@@ -715,7 +717,7 @@ html.app-standalone #mapCoverageBadgeMobile.coverage-mobile-inline.coverage-badg
 /* ===== Misc ===== */
 .line-clamp-4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .amenity-pill { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; color: #374151; background: #fff; }
-.card-map-active { border-color: #127b5a !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1) !important; }
+.card-map-active { border-color: var(--color-brand-500) !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1) !important; }
 
 /* ===== Skeleton shimmer ===== */
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
@@ -724,17 +726,17 @@ html.app-standalone #mapCoverageBadgeMobile.coverage-mobile-inline.coverage-badg
 /* ===== Toggle switch ===== */
 .toggle-track { transition: background .2s; }
 .toggle-knob { transition: transform .2s; }
-.toggle-on { background-color: #127b5a !important; }
+.toggle-on { background-color: var(--color-brand-500) !important; }
 
 /* ===== City tabs ===== */
 .city-tab { color: #6b7280; }
 .city-tab:hover { color: #374151; }
-.city-tab.active { background: #fff; color: #127b5a; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.city-tab.active { background: #fff; color: var(--color-brand-500); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
 
 /* Size-unit segmented toggle (Marla / Sq Yd) — mirrors the city tabs */
 .size-unit-btn { color: #6b7280; }
 .size-unit-btn:hover { color: #374151; }
-.size-unit-btn.active { background: #fff; color: #127b5a; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.size-unit-btn.active { background: #fff; color: var(--color-brand-500); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
 
 /* ===== Filter chips ===== */
 .chip-filter.hidden { display: none; }
@@ -745,7 +747,7 @@ html.app-standalone #mapCoverageBadgeMobile.coverage-mobile-inline.coverage-badg
   font-size: 0.75rem; font-weight: 500; color: #4b5563;
   cursor: pointer; transition: all .15s ease;
 }
-.chip-filter:hover { border-color: #127b5a; color: #127b5a; background: #eef8f4; }
+.chip-filter:hover { border-color: var(--color-brand-500); color: var(--color-brand-500); background: #eef8f4; }
 .chip-filter.has-value { background: #1f2937; border-color: #1f2937; color: #fff; }
 .chip-filter.has-value:hover { background: #374151; border-color: #374151; color: #fff; }
 .chip-filter.chip-disabled { opacity: 0.6; }
@@ -762,9 +764,10 @@ html.app-standalone #mapCoverageBadgeMobile.coverage-mobile-inline.coverage-badg
   cursor: pointer; transition: all .15s ease;
   white-space: nowrap; user-select: none;
 }
-.chip:hover { border-color: #127b5a; color: #127b5a; background: #eef8f4; }
-.chip.active { background: #127b5a; border-color: #127b5a; color: #fff; }
-.chip.active:hover { background: #0f654a; border-color: #0f654a; color: #fff; }
+.chip:hover { border-color: var(--color-brand-500); color: var(--color-brand-500); background: #eef8f4; }
+.chip.active { background: var(--color-brand-500); border-color: var(--color-brand-500); color: #fff; }
+.chip.active:hover { background: var(--color-brand-600); border-color: var(--color-brand-600); color: #fff; }
+.chip:focus-visible, .chip-filter:focus-visible, .toggle-track:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
 
 /* Missing-image placeholder — a monochrome line-art photo glyph (replaces the
    old 🏠 emoji) shown for listings with no/broken images. */
@@ -1082,4 +1085,20 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
     width: 100%;
     min-width: 0;
   }
+}
+
+/* Mobile touch targets and safe-area spacing from the responsive layout. */
+@media (max-width: 1023px) {
+  #nlInput { font-size: 16px; }
+  .filter-dd {
+    max-height: 70dvh;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+  }
+  .filter-dd .chip { min-height: 44px; padding: 10px 16px; font-size: 14px; }
+  .filter-dd input, .filter-dd select { font-size: 16px; min-height: 44px; }
+  #ddBackdrop { backdrop-filter: blur(4px); }
+  #galleryModal .absolute.top-4 { top: calc(16px + env(safe-area-inset-top, 0px)); }
+  .area-opt, #nlSuggestions .nl-ex, #nlSuggestions .pop-search { min-height: 44px; }
+  #mapCarousel { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
 }

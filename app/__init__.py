@@ -45,6 +45,8 @@ async def startup():
 
 @app.on_event("shutdown")
 async def shutdown():
+    from app.parsing import close_nlq_client
+    await close_nlq_client()
     close_db()
 
 from app.routes import router  # noqa: E402

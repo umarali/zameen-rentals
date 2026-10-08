@@ -1,5 +1,5 @@
 """NLP query parsing, area matching, price parsing, and URL building."""
-import asyncio, logging, os, re
+import logging, os, re
 from difflib import SequenceMatcher
 from typing import Literal, Optional
 from urllib.parse import urlencode
@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.data import (
     KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas,
-    URDU_AREAS, ROMAN_URDU_AREAS,
+    URDU_AREAS, URDU_AREAS_BY_CITY, ROMAN_URDU_AREAS,
     URDU_TYPES, ROMAN_URDU_TYPES,
     ROMAN_URDU_AREAS_BY_CITY, LANDMARKS,
 )
@@ -81,16 +81,16 @@ def _strip_noise_tokens(text: str, keep_digits: bool = False) -> str:
     )
 
 
-_BED_RANGE_RE = re.compile(r'(\d+)\s*(?:-|to|se)\s*(\d+)\s*(?:bed(?:room)?s?|br|bhk|kamr[eao]|کمر[ےوں]|بیڈ)')
+_BED_RANGE_RE = re.compile(r'(\d+)\s*(?:-|to|se|سے)\s*(\d+)\s*(?:bed(?:room)?s?|br|bhk|kamr[eao]|کمر[ےوں]|بیڈ)')
 _BED_SINGLE_RE = re.compile(r'(\d+)\s*(?:bed(?:room)?s?|br|bhk|kamr[eao]|کمر[ےوں]|بیڈ)')
 
 # Units: marla/kanal (Punjab) + square-yard family / gaz (Karachi). Longer forms
 # are listed before "yards?" so they match fully.
 # Bare "yards" is intentionally excluded — it's ambiguous with distance
 # ("100 yards from beach"). Karachi size is captured via gaz / sq yd / square yards.
-_SIZE_UNIT_PAT = r'(kanal|marla|gaz|gaj|guz|gajj|square\s*yards?|sq\.?\s*yards?|sq\.?\s*yd)'
+_SIZE_UNIT_PAT = r'(kanal|marla|gaz|gaj|guz|gajj|square\s*yards?|sq\.?\s*yards?|sq\.?\s*yd|مرلہ|مرلے|کنال|گز)'
 _SIZE_RANGE_RE = re.compile(
-    rf'([\d.]+)\s*{_SIZE_UNIT_PAT}\s*(?:se|to|-)\s*([\d.]+)\s*{_SIZE_UNIT_PAT}', re.I
+    rf'([\d.]+)\s*{_SIZE_UNIT_PAT}\s*(?:se|to|-|سے)\s*([\d.]+)\s*{_SIZE_UNIT_PAT}', re.I
 )
 _SIZE_SINGLE_RE = re.compile(rf'([\d.]+)\s*{_SIZE_UNIT_PAT}', re.I)
 
@@ -107,6 +107,7 @@ def _parse_size_value(num: str, unit: str) -> Optional[float]:
     except ValueError:
         return None
     u = re.sub(r'[\s.]', '', unit.lower())  # "sq. yd" -> "sqyd"
+    u = {'مرلہ': 'marla', 'مرلے': 'marla', 'کنال': 'kanal', 'گز': 'gaz'}.get(u, u)
     if u == 'kanal':
         return v * 20
     if u in _SQYD_UNITS:
@@ -143,7 +144,7 @@ _FRACTION_WORDS = {"dedh": 1.5, "derh": 1.5, "ڈیڑھ": 1.5, "dhai": 2.5, "adha
 _NUMBER_MODIFIERS = {"sade": 0.5, "saade": 0.5, "ساڑھے": 0.5, "sawa": 0.25, "سوا": 0.25}
 _URDU_UNITS = {"ہزار": "hazar", "لاکھ": "lakh", "کروڑ": "crore"}
 _NUMBER_UNIT = (r"(?:bed(?:room)?s?|br|bhk|kamr\w*|rooms?|hazar|hazaar|thousand|k\b|"
-                r"lakh|lac|lacs|laakh|crore|cr\b|marla|kanal|بیڈ|کمر\w*|مرلہ|کنال)")
+                r"lakh|lac|lacs|laakh|crore|cr\b|marla|kanal|بیڈ|کمر\w*|مرلہ|مرلے|کنال|گز)")
 _DIGIT_TABLE = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
 
 
@@ -392,6 +393,7 @@ def _area_spans(text, city):
 
     Overlapping matches keep the longest (so 'dha phase 6' beats 'dha').
     """
+    text = text.translate(_DIGIT_TABLE)
     spans = []
     roman_map = ROMAN_URDU_AREAS_BY_CITY.get(city, {})
     for alias, area_name in roman_map.items():
@@ -403,10 +405,9 @@ def _area_spans(text, city):
             continue
         for m in re.finditer(r'\b' + re.escape(nl) + r'\b', text):
             spans.append((m.start(), m.end(), name))
-    if city == "karachi":
-        for ur_area, en_area in URDU_AREAS.items():
-            for m in re.finditer(re.escape(ur_area), text):
-                spans.append((m.start(), m.end(), en_area))
+    for ur_area, en_area in URDU_AREAS_BY_CITY.get(city, {}).items():
+        for m in re.finditer(r'(?<!\w)' + re.escape(ur_area) + r'(?!\w)', text):
+            spans.append((m.start(), m.end(), en_area))
     # "askari 5 marla": the 5 is a size, so the area is Askari, not Askari 5.
     spans = [
         (start, end, name) for start, end, name in spans
@@ -423,16 +424,15 @@ def _area_spans(text, city):
 
 def match_area(query, city="lahore"):
     areas = get_areas(city)
-    q = query.strip()
+    q = query.strip().translate(_DIGIT_TABLE)
     if not q:
         return None
-    # 1. Exact Urdu match (Karachi only for now)
-    if city == "karachi":
-        for ur, en in URDU_AREAS.items():
-            if ur == q: return en
-        # 2. Fuzzy Urdu match
-        for ur, en in URDU_AREAS.items():
-            if q in ur or ur in q: return en
+    # Urdu aliases follow the same city boundary as English area names.
+    urdu = URDU_AREAS_BY_CITY.get(city, {})
+    for ur, en in urdu.items():
+        if ur == q: return en
+    for ur, en in sorted(urdu.items(), key=lambda item: -len(item[0])):
+        if re.search(r'(?<!\w)' + re.escape(ur) + r'(?!\w)', q): return en
     ql = q.lower()
     qn = _norm(ql)
     # An exact area name always wins over aliases that merely contain it.
@@ -666,10 +666,17 @@ def _get_instructor_client():
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
             return None
-        # Stay inside the route's 8 s wait_for: one quick retry at most.
+        # Native async I/O allows the route deadline to cancel pending requests.
         _instructor_client = instructor.from_anthropic(
-            anthropic.Anthropic(api_key=api_key, timeout=6.0, max_retries=1))
+            anthropic.AsyncAnthropic(api_key=api_key, timeout=6.0, max_retries=0))
     return _instructor_client
+
+
+async def close_nlq_client():
+    global _instructor_client
+    client, _instructor_client = _instructor_client, None
+    if client is not None:
+        await client.client.close()
 
 
 def _reconcile_ai_area(query: str, result: dict, city: str) -> dict:
@@ -721,7 +728,7 @@ PARSE_CANDIDATE_LIMIT = int(os.environ.get("ZR_PARSE_CANDIDATES", "30"))
 NL_DAILY_BUDGET_USD = float(os.environ.get("ZR_NL_DAILY_BUDGET_USD", "1.00"))
 NL_CACHE_TTL_SECONDS = float(os.environ.get("ZR_NL_CACHE_TTL_HOURS", "168")) * 3600
 # Bump when the prompt or post-processing changes, so cached parses refresh.
-PARSE_PROMPT_VERSION = "2026-10-08.2"
+PARSE_PROMPT_VERSION = "2026-10-08.3"
 
 # USD per million tokens: (input, 5-minute cache write, cache read, output).
 _MODEL_PRICES = {
@@ -934,31 +941,30 @@ async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
     """
     import time
     last_call.clear()
-    client = _get_instructor_client()
-    if client is None:
-        return parse_natural_query(query, city=city)
-
-    ck = _nl_cache_key(query, city)
-    cached = _nl_cache_get(ck)
-    if cached is not None:
-        last_call.update(cached=True)
-        return cached
-
-    if nl_spend_today() >= NL_DAILY_BUDGET_USD:
-        logger.warning("NL parse budget of $%.2f spent today; using the regex parser", NL_DAILY_BUDGET_USD)
-        last_call.update(budget_exhausted=True)
-        return parse_natural_query(query, city=city)
-
     try:
+        client = _get_instructor_client()
+        if client is None:
+            return parse_natural_query(query, city=city)
+
+        ck = _nl_cache_key(query, city)
+        cached = _nl_cache_get(ck)
+        if cached is not None:
+            last_call.update(cached=True)
+            return cached
+
+        if nl_spend_today() >= NL_DAILY_BUDGET_USD:
+            logger.warning("NL parse budget of $%.2f spent today; using the regex parser", NL_DAILY_BUDGET_USD)
+            last_call.update(budget_exhausted=True)
+            return parse_natural_query(query, city=city)
+
         started = time.monotonic()
-        filters, completion = await asyncio.to_thread(
-            client.messages.create_with_completion,
+        filters, completion = await client.messages.create_with_completion(
             model=PARSE_MODEL,
             max_tokens=256,
             system=_nlq_system(query, city),
             messages=[{"role": "user", "content": query}],
             response_model=RentalFilters,
-            max_retries=1,  # one re-ask on a schema error, not three
+            max_retries=1,  # one attempt inside the route deadline
         )
         usage = getattr(completion, "usage", None)
         cost = _call_cost(PARSE_MODEL, usage)
@@ -974,6 +980,9 @@ async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
                     PARSE_MODEL, last_call["input_tokens"], last_call["cache_read_tokens"],
                     last_call["cache_write_tokens"], last_call["output_tokens"], cost or 0.0)
         result = filters.model_dump(exclude_none=True)
+        if (result.get("price_min") is not None and result.get("price_max") is not None
+                and result["price_min"] > result["price_max"]):
+            raise ValueError("Model returned reversed rent bounds")
 
         # If city_hint differs, re-target area normalization to the hinted city
         effective_city = city
@@ -1019,6 +1028,7 @@ async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
         _nl_cache_set(ck, result)
         return result
     except Exception as e:
-        logger.warning(f"Claude parse failed, falling back to regex: {e}")
-        last_call.update(error=f"{type(e).__name__}: {e}")
+        # Provider errors can include private queries and response bodies.
+        logger.warning("Claude parse failed (%s), falling back to regex", type(e).__name__)
+        last_call.update(error=type(e).__name__)
         return parse_natural_query(query, city=city)

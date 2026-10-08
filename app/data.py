@@ -208,6 +208,31 @@ _ENGLISH_TO_URDU = {
     v: k for k, v in URDU_AREAS.items() if k not in PARENT_FALLBACK_ALIASES["karachi"]
 }
 
+# Search aliases are city-scoped: the same Urdu name can refer to different
+# neighborhoods, and a Karachi fallback must never leak into another city.
+URDU_AREAS_BY_CITY = {
+    "karachi": URDU_AREAS,
+    "lahore": {
+        "گلبرگ": "Gulberg", "جوہر ٹاؤن": "Johar Town", "جوہر ٹاون": "Johar Town",
+        "ماڈل ٹاؤن": "Model Town", "ماڈل ٹاون": "Model Town",
+        "بحریہ ٹاؤن": "Bahria Town", "بحریہ ٹاون": "Bahria Town",
+        "ڈی ایچ اے": "DHA Defence", "عسکری": "Askari",
+        "فیصل ٹاؤن": "Faisal Town", "گارڈن ٹاؤن": "Garden Town",
+        "علامہ اقبال ٹاؤن": "Allama Iqbal Town", "اقبال ٹاؤن": "Allama Iqbal Town",
+        "واپڈا ٹاؤن": "Wapda Town", "سمن آباد": "Samanabad",
+    },
+    "islamabad": {
+        "گلبرگ": "Gulberg", "بحریہ ٹاؤن": "Bahria Town", "بحریہ ٹاون": "Bahria Town",
+        "ڈی ایچ اے": "DHA Defence", "بنی گالا": "Bani Gala",
+    },
+}
+for _name in CITY_AREAS["islamabad"]:
+    _parts = _name.split()
+    if len(_parts) == 2 and _parts[0] in {"F", "G", "E", "I"} and _parts[1].isdigit():
+        _letter = {"F": "ایف", "G": "جی", "E": "ای", "I": "آئی"}[_parts[0]]
+        for _separator in (" ", "-"):
+            URDU_AREAS_BY_CITY["islamabad"][f"{_letter}{_separator}{_parts[1]}"] = _name
+
 ROMAN_URDU_TYPES = {
     "house": "house", "ghar": "house", "makan": "house", "makaan": "house",
     "apartment": "apartment", "flat": "apartment", "flaat": "apartment",

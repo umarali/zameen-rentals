@@ -8,7 +8,7 @@ import time
 from threading import Lock as _Lock
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -17,6 +17,7 @@ from app.data import (
     KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, _ENGLISH_TO_URDU,
     PARENT_FALLBACK_ALIASES, ROMAN_URDU_AREAS_BY_CITY, URDU_AREAS,
 )
+from app.listing_tags import attach_tags
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
@@ -426,9 +427,13 @@ async def api_parse_query(request: Request, q: str = Query(..., min_length=1), c
 
 @router.get("/api/search")
 @limiter.limit(_SEARCH_RATE_LIMIT)
-async def search(request: Request, city: str = Query("lahore"), area: Optional[str]=Query(None), areas: Optional[list[str]]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), bedrooms_max: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), size_marla_min: Optional[float]=Query(None, ge=0), size_marla_max: Optional[float]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None)):
+async def search(request: Request, city: str = Query("lahore"), area: Optional[str]=Query(None), areas: Optional[list[str]]=Query(None), property_type: Optional[str]=Query(None), bedrooms: Optional[int]=Query(None, ge=1, le=10), bedrooms_max: Optional[int]=Query(None, ge=1, le=10), price_min: Optional[int]=Query(None, ge=0), price_max: Optional[int]=Query(None, ge=0), size_marla_min: Optional[float]=Query(None, ge=0), size_marla_max: Optional[float]=Query(None, ge=0), furnished: Optional[bool]=Query(None), page: int=Query(1, ge=1), sort: Optional[str]=Query(None), tenant: Optional[Literal["family", "bachelor"]]=Query(None), backup_power: Optional[bool]=Query(None), separate_entrance: Optional[bool]=Query(None)):
     try:
         _validate_price_range(price_min, price_max)
+        # Jev tags (app/listing_tags.py). Zameen can't filter on these, so a
+        # tag filter never falls back to the live scraper.
+        tag_filters = {"tenant": tenant, "backup_power": backup_power or None,
+                       "separate_entrance": separate_entrance or None}
         # "DHA or Clifton": several areas. One area stays on the single-area path.
         area_names = _normalize_area_names(areas) if areas else []
         if len(area_names) == 1:
@@ -437,14 +442,15 @@ async def search(request: Request, city: str = Query("lahore"), area: Optional[s
             area = None
         # Serve from in-memory cache for the default (no-filter, page=1) query.
         # log_search is intentionally skipped on cache hits to avoid inflating search history counts.
-        is_default = not area_names and _is_default_search(area, property_type, bedrooms, bedrooms_max,
+        is_default = not area_names and not any(tag_filters.values()) and _is_default_search(area, property_type, bedrooms, bedrooms_max,
                                         price_min, price_max, size_marla_min, size_marla_max,
                                         furnished, sort, page)
         if is_default:
             with _DEFAULT_SEARCH_LOCK:
                 cached = _DEFAULT_SEARCH_CACHE.get(city)
             if cached and cached[1] > time.monotonic():
-                return {**cached[0], "source": "local"}
+                return {**cached[0], "source": "local",
+                        "results": attach_tags([dict(item) for item in cached[0]["results"]])}
 
         # Try local DB first (instant results from crawler data)
         local_result = search_listings(
@@ -452,7 +458,7 @@ async def search(request: Request, city: str = Query("lahore"), area: Optional[s
             bedrooms=bedrooms, bedrooms_max=bedrooms_max,
             price_min=price_min, price_max=price_max,
             size_marla_min=size_marla_min, size_marla_max=size_marla_max,
-            furnished=furnished, sort=sort, page=page
+            furnished=furnished, sort=sort, page=page, **tag_filters
         )
         if local_result["total"] > 0:
             local_result["source"] = "local"
@@ -467,7 +473,7 @@ async def search(request: Request, city: str = Query("lahore"), area: Optional[s
 
         # The upstream scraper cannot apply size bounds or several areas. Keep
         # the local empty result instead of returning homes outside the request.
-        if size_marla_min or size_marla_max or area_names:
+        if size_marla_min or size_marla_max or area_names or any(tag_filters.values()):
             return {**local_result, "source": "local"}
 
         if _PLAYWRIGHT_SERVER:

@@ -85,7 +85,11 @@ function renderDrawerMiniMap(target) {
     attributionControl: false,
   }).setView([target.lat, target.lng], target.zoom);
   refs.miniMapBaseLayer = createBaseLayer(refs.mapLayer).addTo(refs.miniMap);
-  L.marker([target.lat, target.lng]).addTo(refs.miniMap);
+  // Same red pin as the main map's exact markers; L.marker's default icon
+  // images aren't bundled and 404.
+  L.circleMarker([target.lat, target.lng], {
+    radius: 8, color: '#ffffff', weight: 2, opacity: 1, fillColor: '#ef4444', fillOpacity: 0.95,
+  }).addTo(refs.miniMap);
 }
 
 // ===== OPEN DRAWER =====
@@ -151,7 +155,7 @@ export function openDrawer(item, selectAreaFull) {
     <div class="drawer-divider"></div>
     <div class="flex items-baseline gap-2 mb-1">
       <span class="text-2xl font-extrabold text-gray-900">${esc(fmtPrice(item.price, item.price_text))}</span>
-      <span class="text-sm text-gray-400">/ month</span>
+      <span class="text-sm text-gray-500">/ month</span>
     </div>
     ${(() => {
       const addedRel = item.posted_at ? fmtRelative(item.posted_at) : '';
@@ -160,7 +164,7 @@ export function openDrawer(item, selectAreaFull) {
       if (!addedLine && !updatedRel) return '';
       return `<div class="mb-2 leading-tight">
         ${addedLine ? `<div class="text-xs text-gray-500">${esc(addedLine)}</div>` : ''}
-        ${updatedRel ? `<div class="text-[11px] text-gray-400">Updated ${esc(updatedRel)}</div>` : ''}
+        ${updatedRel ? `<div class="text-xs text-gray-500">Updated ${esc(updatedRel)}</div>` : ''}
       </div>`;
     })()}
     ${highlights.length ? `<div class="drawer-divider"></div><div class="grid grid-cols-2 gap-3 mb-1">${highlights.join('')}</div>` : ''}
@@ -173,13 +177,13 @@ export function openDrawer(item, selectAreaFull) {
         <div class="skeleton h-10 w-full mt-4"></div>
       </div>
     </div>
-    ${mapTarget ? `<div class="drawer-divider"></div><div class="mb-3"><div class="text-sm font-semibold text-gray-800">Location</div><div id="drawerLocationMeta" class="text-xs text-gray-400 mt-1">${mapTarget.exact ? 'Exact listing pin' : 'Approximate area location'}</div></div><div id="drawerMiniMap" class="w-full h-44 rounded-xl overflow-hidden mb-1"></div>` : ''}
+    ${mapTarget ? `<div class="drawer-divider"></div><div class="mb-3"><div class="text-sm font-semibold text-gray-800">Location</div><div id="drawerLocationMeta" class="text-xs text-gray-500 mt-1">${mapTarget.exact ? 'Exact listing pin' : 'Approximate area location'}</div></div><div id="drawerMiniMap" class="w-full h-44 rounded-xl overflow-hidden mb-1"></div>` : ''}
     ${nearbyHtml ? `<div class="drawer-divider"></div>${nearbyHtml}` : ''}
     <div class="h-20"></div>
     <div class="drawer-contact-bar">
       <div class="flex-1 min-w-0">
         <div class="text-lg font-bold text-gray-900 truncate">${esc(fmtPrice(item.price, item.price_text))}</div>
-        <div class="text-xs text-gray-400">per month</div>
+        <div class="text-xs text-gray-500">per month</div>
       </div>
       ${item.url ? `
       <a href="${escA(item.url)}" target="_blank" rel="noopener" class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:text-brand-500 hover:border-brand-200 transition-colors" title="View on Zameen.com"><svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg></a>
@@ -263,7 +267,7 @@ async function fetchDrawerDetail(item, existingImgs) {
           <div class="w-11 h-11 rounded-full bg-gray-200 flex items-center justify-center text-gray-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0"/></svg></div>
           <div>
             <div class="text-sm font-semibold text-gray-800">${esc(d.agent_name)}</div>
-            ${d.agent_agency ? `<div class="text-xs text-gray-400">${esc(d.agent_agency)}</div>` : ''}
+            ${d.agent_agency ? `<div class="text-xs text-gray-500">${esc(d.agent_agency)}</div>` : ''}
           </div>
         </div>`;
     }
@@ -285,7 +289,7 @@ async function fetchDrawerDetail(item, existingImgs) {
     if (detailKeys.length) {
       html += `<div class="drawer-divider"></div>
         <div class="text-sm font-semibold text-gray-800 mb-3">Details</div>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-2">${detailKeys.slice(0, 12).map(k => `<div class="text-xs text-gray-400">${esc(k)}</div><div class="text-sm text-gray-700">${esc(d.details[k])}</div>`).join('')}</div>`;
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2">${detailKeys.slice(0, 12).map(k => `<div class="text-xs text-gray-500">${esc(k)}</div><div class="text-sm text-gray-700">${esc(d.details[k])}</div>`).join('')}</div>`;
     }
     el.innerHTML = html || '';
 
@@ -303,7 +307,7 @@ async function fetchDrawerDetail(item, existingImgs) {
     });
   } catch (error) {
     if (error?.name === 'AbortError' || requestId !== drawerDetailRequestId) return;
-    el.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">Could not load details</p>';
+    el.innerHTML = '<p class="text-xs text-gray-500 text-center py-2">Could not load details</p>';
   } finally {
     if (drawerDetailController === controller) drawerDetailController = null;
   }
