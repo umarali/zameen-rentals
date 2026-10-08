@@ -19,7 +19,7 @@ import {
   initMobileMap, updateMobileCarousel, updateMobileMarkers, initHoverSync,
   getVisibleAreaNames, fitCityOverview,
   clearNearbyRadiusOverlays, hydrateStoredUserLocation, refreshUserLocationOverlays,
-  requestUserLocation, resetExactPrefetchState,
+  requestUserLocation, getNearestCity, resetExactPrefetchState,
 } from './map.js';
 import { openDrawer, initDrawerListeners } from './drawer.js';
 import { getStoredMapLayer } from './map-layers.js';
@@ -1357,16 +1357,38 @@ function initNearbyControls() {
 
     try {
       if (!refs.userLocation) {
-        await requestUserLocation({ mapInstance: getActiveMapInstance(), recenter: true });
-      } else {
-        refreshUserLocationOverlays();
+        await requestUserLocation({ recenter: false });
       }
     } catch {
       return;
     }
 
     refs.searchMode = 'nearby';
+    clearTimeout(refs.mapTimer);
+    refs.searchController?.abort();
+    // Near Me replaces the previous area, including an area in the same city.
+    // Keep the user's property, bedroom and budget preferences.
+    S.area = '';
+    $('#areaInput').value = '';
+    $('#areaClear').classList.add('hidden');
+    const nearestCity = getNearestCity(refs.userLocation);
+    const prevCity = S.city;
+    if (nearestCity !== S.city) {
+      S.city = nearestCity;
+      S.sizeUnit = '';
+      updateCityTabs();
+      updateNlExamples();
+      trackCitySwitch({ from: prevCity, to: S.city });
+    }
+    updateChips();
+    saveSearch();
+    if (nearestCity !== prevCity) {
+      await loadCityData({ search: false });
+      // A manual city change while the lookup was pending takes precedence.
+      if (S.city !== nearestCity || refs.searchMode !== 'nearby') return;
+    }
     updateNearbyControls();
+    refreshUserLocationOverlays({ recenter: true, mapInstance: getActiveMapInstance() });
     refs._lastTriggeredBy = 'nearby_chip';
     doSearch(1);
   });

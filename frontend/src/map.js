@@ -235,6 +235,14 @@ export function clearNearbyRadiusOverlays() {
   clearLayerRef('mobileNearbyRadiusLayer');
 }
 
+export function getNearestCity(location) {
+  const point = L.latLng(location.lat, location.lng);
+  return Object.keys(CITY_DEFAULTS).reduce((nearest, city) =>
+    point.distanceTo(CITY_DEFAULTS[city]) < point.distanceTo(CITY_DEFAULTS[nearest])
+      ? city : nearest
+  );
+}
+
 function geolocationErrorMessage(error) {
   if (!error) return 'Could not get your location right now.';
   if (error.code === 1) return 'Location permission was denied.';
