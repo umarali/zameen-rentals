@@ -236,11 +236,27 @@ export function clearNearbyRadiusOverlays() {
 }
 
 export function getNearestCity(location) {
+  return getNearestCityWithDistance(location).city;
+}
+
+// Beyond this distance from every city centre, Near Me has nothing to show:
+// the furthest covered suburbs (Bahria Town Karachi, DHA City) sit well inside it.
+export const NEAR_ME_MAX_CITY_KM = 75;
+
+export function getNearestCityWithDistance(location) {
   const point = L.latLng(location.lat, location.lng);
-  return Object.keys(CITY_DEFAULTS).reduce((nearest, city) =>
-    point.distanceTo(CITY_DEFAULTS[city]) < point.distanceTo(CITY_DEFAULTS[nearest])
-      ? city : nearest
-  );
+  let best = null;
+  for (const city of Object.keys(CITY_DEFAULTS)) {
+    const km = point.distanceTo(CITY_DEFAULTS[city]) / 1000;
+    if (!best || km < best.km) best = { city, km };
+  }
+  return best;
+}
+
+// The TTL is checked when a stored location is loaded, but an app left open
+// for hours (an installed PWA) keeps its in-memory location; check it again.
+export function isUserLocationFresh(location = refs.userLocation) {
+  return !!location?.ts && Date.now() - location.ts <= USER_LOCATION_TTL_MS;
 }
 
 function geolocationErrorMessage(error) {

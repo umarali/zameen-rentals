@@ -6,6 +6,11 @@ from types import SimpleNamespace
 import pytest
 import anthropic
 import httpx
+
+try:  # anthropic 1.x runs on httpx2 and rejects httpx clients; 0.x uses httpx.
+    import httpx2 as sdk_httpx
+except ImportError:  # pragma: no cover - older SDK
+    sdk_httpx = httpx
 import instructor
 
 from app import parsing
@@ -122,7 +127,7 @@ def test_real_sdk_and_instructor_parse_tool_response(monkeypatch):
         import json
         body = json.loads(request.content)
         seen.append(body)
-        return httpx.Response(200, json={
+        return sdk_httpx.Response(200, json={
             "id": "msg_test", "type": "message", "role": "assistant",
             "model": body["model"], "stop_reason": "tool_use", "stop_sequence": None,
             "usage": {"input_tokens": 10, "output_tokens": 10},
@@ -133,7 +138,7 @@ def test_real_sdk_and_instructor_parse_tool_response(monkeypatch):
     async def run():
         async with anthropic.AsyncAnthropic(
             api_key="test-only", max_retries=0,
-            http_client=httpx.AsyncClient(transport=httpx.MockTransport(respond)),
+            http_client=sdk_httpx.AsyncClient(transport=sdk_httpx.MockTransport(respond)),
         ) as sdk:
             monkeypatch.setattr(parsing, "_get_instructor_client", lambda: instructor.from_anthropic(sdk))
             monkeypatch.setattr(parsing, "_nl_cache_get", lambda key: None)
