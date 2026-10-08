@@ -1,0 +1,150 @@
+{"id": "kar-001", "city": "karachi", "lang": "en", "q": "2 bed flat in DHA under 50k", "expect": {"area": "DHA Defence", "bedrooms": 2, "property_type": "apartment", "price_max": 50000}}
+{"id": "kar-002", "city": "karachi", "lang": "en", "q": "3 bedroom house in clifton", "expect": {"area": "Clifton", "bedrooms": 3, "property_type": "house"}}
+{"id": "kar-003", "city": "karachi", "lang": "en", "q": "flat in clifton block 5", "expect": {"area": "Clifton Block 5", "property_type": "apartment"}}
+{"id": "kar-004", "city": "karachi", "lang": "en", "q": "furnished apartment dha phase 6", "expect": {"area": "DHA Phase 6", "property_type": "apartment", "furnished": true}}
+{"id": "kar-005", "city": "karachi", "lang": "en", "q": "upper portion in gulshan e iqbal 40k to 60k", "expect": {"area": "Gulshan-e-Iqbal", "property_type": "upper_portion", "price_min": 40000, "price_max": 60000}}
+{"id": "kar-006", "city": "karachi", "lang": "en", "q": "cheapest room in saddar", "expect": {"area": "Saddar", "property_type": "room", "sort": "price_low"}}
+{"id": "kar-007", "city": "karachi", "lang": "en", "q": "house for 45000", "expect": {"property_type": "house", "price_max": 45000, "area": null}, "tags": ["no-area"]}
+{"id": "kar-008", "city": "karachi", "lang": "en", "q": "3 bed house 50 to 80 thousand", "expect": {"bedrooms": 3, "property_type": "house", "price_min": 50000, "price_max": 80000, "area": null}, "tags": ["no-area"]}
+{"id": "kar-009", "city": "karachi", "lang": "en", "q": "DHA or Clifton flat under 80k", "expect": {"areas": ["DHA Defence", "Clifton"], "property_type": "apartment", "price_max": 80000}}
+{"id": "kar-010", "city": "karachi", "lang": "en", "q": "2 bed flat in DHA or Clifton under 80k", "expect": {"areas": ["DHA Defence", "Clifton"], "bedrooms": 2, "price_max": 80000}}
+{"id": "kar-011", "city": "karachi", "lang": "en", "q": "240 sq yd house in clifton", "expect": {"area": "Clifton", "property_type": "house", "size_marla_min": 9.6}}
+{"id": "kar-012", "city": "karachi", "lang": "en", "q": "500 gaz bungalow dha phase 8", "expect": {"area": "DHA Phase 8", "property_type": "house", "size_marla_min": 20.0}, "tags": ["number-in-area"]}
+{"id": "kar-013", "city": "karachi", "lang": "en", "q": "newest flats in north nazimabad", "expect": {"area": "North Nazimabad", "property_type": "apartment", "sort": "newest"}}
+{"id": "kar-014", "city": "karachi", "lang": "en", "q": "2-3 bed apartment pechs", "expect": {"area": "PECHS", "bedrooms": 2, "bedrooms_max": 3, "property_type": "apartment"}}
+{"id": "kar-015", "city": "karachi", "lang": "en", "q": "penthouse in bahria town karachi", "expect": {"area": "Bahria Town Karachi", "property_type": "penthouse"}}
+{"id": "kar-016", "city": "karachi", "lang": "en", "q": "lower portion gulistan e jauhar under 35k", "expect": {"area": "Gulistan-e-Jauhar", "property_type": "lower_portion", "price_max": 35000}}
+{"id": "kar-017", "city": "karachi", "lang": "en", "q": "gulshan e iqbal block 13 upper portion", "expect": {"area": "Gulshan-e-Iqbal", "property_type": "upper_portion"}, "approx_ok": true, "tags": ["missing-block"], "note": "Block 13 is not a known area"}
+{"id": "kar-018", "city": "karachi", "lang": "en", "q": "house in dha phase 9", "expect": {"area": "DHA Defence", "property_type": "house"}, "approx_ok": true, "tags": ["missing-block"], "note": "no Phase 9"}
+{"id": "kar-019", "city": "karachi", "lang": "en", "q": "flat in clifftn blok 5 under 50000", "expect": {"area": "Clifton Block 5", "property_type": "apartment", "price_max": 50000}, "approx_ok": true, "tags": ["typo", "number-in-area"]}
+{"id": "kar-020", "city": "karachi", "lang": "en", "q": "near clifton bridge in dha 2 bed", "expect": {"area": "DHA Defence", "bedrooms": 2}, "tags": ["two-mentions"]}
+{"id": "kar-021", "city": "karachi", "lang": "en", "q": "flat near aga khan hospital", "expect": {"property_type": "apartment"}, "area_any": ["Saddar", "Gulshan-e-Iqbal", "Clifton"], "approx_ok": true, "tags": ["landmark"]}
+{"id": "kar-022", "city": "karachi", "lang": "en", "q": "askari 5 flat", "expect": {"area": "Cantt Malir Cantonment", "property_type": "apartment"}, "approx_ok": true, "tags": ["number-in-area"], "note": "Askari 5 not an area; parent"}
+{"id": "kar-023", "city": "karachi", "lang": "en", "q": "2 bed flat in federal b area", "expect": {"area": "Federal B. Area", "bedrooms": 2, "property_type": "apartment"}}
+{"id": "kar-024", "city": "karachi", "lang": "en", "q": "studio apartment clifton", "expect": {"area": "Clifton", "bedrooms": 1, "property_type": "apartment"}}
+{"id": "kar-025", "city": "karachi", "lang": "en", "q": "house in surjani town under 25k", "expect": {"area": "Gadap Town Surjani Town", "property_type": "house", "price_max": 25000}}
+{"id": "kar-026", "city": "karachi", "lang": "en", "q": "1 kanal house dha", "expect": {"area": "DHA Defence", "property_type": "house", "size_marla_min": 20.0}}
+{"id": "kar-027", "city": "karachi", "lang": "en", "q": "flat in tariq road", "expect": {"area": "Tariq Road", "property_type": "apartment"}}
+{"id": "kar-028", "city": "karachi", "lang": "en", "q": "room for rent in kemari", "expect": {"property_type": "room", "area": null}, "tags": ["no-area", "uncovered"], "note": "Kemari not covered yet"}
+{"id": "kar-029", "city": "karachi", "lang": "en", "q": "house in navy housing scheme karsaz", "expect": {"area": "Navy Housing Scheme Karsaz", "property_type": "house"}}
+{"id": "kar-030", "city": "karachi", "lang": "en", "q": "flat on shaheed e millat road", "expect": {"area": "Shaheed Millat Road", "property_type": "apartment"}}
+{"id": "kar-031", "city": "karachi", "lang": "en", "q": "clifton dha flat", "expect": {"property_type": "apartment"}, "area_any": ["Clifton", "DHA Defence"], "approx_ok": true, "tags": ["two-mentions"], "note": "two areas, no joiner"}
+{"id": "kar-032", "city": "karachi", "lang": "en", "q": "4 bed house in dha phase 5 above 2 lakh", "expect": {"area": "DHA Phase 5", "bedrooms": 4, "property_type": "house", "price_min": 200000}}
+{"id": "kar-033", "city": "karachi", "lang": "en", "q": "luxury apartment dha phase 8", "expect": {"area": "DHA Phase 8", "property_type": "apartment", "sort": "price_high"}}
+{"id": "kar-034", "city": "karachi", "lang": "en", "q": "flat in north karachi buffer zone", "expect": {"area": "North Buffer Zone", "property_type": "apartment"}}
+{"id": "kar-035", "city": "karachi", "lang": "en", "q": "2 bed flat in gulberg town", "expect": {"property_type": "apartment", "bedrooms": 2}, "note": "Gulberg Town not an area; no wrong area"}
+{"id": "kar-036", "city": "karachi", "lang": "roman", "q": "dha phase 8 main 250 se 300k tak ka neechay ka portion", "expect": {"area": "DHA Phase 8", "property_type": "lower_portion", "price_min": 250000, "price_max": 300000}}
+{"id": "kar-037", "city": "karachi", "lang": "roman", "q": "gulshan e iqbal block 13 main ooper ka portion 150k tak", "expect": {"area": "Gulshan-e-Iqbal", "property_type": "upper_portion", "price_max": 150000}, "approx_ok": true}
+{"id": "kar-038", "city": "karachi", "lang": "roman", "q": "sasta kamra near nipa", "expect": {"area": "Gulshan-e-Iqbal", "property_type": "room", "sort": "price_low"}, "tags": ["landmark"]}
+{"id": "kar-039", "city": "karachi", "lang": "roman", "q": "clifton mein 2 kamray ka flat", "expect": {"area": "Clifton", "bedrooms": 2, "property_type": "apartment"}}
+{"id": "kar-040", "city": "karachi", "lang": "roman", "q": "do bed flat dha mein pachas hazar tak", "expect": {"area": "DHA Defence", "bedrooms": 2, "property_type": "apartment", "price_max": 50000}, "tags": ["number-words"]}
+{"id": "kar-041", "city": "karachi", "lang": "roman", "q": "teen kamray ka ghar gulistan e jauhar", "expect": {"area": "Gulistan-e-Jauhar", "bedrooms": 3, "property_type": "house"}}
+{"id": "kar-042", "city": "karachi", "lang": "roman", "q": "federal b area do kamray ka flat", "expect": {"area": "Federal B. Area", "bedrooms": 2, "property_type": "apartment"}}
+{"id": "kar-043", "city": "karachi", "lang": "roman", "q": "fb area mein ghar dedh lakh tak", "expect": {"area": "Federal B. Area", "property_type": "house", "price_max": 150000}}
+{"id": "kar-044", "city": "karachi", "lang": "roman", "q": "saddar mein sasta kamra", "expect": {"area": "Saddar", "property_type": "room", "sort": "price_low"}}
+{"id": "kar-045", "city": "karachi", "lang": "roman", "q": "furnished flat clifton mein 1 lac tak", "expect": {"area": "Clifton", "property_type": "apartment", "furnished": true, "price_max": 100000}}
+{"id": "kar-046", "city": "karachi", "lang": "roman", "q": "bahria town karachi mein ghar 60 se 80 hazar", "expect": {"area": "Bahria Town Karachi", "property_type": "house", "price_min": 60000, "price_max": 80000}}
+{"id": "kar-047", "city": "karachi", "lang": "roman", "q": "north nazimabad mein ooper wala portion", "expect": {"area": "North Nazimabad", "property_type": "upper_portion"}}
+{"id": "kar-048", "city": "karachi", "lang": "roman", "q": "pechs mein naya flat", "expect": {"area": "PECHS", "property_type": "apartment", "sort": "newest"}}
+{"id": "kar-049", "city": "karachi", "lang": "roman", "q": "dha ya clifton mein flat", "expect": {"areas": ["DHA Defence", "Clifton"], "property_type": "apartment"}}
+{"id": "kar-050", "city": "karachi", "lang": "roman", "q": "dha mein, clifton ke paas 2 bed", "expect": {"area": "DHA Defence", "bedrooms": 2}, "tags": ["two-mentions"]}
+{"id": "kar-051", "city": "karachi", "lang": "roman", "q": "saadi town mein portion 30 hazar tak", "expect": {"area": "Scheme 33 Saadi Town", "price_max": 30000}}
+{"id": "kar-052", "city": "karachi", "lang": "roman", "q": "karsaz mein ghar", "expect": {"area": "Navy Housing Scheme Karsaz", "property_type": "house"}, "approx_ok": true}
+{"id": "kar-053", "city": "karachi", "lang": "roman", "q": "char kamray ka ghar dha phase 6", "expect": {"area": "DHA Phase 6", "bedrooms": 4, "property_type": "house"}, "tags": ["number-words", "number-in-area"]}
+{"id": "kar-054", "city": "karachi", "lang": "roman", "q": "120 gaz ka ghar gulshan", "expect": {"area": "Gulshan-e-Iqbal", "property_type": "house", "size_marla_min": 4.8}}
+{"id": "kar-055", "city": "karachi", "lang": "roman", "q": "malir mein sasta ghar", "expect": {"area": "Malir", "property_type": "house", "sort": "price_low"}}
+{"id": "kar-056", "city": "karachi", "lang": "roman", "q": "korangi mein kamra 15 hazar tak", "expect": {"area": "Korangi", "property_type": "room", "price_max": 15000}}
+{"id": "kar-057", "city": "karachi", "lang": "roman", "q": "sade teen lakh tak bungalow dha", "expect": {"area": "DHA Defence", "property_type": "house", "price_max": 350000}, "tags": ["number-words"]}
+{"id": "kar-058", "city": "karachi", "lang": "roman", "q": "flat chahiye clifton block 2 mein", "expect": {"area": "Clifton Block 2", "property_type": "apartment"}}
+{"id": "kar-059", "city": "karachi", "lang": "roman", "q": "landhi mein ghar", "expect": {"property_type": "house", "area": null}, "tags": ["no-area", "uncovered"], "note": "Landhi not covered yet"}
+{"id": "kar-060", "city": "karachi", "lang": "urdu", "q": "ڈی ایچ اے میں فلیٹ", "expect": {"area": "DHA Defence", "property_type": "apartment"}}
+{"id": "kar-061", "city": "karachi", "lang": "urdu", "q": "کلفٹن میں تین کمرے کا گھر پچاس ہزار تک", "expect": {"area": "Clifton", "bedrooms": 3, "property_type": "house", "price_max": 50000}, "tags": ["number-words", "urdu"]}
+{"id": "kar-062", "city": "karachi", "lang": "urdu", "q": "دو بیڈ فلیٹ گلشن اقبال", "expect": {"area": "Gulshan-e-Iqbal", "bedrooms": 2, "property_type": "apartment"}}
+{"id": "kar-063", "city": "karachi", "lang": "urdu", "q": "کلفٹن یا ڈی ایچ اے میں فلیٹ", "expect": {"areas": ["Clifton", "DHA Defence"], "property_type": "apartment"}}
+{"id": "kar-064", "city": "karachi", "lang": "urdu", "q": "فیڈرل بی ایریا میں فلیٹ", "expect": {"area": "Federal B. Area", "property_type": "apartment"}}
+{"id": "kar-065", "city": "karachi", "lang": "urdu", "q": "ڈی ایچ اے فیز 6 میں گھر", "expect": {"area": "DHA Phase 6", "property_type": "house"}}
+{"id": "kar-066", "city": "karachi", "lang": "urdu", "q": "کلفٹن بلاک 5 میں 2 بیڈ فلیٹ", "expect": {"area": "Clifton Block 5", "bedrooms": 2, "property_type": "apartment"}}
+{"id": "kar-067", "city": "karachi", "lang": "urdu", "q": "گھر ڈیڑھ لاکھ تک ڈی ایچ اے", "expect": {"area": "DHA Defence", "property_type": "house", "price_max": 150000}}
+{"id": "kar-068", "city": "karachi", "lang": "urdu", "q": "صدر میں سستا کمرہ", "expect": {"area": "Saddar", "property_type": "room", "sort": "price_low"}}
+{"id": "kar-069", "city": "karachi", "lang": "urdu", "q": "عسکری 5 میں فلیٹ", "expect": {"area": "Cantt Malir Cantonment", "property_type": "apartment"}, "approx_ok": true, "tags": ["number-in-area", "urdu"]}
+{"id": "kar-070", "city": "karachi", "lang": "urdu", "q": "کلفٹن برج کے پاس ڈی ایچ اے میں فلیٹ", "expect": {"area": "DHA Defence", "property_type": "apartment"}, "tags": ["two-mentions", "urdu"]}
+{"id": "kar-071", "city": "karachi", "lang": "urdu", "q": "۲ بیڈ فلیٹ کلفٹن", "expect": {"area": "Clifton", "bedrooms": 2, "property_type": "apartment"}, "tags": ["urdu-digits"]}
+{"id": "kar-072", "city": "karachi", "lang": "urdu", "q": "فرنشڈ فلیٹ ڈی ایچ اے", "expect": {"area": "DHA Defence", "property_type": "apartment", "furnished": true}}
+{"id": "kar-073", "city": "karachi", "lang": "urdu", "q": "گلستان جوہر میں چار کمرے کا گھر", "expect": {"area": "Gulistan-e-Jauhar", "bedrooms": 4, "property_type": "house"}}
+{"id": "kar-074", "city": "karachi", "lang": "mixed", "q": "2 bed کلفٹن or DHA", "expect": {"areas": ["Clifton", "DHA Defence"], "bedrooms": 2}}
+{"id": "kar-075", "city": "karachi", "lang": "mixed", "q": "furnished 5 marla کلفٹن or DHA", "expect": {"areas": ["Clifton", "DHA Defence"], "furnished": true, "size_marla_min": 5.0}}
+{"id": "lhr-001", "city": "lahore", "lang": "en", "q": "3 bed house DHA", "expect": {"area": "DHA Defence", "bedrooms": 3, "property_type": "house"}}
+{"id": "lhr-002", "city": "lahore", "lang": "en", "q": "5 marla house in johar town", "expect": {"area": "Johar Town", "property_type": "house", "size_marla_min": 5.0}}
+{"id": "lhr-003", "city": "lahore", "lang": "en", "q": "10 marla upper portion in bahria town", "expect": {"area": "Bahria Town", "property_type": "upper_portion", "size_marla_min": 10.0}}
+{"id": "lhr-004", "city": "lahore", "lang": "en", "q": "1 kanal house dha phase 5", "expect": {"area": "Defence (DHA) Phase 5", "property_type": "house", "size_marla_min": 20.0}}
+{"id": "lhr-005", "city": "lahore", "lang": "en", "q": "dha phase 6 house", "expect": {"area": "Defence  DHA  Phase 6", "property_type": "house"}}
+{"id": "lhr-006", "city": "lahore", "lang": "en", "q": "flat in gulberg 3 under 1 lac", "expect": {"area": "Gulberg 3", "property_type": "apartment", "price_max": 100000}}
+{"id": "lhr-007", "city": "lahore", "lang": "en", "q": "furnished room model town", "expect": {"area": "Model Town", "property_type": "room", "furnished": true}}
+{"id": "lhr-008", "city": "lahore", "lang": "en", "q": "house in garden town 80k to 1.2 lac", "expect": {"area": "Garden Town", "property_type": "house", "price_min": 80000, "price_max": 120000}}
+{"id": "lhr-009", "city": "lahore", "lang": "en", "q": "lower portion in allama iqbal town", "expect": {"area": "Allama Iqbal Town", "property_type": "lower_portion"}}
+{"id": "lhr-010", "city": "lahore", "lang": "en", "q": "cheap flat in wapda town", "expect": {"area": "Wapda Town", "property_type": "apartment", "sort": "price_low"}}
+{"id": "lhr-011", "city": "lahore", "lang": "en", "q": "house near emporium mall", "expect": {"property_type": "house"}, "area_any": ["Johar Town"], "tags": ["landmark"]}
+{"id": "lhr-012", "city": "lahore", "lang": "en", "q": "flat near liberty market", "expect": {"area": "Gulberg", "property_type": "apartment"}}
+{"id": "lhr-013", "city": "lahore", "lang": "en", "q": "house in lake city", "expect": {"area": "Raiwind Road Lake City", "property_type": "house"}}
+{"id": "lhr-014", "city": "lahore", "lang": "en", "q": "2 bed apartment in askari 10", "expect": {"area": "Askari Askari 10", "bedrooms": 2, "property_type": "apartment"}}
+{"id": "lhr-015", "city": "lahore", "lang": "en", "q": "house in dha rahbar", "expect": {"area": "DHA 11 Rahbar", "property_type": "house"}}
+{"id": "lhr-016", "city": "lahore", "lang": "en", "q": "1 kanal house dha", "expect": {"area": "DHA Defence", "property_type": "house", "size_marla_min": 20.0}}
+{"id": "lhr-017", "city": "lahore", "lang": "en", "q": "5 marla house", "expect": {"property_type": "house", "size_marla_min": 5.0, "area": null}, "tags": ["no-area"]}
+{"id": "lhr-018", "city": "lahore", "lang": "en", "q": "house 1 lac tak", "expect": {"property_type": "house", "price_max": 100000}}
+{"id": "lhr-019", "city": "lahore", "lang": "en", "q": "gulbrg house", "expect": {"area": "Gulberg", "property_type": "house"}, "tags": ["typo"]}
+{"id": "lhr-020", "city": "lahore", "lang": "en", "q": "upper portion in valencia", "expect": {"area": "Valencia Housing Society", "property_type": "upper_portion"}}
+{"id": "lhr-021", "city": "lahore", "lang": "en", "q": "house in faisal town or model town", "expect": {"areas": ["Faisal Town", "Model Town"], "property_type": "house"}}
+{"id": "lhr-022", "city": "lahore", "lang": "en", "q": "room near ucp", "expect": {"area": "Johar Town", "property_type": "room"}, "tags": ["landmark"]}
+{"id": "lhr-023", "city": "lahore", "lang": "en", "q": "flat in cantt", "expect": {"area": "Cantt", "property_type": "apartment"}}
+{"id": "lhr-024", "city": "lahore", "lang": "en", "q": "house in state life", "expect": {"area": "State Life Housing Society", "property_type": "house"}}
+{"id": "lhr-025", "city": "lahore", "lang": "en", "q": "johar town phase 2 house 10 marla", "expect": {"area": "Johar Town Phase 2", "property_type": "house", "size_marla_min": 10.0}}
+{"id": "lhr-026", "city": "lahore", "lang": "roman", "q": "johr town mein 2 kamray ka flat", "expect": {"area": "Johar Town", "bedrooms": 2, "property_type": "apartment"}, "tags": ["typo"]}
+{"id": "lhr-027", "city": "lahore", "lang": "roman", "q": "jauhar town ghar", "expect": {"area": "Johar Town", "property_type": "house"}, "tags": ["typo"]}
+{"id": "lhr-028", "city": "lahore", "lang": "roman", "q": "dha mein 1 kanal ka ghar 3 lakh tak", "expect": {"area": "DHA Defence", "property_type": "house", "size_marla_min": 20.0, "price_max": 300000}}
+{"id": "lhr-029", "city": "lahore", "lang": "roman", "q": "bahria town mein 5 marla ghar 50 hazar tak", "expect": {"area": "Bahria Town", "property_type": "house", "size_marla_min": 5.0, "price_max": 50000}}
+{"id": "lhr-030", "city": "lahore", "lang": "roman", "q": "gulberg mein flat chahiye", "expect": {"area": "Gulberg", "property_type": "apartment"}}
+{"id": "lhr-031", "city": "lahore", "lang": "roman", "q": "model town mein ooper wala portion", "expect": {"area": "Model Town", "property_type": "upper_portion"}}
+{"id": "lhr-032", "city": "lahore", "lang": "roman", "q": "das marla ghar johar town", "expect": {"area": "Johar Town", "property_type": "house", "size_marla_min": 10.0}}
+{"id": "lhr-033", "city": "lahore", "lang": "roman", "q": "teen kamray ka ghar wapda town mein", "expect": {"area": "Wapda Town", "bedrooms": 3, "property_type": "house"}}
+{"id": "lhr-034", "city": "lahore", "lang": "roman", "q": "iqbal town mein sasta kamra", "expect": {"area": "Allama Iqbal Town", "property_type": "room", "sort": "price_low"}}
+{"id": "lhr-035", "city": "lahore", "lang": "roman", "q": "township mein neechay ka portion", "expect": {"area": "Township Sector A2", "property_type": "lower_portion"}}
+{"id": "lhr-036", "city": "lahore", "lang": "roman", "q": "eme society mein ghar dhai lakh tak", "expect": {"area": "EME Society", "property_type": "house", "price_max": 250000}}
+{"id": "lhr-037", "city": "lahore", "lang": "roman", "q": "cavalry ground mein flat", "expect": {"area": "Cavalry Ground", "property_type": "apartment"}}
+{"id": "lhr-038", "city": "lahore", "lang": "roman", "q": "samanabad mein kamra", "expect": {"area": "Samanabad", "property_type": "room"}}
+{"id": "lhr-039", "city": "lahore", "lang": "roman", "q": "raiwind road pe ghar", "expect": {"area": "Raiwind Road", "property_type": "house"}}
+{"id": "lhr-040", "city": "lahore", "lang": "roman", "q": "bahria orchard mein naya ghar", "expect": {"area": "Bahria Orchard", "property_type": "house", "sort": "newest"}}
+{"id": "lhr-041", "city": "lahore", "lang": "roman", "q": "dha phase 5 mein char bed ka ghar", "expect": {"area": "Defence (DHA) Phase 5", "bedrooms": 4, "property_type": "house"}}
+{"id": "lhr-042", "city": "lahore", "lang": "urdu", "q": "جوہر ٹاؤن میں دو کمرے کا فلیٹ", "expect": {"area": "Johar Town", "bedrooms": 2, "property_type": "apartment"}}
+{"id": "lhr-043", "city": "lahore", "lang": "urdu", "q": "گلبرگ میں فلیٹ", "expect": {"area": "Gulberg", "property_type": "apartment"}}
+{"id": "lhr-044", "city": "lahore", "lang": "urdu", "q": "ماڈل ٹاؤن میں گھر", "expect": {"area": "Model Town", "property_type": "house"}}
+{"id": "lhr-045", "city": "lahore", "lang": "urdu", "q": "بحریہ ٹاؤن میں پانچ مرلہ گھر", "expect": {"area": "Bahria Town", "property_type": "house", "size_marla_min": 5.0}}
+{"id": "lhr-046", "city": "lahore", "lang": "urdu", "q": "ڈی ایچ اے میں ایک کنال گھر", "expect": {"area": "DHA Defence", "property_type": "house", "size_marla_min": 20.0}}
+{"id": "isb-001", "city": "islamabad", "lang": "en", "q": "F-8 mein flat 40 se 70 hazar", "expect": {"area": "F 8", "property_type": "apartment", "price_min": 40000, "price_max": 70000}}
+{"id": "isb-002", "city": "islamabad", "lang": "en", "q": "f8 flat", "expect": {"area": "F 8", "property_type": "apartment"}}
+{"id": "isb-003", "city": "islamabad", "lang": "en", "q": "G 11/3 lower portion", "expect": {"area": "G 11 G 11 3", "property_type": "lower_portion"}, "tags": ["number-in-area"]}
+{"id": "isb-004", "city": "islamabad", "lang": "en", "q": "g-11/3 flat", "expect": {"area": "G 11 G 11 3", "property_type": "apartment"}, "tags": ["number-in-area"]}
+{"id": "isb-005", "city": "islamabad", "lang": "en", "q": "bahria enclave house", "expect": {"area": "Bahria Town Bahria Enclave", "property_type": "house"}}
+{"id": "isb-006", "city": "islamabad", "lang": "en", "q": "2 bed apartment in E-11", "expect": {"area": "E 11", "bedrooms": 2, "property_type": "apartment"}}
+{"id": "isb-007", "city": "islamabad", "lang": "en", "q": "house in F-7 above 3 lakh", "expect": {"area": "F 7", "property_type": "house", "price_min": 300000}}
+{"id": "isb-008", "city": "islamabad", "lang": "en", "q": "furnished flat in blue area", "expect": {"area": "Blue Area", "property_type": "apartment", "furnished": true}}
+{"id": "isb-009", "city": "islamabad", "lang": "en", "q": "upper portion G-13 under 60k", "expect": {"area": "G 13", "property_type": "upper_portion", "price_max": 60000}}
+{"id": "isb-010", "city": "islamabad", "lang": "en", "q": "room in I-8", "expect": {"area": "I  8", "property_type": "room"}}
+{"id": "isb-011", "city": "islamabad", "lang": "en", "q": "house in DHA islamabad", "expect": {"area": "DHA Defence", "property_type": "house"}}
+{"id": "isb-012", "city": "islamabad", "lang": "en", "q": "flat in bahria town", "expect": {"area": "Bahria Town", "property_type": "apartment"}}
+{"id": "isb-013", "city": "islamabad", "lang": "en", "q": "1 kanal house in F-11", "expect": {"area": "F 11", "property_type": "house", "size_marla_min": 20.0}}
+{"id": "isb-014", "city": "islamabad", "lang": "en", "q": "lower portion in pwd", "expect": {"area": "PWD Housing Scheme", "property_type": "lower_portion"}}
+{"id": "isb-015", "city": "islamabad", "lang": "en", "q": "house in cbr town", "expect": {"area": "CBR Town", "property_type": "house"}}
+{"id": "isb-016", "city": "islamabad", "lang": "en", "q": "flat in soan garden", "expect": {"area": "Soan Garden", "property_type": "apartment"}}
+{"id": "isb-017", "city": "islamabad", "lang": "en", "q": "G-10 or G-9 portion under 50k", "expect": {"areas": ["G 10", "G 9"], "price_max": 50000}}
+{"id": "isb-018", "city": "islamabad", "lang": "en", "q": "cheapest room in G-9", "expect": {"area": "G 9", "property_type": "room", "sort": "price_low"}}
+{"id": "isb-019", "city": "islamabad", "lang": "en", "q": "3 bed house D-12", "expect": {"area": "D 12", "bedrooms": 3, "property_type": "house"}}
+{"id": "isb-020", "city": "islamabad", "lang": "en", "q": "flat in B-17", "expect": {"area": "B 17", "property_type": "apartment"}}
+{"id": "isb-021", "city": "islamabad", "lang": "en", "q": "house in G 11 sector", "expect": {"area": "G 11", "property_type": "house"}}
+{"id": "isb-022", "city": "islamabad", "lang": "en", "q": "flat in F-6 for 1.5 lakh", "expect": {"area": "F 6", "property_type": "apartment", "price_max": 150000}}
+{"id": "isb-023", "city": "islamabad", "lang": "roman", "q": "f 10 mein do kamray ka flat", "expect": {"area": "F 10", "bedrooms": 2, "property_type": "apartment"}}
+{"id": "isb-024", "city": "islamabad", "lang": "roman", "q": "g 11 mein ghar dedh lakh tak", "expect": {"area": "G 11", "property_type": "house", "price_max": 150000}}
+{"id": "isb-025", "city": "islamabad", "lang": "roman", "q": "e 11 mein sasta flat", "expect": {"area": "E 11", "property_type": "apartment", "sort": "price_low"}}
+{"id": "isb-026", "city": "islamabad", "lang": "roman", "q": "pakistan town mein ghar", "expect": {"area": "Pakistan Town", "property_type": "house"}}
+{"id": "isb-027", "city": "islamabad", "lang": "roman", "q": "i 10 mein neechay ka portion 40 hazar tak", "expect": {"area": "I 10", "property_type": "lower_portion", "price_max": 40000}}
+{"id": "isb-028", "city": "islamabad", "lang": "urdu", "q": "ایف ایٹ میں فلیٹ", "expect": {"property_type": "apartment", "area": "F 8"}, "tags": ["urdu", "number-words"], "note": "Urdu sector names not aliased yet; area F 8 ideal"}
+{"id": "isb-029", "city": "islamabad", "lang": "urdu", "q": "بحریہ ٹاؤن میں گھر", "expect": {"area": "Bahria Town", "property_type": "house"}}
