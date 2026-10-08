@@ -14,7 +14,6 @@ from app.data import (
     URDU_TYPES, ROMAN_URDU_TYPES,
     ROMAN_URDU_AREAS_BY_CITY, LANDMARKS,
 )
-from app.cache import cache_key, cache_get, cache_set
 
 logger = logging.getLogger("zameenrentals")
 
@@ -115,11 +114,77 @@ def _parse_size_value(num: str, unit: str) -> Optional[float]:
     return v
 
 
+# --- Spoken numbers --------------------------------------------------------
+# Voice search transcribes "two bed" as "do bed" / "دو بیڈ" and "50 thousand"
+# as "pachas hazar" / "پچاس ہزار". Number words become digits only when a bed,
+# room, size or money unit follows, so "saath" ("with") and "do" stay words.
+_NUMBER_WORDS = {
+    # Roman Urdu
+    "ek": 1, "aik": 1, "do": 2, "teen": 3, "tin": 3, "char": 4, "chaar": 4,
+    "panch": 5, "paanch": 5, "chay": 6, "chhe": 6, "che": 6, "saat": 7, "aath": 8, "ath": 8,
+    "das": 10, "pandrah": 15, "bees": 20, "pachees": 25, "tees": 30, "paintees": 35,
+    "chalees": 40, "chalis": 40, "paintalees": 45, "pachas": 50, "pachaas": 50,
+    "pachpan": 55, "saath": 60, "sath": 60, "painsath": 65, "sattar": 70, "pachattar": 75,
+    "assi": 80, "assee": 80, "nabbe": 90, "nabbay": 90, "sau": 100,
+    # English
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+    "nine": 9, "ten": 10, "fifteen": 15, "twenty": 20, "twenty-five": 25, "thirty": 30,
+    "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
+    "hundred": 100,
+    # Urdu script
+    "ایک": 1, "دو": 2, "تین": 3, "چار": 4, "پانچ": 5, "چھ": 6, "سات": 7, "آٹھ": 8, "نو": 9,
+    "دس": 10, "پندرہ": 15, "بیس": 20, "پچیس": 25, "تیس": 30, "پینتیس": 35, "چالیس": 40,
+    "پینتالیس": 45, "پچاس": 50, "پچپن": 55, "ساٹھ": 60, "پینسٹھ": 65, "ستر": 70,
+    "پچھتر": 75, "اسی": 80, "نوے": 90, "سو": 100,
+}
+# Words that are a number on their own: dedh = 1.5, dhai = 2.5.
+_FRACTION_WORDS = {"dedh": 1.5, "derh": 1.5, "ڈیڑھ": 1.5, "dhai": 2.5, "adhai": 2.5, "ڈھائی": 2.5}
+# Modifiers before a number word: sade teen = 3.5, sawa do = 2.25.
+_NUMBER_MODIFIERS = {"sade": 0.5, "saade": 0.5, "ساڑھے": 0.5, "sawa": 0.25, "سوا": 0.25}
+_URDU_UNITS = {"ہزار": "hazar", "لاکھ": "lakh", "کروڑ": "crore"}
+_NUMBER_UNIT = (r"(?:bed(?:room)?s?|br|bhk|kamr\w*|rooms?|hazar|hazaar|thousand|k\b|"
+                r"lakh|lac|lacs|laakh|crore|cr\b|marla|kanal|بیڈ|کمر\w*|مرلہ|کنال)")
+_DIGIT_TABLE = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+
+
+def _format_number(value):
+    return str(int(value)) if value == int(value) else f"{value:g}"
+
+
+def _normalize_number_words(text: str) -> str:
+    """Rewrite spoken numbers as digits when a unit follows ("do bed" -> "2 bed")."""
+    text = text.translate(_DIGIT_TABLE)
+    for urdu, roman in _URDU_UNITS.items():
+        text = text.replace(urdu, f" {roman} ")
+    words = "|".join(re.escape(w) for w in sorted(_NUMBER_WORDS, key=len, reverse=True))
+    fractions = "|".join(re.escape(w) for w in _FRACTION_WORDS)
+    modifiers = "|".join(re.escape(w) for w in _NUMBER_MODIFIERS)
+    number = rf"(?:(?:({modifiers})\s+)?({words})|({fractions}))"
+    # A number word followed by a unit, or by "se/to/-" and a second number + unit.
+    pattern = re.compile(
+        rf"(?<!\w){number}(?=\s*(?:(?:se|to|-|سے)\s*(?:{number}|\d+)\s*)?{_NUMBER_UNIT})",
+        re.I,
+    )
+
+    def value(mod, word, frac):
+        if frac:
+            return _FRACTION_WORDS[frac.lower()]
+        return _NUMBER_WORDS[word.lower()] + (_NUMBER_MODIFIERS[mod.lower()] if mod else 0)
+
+    def repl(m):
+        return _format_number(value(m.group(1), m.group(2), m.group(3)))
+
+    # Run twice so both ends of a range ("tees se pachas hazar") are rewritten.
+    for _ in range(2):
+        text = pattern.sub(repl, text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def parse_natural_query(query: str, city: str = "lahore") -> dict:
     """Parse a natural language rental query into structured filters.
     Supports English, Roman Urdu, and Urdu script."""
     result = {}
-    q = query.strip()
+    q = _normalize_number_words(query.strip())
     if not q:
         return result
     ql = q.lower()
@@ -225,7 +290,13 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
     # so "clifton block 5" beats the shorter alias "clifton".
     spans = _area_spans(q.lower(), city)
     if spans:
-        result['area'] = spans[0][2]
+        area, ambiguous, others = _choose_mention(q.lower(), spans)
+        result['area'] = area
+        # "clifton dha flat": two areas, nothing says which; keep one but flag it.
+        # ("X or Y" is handled below as a multi-area search instead.)
+        if ambiguous and len(_area_mentions(q.lower(), city)) < 2:
+            result['area_approximate'] = True
+            result['area_query'] = " ".join(others)
     # Landmark resolution
     if 'area' not in result:
         lm = resolve_landmark(q, city=city)
@@ -257,6 +328,41 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
 
 
 _AREA_JOINER_RE = re.compile(r'^\s*(?:,|/|&|\bor\b|\band\b|\bya\b|\baur\b|\bphir\b|یا|اور)[\s,]*(?:\bor\b|\bthen\b)?\s*$')
+
+
+# Which literal mention is the area being asked for? "near clifton bridge in
+# dha": Clifton is a landmark reference, DHA is where the user wants to rent.
+_LOCATIVE_BEFORE_RE = re.compile(r"(?:^|\s)(?:in|mein|me|main|at)\s*$")
+_LOCATIVE_AFTER_RE = re.compile(r"\s*(?:mein|me|main|میں)(?!\w)")
+_LANDMARK_AFTER_RE = re.compile(
+    r"\s*(?:bridge|chowrangi|chowk|hospital|road|mall|market|park|flyover|underpass|station"
+    r"|university|college|school|masjid|mosque|stadium|beach|برج|چورنگی|چوک|ہسپتال|روڈ)(?!\w)"
+)
+_PROXIMITY_BEFORE_RE = re.compile(r"(?:near|nazdeek|paas|qareeb)\s*$")
+
+
+def _choose_mention(text, spans):
+    """Pick the area the user means among literal mentions.
+
+    Returns (area, ambiguous, others): ``ambiguous`` is True when no mention
+    clearly wins; ``others`` is the text of the mentions not chosen.
+    """
+    best = {}
+    for start, end, name in spans:
+        score = 0
+        if _LOCATIVE_BEFORE_RE.search(text[:start]) or _LOCATIVE_AFTER_RE.match(text, end):
+            score += 2
+        if _LANDMARK_AFTER_RE.match(text, end):
+            score -= 2
+        if _PROXIMITY_BEFORE_RE.search(text[:start]):
+            score -= 1
+        if name not in best or score > best[name][0]:
+            best[name] = (score, start, text[start:end])
+    ranked = sorted(best.items(), key=lambda kv: (-kv[1][0], kv[1][1]))
+    area = ranked[0][0]
+    ambiguous = len(ranked) > 1 and ranked[1][1][0] == ranked[0][1][0]
+    others = [mention for name, (_, _, mention) in ranked[1:]]
+    return area, ambiguous, others
 
 
 def _area_mentions(text, city):
@@ -415,14 +521,17 @@ def suggest_areas(query, city="lahore", limit=3):
     if not q_tokens:
         return []
     scored = []
+    city_name = CITIES.get(city, {}).get("name")
     for name in get_areas(city):
+        if name == city_name:
+            continue
         nn = _norm(name)
         n_tokens = _distinctive_tokens(nn)
         if not n_tokens:
             continue
         token_score = sum(max(_token_ratio(t, nt) for nt in n_tokens) for t in q_tokens) / len(q_tokens)
         score = max(token_score, SequenceMatcher(None, qn, nn).ratio())
-        if score >= 0.6:
+        if score >= 0.75:
             scored.append((-score, len(name), name))
     return [name for _, _, name in sorted(scored)[:limit]]
 
@@ -484,16 +593,17 @@ class RentalFilters(BaseModel):
     city_hint: Optional[Literal["karachi", "lahore", "islamabad"]] = Field(None, description="Only set if query explicitly names a city or an area unambiguously tied to one city. Omit if ambiguous.")
 
 
-_NLQ_SYSTEM = """\
+# Static instructions, identical for every query so the prompt cache can hold
+# them. The city and the candidate areas go in a separate, uncached block.
+_NLQ_RULES = """\
 You are a rental property search assistant for Pakistan. \
 Extract structured search filters from the user's query. \
 The user may write in English, Roman Urdu, or Urdu script.
 
-CURRENT CITY: {city}
-AVAILABLE AREAS FOR THIS CITY: {areas}
+The CURRENT CITY and CANDIDATE AREAS for this query follow these rules.
 
 FIELD RULES:
-area: Pick the closest match from AVAILABLE AREAS. If the user mentions a sub-block not in the list, return the parent area. Return the exact English name only.
+area: Pick the closest match from CANDIDATE AREAS. If the user mentions a sub-block not in the list, return the parent area. Return the exact English name only. If the query names a place that matches no candidate, return the place as the user wrote it. If the query names no place, omit area. A number that is part of a place name ("askari 5", "phase 8", "g 11") is not a bedroom count.
 
 property_type: house | apartment | upper_portion | lower_portion | room | penthouse | farm_house
   Roman Urdu: ghar/makan=house, flat/apartment=apartment, bala hissa/ooper portion/upar ka portion=upper_portion, nichla hissa/neechay portion=lower_portion, kamra=room
@@ -556,53 +666,340 @@ def _get_instructor_client():
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
             return None
-        _instructor_client = instructor.from_anthropic(anthropic.Anthropic(api_key=api_key))
+        # Stay inside the route's 8 s wait_for: one quick retry at most.
+        _instructor_client = instructor.from_anthropic(
+            anthropic.Anthropic(api_key=api_key, timeout=6.0, max_retries=1))
     return _instructor_client
 
 
+def _reconcile_ai_area(query: str, result: dict, city: str) -> dict:
+    """Make the model's area agree with the areas the query names literally.
+
+    Claude picks from the full area list, so it can return a valid but wrong
+    name ("askari 5" -> "Gulistan-e-Jauhar Askari 4"). When the query names
+    areas exactly (names or aliases), a choice outside them is replaced by
+    the first one. With no literal mention (a landmark, a description), the
+    model's choice stands. "X or Y" also sets ``areas`` like the regex parser.
+    """
+    result = dict(result)
+    text = _normalize_number_words(query).lower()
+    joined = _area_mentions(text, city)
+    if len(joined) >= 2:
+        result["areas"] = joined
+        result["area"] = joined[0]
+        return result
+    spans = _area_spans(text, city)
+    names = list(dict.fromkeys(name for _, _, name in spans))
+    if not names:
+        return result  # nothing named literally: the model's resolution stands
+    ai_area = result.get("area")
+    if len(names) == 1:
+        result["area"] = names[0]
+        return result
+    chosen, ambiguous, others = _choose_mention(text, spans)
+    if ai_area == chosen and not ambiguous:
+        return result
+    # Several mentions and the model disagrees (or nothing clearly wins):
+    # keep a literal mention, preferring the model's if it is one, and flag it.
+    result["area"] = ai_area if (ambiguous and ai_area in names) else chosen
+    result["area_approximate"] = True
+    mention_text = {name: text[start:end] for start, end, name in reversed(spans)}
+    result["area_query"] = " ".join(mention_text[n] for n in names if n != result["area"])
+    return result
+
+
+
+
+# --- Claude parse: model, candidate areas, caching and spend ---
+
+# Haiku 5.5 is ~10x cheaper than Haiku 4.5 per token at the same latency.
+PARSE_MODEL = os.environ.get("ZR_PARSE_MODEL", "claude-haiku-5-5")
+# "candidates" sends only the areas closest to the query; "full" sends the
+# whole city list (the pre-2026-10-08 behaviour, kept for evals and rollback).
+PARSE_AREA_LIST = os.environ.get("ZR_PARSE_AREA_LIST", "candidates")
+PARSE_CANDIDATE_LIMIT = int(os.environ.get("ZR_PARSE_CANDIDATES", "30"))
+NL_DAILY_BUDGET_USD = float(os.environ.get("ZR_NL_DAILY_BUDGET_USD", "1.00"))
+NL_CACHE_TTL_SECONDS = float(os.environ.get("ZR_NL_CACHE_TTL_HOURS", "168")) * 3600
+# Bump when the prompt or post-processing changes, so cached parses refresh.
+PARSE_PROMPT_VERSION = "2026-10-08.2"
+
+# USD per million tokens: (input, 5-minute cache write, cache read, output).
+_MODEL_PRICES = {
+    "claude-haiku-5-5": (0.10, 0.125, 0.01, 0.50),
+    "claude-haiku-4-5": (1.00, 1.25, 0.10, 5.00),
+    "claude-haiku-4-5-20251001": (1.00, 1.25, 0.10, 5.00),
+}
+
+# Filled after each Claude call, for logs and tools/eval_nl_parser.py.
+last_call = {}
+
+
+def _call_cost(model, usage):
+    prices = _MODEL_PRICES.get(model)
+    if not prices or usage is None:
+        return None
+    pin, pwrite, pread, pout = prices
+    return (
+        (getattr(usage, "input_tokens", 0) or 0) * pin
+        + (getattr(usage, "cache_creation_input_tokens", 0) or 0) * pwrite
+        + (getattr(usage, "cache_read_input_tokens", 0) or 0) * pread
+        + (getattr(usage, "output_tokens", 0) or 0) * pout
+    ) / 1_000_000
+
+
+def _candidate_areas(query, city, limit=PARSE_CANDIDATE_LIMIT):
+    """The areas a query most plausibly means, best first.
+
+    Sending these instead of the whole city list (300-460 names) cuts the
+    prompt by roughly 80%. Exact mentions and their sub-areas come first,
+    then landmark hits, then fuzzy token matches that catch typos
+    ("johr town").
+    """
+    text = _normalize_number_words(query).lower()
+    areas = get_areas(city)
+    picked = []
+
+    def add(name):
+        if name and name in areas and name not in picked:
+            picked.append(name)
+
+    exact = [name for _, _, name in _area_spans(text, city)]
+    for name in exact:
+        add(name)
+    # Sub-areas of an exact mention ("dha" -> the DHA phases), so a typed
+    # phase or block can still resolve to the right child.
+    for name in exact:
+        stem = _norm(name).split()[0]
+        if len(stem) >= 3:
+            for other in sorted(areas):
+                if len(picked) >= limit // 2:
+                    break
+                if _norm(other).split()[0] == stem:
+                    add(other)
+    add(resolve_landmark(query, city=city))
+
+    q_tokens = [t for t in _distinctive_tokens(_norm(text)) if len(t) >= 3 and not t.isdigit()]
+    if q_tokens:
+        scored = []
+        city_name = CITIES.get(city, {}).get("name")
+        for name in areas:
+            if name == city_name or name in picked:
+                continue
+            n_tokens = _distinctive_tokens(_norm(name))
+            if not n_tokens:
+                continue
+            best = max(_token_ratio(t, nt) for t in q_tokens for nt in n_tokens)
+            if best >= 0.75:
+                scored.append((-best, len(name), name))
+        for _, _, name in sorted(scored):
+            if len(picked) >= limit:
+                break
+            add(name)
+    return picked[:limit]
+
+
+def _nlq_system(query, city):
+    """System blocks: cached static rules, then this query's city and areas."""
+    if PARSE_AREA_LIST == "full":
+        areas = sorted(get_areas(city))
+    else:
+        areas = _candidate_areas(query, city)
+    area_text = ", ".join(areas) if areas else "(none close to the query)"
+    return [
+        {"type": "text", "text": _NLQ_RULES, "cache_control": {"type": "ephemeral"}},
+        {"type": "text", "text": f"CURRENT CITY: {city.capitalize()}\nCANDIDATE AREAS: {area_text}"},
+    ]
+
+
+def _nl_db():
+    from app.database import _get_conn
+    conn = _get_conn()
+    conn.execute("""CREATE TABLE IF NOT EXISTS nl_parse_cache (
+        cache_key TEXT PRIMARY KEY, result TEXT NOT NULL, created_at REAL NOT NULL)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS nl_usage_daily (
+        day TEXT PRIMARY KEY, calls INTEGER NOT NULL DEFAULT 0,
+        input_tokens INTEGER NOT NULL DEFAULT 0, cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+        cache_read_tokens INTEGER NOT NULL DEFAULT 0, output_tokens INTEGER NOT NULL DEFAULT 0,
+        cost_usd REAL NOT NULL DEFAULT 0)""")
+    return conn
+
+
+def _nl_cache_key(query, city):
+    import hashlib
+    raw = "|".join([PARSE_PROMPT_VERSION, PARSE_MODEL, PARSE_AREA_LIST, city, _norm(query)])
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _nl_cache_get(key):
+    import json, time
+    row = _nl_db().execute(
+        "SELECT result, created_at FROM nl_parse_cache WHERE cache_key = ?", (key,)).fetchone()
+    if row and time.time() - row[1] < NL_CACHE_TTL_SECONDS:
+        return json.loads(row[0])
+    return None
+
+
+def _nl_cache_set(key, result):
+    import json, time
+    conn = _nl_db()
+    conn.execute("INSERT OR REPLACE INTO nl_parse_cache (cache_key, result, created_at) VALUES (?, ?, ?)",
+                 (key, json.dumps(result), time.time()))
+    conn.commit()
+
+
+def _utc_day():
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def nl_spend_today():
+    row = _nl_db().execute("SELECT cost_usd FROM nl_usage_daily WHERE day = ?", (_utc_day(),)).fetchone()
+    return row[0] if row else 0.0
+
+
+def _record_usage(usage, cost):
+    conn = _nl_db()
+    conn.execute("""INSERT INTO nl_usage_daily (day, calls, input_tokens, cache_write_tokens,
+                        cache_read_tokens, output_tokens, cost_usd)
+                    VALUES (?, 1, ?, ?, ?, ?, ?)
+                    ON CONFLICT(day) DO UPDATE SET calls = calls + 1,
+                        input_tokens = input_tokens + excluded.input_tokens,
+                        cache_write_tokens = cache_write_tokens + excluded.cache_write_tokens,
+                        cache_read_tokens = cache_read_tokens + excluded.cache_read_tokens,
+                        output_tokens = output_tokens + excluded.output_tokens,
+                        cost_usd = cost_usd + excluded.cost_usd""",
+                 (_utc_day(), getattr(usage, "input_tokens", 0) or 0,
+                  getattr(usage, "cache_creation_input_tokens", 0) or 0,
+                  getattr(usage, "cache_read_input_tokens", 0) or 0,
+                  getattr(usage, "output_tokens", 0) or 0, cost or 0.0))
+    conn.commit()
+
+
+def _drop_area_number_beds(query, result, city):
+    """Drop a bedroom count that is really part of an area name.
+
+    "askari 5 flat" is Askari 5, not 5 bedrooms. A number counts as area text
+    when it sits inside a kept area mention and no bed/size/price unit
+    follows it ("askari 5 bed" really is 5 beds).
+    """
+    beds = result.get("bedrooms")
+    if beds is None:
+        return result
+    text = _normalize_number_words(query).lower()
+    occurrences = [m for m in re.finditer(r"(?<![\d.])" + str(beds) + r"(?![\d.])", text)]
+    if not occurrences or "studio" in text:
+        return result
+    spans = _area_spans(text, city)
+    def is_area_number(m):
+        inside = any(start <= m.start() and m.end() <= end for start, end, _ in spans)
+        return inside and not _UNIT_AFTER_NUMBER_RE.match(text, m.end())
+    if all(is_area_number(m) for m in occurrences):
+        result = dict(result)
+        result.pop("bedrooms", None)
+        result.pop("bedrooms_max", None)
+    return result
+
+
+_NUMERIC_FIELDS = ("bedrooms", "bedrooms_max", "price_min", "price_max", "size_marla_min", "size_marla_max")
+
+
+def _prefer_regex_numbers(query, result, city):
+    """Take bedrooms, prices and sizes from the regex parser when it finds them.
+
+    The regex parser handles units and Roman Urdu/Urdu number words
+    deterministically ("sade teen lakh" = 350,000, "240 gaz" = 9.6 marla,
+    "do bed" = 2). On the eval set it scored 100% on beds and prices, where
+    the models misread several. Claude still decides areas, types and intent,
+    and supplies numbers the regex parser didn't find.
+    """
+    regex = parse_natural_query(query, city=city)
+    found = {f: regex[f] for f in _NUMERIC_FIELDS if f in regex}
+    if not found:
+        return result
+    result = dict(result)
+    for group in (("bedrooms", "bedrooms_max"), ("price_min", "price_max"), ("size_marla_min", "size_marla_max")):
+        if any(f in found for f in group):
+            for f in group:  # replace the whole range, not half of it
+                result.pop(f, None)
+                if f in found:
+                    result[f] = found[f]
+    return result
+
+
 async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
-    """Use Instructor + Claude Haiku to parse a natural language rental query."""
+    """Parse a natural-language rental query with Claude, falling back to regex.
+
+    Falls back to the regex parser when there is no API key, the daily budget
+    (ZR_NL_DAILY_BUDGET_USD) is spent, or the call fails.
+    """
+    import time
+    last_call.clear()
     client = _get_instructor_client()
     if client is None:
         return parse_natural_query(query, city=city)
 
-    ck = cache_key(nlq=query, city=city)
-    cached = cache_get(ck)
+    ck = _nl_cache_key(query, city)
+    cached = _nl_cache_get(ck)
     if cached is not None:
+        last_call.update(cached=True)
         return cached
 
-    areas = get_areas(city)
-    areas_list = ", ".join(sorted(areas.keys()))
+    if nl_spend_today() >= NL_DAILY_BUDGET_USD:
+        logger.warning("NL parse budget of $%.2f spent today; using the regex parser", NL_DAILY_BUDGET_USD)
+        last_call.update(budget_exhausted=True)
+        return parse_natural_query(query, city=city)
 
     try:
-        filters = await asyncio.to_thread(
-            client.messages.create,
-            model="claude-haiku-4-5-20251001",
+        started = time.monotonic()
+        filters, completion = await asyncio.to_thread(
+            client.messages.create_with_completion,
+            model=PARSE_MODEL,
             max_tokens=256,
-            system=_NLQ_SYSTEM.format(city=city.capitalize(), areas=areas_list),
+            system=_nlq_system(query, city),
             messages=[{"role": "user", "content": query}],
             response_model=RentalFilters,
+            max_retries=1,  # one re-ask on a schema error, not three
         )
+        usage = getattr(completion, "usage", None)
+        cost = _call_cost(PARSE_MODEL, usage)
+        _record_usage(usage, cost)
+        last_call.update(
+            model=PARSE_MODEL, cost_usd=cost, latency_s=time.monotonic() - started,
+            input_tokens=getattr(usage, "input_tokens", None),
+            cache_read_tokens=getattr(usage, "cache_read_input_tokens", None),
+            cache_write_tokens=getattr(usage, "cache_creation_input_tokens", None),
+            output_tokens=getattr(usage, "output_tokens", None),
+        )
+        logger.info("NL parse %s: in=%s cache_read=%s cache_write=%s out=%s cost=$%.6f",
+                    PARSE_MODEL, last_call["input_tokens"], last_call["cache_read_tokens"],
+                    last_call["cache_write_tokens"], last_call["output_tokens"], cost or 0.0)
         result = filters.model_dump(exclude_none=True)
 
         # If city_hint differs, re-target area normalization to the hinted city
         effective_city = city
         if "city_hint" in result and result["city_hint"] in CITIES and result["city_hint"] != city:
             effective_city = result["city_hint"]
-            areas = get_areas(effective_city)
+        areas = get_areas(effective_city)
 
-        # Area normalization
+        # Area normalization. A place that matches no area (a landmark or an
+        # area Zameen doesn't list) is dropped, never kept as raw text: a
+        # search on a name that isn't an area returns nothing, unflagged.
         if "area" in result and result["area"] not in areas:
             matched = match_area(result["area"], city=effective_city)
-            result["area"] = matched if matched else result.pop("area", None)
-            if result.get("area") is None:
-                result.pop("area", None)
+            if matched:
+                result["area"] = matched
+            else:
+                result.pop("area")
 
         # Landmark fallback if Claude found no area
         if "area" not in result:
             lm = resolve_landmark(query, city=effective_city)
             if lm:
                 result["area"] = lm
+
+        result = _reconcile_ai_area(query, result, effective_city)
+        result = _drop_area_number_beds(query, result, effective_city)
+        result = _prefer_regex_numbers(query, result, effective_city)
 
         # Validate bedrooms_max > bedrooms
         if "bedrooms_max" in result and "bedrooms" in result:
@@ -619,8 +1016,9 @@ async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
             result.pop("city_hint", None)
 
         result["parser"] = "ai"
-        cache_set(ck, result)
+        _nl_cache_set(ck, result)
         return result
     except Exception as e:
-        logger.warning(f"Instructor parse failed, falling back to regex: {e}")
+        logger.warning(f"Claude parse failed, falling back to regex: {e}")
+        last_call.update(error=f"{type(e).__name__}: {e}")
         return parse_natural_query(query, city=city)

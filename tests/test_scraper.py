@@ -420,3 +420,52 @@ class TestEnrichFromSearchState:
         assert "search_state" not in listings[0]
         assert enrich_from_search_state("<html>no state</html>", listings) == 0
         assert enrich_from_search_state("<script>window.state = {broken</script>", listings) == 0
+
+
+class TestDetailFromState:
+    import json as _json
+
+    def _page(self, data):
+        return f"<html><script>window.state = {self._json.dumps({'property': {'data': data}})};</script></html>"
+
+    def test_reads_description_amenities_and_contact(self):
+        from app.scraper import detail_from_state
+        html = self._page({
+            "description": "  Spacious 2 bed flat, separate entrance, solar backup.  ",
+            "amenities": [{"amenities": [
+                {"text": "Parking Spaces", "value": "2"},
+                {"text": "Lobby in Building", "value": ""},
+                {"text": "Parking Spaces", "value": "2"},
+            ]}],
+            "contactName": "Mr David",
+            "agency": {"name": "David Corporation"},
+        })
+        assert detail_from_state(html) == {
+            "description": "Spacious 2 bed flat, separate entrance, solar backup.",
+            "amenities": ["Parking Spaces: 2", "Lobby in Building"],
+            "agent_name": "Mr David",
+            "agent_agency": "David Corporation",
+        }
+
+    def test_missing_or_broken_state_gives_nothing(self):
+        from app.scraper import detail_from_state
+        assert detail_from_state("<html>no state</html>") == {}
+        assert detail_from_state("<script>window.state = {broken</script>") == {}
+        assert detail_from_state(self._page({"description": "   "})) == {}
+
+    def test_crawler_detail_parser_uses_state_and_persists(self):
+        from bs4 import BeautifulSoup
+        from app.crawler_worker import _parse_detail_html
+        from app.db_listings import upsert_listing, get_listing_by_zameen_id
+        html = self._page({"description": "Family only. Separate gate.",
+                           "amenities": [{"amenities": [{"text": "Solar Panels", "value": ""}]}]})
+        detail = _parse_detail_html(BeautifulSoup(html, "html.parser"), html=html, zameen_id="54790001")
+        assert detail["description"] == "Family only. Separate gate."
+        assert detail["amenities"] == ["Solar Panels"]
+        url = "https://www.zameen.com/Property/x-54790001-5-4.html"
+        upsert_listing(zameen_id="54790001", url=url, city="karachi", area_name="Clifton",
+                       card_data={"title": "Flat", "price": 50000})
+        upsert_listing(zameen_id="54790001", url=url, city="karachi", detail_data=detail)
+        row = get_listing_by_zameen_id("54790001")
+        assert row["description"] == "Family only. Separate gate."
+        assert "Solar Panels" in (row["amenities_json"] or "")

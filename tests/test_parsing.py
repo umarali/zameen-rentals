@@ -204,3 +204,45 @@ class TestAreaReviewRegressions:
                 continue  # The known dangling aliases are outside this branch's scope.
             for query in (alias, f"2 بیڈ فلیٹ {alias} میں 50000 تک", f"furnished 5 marla {alias}"):
                 assert parse_natural_query(query, "karachi")["area"] == name, query
+
+
+class TestNumberWords:
+    """Spoken numbers (voice search) arrive as words, not digits."""
+
+    @pytest.mark.parametrize("query,beds", [
+        ("do bed flat", 2),
+        ("teen kamray ka ghar", 3),
+        ("char bedroom house", 4),
+        ("two bed apartment", 2),
+        ("دو بیڈ فلیٹ", 2),
+        ("تین کمرے کا گھر", 3),
+        ("۲ بیڈ فلیٹ", 2),
+    ])
+    def test_bedroom_words(self, query, beds):
+        assert parse_natural_query(query, city="karachi")["bedrooms"] == beds
+
+    @pytest.mark.parametrize("query,price", [
+        ("flat pachas hazar tak", 50_000),
+        ("house under dedh lakh", 150_000),
+        ("ghar sade teen lakh tak", 350_000),
+        ("flat under fifty thousand", 50_000),
+        ("فلیٹ پچاس ہزار تک", 50_000),
+        ("گھر ڈیڑھ لاکھ تک", 150_000),
+        ("flat under 45 ہزار", 45_000),
+    ])
+    def test_price_words(self, query, price):
+        assert parse_natural_query(query, city="karachi")["price_max"] == price
+
+    def test_price_range_in_words(self):
+        r = parse_natural_query("tees se pachas hazar", city="karachi")
+        assert (r["price_min"], r["price_max"]) == (30_000, 50_000)
+
+    def test_full_urdu_voice_query(self):
+        r = parse_natural_query("کلفٹن میں تین کمرے کا گھر پچاس ہزار تک", city="karachi")
+        assert (r["area"], r["bedrooms"], r["property_type"], r["price_max"]) == (
+            "Clifton", 3, "house", 50_000)
+
+    def test_words_without_a_unit_are_left_alone(self):
+        r = parse_natural_query("flat saath parking", city="karachi")  # saath = "with"
+        assert "price_max" not in r and "price_min" not in r and "bedrooms" not in r
+        assert "bedrooms" not in parse_natural_query("do flat dikhao", city="karachi")

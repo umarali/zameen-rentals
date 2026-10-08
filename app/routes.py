@@ -11,14 +11,17 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
-from app.data import KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, _ENGLISH_TO_URDU
+from app.data import (
+    KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, _ENGLISH_TO_URDU,
+    PARENT_FALLBACK_ALIASES, ROMAN_URDU_AREAS_BY_CITY, URDU_AREAS,
+)
 from app.listing_tags import attach_tags
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
-from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE, _area_spans
+from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE, _UNIT_AFTER_NUMBER_RE, _area_spans, _normalize_number_words
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
 from app.db_listings import (
     decode_listing_json_field,
@@ -154,6 +157,22 @@ def _unmatched_sub_area(q, selected):
     return None
 
 
+def _fallback_alias_used(q, city, selected):
+    """The parent-fallback alias the query used for a selected area, if any."""
+    text = q.lower()
+    aliases = {**URDU_AREAS, **ROMAN_URDU_AREAS_BY_CITY.get(city, {})}
+    for alias in sorted(PARENT_FALLBACK_ALIASES.get(city, ()), key=len, reverse=True):
+        target = aliases.get(alias)
+        # Typing the area's own full name isn't a fallback ("navy housing scheme karsaz").
+        if target not in selected or " ".join(target.lower().split()) in text:
+            continue
+        m = re.search(r"(?<!\w)" + re.escape(alias) + r"(?!\w)", text)
+        # "dha 3 bed": the 3 belongs to the bedroom count, not the alias.
+        if m and not (alias[-1].isdigit() and _UNIT_AFTER_NUMBER_RE.match(text, m.end())):
+            return alias
+    return None
+
+
 def _build_parse_query_response(q, city, result):
     # Copy: the Claude path returns its cached dict.
     result = dict(result)
@@ -198,6 +217,22 @@ def _build_parse_query_response(q, city, result):
             # Keep other unmatched words, then the qualifier as typed.
             other = [w for w in result.get("area_query", "").split() if w not in qualifier.split()]
             result["area_query"] = " ".join(other + [qualifier])
+        elif not result.get("area_approximate"):
+            fallback = _fallback_alias_used(q, effective_city, selected)
+            if fallback:
+                result["area_approximate"] = True
+                result["area_query"] = fallback
+        if not result.get("area_approximate") and not exact_selection:
+            # A numbered area ("... Askari 4") the user never typed that number for.
+            # Bed/size/price numbers ("2 bed", "10 marla") aren't area evidence.
+            norm = _normalize_number_words(q).lower()
+            typed = {m.group() for m in re.finditer(r"\d+", norm)
+                     if not _UNIT_AFTER_NUMBER_RE.match(norm, m.end())}
+            untyped = [n for name in selected if name
+                       for n in re.findall(r"\d+", name) if n not in typed]
+            if untyped:
+                result["area_approximate"] = True
+                result["area_query"] = _strip_noise_tokens(q.lower(), keep_digits=True) or q
     if not result.get("area"):
         # No confident area: offer "did you mean" choices instead of guessing.
         leftover = _strip_noise_tokens(q.lower())
@@ -251,10 +286,56 @@ async def _maybe_enrich_nearby_exact_locations(*, city, lat, lng, radius_km, are
     return any(result is True for result in results)
 
 
-@router.get("/api/health")
+# The crawler refreshes each city's newest listings every few minutes, so the
+# newest last_seen_at stays recent while it works. Older than this means it
+# has stopped, crashed or is being blocked.
+_CRAWLER_STALE_MINUTES = int(os.getenv("ZR_HEALTH_CRAWLER_MAX_MINUTES", "60"))
+
+
+def _listing_freshness():
+    """(active listings, minutes since the crawler last saw any listing or None)."""
+    from datetime import datetime
+    from app.database import _get_conn
+
+    count, newest = _get_conn().execute(
+        "SELECT COUNT(*), MAX(last_seen_at) FROM listings WHERE is_active = 1"
+    ).fetchone()
+    age = None
+    if newest:
+        age = (datetime.utcnow() - datetime.fromisoformat(newest)).total_seconds() / 60
+    return count, age
+
+
+# HEAD too: uptime monitors often probe with it.
+@router.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
+    """Web app and database. 503 when the database can't be queried."""
     from app import APP_VERSION  # lazy import avoids a circular import at module load
-    return {"status": "ok", "service": "ZameenRentals", "version": APP_VERSION}
+    try:
+        listings, _ = _listing_freshness()
+    except Exception:
+        logger.exception("Health check: database query failed")
+        return JSONResponse(status_code=503, content={
+            "status": "error", "service": "ZameenRentals", "version": APP_VERSION, "database": "unavailable",
+        })
+    return {"status": "ok", "service": "ZameenRentals", "version": APP_VERSION, "listings": listings}
+
+
+@router.api_route("/api/health/crawler", methods=["GET", "HEAD"])
+async def crawler_health():
+    """Data freshness. 503 when the crawler hasn't seen a listing recently."""
+    try:
+        _, age = _listing_freshness()
+    except Exception:
+        logger.exception("Crawler health check: database query failed")
+        return JSONResponse(status_code=503, content={"status": "error", "database": "unavailable"})
+    body = {
+        "newest_listing_seen_minutes_ago": round(age, 1) if age is not None else None,
+        "max_minutes": _CRAWLER_STALE_MINUTES,
+    }
+    if age is None or age > _CRAWLER_STALE_MINUTES:
+        return JSONResponse(status_code=503, content={"status": "stale", **body})
+    return {"status": "ok", **body}
 
 
 @router.get("/api/cities")
