@@ -14,7 +14,6 @@ from app.data import (
     URDU_TYPES, ROMAN_URDU_TYPES,
     ROMAN_URDU_AREAS_BY_CITY, LANDMARKS,
 )
-from app.cache import cache_key, cache_get, cache_set
 
 logger = logging.getLogger("zameenrentals")
 
@@ -594,16 +593,17 @@ class RentalFilters(BaseModel):
     city_hint: Optional[Literal["karachi", "lahore", "islamabad"]] = Field(None, description="Only set if query explicitly names a city or an area unambiguously tied to one city. Omit if ambiguous.")
 
 
-_NLQ_SYSTEM = """\
+# Static instructions, identical for every query so the prompt cache can hold
+# them. The city and the candidate areas go in a separate, uncached block.
+_NLQ_RULES = """\
 You are a rental property search assistant for Pakistan. \
 Extract structured search filters from the user's query. \
 The user may write in English, Roman Urdu, or Urdu script.
 
-CURRENT CITY: {city}
-AVAILABLE AREAS FOR THIS CITY: {areas}
+The CURRENT CITY and CANDIDATE AREAS for this query follow these rules.
 
 FIELD RULES:
-area: Pick the closest match from AVAILABLE AREAS. If the user mentions a sub-block not in the list, return the parent area. Return the exact English name only.
+area: Pick the closest match from CANDIDATE AREAS. If the user mentions a sub-block not in the list, return the parent area. Return the exact English name only. If the query names a place that matches no candidate, return the place as the user wrote it. If the query names no place, omit area. A number that is part of a place name ("askari 5", "phase 8", "g 11") is not a bedroom count.
 
 property_type: house | apartment | upper_portion | lower_portion | room | penthouse | farm_house
   Roman Urdu: ghar/makan=house, flat/apartment=apartment, bala hissa/ooper portion/upar ka portion=upper_portion, nichla hissa/neechay portion=lower_portion, kamra=room
@@ -666,7 +666,9 @@ def _get_instructor_client():
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
             return None
-        _instructor_client = instructor.from_anthropic(anthropic.Anthropic(api_key=api_key))
+        # Stay inside the route's 8 s wait_for: one quick retry at most.
+        _instructor_client = instructor.from_anthropic(
+            anthropic.Anthropic(api_key=api_key, timeout=6.0, max_retries=1))
     return _instructor_client
 
 
@@ -706,43 +708,288 @@ def _reconcile_ai_area(query: str, result: dict, city: str) -> dict:
     return result
 
 
+
+
+# --- Claude parse: model, candidate areas, caching and spend ---
+
+# Haiku 5.5 is ~10x cheaper than Haiku 4.5 per token at the same latency.
+PARSE_MODEL = os.environ.get("ZR_PARSE_MODEL", "claude-haiku-5-5")
+# "candidates" sends only the areas closest to the query; "full" sends the
+# whole city list (the pre-2026-10-08 behaviour, kept for evals and rollback).
+PARSE_AREA_LIST = os.environ.get("ZR_PARSE_AREA_LIST", "candidates")
+PARSE_CANDIDATE_LIMIT = int(os.environ.get("ZR_PARSE_CANDIDATES", "30"))
+NL_DAILY_BUDGET_USD = float(os.environ.get("ZR_NL_DAILY_BUDGET_USD", "1.00"))
+NL_CACHE_TTL_SECONDS = float(os.environ.get("ZR_NL_CACHE_TTL_HOURS", "168")) * 3600
+# Bump when the prompt or post-processing changes, so cached parses refresh.
+PARSE_PROMPT_VERSION = "2026-10-08.2"
+
+# USD per million tokens: (input, 5-minute cache write, cache read, output).
+_MODEL_PRICES = {
+    "claude-haiku-5-5": (0.10, 0.125, 0.01, 0.50),
+    "claude-haiku-4-5": (1.00, 1.25, 0.10, 5.00),
+    "claude-haiku-4-5-20251001": (1.00, 1.25, 0.10, 5.00),
+}
+
+# Filled after each Claude call, for logs and tools/eval_nl_parser.py.
+last_call = {}
+
+
+def _call_cost(model, usage):
+    prices = _MODEL_PRICES.get(model)
+    if not prices or usage is None:
+        return None
+    pin, pwrite, pread, pout = prices
+    return (
+        (getattr(usage, "input_tokens", 0) or 0) * pin
+        + (getattr(usage, "cache_creation_input_tokens", 0) or 0) * pwrite
+        + (getattr(usage, "cache_read_input_tokens", 0) or 0) * pread
+        + (getattr(usage, "output_tokens", 0) or 0) * pout
+    ) / 1_000_000
+
+
+def _candidate_areas(query, city, limit=PARSE_CANDIDATE_LIMIT):
+    """The areas a query most plausibly means, best first.
+
+    Sending these instead of the whole city list (300-460 names) cuts the
+    prompt by roughly 80%. Exact mentions and their sub-areas come first,
+    then landmark hits, then fuzzy token matches that catch typos
+    ("johr town").
+    """
+    text = _normalize_number_words(query).lower()
+    areas = get_areas(city)
+    picked = []
+
+    def add(name):
+        if name and name in areas and name not in picked:
+            picked.append(name)
+
+    exact = [name for _, _, name in _area_spans(text, city)]
+    for name in exact:
+        add(name)
+    # Sub-areas of an exact mention ("dha" -> the DHA phases), so a typed
+    # phase or block can still resolve to the right child.
+    for name in exact:
+        stem = _norm(name).split()[0]
+        if len(stem) >= 3:
+            for other in sorted(areas):
+                if len(picked) >= limit // 2:
+                    break
+                if _norm(other).split()[0] == stem:
+                    add(other)
+    add(resolve_landmark(query, city=city))
+
+    q_tokens = [t for t in _distinctive_tokens(_norm(text)) if len(t) >= 3 and not t.isdigit()]
+    if q_tokens:
+        scored = []
+        city_name = CITIES.get(city, {}).get("name")
+        for name in areas:
+            if name == city_name or name in picked:
+                continue
+            n_tokens = _distinctive_tokens(_norm(name))
+            if not n_tokens:
+                continue
+            best = max(_token_ratio(t, nt) for t in q_tokens for nt in n_tokens)
+            if best >= 0.75:
+                scored.append((-best, len(name), name))
+        for _, _, name in sorted(scored):
+            if len(picked) >= limit:
+                break
+            add(name)
+    return picked[:limit]
+
+
+def _nlq_system(query, city):
+    """System blocks: cached static rules, then this query's city and areas."""
+    if PARSE_AREA_LIST == "full":
+        areas = sorted(get_areas(city))
+    else:
+        areas = _candidate_areas(query, city)
+    area_text = ", ".join(areas) if areas else "(none close to the query)"
+    return [
+        {"type": "text", "text": _NLQ_RULES, "cache_control": {"type": "ephemeral"}},
+        {"type": "text", "text": f"CURRENT CITY: {city.capitalize()}\nCANDIDATE AREAS: {area_text}"},
+    ]
+
+
+def _nl_db():
+    from app.database import _get_conn
+    conn = _get_conn()
+    conn.execute("""CREATE TABLE IF NOT EXISTS nl_parse_cache (
+        cache_key TEXT PRIMARY KEY, result TEXT NOT NULL, created_at REAL NOT NULL)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS nl_usage_daily (
+        day TEXT PRIMARY KEY, calls INTEGER NOT NULL DEFAULT 0,
+        input_tokens INTEGER NOT NULL DEFAULT 0, cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+        cache_read_tokens INTEGER NOT NULL DEFAULT 0, output_tokens INTEGER NOT NULL DEFAULT 0,
+        cost_usd REAL NOT NULL DEFAULT 0)""")
+    return conn
+
+
+def _nl_cache_key(query, city):
+    import hashlib
+    raw = "|".join([PARSE_PROMPT_VERSION, PARSE_MODEL, PARSE_AREA_LIST, city, _norm(query)])
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _nl_cache_get(key):
+    import json, time
+    row = _nl_db().execute(
+        "SELECT result, created_at FROM nl_parse_cache WHERE cache_key = ?", (key,)).fetchone()
+    if row and time.time() - row[1] < NL_CACHE_TTL_SECONDS:
+        return json.loads(row[0])
+    return None
+
+
+def _nl_cache_set(key, result):
+    import json, time
+    conn = _nl_db()
+    conn.execute("INSERT OR REPLACE INTO nl_parse_cache (cache_key, result, created_at) VALUES (?, ?, ?)",
+                 (key, json.dumps(result), time.time()))
+    conn.commit()
+
+
+def _utc_day():
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def nl_spend_today():
+    row = _nl_db().execute("SELECT cost_usd FROM nl_usage_daily WHERE day = ?", (_utc_day(),)).fetchone()
+    return row[0] if row else 0.0
+
+
+def _record_usage(usage, cost):
+    conn = _nl_db()
+    conn.execute("""INSERT INTO nl_usage_daily (day, calls, input_tokens, cache_write_tokens,
+                        cache_read_tokens, output_tokens, cost_usd)
+                    VALUES (?, 1, ?, ?, ?, ?, ?)
+                    ON CONFLICT(day) DO UPDATE SET calls = calls + 1,
+                        input_tokens = input_tokens + excluded.input_tokens,
+                        cache_write_tokens = cache_write_tokens + excluded.cache_write_tokens,
+                        cache_read_tokens = cache_read_tokens + excluded.cache_read_tokens,
+                        output_tokens = output_tokens + excluded.output_tokens,
+                        cost_usd = cost_usd + excluded.cost_usd""",
+                 (_utc_day(), getattr(usage, "input_tokens", 0) or 0,
+                  getattr(usage, "cache_creation_input_tokens", 0) or 0,
+                  getattr(usage, "cache_read_input_tokens", 0) or 0,
+                  getattr(usage, "output_tokens", 0) or 0, cost or 0.0))
+    conn.commit()
+
+
+def _drop_area_number_beds(query, result, city):
+    """Drop a bedroom count that is really part of an area name.
+
+    "askari 5 flat" is Askari 5, not 5 bedrooms. A number counts as area text
+    when it sits inside a kept area mention and no bed/size/price unit
+    follows it ("askari 5 bed" really is 5 beds).
+    """
+    beds = result.get("bedrooms")
+    if beds is None:
+        return result
+    text = _normalize_number_words(query).lower()
+    occurrences = [m for m in re.finditer(r"(?<![\d.])" + str(beds) + r"(?![\d.])", text)]
+    if not occurrences or "studio" in text:
+        return result
+    spans = _area_spans(text, city)
+    def is_area_number(m):
+        inside = any(start <= m.start() and m.end() <= end for start, end, _ in spans)
+        return inside and not _UNIT_AFTER_NUMBER_RE.match(text, m.end())
+    if all(is_area_number(m) for m in occurrences):
+        result = dict(result)
+        result.pop("bedrooms", None)
+        result.pop("bedrooms_max", None)
+    return result
+
+
+_NUMERIC_FIELDS = ("bedrooms", "bedrooms_max", "price_min", "price_max", "size_marla_min", "size_marla_max")
+
+
+def _prefer_regex_numbers(query, result, city):
+    """Take bedrooms, prices and sizes from the regex parser when it finds them.
+
+    The regex parser handles units and Roman Urdu/Urdu number words
+    deterministically ("sade teen lakh" = 350,000, "240 gaz" = 9.6 marla,
+    "do bed" = 2). On the eval set it scored 100% on beds and prices, where
+    the models misread several. Claude still decides areas, types and intent,
+    and supplies numbers the regex parser didn't find.
+    """
+    regex = parse_natural_query(query, city=city)
+    found = {f: regex[f] for f in _NUMERIC_FIELDS if f in regex}
+    if not found:
+        return result
+    result = dict(result)
+    for group in (("bedrooms", "bedrooms_max"), ("price_min", "price_max"), ("size_marla_min", "size_marla_max")):
+        if any(f in found for f in group):
+            for f in group:  # replace the whole range, not half of it
+                result.pop(f, None)
+                if f in found:
+                    result[f] = found[f]
+    return result
+
+
 async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
-    """Use Instructor + Claude Haiku to parse a natural language rental query."""
+    """Parse a natural-language rental query with Claude, falling back to regex.
+
+    Falls back to the regex parser when there is no API key, the daily budget
+    (ZR_NL_DAILY_BUDGET_USD) is spent, or the call fails.
+    """
+    import time
+    last_call.clear()
     client = _get_instructor_client()
     if client is None:
         return parse_natural_query(query, city=city)
 
-    ck = cache_key(nlq=query, city=city)
-    cached = cache_get(ck)
+    ck = _nl_cache_key(query, city)
+    cached = _nl_cache_get(ck)
     if cached is not None:
+        last_call.update(cached=True)
         return cached
 
-    areas = get_areas(city)
-    areas_list = ", ".join(sorted(areas.keys()))
+    if nl_spend_today() >= NL_DAILY_BUDGET_USD:
+        logger.warning("NL parse budget of $%.2f spent today; using the regex parser", NL_DAILY_BUDGET_USD)
+        last_call.update(budget_exhausted=True)
+        return parse_natural_query(query, city=city)
 
     try:
-        filters = await asyncio.to_thread(
-            client.messages.create,
-            model="claude-haiku-4-5-20251001",
+        started = time.monotonic()
+        filters, completion = await asyncio.to_thread(
+            client.messages.create_with_completion,
+            model=PARSE_MODEL,
             max_tokens=256,
-            system=_NLQ_SYSTEM.format(city=city.capitalize(), areas=areas_list),
+            system=_nlq_system(query, city),
             messages=[{"role": "user", "content": query}],
             response_model=RentalFilters,
+            max_retries=1,  # one re-ask on a schema error, not three
         )
+        usage = getattr(completion, "usage", None)
+        cost = _call_cost(PARSE_MODEL, usage)
+        _record_usage(usage, cost)
+        last_call.update(
+            model=PARSE_MODEL, cost_usd=cost, latency_s=time.monotonic() - started,
+            input_tokens=getattr(usage, "input_tokens", None),
+            cache_read_tokens=getattr(usage, "cache_read_input_tokens", None),
+            cache_write_tokens=getattr(usage, "cache_creation_input_tokens", None),
+            output_tokens=getattr(usage, "output_tokens", None),
+        )
+        logger.info("NL parse %s: in=%s cache_read=%s cache_write=%s out=%s cost=$%.6f",
+                    PARSE_MODEL, last_call["input_tokens"], last_call["cache_read_tokens"],
+                    last_call["cache_write_tokens"], last_call["output_tokens"], cost or 0.0)
         result = filters.model_dump(exclude_none=True)
 
         # If city_hint differs, re-target area normalization to the hinted city
         effective_city = city
         if "city_hint" in result and result["city_hint"] in CITIES and result["city_hint"] != city:
             effective_city = result["city_hint"]
-            areas = get_areas(effective_city)
+        areas = get_areas(effective_city)
 
-        # Area normalization
+        # Area normalization. A place that matches no area (a landmark or an
+        # area Zameen doesn't list) is dropped, never kept as raw text: a
+        # search on a name that isn't an area returns nothing, unflagged.
         if "area" in result and result["area"] not in areas:
             matched = match_area(result["area"], city=effective_city)
-            result["area"] = matched if matched else result.pop("area", None)
-            if result.get("area") is None:
-                result.pop("area", None)
+            if matched:
+                result["area"] = matched
+            else:
+                result.pop("area")
 
         # Landmark fallback if Claude found no area
         if "area" not in result:
@@ -751,6 +998,8 @@ async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
                 result["area"] = lm
 
         result = _reconcile_ai_area(query, result, effective_city)
+        result = _drop_area_number_beds(query, result, effective_city)
+        result = _prefer_regex_numbers(query, result, effective_city)
 
         # Validate bedrooms_max > bedrooms
         if "bedrooms_max" in result and "bedrooms" in result:
@@ -767,8 +1016,9 @@ async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
             result.pop("city_hint", None)
 
         result["parser"] = "ai"
-        cache_set(ck, result)
+        _nl_cache_set(ck, result)
         return result
     except Exception as e:
-        logger.warning(f"Instructor parse failed, falling back to regex: {e}")
+        logger.warning(f"Claude parse failed, falling back to regex: {e}")
+        last_call.update(error=f"{type(e).__name__}: {e}")
         return parse_natural_query(query, city=city)

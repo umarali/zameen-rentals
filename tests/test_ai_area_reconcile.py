@@ -65,21 +65,34 @@ class _FakeFilters:
         return dict(self._data)
 
 
+class _FakeUsage:
+    input_tokens, output_tokens = 900, 60
+    cache_creation_input_tokens, cache_read_input_tokens = 0, 1500
+
+
+class _FakeCompletion:
+    usage = _FakeUsage()
+
+
 class _FakeClient:
     def __init__(self, data):
         self.messages = self
         self._data = data
+        self.calls = []
 
-    def create(self, **kwargs):
-        return _FakeFilters(self._data)
+    def create_with_completion(self, **kwargs):
+        self.calls.append(kwargs)
+        return _FakeFilters(self._data), _FakeCompletion()
 
 
 @pytest.fixture
 def claude_returns(monkeypatch):
     def install(data):
-        monkeypatch.setattr(parsing, "_get_instructor_client", lambda: _FakeClient(data))
-        monkeypatch.setattr(parsing, "cache_get", lambda key: None)
-        monkeypatch.setattr(parsing, "cache_set", lambda key, value: None)
+        client = _FakeClient(data)
+        monkeypatch.setattr(parsing, "_get_instructor_client", lambda: client)
+        monkeypatch.setattr(parsing, "_nl_cache_get", lambda key: None)
+        monkeypatch.setattr(parsing, "_nl_cache_set", lambda key, value: None)
+        return client
     return install
 
 
