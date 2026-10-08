@@ -432,6 +432,8 @@ def init_db():
 
         # Clean expired cache on startup
         conn.execute("DELETE FROM listing_cache WHERE created_at < ?", (time.time() - CACHE_TTL,))
+    from app.listing_tags import init_listing_tags_schema
+    init_listing_tags_schema(conn)
     logger.info("Database initialized at %s", _DB_PATH)
 
 
