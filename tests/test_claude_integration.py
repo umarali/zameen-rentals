@@ -1,6 +1,7 @@
 """Provider-boundary checks; no API key or live model is needed."""
 import asyncio
 from unittest.mock import AsyncMock, Mock
+from types import SimpleNamespace
 
 import pytest
 import anthropic
@@ -13,11 +14,16 @@ from app import parsing
 @pytest.fixture
 def provider(monkeypatch):
     client = Mock()
-    client.messages.create = AsyncMock()
+    create = AsyncMock()
+
+    async def create_with_completion(**kwargs):
+        return await create(**kwargs), SimpleNamespace(usage=None)
+
+    client.messages.create_with_completion = create_with_completion
     monkeypatch.setattr(parsing, "_get_instructor_client", lambda: client)
-    monkeypatch.setattr(parsing, "cache_get", lambda key: None)
-    monkeypatch.setattr(parsing, "cache_set", Mock())
-    return client.messages.create
+    monkeypatch.setattr(parsing, "_nl_cache_get", lambda key: None)
+    monkeypatch.setattr(parsing, "_nl_cache_set", Mock())
+    return create
 
 
 def test_unknown_model_area_is_removed(provider):
@@ -37,7 +43,7 @@ def test_reversed_model_price_bounds_fall_back(provider):
 
 def test_equal_price_bounds_are_valid(provider):
     provider.return_value = parsing.RentalFilters(price_min=50000, price_max=50000)
-    result = asyncio.run(parsing.parse_query_with_claude("flat for exactly 50k"))
+    result = asyncio.run(parsing.parse_query_with_claude("flat for a fixed budget"))
     assert result["price_min"] == result["price_max"] == 50000
     assert result["parser"] == "ai"
 
@@ -74,13 +80,13 @@ def test_deadline_cancels_provider_and_does_not_cache(provider):
 
     asyncio.run(run())
     assert cancelled == [True]
-    parsing.cache_set.assert_not_called()
+    parsing._nl_cache_set.assert_not_called()
 
 
 def test_failed_response_is_not_cached(provider):
     provider.side_effect = RuntimeError("unavailable")
     asyncio.run(parsing.parse_query_with_claude("flat"))
-    parsing.cache_set.assert_not_called()
+    parsing._nl_cache_set.assert_not_called()
 
 
 def test_retry_budget_is_explicit(provider):
@@ -91,10 +97,10 @@ def test_retry_budget_is_explicit(provider):
 
 def test_model_is_configurable_and_part_of_cache_key(provider, monkeypatch):
     keys = []
-    monkeypatch.setattr(parsing, "cache_get", lambda key: keys.append(key))
+    monkeypatch.setattr(parsing, "_nl_cache_get", lambda key: keys.append(key))
     provider.return_value = parsing.RentalFilters()
     for model in ("model-a", "model-b"):
-        monkeypatch.setenv("CLAUDE_NLQ_MODEL", model)
+        monkeypatch.setattr(parsing, "PARSE_MODEL", model)
         asyncio.run(parsing.parse_query_with_claude("flat"))
         assert provider.call_args.kwargs["model"] == model
     assert keys[0] != keys[1]
@@ -130,7 +136,7 @@ def test_real_sdk_and_instructor_parse_tool_response(monkeypatch):
             http_client=httpx.AsyncClient(transport=httpx.MockTransport(respond)),
         ) as sdk:
             monkeypatch.setattr(parsing, "_get_instructor_client", lambda: instructor.from_anthropic(sdk))
-            monkeypatch.setattr(parsing, "cache_get", lambda key: None)
+            monkeypatch.setattr(parsing, "_nl_cache_get", lambda key: None)
             result = await parsing.parse_query_with_claude("2 bed flat in Clifton under 50k", "karachi")
             assert result["parser"] == "ai"
             assert result["area"] == "Clifton"

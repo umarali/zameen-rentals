@@ -75,13 +75,13 @@ INFO     zameenrentals:database.py:437 Database initialized at /var/folders/g_/p
 _______________________ test_invalid_json_is_typed_error _______________________
 tests/test_strict_audit.py:28: in test_invalid_json_is_typed_error
     asyncio.run(run())
-/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/asyncio/runners.py:194: in run
+<local-python>/versions/3.13.1/lib/python3.13/asyncio/runners.py:194: in run
     return runner.run(main)
            ^^^^^^^^^^^^^^^^
-/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/asyncio/runners.py:118: in run
+<local-python>/versions/3.13.1/lib/python3.13/asyncio/runners.py:118: in run
     return self._loop.run_until_complete(task)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/asyncio/base_events.py:720: in run_until_complete
+<local-python>/versions/3.13.1/lib/python3.13/asyncio/base_events.py:720: in run_until_complete
     return future.result()
            ^^^^^^^^^^^^^^^
 tests/test_strict_audit.py:26: in run
@@ -89,16 +89,16 @@ tests/test_strict_audit.py:26: in run
 app/decisions.py:104: in decide
     return parse_decision(resp.json())
                           ^^^^^^^^^^^
-/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/site-packages/httpx/_models.py:832: in json
+<local-python>/versions/3.13.1/lib/python3.13/site-packages/httpx/_models.py:832: in json
     return jsonlib.loads(self.content, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/json/__init__.py:346: in loads
+<local-python>/versions/3.13.1/lib/python3.13/json/__init__.py:346: in loads
     return _default_decoder.decode(s)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/json/decoder.py:345: in decode
+<local-python>/versions/3.13.1/lib/python3.13/json/decoder.py:345: in decode
     obj, end = self.raw_decode(s, idx=_w(s, 0).end())
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/umarali/.pyenv/versions/3.13.1/lib/python3.13/json/decoder.py:363: in raw_decode
+<local-python>/versions/3.13.1/lib/python3.13/json/decoder.py:363: in raw_decode
     raise JSONDecodeError("Expecting value", s, err.value) from None
 E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
 ---------------------------- Captured stderr setup -----------------------------

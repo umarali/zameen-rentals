@@ -1,4 +1,4 @@
-Follow-up: Jev fixes have now been applied to its existing worktree, and English/Urdu fallback search has been improved on main. See [what changed](fixes.md) and [how to test](testing.md). The audit below records the earlier findings before those fixes.
+Follow-up: Jev fixes have now been applied to its existing worktree, and English/Urdu fallback search has been improved on `fix/english-urdu-search-reliability`. The branch incorporates main's subsequent Haiku 5.5 parser and spend controls. See [what changed](fixes.md) and [how to test](testing.md). The audit below records the earlier findings before those fixes.
 
 Jev is worth continuing as an inexpensive offline classifier, but I would not ship its current tags as authoritative search filters. The implementation needs data freshness, response validation, and evidence checks first. Claude has the strongest immediate role in multilingual search and extracting verifiable listing facts.
 
