@@ -114,3 +114,61 @@ for (const { from, to, lat, lng } of cases.slice(0, 3)) {
     await expect(page.locator('.card-wrap').first()).toBeVisible();
   });
 }
+
+test('Near Me outside the three cities explains instead of searching', async ({ page, context }) => {
+  let nearbyCalls = 0;
+  await page.route('**/api/nearby-search?**', route => { nearbyCalls += 1; return route.fulfill({ json: { total: 0, results: [] } }); });
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 30.1575, longitude: 71.5249 }); // Multan, ~310 km from Lahore
+  await page.goto('/?city=karachi');
+  await expect(page.locator('.card-wrap').first()).toBeVisible();
+  await page.locator('#nearbyChip').click();
+  await expect(page.getByText(/Near Me covers Karachi, Lahore and Islamabad/)).toBeVisible();
+  await expect(page.locator('.city-tab[data-city="karachi"]')).toHaveClass(/active/);
+  await expect(page.locator('#nearbyChip')).not.toHaveClass(/has-value/);
+  expect(nearbyCalls).toBe(0);
+});
+
+test('Near Me asks again when the remembered location is older than 30 minutes', async ({ page }) => {
+  await page.route('**/api/nearby-search?**', route => route.fulfill({
+    json: { total: 0, page: 1, per_page: 25, source: 'local', mode: 'nearby', results: [] },
+  }));
+  // A controlled location service: counts requests and answers with window.__geo.
+  // (Chromium's own position cache follows real time, not the page clock.)
+  await page.addInitScript(() => {
+    window.__geo = { lat: 31.522361, lng: 74.347172 }; // Lahore
+    window.__geoCalls = 0;
+    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: {
+      getCurrentPosition(ok) {
+        window.__geoCalls += 1;
+        ok({ coords: { latitude: window.__geo.lat, longitude: window.__geo.lng, accuracy: 10 } });
+      },
+      watchPosition() { return 0; }, clearWatch() {},
+    } });
+  });
+  await page.clock.install();
+  await page.goto('/?city=lahore');
+  await expect(page.locator('.card-wrap').first()).toBeVisible();
+  let request = page.waitForRequest(r => new URL(r.url()).pathname === '/api/nearby-search');
+  await page.locator('#nearbyChip').click();
+  expect(new URL((await request).url()).searchParams.get('city')).toBe('lahore');
+  expect(await page.evaluate(() => window.__geoCalls)).toBe(1);
+
+  // Within 30 minutes the remembered location is reused without asking.
+  await page.locator('[data-nearby-clear]').click();
+  await page.clock.fastForward('10:00');
+  request = page.waitForRequest(r => new URL(r.url()).pathname === '/api/nearby-search');
+  await page.locator('#nearbyChip').click();
+  await request;
+  expect(await page.evaluate(() => window.__geoCalls)).toBe(1);
+
+  // The app stays open while the user travels to Islamabad.
+  await page.locator('[data-nearby-clear]').click();
+  await page.clock.fastForward('21:00');
+  await page.evaluate(() => { window.__geo = { lat: 33.691531, lng: 73.005431 }; });
+  request = page.waitForRequest(r => new URL(r.url()).pathname === '/api/nearby-search');
+  await page.locator('#nearbyChip').click();
+  expect(new URL((await request).url()).searchParams.get('city')).toBe('islamabad');
+  expect(await page.evaluate(() => window.__geoCalls)).toBe(2);
+  await expect(page.locator('.city-tab[data-city="islamabad"]')).toHaveClass(/active/);
+});

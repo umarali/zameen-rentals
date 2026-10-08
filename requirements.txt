@@ -2,8 +2,8 @@ fastapi
 uvicorn[standard]
 httpx
 beautifulsoup4
-anthropic
-instructor
+anthropic>=1.11,<2
+instructor>=1.17,<2
 python-dotenv
 slowapi
 pywebpush

@@ -19,7 +19,8 @@ import {
   initMobileMap, updateMobileCarousel, updateMobileMarkers, initHoverSync,
   getVisibleAreaNames, fitCityOverview,
   clearNearbyRadiusOverlays, hydrateStoredUserLocation, refreshUserLocationOverlays,
-  requestUserLocation, getNearestCity, resetExactPrefetchState,
+  requestUserLocation, getNearestCityWithDistance, isUserLocationFresh, NEAR_ME_MAX_CITY_KM,
+  resetExactPrefetchState,
 } from './map.js';
 import { openDrawer, initDrawerListeners } from './drawer.js';
 import { getStoredMapLayer } from './map-layers.js';
@@ -1356,10 +1357,17 @@ function initNearbyControls() {
     }
 
     try {
-      if (!refs.userLocation) {
+      if (!isUserLocationFresh(refs.userLocation)) {
         await requestUserLocation({ recenter: false });
       }
     } catch {
+      return;
+    }
+
+    const { city: nearestCity, km } = getNearestCityWithDistance(refs.userLocation);
+    if (km > NEAR_ME_MAX_CITY_KM) {
+      showToast(`Near Me covers Karachi, Lahore and Islamabad. You're about ${Math.round(km)} km from ${CITY_DEFAULTS[nearestCity].name}.`,
+        { tone: 'warning' });
       return;
     }
 
@@ -1371,7 +1379,6 @@ function initNearbyControls() {
     S.area = '';
     $('#areaInput').value = '';
     $('#areaClear').classList.add('hidden');
-    const nearestCity = getNearestCity(refs.userLocation);
     const prevCity = S.city;
     if (nearestCity !== S.city) {
       S.city = nearestCity;
