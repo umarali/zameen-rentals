@@ -151,7 +151,7 @@ function formatFiltersSummary(filters) {
   } else if (filters.price_min) {
     parts.push(`over ${Math.round(filters.price_min / 1000)}K PKR`);
   }
-  if (filters.furnished) parts.push('furnished');
+  if (filters.furnished != null) parts.push(filters.furnished ? 'furnished' : 'unfurnished');
   return parts.join(' ');
 }
 

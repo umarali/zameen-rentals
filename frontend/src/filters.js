@@ -38,7 +38,7 @@ function countFilters() {
   let n = 0;
   if (S.area) n++; if (S.type) n++; if (S.beds) n++;
   if (S.priceMin || S.priceMax) n++; if (S.sizeMarlaMin || S.sizeMarlaMax) n++;
-  if (S.furnished) n++; if (S.sort) n++;
+  if (S.furnishing) n++; if (S.sort) n++;
   return n;
 }
 
@@ -182,7 +182,7 @@ export function updateChips() {
 
   setChipVal($('#sizeChip'), sizeChipLabel(S.sizeMarlaMin, S.sizeMarlaMax), 'Size');
 
-  const mc = (S.furnished ? 1 : 0) + (S.sort ? 1 : 0);
+  const mc = (S.furnishing ? 1 : 0) + (S.sort ? 1 : 0);
   setChipVal($('#moreChip'), mc ? 'More (' + mc + ')' : '', 'More');
 
   $('#clearAllBtn').classList.toggle('hidden', !hasActiveFilters);
@@ -298,12 +298,9 @@ export function syncPriceChips() {
   }
 }
 
-export function setToggle(on) {
-  const t = $('#furnishedToggle');
-  t.classList.toggle('toggle-on', on);
-  t.setAttribute('aria-checked', String(on));
-  t.querySelector('.toggle-knob').style.transform = on ? 'translateX(20px)' : 'translateX(0)';
-  S.furnished = on;
+export function setFurnishing(furnishing) {
+  S.furnishing = furnishing || '';
+  $$('#furnishingRow .chip').forEach(c => c.classList.toggle('active', c.dataset.furnishing === S.furnishing));
 }
 
 // ===== CLEAR FILTER =====
@@ -319,7 +316,8 @@ export function clearFilter(f, { resetMapView, doSearch } = {}) {
   if (f === 'beds') { S.beds = ''; S.bedsMax = ''; $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === '')); }
   if (f === 'price') { S.priceMin = ''; S.priceMax = ''; $$('#priceGrid .chip').forEach(c => c.classList.remove('active')); $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = ''; }
   if (f === 'size') { S.sizeMarlaMin = ''; S.sizeMarlaMax = ''; $$('#sizeGrid .chip').forEach(c => c.classList.remove('active')); $('#customSize').classList.add('hidden'); $('#sizeMin').value = ''; $('#sizeMax').value = ''; }
-  if (f === 'more') { S.furnished = false; S.sort = ''; setToggle(false); $('#sortSelect').value = ''; }
+  if (f === 'furnishing') setFurnishing('');
+  if (f === 'more') { S.sort = ''; setFurnishing(''); $('#sortSelect').value = ''; }
   clearNlInput();
   updateChips(); doSearch?.();
 }
@@ -378,7 +376,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
 
   // Clear All
   $('#clearAllBtn').addEventListener('click', () => {
-    S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
+    S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.sort = '';
     S.sizeMarlaMin = ''; S.sizeMarlaMax = '';
     $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
     $$('#typeGrid .chip').forEach(c => c.classList.remove('active'));
@@ -387,7 +385,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = '';
     $$('#sizeGrid .chip').forEach(c => c.classList.remove('active'));
     $('#customSize').classList.add('hidden'); $('#sizeMin').value = ''; $('#sizeMax').value = '';
-    setToggle(false); $('#sortSelect').value = '';
+    setFurnishing(''); $('#sortSelect').value = '';
     $$('#presetRow .chip').forEach(c => c.classList.remove('active'));
     clearNlInput();
     updateChips();
@@ -509,11 +507,13 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
   $$('#customSize input').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { clearNlInput(); closeDD(); doSearch(); } }));
   $('#sizeApply').addEventListener('click', () => { S.sizeMarlaMin = unitToMarla($('#sizeMin').value, currentSizeUnit()); S.sizeMarlaMax = unitToMarla($('#sizeMax').value, currentSizeUnit()); clearNlInput(); updateChips(); closeDD(); doSearch(); });
 
-  // Furnished
-  $('#furnishedToggle').addEventListener('click', () => {
-    const prev = S.furnished;
-    setToggle(!S.furnished);
-    trackFilterChange({ filter: 'furnished', value: String(S.furnished), previousValue: String(prev), mode: refs.searchMode, city: S.city });
+  // Furnishing. The panel stays open so sort can be set too.
+  $('#furnishingRow').addEventListener('click', e => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    const prev = S.furnishing;
+    setFurnishing(c.dataset.furnishing);
+    if (prev === S.furnishing) return;
+    trackFilterChange({ filter: 'furnished', value: S.furnishing, previousValue: prev, mode: refs.searchMode, city: S.city });
     clearNlInput();
     updateChips(); doSearch();
   });

@@ -53,7 +53,7 @@ def resolve_landmark(query: str, city: str = "lahore") -> Optional[str]:
 
 
 _AREA_NOISE = frozenset({
-    'furnished', 'furnish', 'cheap', 'sasta', 'mehenga', 'naya', 'studio',
+    'furnished', 'unfurnished', 'furnish', 'cheap', 'sasta', 'mehenga', 'naya', 'studio',
     'bedroom', 'bedrooms', 'bed', 'beds', 'br', 'bhk',
     'flat', 'house', 'ghar', 'makan', 'makaan', 'kamra', 'room',
     'apartment', 'portion', 'upper', 'lower', 'bala', 'nichla',
@@ -80,6 +80,16 @@ def _strip_noise_tokens(text: str, keep_digits: bool = False) -> str:
         if t not in _AREA_NOISE and (t.isdigit() and keep_digits or not t.isdigit() and len(t) > 1)
     )
 
+
+# An explicit request for an unfurnished home. "semi-furnished" is not one.
+_UNFURNISHED_RE = re.compile(
+    r'(?<!\w)(?:un-?\s?furnished|non-?\s?furnished|not\s+furnished'
+    r'|(?:without|no|bina|baghair|bagair)\s+furniture|furniture\s+(?:ke\s+)?(?:baghair|bagair|bina)'
+    r'|(?:ان|غیر)\s?فرنشڈ|بغیر\s+فرنیچر|فرنیچر\s+کے\s+بغیر)(?!\w)',
+    re.I,
+)
+# Any mention of furnishing at all. A furnishing value needs one.
+_FURNISHING_MENTION_RE = re.compile(r'furnish|furniture|فرنش|فرنیچر', re.I)
 
 _BED_RANGE_RE = re.compile(r'(\d+)\s*(?:-|to|se|سے)\s*(\d+)\s*(?:bed(?:room)?s?|br|bhk|kamr[eao]|کمر[ےوں]|بیڈ)')
 _BED_SINGLE_RE = re.compile(r'(\d+)\s*(?:bed(?:room)?s?|br|bhk|kamr[eao]|کمر[ےوں]|بیڈ)')
@@ -192,7 +202,10 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
     areas = get_areas(city)
 
     # --- Furnished ---
-    if re.search(r'\b(?:furnished|furnish|فرنشڈ|فرنش)\b', q, re.I):
+    if _UNFURNISHED_RE.search(q):
+        result['furnished'] = False
+        ql = _UNFURNISHED_RE.sub(' ', ql)
+    elif re.search(r'\b(?:furnished|furnish|فرنشڈ|فرنش)\b', q, re.I):
         result['furnished'] = True
         ql = re.sub(r'\b(?:furnished|furnish)\b', ' ', ql, flags=re.I)
 
@@ -728,7 +741,7 @@ PARSE_CANDIDATE_LIMIT = int(os.environ.get("ZR_PARSE_CANDIDATES", "30"))
 NL_DAILY_BUDGET_USD = float(os.environ.get("ZR_NL_DAILY_BUDGET_USD", "1.00"))
 NL_CACHE_TTL_SECONDS = float(os.environ.get("ZR_NL_CACHE_TTL_HOURS", "168")) * 3600
 # Bump when the prompt or post-processing changes, so cached parses refresh.
-PARSE_PROMPT_VERSION = "2026-10-08.3"
+PARSE_PROMPT_VERSION = "2026-10-09.1"
 
 # USD per million tokens: (input, 5-minute cache write, cache read, output).
 _MODEL_PRICES = {
@@ -933,6 +946,20 @@ def _prefer_regex_numbers(query, result, city):
     return result
 
 
+def _check_furnishing(query, result):
+    """An explicit "unfurnished" wins; a furnishing the query never mentions is dropped.
+
+    False now filters to unfurnished homes, so a stray value from the model
+    would quietly hide most listings.
+    """
+    if _UNFURNISHED_RE.search(query):
+        return {**result, "furnished": False}
+    if "furnished" in result and not _FURNISHING_MENTION_RE.search(query):
+        result = dict(result)
+        result.pop("furnished")
+    return result
+
+
 async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
     """Parse a natural-language rental query with Claude, falling back to regex.
 
@@ -1009,6 +1036,7 @@ async def parse_query_with_claude(query: str, city: str = "lahore") -> dict:
         result = _reconcile_ai_area(query, result, effective_city)
         result = _drop_area_number_beds(query, result, effective_city)
         result = _prefer_regex_numbers(query, result, effective_city)
+        result = _check_furnishing(query, result)
 
         # Validate bedrooms_max > bedrooms
         if "bedrooms_max" in result and "bedrooms" in result:

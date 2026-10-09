@@ -193,7 +193,7 @@ def _build_parse_query_response(q, city, result):
             for t in name.lower().replace("-", " ").split()
         }
         unmatched = query_tokens - area_tokens
-        noise = {"house", "flat", "apartment", "portion", "upper", "lower", "room", "bed", "bedroom", "furnished", "full", "ghar", "makan", "bala", "nichla", "kamra",
+        noise = {"house", "flat", "apartment", "portion", "upper", "lower", "room", "bed", "bedroom", "furnished", "unfurnished", "full", "ghar", "makan", "bala", "nichla", "kamra",
                  # Size units and city names are consumed by other parsed fields —
                  # they must not count as an "unmatched" area or they wrongly flag
                  # a clean match (e.g. "5 marla house in DHA Lahore" or "240 sq yd
@@ -471,9 +471,11 @@ async def search(request: Request, city: str = Query("lahore"), area: Optional[s
                        sort=sort, result_count=local_result["total"])
             return local_result
 
-        # The upstream scraper cannot apply size bounds or several areas. Keep
-        # the local empty result instead of returning homes outside the request.
-        if size_marla_min or size_marla_max or area_names or any(tag_filters.values()):
+        # The upstream scraper cannot apply size bounds, several areas or
+        # "unfurnished". Keep the local empty result instead of returning homes
+        # outside the request.
+        if (size_marla_min or size_marla_max or area_names or furnished is False
+                or any(tag_filters.values())):
             return {**local_result, "source": "local"}
 
         if _PLAYWRIGHT_SERVER:

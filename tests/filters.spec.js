@@ -306,14 +306,21 @@ test.describe("More Filters", () => {
     await expect(page.locator("#dd-more")).toHaveClass(/open/);
   });
 
-  test("furnished toggle works", async ({ page }) => {
+  test("furnishing options are exclusive", async ({ page }) => {
     await page.locator("#moreChip").click();
-    const toggle = page.locator("#furnishedToggle");
-    await expect(toggle).toBeVisible();
-    await toggle.click();
-    await expect(toggle).toHaveClass(/toggle-on/);
+    const option = (value) => page.locator(`#furnishingRow [data-furnishing="${value}"]`);
+    await expect(option("")).toHaveClass(/active/);
+    await option("furnished").click();
+    await expect(option("furnished")).toHaveClass(/active/);
+    await expect(option("")).not.toHaveClass(/active/);
     // More chip should show count
     await expect(page.locator("#moreChip")).toHaveClass(/has-value/);
+    await option("unfurnished").click();
+    await expect(option("unfurnished")).toHaveClass(/active/);
+    await expect(option("furnished")).not.toHaveClass(/active/);
+    await expect(page.locator("#moreChip")).toHaveClass(/has-value/);
+    await option("").click();
+    await expect(page.locator("#moreChip")).not.toHaveClass(/has-value/);
   });
 
   test("sort select has all options", async ({ page }) => {

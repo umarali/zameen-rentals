@@ -723,11 +723,6 @@ html.app-standalone #mapCoverageBadgeMobile.coverage-mobile-inline.coverage-badg
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 .skeleton { background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
 
-/* ===== Toggle switch ===== */
-.toggle-track { transition: background .2s; }
-.toggle-knob { transition: transform .2s; }
-.toggle-on { background-color: var(--color-brand-500) !important; }
-
 /* ===== City tabs ===== */
 .city-tab { color: #6b7280; }
 .city-tab:hover { color: #374151; }
@@ -767,7 +762,7 @@ html.app-standalone #mapCoverageBadgeMobile.coverage-mobile-inline.coverage-badg
 .chip:hover { border-color: var(--color-brand-500); color: var(--color-brand-500); background: #eef8f4; }
 .chip.active { background: var(--color-brand-500); border-color: var(--color-brand-500); color: #fff; }
 .chip.active:hover { background: var(--color-brand-600); border-color: var(--color-brand-600); color: #fff; }
-.chip:focus-visible, .chip-filter:focus-visible, .toggle-track:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+.chip:focus-visible, .chip-filter:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
 
 /* Missing-image placeholder — a monochrome line-art photo glyph (replaces the
    old 🏠 emoji) shown for listings with no/broken images. */

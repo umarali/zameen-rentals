@@ -124,6 +124,70 @@ def area_filter_sql(city, area_names, *, alias=None):
     )
 
 
+# Furnishing evidence in a listing's title, amenities and details, lowercased
+# and joined by newlines. Matching is plain substring counting, so the SQL and
+# the Python versions agree exactly.
+_STRUCTURED_KEYS = ("furnished", "furnishing", "is_furnished")
+# Negative wording, the same variants the query parser accepts
+# (parsing._UNFURNISHED_RE). Most of it contains "furnished": "non furnished"
+# is not positive evidence, so those occurrences are discounted.
+_UNFURNISHED_PHRASES = (
+    "unfurnished", "un-furnished", "un furnished",
+    "non-furnished", "non furnished", "nonfurnished", "not furnished",
+    "without furniture", "no furniture", "bina furniture", "baghair furniture",
+    "bagair furniture", "furniture baghair", "furniture bagair", "furniture bina",
+    "furniture ke baghair", "furniture ke bagair", "furniture ke bina",
+    "ان فرنشڈ", "انفرنشڈ", "غیر فرنشڈ", "غیرفرنشڈ", "بغیر فرنیچر", "فرنیچر کے بغیر",
+    # Structured details as json.dumps writes them: {"Furnished": "No"}.
+    *(f'"{key}": {value}' for key in _STRUCTURED_KEYS for value in ("false", '"no"', '"false"')),
+)
+# Structured "unknown" values: neither positive nor negative.
+_NEUTRAL_FURNISHING_PHRASES = tuple(
+    f'"{key}": {value}' for key in _STRUCTURED_KEYS for value in ("null", '""'))
+# Phrases whose "furnished" is not positive evidence.
+_DISCOUNTED_PHRASES = tuple(
+    p for p in _UNFURNISHED_PHRASES + _NEUTRAL_FURNISHING_PHRASES if "furnished" in p)
+assert not any("'" in p for p in _UNFURNISHED_PHRASES + _NEUTRAL_FURNISHING_PHRASES)
+assert all(p.count("furnished") == 1 for p in _DISCOUNTED_PHRASES)
+# Every phrase above, and "furnished", contains one of these. A listing without
+# any is unknown, and checking for them first skips most listings cheaply.
+_FURNISHING_STEMS = ("furni", "فرنش", "فرنیچر")
+assert all(any(stem in p for stem in _FURNISHING_STEMS) for p in _UNFURNISHED_PHRASES)
+
+
+def furnishing_sql(furnished, alias=""):
+    """SQL for a furnishing filter, or None when there's no preference.
+
+    True needs positive evidence ("furnished", "semi furnished", the Furnished
+    amenity) and no negative wording. False needs negative wording ("non
+    furnished", {"furnished": false}) and no positive evidence. Listings that
+    say nothing, or say both, match neither; they still appear under "Any".
+    """
+    if furnished is None:
+        return None
+    prefix = f"{alias}." if alias else ""
+    hay = "LOWER(" + " || char(10) || ".join(
+        f"COALESCE({prefix}{name},'')" for name in ("title", "amenities_json", "details_json")) + ")"
+    count = lambda p: f"(length(h) - length(replace(h, '{p}', ''))) / {len(p)}"
+    negative = "(" + " OR ".join(f"instr(h, '{p}') > 0" for p in _UNFURNISHED_PHRASES) + ")"
+    positive = f"({count('furnished')} > " + " + ".join(count(p) for p in _DISCOUNTED_PHRASES) + ")"
+    status = (f"CASE WHEN {positive} AND NOT {negative} THEN 1"
+              f" WHEN {negative} AND NOT {positive} THEN 0 END")
+    mentioned = "(" + " OR ".join(f"instr({hay}, '{stem}') > 0" for stem in _FURNISHING_STEMS) + ")"
+    # The subquery names the haystack once instead of repeating it per phrase.
+    return f"({mentioned} AND (SELECT {status} FROM (SELECT {hay} AS h)) = {1 if furnished else 0})"
+
+
+def furnishing_status(*texts):
+    """Python mirror of furnishing_sql: True, False, or None (unknown or contradictory)."""
+    hay = "\n".join(t or "" for t in texts).lower()
+    negative = any(p in hay for p in _UNFURNISHED_PHRASES)
+    positive = hay.count("furnished") > sum(hay.count(p) for p in _DISCOUNTED_PHRASES)
+    if positive != negative:
+        return positive
+    return None
+
+
 def _listing_filter_clauses(*, city="lahore", area=None, area_names=None, property_type=None,
                             bedrooms=None, bedrooms_max=None, price_min=None, price_max=None,
                             size_marla_min=None, size_marla_max=None,
@@ -174,15 +238,9 @@ def _listing_filter_clauses(*, city="lahore", area=None, area_names=None, proper
     if price_max:
         conditions.append("price <= ?")
         params.append(price_max)
-    if furnished:
-        conditions.append(
-            "("
-            "(LOWER(title) LIKE '%furnished%' OR LOWER(COALESCE(amenities_json,'')) LIKE '%furnished%' OR LOWER(COALESCE(details_json,'')) LIKE '%furnished%')"
-            " AND LOWER(title) NOT LIKE '%unfurnished%'"
-            " AND LOWER(COALESCE(amenities_json,'')) NOT LIKE '%unfurnished%'"
-            " AND LOWER(COALESCE(details_json,'')) NOT LIKE '%unfurnished%'"
-            ")"
-        )
+    furnishing = furnishing_sql(furnished)
+    if furnishing:
+        conditions.append(furnishing)
     if q:
         conditions.append("id IN (SELECT rowid FROM listings_fts WHERE listings_fts MATCH ?)")
         params.append(q)
