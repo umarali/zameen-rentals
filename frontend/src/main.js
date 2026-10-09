@@ -1,10 +1,10 @@
 /** App entry point — wires modules together, search engine, init. */
 
 import { $, $$, esc, TYPE_L, showToast, fmtRelative } from './utils.js';
-import { S, refs, CITY_DEFAULTS } from './state.js';
+import { S, refs, CITY_DEFAULTS, FURNISHING_L, furnishedValue, furnishingFrom } from './state.js';
 import {
   updateCityTabs, updateNlExamples, updateChips, clearFilter, selectArea,
-  syncPriceChips, syncSizeChips, sizeChipLabel, renderSizeFilter, setToggle, initFilterListeners, closeDD,
+  syncPriceChips, syncSizeChips, sizeChipLabel, renderSizeFilter, setFurnishing, initFilterListeners, closeDD,
 } from './filters.js';
 import {
   renderCard, initCarousels, handleContactAction, contactFromData, skeletonCard,
@@ -240,7 +240,7 @@ function selectAreaFull(name, fromMap, { search = true } = {}) {
 }
 
 function clearFilterFull(f) {
-  const prevValues = { area: S.area, type: S.type, beds: S.beds, price: S.priceMin || S.priceMax ? `${S.priceMin}-${S.priceMax}` : '', size: S.sizeMarlaMin || S.sizeMarlaMax ? `${S.sizeMarlaMin}-${S.sizeMarlaMax}` : '', more: S.furnished ? 'furnished' : S.sort || '' };
+  const prevValues = { area: S.area, type: S.type, beds: S.beds, price: S.priceMin || S.priceMax ? `${S.priceMin}-${S.priceMax}` : '', size: S.sizeMarlaMin || S.sizeMarlaMax ? `${S.sizeMarlaMin}-${S.sizeMarlaMax}` : '', furnishing: S.furnishing, more: S.furnishing || S.sort || '' };
   if (prevValues[f]) trackFilterChange({ filter: f, value: '', previousValue: prevValues[f], mode: refs.searchMode, city: S.city });
   if (f === 'area') {
     refs.searchMode = refs.searchMode === 'nearby' ? 'nearby' : getBrowseMode();
@@ -287,7 +287,7 @@ function getCurrentFiltersForAlert() {
   if (S.priceMax) filters.price_max = Number(S.priceMax);
   if (S.sizeMarlaMin) filters.size_marla_min = Number(S.sizeMarlaMin);
   if (S.sizeMarlaMax) filters.size_marla_max = Number(S.sizeMarlaMax);
-  if (S.furnished) filters.furnished = true;
+  if (S.furnishing) filters.furnished = furnishedValue();
   return filters;
 }
 
@@ -302,7 +302,7 @@ function getParams(pg, { omitArea = false } = {}) {
   if (S.priceMax) p.set('price_max', S.priceMax);
   if (S.sizeMarlaMin) p.set('size_marla_min', S.sizeMarlaMin);
   if (S.sizeMarlaMax) p.set('size_marla_max', S.sizeMarlaMax);
-  if (S.furnished) p.set('furnished', 'true');
+  if (S.furnishing) p.set('furnished', String(furnishedValue()));
   if (S.sort) p.set('sort', S.sort);
   p.set('page', pg);
   return p;
@@ -319,7 +319,7 @@ function saveSearch() {
   if (S.priceMax) p.set('price_max', S.priceMax);
   if (S.sizeMarlaMin) p.set('size_marla_min', S.sizeMarlaMin);
   if (S.sizeMarlaMax) p.set('size_marla_max', S.sizeMarlaMax);
-  if (S.furnished) p.set('furnished', '1');
+  if (S.furnishing) p.set('furnished', S.furnishing === 'furnished' ? '1' : '0');
   if (S.sort) p.set('sort', S.sort);
   const qs = p.toString();
   const newUrl = qs ? '?' + qs : location.pathname;
@@ -341,16 +341,20 @@ function loadSearch() {
       priceMax: urlParams.get('price_max') || '',
       sizeMarlaMin: urlParams.get('size_marla_min') || '',
       sizeMarlaMax: urlParams.get('size_marla_max') || '',
-      furnished: urlParams.get('furnished') === '1',
+      furnishing: { 1: 'furnished', 0: 'unfurnished' }[urlParams.get('furnished')] || '',
       sort: urlParams.get('sort') || '',
     };
   } else {
     try { d = JSON.parse(localStorage.getItem('rk_s')); } catch {}
+    // Saved before furnishing had three states: `furnished: false` meant no preference.
+    if (d && d.furnishing === undefined) d.furnishing = d.furnished === true ? 'furnished' : '';
   }
   if (!d) return;
 
   if (d.city && CITY_DEFAULTS[d.city]) { S.city = d.city; updateCityTabs(); updateNlExamples(); }
-  if (d.area) selectAreaFull(d.area);
+  // init() searches once all saved filters are applied; searching here would
+  // send a request with the area but none of the filters restored below.
+  if (d.area) selectAreaFull(d.area, false, { search: false });
   if (d.type) { S.type = d.type; $$('#typeGrid .chip').forEach(c => c.classList.toggle('active', c.dataset.type === d.type)); }
   if (d.beds) { S.beds = d.beds; $$('#bedRow .chip').forEach(c => c.classList.toggle('active', c.dataset.beds === d.beds)); }
   if (d.priceMin) S.priceMin = d.priceMin;
@@ -359,7 +363,7 @@ function loadSearch() {
   if (d.sizeMarlaMin) S.sizeMarlaMin = d.sizeMarlaMin;
   if (d.sizeMarlaMax) S.sizeMarlaMax = d.sizeMarlaMax;
   if (d.sizeMarlaMin || d.sizeMarlaMax) syncSizeChips();
-  if (d.furnished) setToggle(true);
+  if (FURNISHING_L[d.furnishing]) setFurnishing(d.furnishing);
   if (d.sort) { S.sort = d.sort; $('#sortSelect').value = d.sort; }
   updateChips();
 }
@@ -683,7 +687,7 @@ function renderNoResults(message) {
   if (S.type) activeFilters.push({ label: 'Type: ' + (TYPE_L[S.type] || S.type), filter: 'type' });
   if (S.beds) activeFilters.push({ label: S.beds + ' Bed', filter: 'beds' });
   if (S.priceMin || S.priceMax) activeFilters.push({ label: 'Price range', filter: 'price' });
-  if (S.furnished) activeFilters.push({ label: 'Furnished', filter: 'more' });
+  if (S.furnishing) activeFilters.push({ label: FURNISHING_L[S.furnishing], filter: 'furnishing' });
   const filterHtml = activeFilters.length
     ? `<div class="flex flex-wrap justify-center gap-2 mt-4">${activeFilters.map(f => `<button class="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 transition-colors" data-remove-filter="${f.filter}">Remove ${esc(f.label)} &times;</button>`).join('')}</div>`
     : '';
@@ -806,7 +810,7 @@ function buildViewportSearchKey({ visibleAreaNames, center, bounds, mobile = fal
     priceMax: S.priceMax || '',
     sizeMarlaMin: S.sizeMarlaMin || '',
     sizeMarlaMax: S.sizeMarlaMax || '',
-    furnished: S.furnished ? 1 : 0,
+    furnishing: S.furnishing,
     sort: S.sort || '',
     mobile,
     page,
@@ -1034,7 +1038,7 @@ function understoodChips() {
   if (S.beds) chips.push({ field: 'beds', label: S.bedsMax ? `${S.beds}–${S.bedsMax} bed` : `${S.beds} bed`, removable: true });
   if (S.priceMin || S.priceMax) chips.push({ field: 'price', label: _priceChipLabel(), removable: true });
   if (S.sizeMarlaMin || S.sizeMarlaMax) chips.push({ field: 'size', label: sizeChipLabel(S.sizeMarlaMin, S.sizeMarlaMax), removable: true });
-  if (S.furnished) chips.push({ field: 'more', label: 'Furnished', removable: true });
+  if (S.furnishing) chips.push({ field: 'furnishing', label: FURNISHING_L[S.furnishing], removable: true });
   return chips;
 }
 
@@ -1111,8 +1115,9 @@ async function doNlSearch() {
     // City auto-switch (before area selection)
     if (f.city_hint && f.city_hint !== S.city && CITY_DEFAULTS[f.city_hint]) {
       S.city = f.city_hint;
-      S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
+      S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnishing = ''; S.sort = '';
       S.sizeMarlaMin = ''; S.sizeMarlaMax = ''; S.sizeUnit = '';
+      setFurnishing('');
       refs.searchMode = getBrowseMode();
       resetViewportSearchMeta({ clearVisibleAreas: true });
       $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
@@ -1129,7 +1134,7 @@ async function doNlSearch() {
     S.sizeMarlaMin = f.size_marla_min != null ? String(f.size_marla_min) : '';
     S.sizeMarlaMax = f.size_marla_max != null ? String(f.size_marla_max) : '';
     syncSizeChips();
-    if (f.furnished) setToggle(true);
+    if ('furnished' in f) setFurnishing(furnishingFrom(f.furnished));
     if (f.sort) { S.sort = f.sort; $('#sortSelect').value = f.sort; }
     trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: true, filters: f, parser: d.parser });
     updateChips();
@@ -1153,7 +1158,7 @@ function initCityTabs() {
     const prevCity = S.city;
     S.city = tab.dataset.city;
     trackCitySwitch({ from: prevCity, to: S.city });
-    S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnished = false; S.sort = '';
+    S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnishing = ''; S.sort = '';
     S.sizeMarlaMin = ''; S.sizeMarlaMax = ''; S.sizeUnit = '';
     refs.searchMode = getBrowseMode();
     resetViewportSearchMeta({ clearVisibleAreas: true });
@@ -1169,7 +1174,7 @@ function initCityTabs() {
     $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = '';
     $$('#sizeGrid .chip').forEach(c => c.classList.remove('active'));
     $('#customSize').classList.add('hidden'); $('#sizeMin').value = ''; $('#sizeMax').value = '';
-    setToggle(false); $('#sortSelect').value = '';
+    setFurnishing(''); $('#sortSelect').value = '';
     updateCityTabs(); updateChips(); updateNlExamples(); updateNearbyControls();
     refs._lastTriggeredBy = 'city_change';
     // Persist the user's selection before async city lookups can be interrupted.
@@ -1300,10 +1305,9 @@ function initNlListeners() {
     const btn = e.target.closest('[data-chip-remove]');
     if (!btn) return;
     const field = btn.dataset.chipRemove;
-    if (field === 'more') {
-      // The only 'more' chip is "Furnished" — clear just that, leaving any sort intact.
-      S.furnished = false;
-      setToggle(false);
+    if (field === 'furnishing') {
+      // Clear just the furnishing, leaving any sort intact.
+      setFurnishing('');
       updateChips();
       refs._lastTriggeredBy = 'nl_chip_remove';
       doSearch();
@@ -1322,7 +1326,7 @@ function initNlListeners() {
       S.beds = pop.dataset.beds || '';
       S.priceMin = '';
       S.priceMax = '';
-      S.furnished = false;
+      setFurnishing('');
       if (refs.searchMode !== 'nearby') refs.searchMode = S.area ? 'area' : refs.searchMode;
       $('#nlInput').value = '';
       $('#nlSuggestions').classList.add('hidden');
@@ -1660,7 +1664,7 @@ async function init() {
     doNlSearch,
     updateChips,
     syncPriceChips,
-    setToggle,
+    setFurnishing,
     isNearbySupportedCity,
     triggerNearby: () => $('#nearbyChip').click(),
     onCityChange: (city) => {

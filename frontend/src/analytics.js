@@ -1,7 +1,7 @@
 /** PostHog analytics — lean event tracking with privacy guards. */
 
 import posthog from 'posthog-js';
-import { S, refs } from './state.js';
+import { S, refs, furnishedValue } from './state.js';
 
 let _loaded = false;
 
@@ -71,7 +71,7 @@ export function trackSearchOutcome({ success, data, mode, page, triggeredBy, vis
       bedrooms: S.beds || null,
       has_price_min: Boolean(S.priceMin),
       has_price_max: Boolean(S.priceMax),
-      furnished: S.furnished,
+      furnished: furnishedValue(), // null = no preference
       sort: S.sort || null,
       page,
       total_results: data.total || 0,

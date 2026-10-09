@@ -72,9 +72,15 @@ class TestNormalizeFilters:
         out = pers.normalize_filters({"city": "lahore", "price_min": -10})
         assert "price_min" not in out
 
-    def test_furnished_false_is_dropped(self):
-        out = pers.normalize_filters({"city": "lahore", "furnished": False})
-        assert "furnished" not in out
+    def test_furnished_false_means_unfurnished(self):
+        assert pers.normalize_filters({"city": "lahore", "furnished": False})["furnished"] is False
+        assert pers.normalize_filters({"city": "lahore", "furnished": "false"})["furnished"] is False
+        assert pers.normalize_filters({"city": "lahore", "furnished": "0"})["furnished"] is False
+
+    def test_furnished_absent_or_unrecognised_is_no_preference(self):
+        assert "furnished" not in pers.normalize_filters({"city": "lahore"})
+        assert "furnished" not in pers.normalize_filters({"city": "lahore", "furnished": None})
+        assert "furnished" not in pers.normalize_filters({"city": "lahore", "furnished": "maybe"})
 
     def test_invalid_dict_raises(self):
         with pytest.raises(ValueError):
@@ -129,6 +135,11 @@ class TestDeriveAlertLabel:
         assert "2 bed" in label
         assert "Lahore" in label
         assert "80K" in label
+
+    def test_furnishing_label(self):
+        assert pers.derive_alert_label({"city": "lahore", "furnished": True}).endswith("furnished")
+        assert pers.derive_alert_label({"city": "lahore", "furnished": False}).endswith("unfurnished")
+        assert "furnished" not in pers.derive_alert_label({"city": "lahore"})
 
     def test_bedrooms_range(self):
         label = pers.derive_alert_label({
@@ -254,6 +265,33 @@ class TestMatching:
         # Cycle-based scan should be idempotent (no duplicate match).
         pers.run_match_cycle(dispatch=False)
         assert len(pers.list_matches(CLIENT_ID)) == 1
+
+    def test_furnishing_alerts_need_evidence(self):
+        pers.create_alert(CLIENT_ID, label=None, filters={"city": "lahore", "furnished": False})
+        pers.create_alert(OTHER_CLIENT_ID, label=None, filters={"city": "lahore", "furnished": True})
+        _insert_listing("FURN-1", card_data={"title": "Fully Furnished Flat"})
+        _insert_listing("UNFURN-1", card_data={"title": "Unfurnished Flat"})
+        _insert_listing("NOT-1", card_data={"title": "Flat, Not Furnished"})
+        _insert_listing("PLAIN-1", card_data={"title": "Flat"})
+        _insert_listing("BOTH-1", card_data={"title": "Furnished and non furnished flats"})
+        pers.run_match_cycle(dispatch=False)
+        assert {m["zameen_id"] for m in pers.list_matches(CLIENT_ID)} == {"UNFURN-1", "NOT-1"}
+        assert {m["zameen_id"] for m in pers.list_matches(OTHER_CLIENT_ID)} == {"FURN-1"}
+
+    def test_sql_and_python_alert_matchers_agree(self):
+        filters_by_value = {v: {"city": "lahore", "furnished": v} for v in (True, False)}
+        titles = ["Fully Furnished Flat", "Unfurnished Flat", "Flat, Not Furnished", "Flat",
+                  "Furnished and non furnished flats", "Semi furnished flat"]
+        for i, title in enumerate(titles):
+            _insert_listing(f"AGREE-{i}", card_data={"title": title})
+        rows = [dict(r) for r in _get_conn().execute(
+            "SELECT * FROM listings WHERE zameen_id LIKE 'AGREE-%'").fetchall()]
+        for filters in filters_by_value.values():
+            conds, params = pers._build_match_clauses(filters, listings_alias="l")
+            sql_ids = {r["zameen_id"] for r in _get_conn().execute(
+                f"SELECT l.zameen_id FROM listings l WHERE {' AND '.join(conds)}", params)}
+            py_ids = {r["zameen_id"] for r in rows if pers.listing_matches_alert(r, filters)}
+            assert sql_ids == py_ids
 
     def test_non_matching_listing_ignored(self):
         pers.create_alert(CLIENT_ID, label=None,
@@ -408,6 +446,16 @@ class TestMatching:
         assert pers.listing_matches_alert(listing, {"city": "lahore", "price_max": 80000})
         assert not pers.listing_matches_alert(listing, {"city": "lahore", "price_max": 60000})
         assert pers.listing_matches_alert(listing, {"city": "lahore", "furnished": True})
+        assert not pers.listing_matches_alert(listing, {"city": "lahore", "furnished": False})
+        for title in ("Non furnished flat", "Flat, not furnished"):
+            negative = {**listing, "title": title}
+            assert pers.listing_matches_alert(negative, {"city": "lahore", "furnished": False})
+            assert not pers.listing_matches_alert(negative, {"city": "lahore", "furnished": True})
+        # Saying nothing about furniture is unknown, not unfurnished.
+        unknown = {**listing, "title": "Flat"}
+        assert pers.listing_matches_alert(unknown, {"city": "lahore"})
+        assert not pers.listing_matches_alert(unknown, {"city": "lahore", "furnished": False})
+        assert not pers.listing_matches_alert(unknown, {"city": "lahore", "furnished": True})
         # Inactive listing never matches.
         assert not pers.listing_matches_alert({**listing, "is_active": 0},
                                               {"city": "lahore"})

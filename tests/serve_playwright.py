@@ -38,6 +38,9 @@ def main():
                        "DHA 11 Rahbar", "Bahria Nasheman Iris"],
             "islamabad": ["F 10", "G 11", "Bahria Town"],
         }
+        # Furnishing evidence for tests/furnishing.spec.js: positive, two
+        # negative wordings, and none (only shown under "Any").
+        FURNISHING_TITLES = ("Furnished", "Unfurnished", "Non Furnished", "Brand new")
         zid = 99000000
         for city, names in areas.items():
             for name in names:
@@ -50,7 +53,7 @@ def main():
                             url=f"https://www.zameen.com/Property/test-{zid}-1-1.html",
                             city=city, area_name=name, area_slug=slug, lat=lat, lng=lng,
                             card_data={
-                                "title": f"Furnished {kind} {zid}",
+                                "title": f"{FURNISHING_TITLES[i % 4]} {kind} {zid}",
                                 "price": 25000 + i * 5000, "price_text": "PKR 50 Thousand",
                                 "bedrooms": i % 4 + 1, "bathrooms": 2,
                                 "area_size": f"{i % 3 * 5 + 5} Marla",

@@ -10,7 +10,7 @@ The filter bar lets a renter pick a city, narrow by area, property type, bedroom
 - `beds-pick` filters by bedroom count.
 - `price-pick` applies a preset or custom PKR range.
 - `size-pick` applies a size preset or custom range, in Marla (Lahore/Islamabad default) or Sq Yd (Karachi default).
-- `more` covers the furnished toggle, sort order and preset bundles.
+- `more` covers furnishing (Any / Furnished / Unfurnished), sort order and preset bundles.
 - `chip-clear` clears one filter through its chip's X.
 - `clear-all` resets every filter and the NL input.
 
@@ -35,7 +35,7 @@ Preconditions:
 - **Pick beds.** Run `page.locator("#bedsChip").click()`, `page.locator('#bedRow .chip[data-beds="3"]').click()`. `#bedsChip` gains `has-value`.
 - **Pick price.** Preset: `page.locator("#priceChip").click()`, `page.locator("#priceGrid .chip").first().click()`. Custom: click `'#priceGrid .chip[data-custom="1"]'`, fill `#priceMin` with `50000` and `#priceMax` with `100000`, then press Enter in `#priceMax`. `#priceChip` gains `has-value` and `#dd-price` closes.
 - **Pick size.** Run `page.locator("#sizeChip").click()`, `page.locator('#sizeGrid .chip[data-smin="5"][data-smax="10"]').click()`. `#sizeChip` gains `has-value`. In Karachi, `'#sizeUnitToggle [data-unit="sqyd"]'` is `active` and `#sizeGrid` shows `sq yd`.
-- **More.** Run `page.locator("#moreChip").click()`, then `page.locator("#furnishedToggle").click()` (gains `toggle-on`) or `page.locator("#sortSelect").selectOption("price_low")`. `#moreChip` gains `has-value`.
+- **More.** Run `page.locator("#moreChip").click()`, then `page.locator('#furnishingRow [data-furnishing="unfurnished"]').click()` (gains `active`; the search sends `furnished=false`, while "Any" sends no `furnished` param) or `page.locator("#sortSelect").selectOption("price_low")`. `#moreChip` gains `has-value`.
 - **Clear one.** Run `page.locator("#areaChip .chip-clear").click()`; for size, `'#sizeChip [data-chip-clear="size"]'`. That chip loses `has-value`.
 - **Clear all.** Run `page.locator("#clearAllBtn").click()`. Every chip loses `has-value`, `#clearAllBtn` is hidden, and `#nlInput` is empty.
 - **Proof.** Call `proof()` before and after the key filter, and read the same filters back with `api("/api/search?city=karachi&area=Clifton&property_type=house")` → `total > 0`.

@@ -30,12 +30,26 @@ export const NL_EXAMPLES = {
 /** Reactive-ish filter state. */
 export const S = {
   city: 'lahore', area: '', type: '', beds: '', bedsMax: '',
-  priceMin: '', priceMax: '', furnished: false, sort: '',
+  // '' = no preference, 'furnished' or 'unfurnished'. Not a boolean: an
+  // unfurnished-only search is a filter, not the absence of one.
+  priceMin: '', priceMax: '', furnishing: '', sort: '',
   // Size is stored canonically in marla; sizeUnit is a display-only preference.
   // Empty = use the city default ('sqyd' for Karachi, 'marla' otherwise); an
   // explicit toggle sets it until the next city change.
   sizeMarlaMin: '', sizeMarlaMax: '', sizeUnit: '',
 };
+
+export const FURNISHING_L = { furnished: 'Furnished', unfurnished: 'Unfurnished' };
+
+/** The API's `furnished` value for a furnishing: true, false, or null for no preference. */
+export function furnishedValue(furnishing = S.furnishing) {
+  return furnishing === 'furnished' ? true : furnishing === 'unfurnished' ? false : null;
+}
+
+/** The furnishing for an API/parser `furnished` value (true, false, or absent). */
+export function furnishingFrom(furnished) {
+  return furnished === true ? 'furnished' : furnished === false ? 'unfurnished' : '';
+}
 
 /** Mutable runtime refs (not filter state). */
 export const refs = {

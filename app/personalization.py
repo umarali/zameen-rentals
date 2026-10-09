@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 from app.database import _get_conn, _DB_DIR
 from app.data import PROPERTY_TYPES, location_id_for_area
-from app.db_listings import area_filter_sql
+from app.db_listings import area_filter_sql, furnishing_sql, furnishing_status
 
 logger = logging.getLogger("zameenrentals")
 
@@ -222,12 +222,17 @@ def normalize_filters(raw: dict) -> dict:
             if value < 0:
                 continue
         elif key == "furnished":
+            # False means unfurnished, not "no preference" (that's absent/None).
             if isinstance(value, str):
-                value = value.lower() in ("1", "true", "yes", "on")
+                text = value.strip().lower()
+                if text in ("1", "true", "yes", "on"):
+                    value = True
+                elif text in ("0", "false", "no", "off"):
+                    value = False
+                else:
+                    continue
             else:
                 value = bool(value)
-            if not value:
-                continue
         elif key in ("city", "area", "property_type", "q"):
             value = str(value).strip()
             if not value:
@@ -263,8 +268,8 @@ def derive_alert_label(filters: dict) -> str:
         parts.append(f"under {filters['price_max'] // 1000}K")
     elif filters.get("price_min"):
         parts.append(f"over {filters['price_min'] // 1000}K")
-    if filters.get("furnished"):
-        parts.append("furnished")
+    if filters.get("furnished") is not None:
+        parts.append("furnished" if filters["furnished"] else "unfurnished")
     label = " ".join(parts) or "All listings"
     return label[:ALERT_LABEL_MAX]
 
@@ -459,13 +464,9 @@ def _build_match_clauses(filters: dict, *, listings_alias: str = "l") -> tuple[l
     if size_max is not None:
         conds.append(f"{size_expr} <= ?")
         params.append(size_max)
-    if filters.get("furnished"):
-        conds.append(
-            f"((LOWER({a}.title) LIKE '%furnished%' OR LOWER(COALESCE({a}.amenities_json,'')) LIKE '%furnished%' OR LOWER(COALESCE({a}.details_json,'')) LIKE '%furnished%')"
-            f" AND LOWER({a}.title) NOT LIKE '%unfurnished%'"
-            f" AND LOWER(COALESCE({a}.amenities_json,'')) NOT LIKE '%unfurnished%'"
-            f" AND LOWER(COALESCE({a}.details_json,'')) NOT LIKE '%unfurnished%')"
-        )
+    furnishing = furnishing_sql(filters.get("furnished"), alias=a)
+    if furnishing:
+        conds.append(furnishing)
     if filters.get("q"):
         conds.append(f"{a}.id IN (SELECT rowid FROM listings_fts WHERE listings_fts MATCH ?)")
         params.append(filters["q"])
@@ -509,13 +510,10 @@ def listing_matches_alert(listing_row: dict, filters: dict) -> bool:
         return False
     if filters.get("price_max") and (price is None or price > filters["price_max"]):
         return False
-    if filters.get("furnished"):
-        haystack = " ".join(filter(None, [
-            (listing_row.get("title") or "").lower(),
-            (listing_row.get("amenities_json") or "").lower(),
-            (listing_row.get("details_json") or "").lower(),
-        ]))
-        if "furnished" not in haystack or "unfurnished" in haystack:
+    if filters.get("furnished") is not None:
+        status = furnishing_status(listing_row.get("title"), listing_row.get("amenities_json"),
+                                   listing_row.get("details_json"))
+        if status is not filters["furnished"]:
             return False
     # Size and full-text filters require the SQL matcher.
     return True
