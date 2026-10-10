@@ -47,5 +47,5 @@ Keep implementation details out of the map. Name only user paths, stable handles
 - [Filters](./filters.md): city tabs, area autocomplete, type, beds, price, size, more/sort, clear all. Proven recipe: `../steps/filters.mjs`.
 - [Natural-language search](./natural-language-search.md): typed queries, example suggestions, "Understood:" chips, approximate-match notice.
 - [Listing drawer](./listing-drawer.md): card → detail drawer, photo gallery, nearby areas, close paths.
-- [Map](./map.md): desktop map panel, mobile map overlay, coverage badge, layers, area markers and exact pins.
+- [Map](./map.md): desktop map panel, mobile map overlay, clusters, price pins and stacks, auto-search toggle, layers.
 - [Personalization](./personalization.md): favorites, hiding listings, save-search alerts, the My rentals panel.

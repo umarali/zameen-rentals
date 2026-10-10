@@ -86,7 +86,11 @@ export function renderCard(item, idx) {
   const typeLabel = item.property_type ? `<span class="text-[10px] font-semibold uppercase tracking-wide text-brand-500 bg-brand-50 px-2 py-0.5 rounded-full">${esc(item.property_type)}</span>` : '';
   const callPhone = item.call_phone || item.phone || '';
   const whatsappPhone = item.whatsapp_phone || '';
-  const distanceLabel = formatDistance(item.distance_km, { approximate: item.is_distance_approximate });
+  // Distance is from the user only in Near Me; elsewhere the API measures from
+  // the map centre, which reads as "from you" and misleads.
+  const distanceLabel = refs.searchMode === 'nearby'
+    ? formatDistance(item.distance_km, { approximate: item.is_distance_approximate })
+    : '';
   const contactAttrs = [
     callPhone ? `data-call-phone="${escA(callPhone)}"` : '',
     whatsappPhone ? `data-whatsapp-phone="${escA(whatsappPhone)}"` : '',

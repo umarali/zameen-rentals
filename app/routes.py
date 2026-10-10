@@ -27,7 +27,7 @@ from app.db_listings import (
     decode_listing_json_field,
     search_listings, count_listings_by_area, get_listing_by_zameen_id,
     get_crawl_stats, get_nearby_enrichment_candidates, search_exact_listings_in_bounds,
-    search_nearby_listings,
+    search_nearby_listings, get_map_pins, get_listing_summary,
     upsert_listing,
 )
 
@@ -58,7 +58,9 @@ _NEARBY_ENRICHMENT_CONCURRENCY = 3
 _PARSE_QUERY_TIMEOUT_SECONDS = 8
 _PLAYWRIGHT_SERVER = os.getenv("ZAMEENRENTALS_PLAYWRIGHT") == "1"
 _SEARCH_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "10/minute"
-_MAP_SEARCH_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "20/minute"
+# Map search runs on every pan or zoom while "Search as I move the map" is on.
+_MAP_SEARCH_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "60/minute"
+_MAP_PINS_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "30/minute"
 _NEARBY_SEARCH_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "10/minute"
 _PARSE_QUERY_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "15/minute"
 _LISTING_DETAIL_RATE_LIMIT = "10000/minute" if _PLAYWRIGHT_SERVER else "20/minute"
@@ -594,6 +596,65 @@ async def map_search(
         else None
     )
     return result
+
+
+# Map pins change only when the crawler writes, so a short in-process cache
+# absorbs repeated loads of the same city and filters.
+_MAP_PINS_CACHE: dict = {}
+_MAP_PINS_LOCK = _Lock()
+_MAP_PINS_TTL = 120
+_MAP_PINS_CACHE_MAX = 64
+
+
+@router.get("/api/map-pins")
+@limiter.limit(_MAP_PINS_RATE_LIMIT)
+async def map_pins(
+    request: Request,
+    city: str = Query("lahore"),
+    area: Optional[str] = Query(None),
+    property_type: Optional[str] = Query(None),
+    bedrooms: Optional[int] = Query(None, ge=1, le=10),
+    bedrooms_max: Optional[int] = Query(None, ge=1, le=10),
+    price_min: Optional[int] = Query(None, ge=0),
+    price_max: Optional[int] = Query(None, ge=0),
+    size_marla_min: Optional[float] = Query(None, ge=0),
+    size_marla_max: Optional[float] = Query(None, ge=0),
+    furnished: Optional[bool] = Query(None),
+):
+    """Every exact-pin listing for the city and filters, for client-side clustering."""
+    _validate_price_range(price_min, price_max)
+    filters = dict(
+        city=city, area=area, property_type=property_type,
+        bedrooms=bedrooms, bedrooms_max=bedrooms_max,
+        price_min=price_min, price_max=price_max,
+        size_marla_min=size_marla_min, size_marla_max=size_marla_max,
+        furnished=furnished,
+    )
+    key = tuple(sorted(filters.items()))
+    now = time.monotonic()
+    with _MAP_PINS_LOCK:
+        hit = _MAP_PINS_CACHE.get(key)
+        if hit and now - hit[0] < _MAP_PINS_TTL:
+            return hit[1]
+    result = get_map_pins(**filters)
+    result["city"] = city
+    with _MAP_PINS_LOCK:
+        if len(_MAP_PINS_CACHE) >= _MAP_PINS_CACHE_MAX:
+            _MAP_PINS_CACHE.pop(min(_MAP_PINS_CACHE, key=lambda k: _MAP_PINS_CACHE[k][0]))
+        _MAP_PINS_CACHE[key] = (now, result)
+    return result
+
+
+@router.get("/api/listings/{zameen_id}")
+@limiter.limit(_LISTING_DETAIL_RATE_LIMIT)
+async def listing_summary(request: Request, zameen_id: str):
+    """One listing from the local database, for map pin previews and shared links."""
+    if not zameen_id.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid listing id")
+    listing = get_listing_summary(zameen_id)
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    return listing
 
 
 @router.get("/api/nearby-search")

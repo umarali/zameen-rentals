@@ -594,6 +594,106 @@ class TestMapSearchEndpoint:
         assert data["area_totals"] == {}
 
 
+def _seed_exact_listing(zid, *, city="karachi", area="Clifton", lat=24.8200, lng=67.0280,
+                        price=100000, beds=2, ptype="House", exact=True):
+    upsert_listing(
+        zameen_id=zid, url=f"https://www.zameen.com/Property/test-{zid}-1-1.html",
+        city=city, area_name=area, area_slug=f"{city}_{area}", lat=lat, lng=lng,
+        card_data={"title": f"Listing {zid}", "price": price, "bedrooms": beds,
+                   "bathrooms": 2, "area_size": "5 Marla", "property_type": ptype},
+    )
+    if exact:
+        upsert_listing(
+            zameen_id=zid, url=f"https://www.zameen.com/Property/test-{zid}-1-1.html",
+            city=city, detail_data={"latitude": lat, "longitude": lng,
+                                    "location_source": "listing_exact"},
+        )
+
+
+class TestMapPinsEndpoint:
+    @pytest.fixture(autouse=True)
+    def _clear_pin_cache(self):
+        from app import routes
+        routes._MAP_PINS_CACHE.clear()
+        yield
+        routes._MAP_PINS_CACHE.clear()
+
+    def test_returns_single_exact_pins_with_type_lookup(self, client):
+        _seed_exact_listing("920001", lat=24.8201, lng=67.0281, price=85000, beds=2)
+        _seed_exact_listing("920002", lat=24.8301, lng=67.0381, price=150000, beds=3, ptype="Apartment / Flat")
+        _seed_exact_listing("920003", exact=False)  # area-centroid only: never a pin
+
+        data = client.get("/api/map-pins?city=karachi").json()
+
+        assert data["total"] == 2
+        assert data["stacks"] == []
+        pins = {p[0]: p for p in data["pins"]}
+        assert set(pins) == {"920001", "920002"}
+        zid, lat, lng, price, beds, type_idx = pins["920002"]
+        assert (lat, lng, price, beds) == (24.8301, 67.0381, 150000, 3)
+        assert data["types"][type_idx] == "Apartment / Flat"
+
+    def test_collapses_a_shared_coordinate_into_one_stack(self, client):
+        for i in range(5):
+            _seed_exact_listing(f"92010{i}", lat=24.8500, lng=67.0500, price=50000 + i * 10000)
+        _seed_exact_listing("920201", lat=24.8600, lng=67.0600)
+
+        data = client.get("/api/map-pins?city=karachi").json()
+
+        assert data["total"] == 6
+        assert data["stack_min"] == 2
+        assert data["stacks"] == [[24.85, 67.05, 5, "Clifton", 50000, 90000, 0]]
+        # A listing alone at its point stays a pin.
+        assert [p[0] for p in data["pins"]] == ["920201"]
+
+    def test_marks_an_all_flat_stack_as_a_building(self, client):
+        for i in range(5):
+            _seed_exact_listing(f"92030{i}", lat=24.8700, lng=67.0700, ptype="Apartment / Flat")
+
+        stack = client.get("/api/map-pins?city=karachi").json()["stacks"][0]
+
+        assert stack[2] == 5
+        assert stack[6] == 1
+
+    def test_applies_filters_and_keeps_cities_apart(self, client):
+        _seed_exact_listing("920401", price=40000, beds=1)
+        _seed_exact_listing("920402", price=90000, beds=2, lat=24.8205)
+        _seed_exact_listing("920403", city="lahore", area="Gulberg", lat=31.52, lng=74.35)
+
+        cheap = client.get("/api/map-pins?city=karachi&price_max=50000").json()
+        two_bed = client.get("/api/map-pins?city=karachi&bedrooms=2").json()
+        lahore = client.get("/api/map-pins?city=lahore").json()
+
+        assert [p[0] for p in cheap["pins"]] == ["920401"]
+        assert [p[0] for p in two_bed["pins"]] == ["920402"]
+        assert [p[0] for p in lahore["pins"]] == ["920403"]
+
+    def test_rejects_inverted_price_range(self, client):
+        res = client.get("/api/map-pins?city=karachi&price_min=90000&price_max=10000")
+        assert res.status_code == 400
+
+
+class TestListingSummaryEndpoint:
+    def test_returns_listing_in_search_result_shape(self, client):
+        _seed_exact_listing("930001", price=70000, beds=2)
+
+        res = client.get("/api/listings/930001")
+
+        assert res.status_code == 200
+        data = res.json()
+        assert data["zameen_id"] == "930001"
+        assert data["price"] == 70000
+        assert data["has_exact_geography"] is True
+        assert data["is_active"] is True
+        assert data["city"] == "karachi"
+
+    def test_unknown_listing_is_404(self, client):
+        assert client.get("/api/listings/999999999").status_code == 404
+
+    def test_non_numeric_id_is_400(self, client):
+        assert client.get("/api/listings/abc").status_code == 400
+
+
 class TestNearbySearchEndpoint:
     def test_nearby_search_returns_exact_only_results(self, client):
         upsert_listing(

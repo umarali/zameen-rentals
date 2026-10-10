@@ -14,21 +14,24 @@ import * as personalization from './personalization.js';
 import { initPersonalizationUI, openPanel as openPersonalizationPanel } from './personalization-ui.js';
 import { registerSW, initOfflineHandlers, queueFeedback } from './sw-register.js';
 import * as compare from './compare.js';
+import L from 'leaflet';
 import {
-  initMap, ensureMarkers, updateMapMarkers, highlightMarker, resetMapView,
-  initMobileMap, updateMobileCarousel, updateMobileMarkers, initHoverSync,
-  getVisibleAreaNames, fitCityOverview,
+  initMap, highlightMarker, resetMapView,
+  initMobileMap, initHoverSync,
+  getVisibleAreaNames,
   clearNearbyRadiusOverlays, hydrateStoredUserLocation, refreshUserLocationOverlays,
   requestUserLocation, getNearestCityWithDistance, isUserLocationFresh, NEAR_ME_MAX_CITY_KM,
-  resetExactPrefetchState,
+  isMapAutoSearch, showSearchAreaPill, isSearchAreaPillVisible, isMobileMapOpen,
+  resetMapsForCity, syncMapsWithResults,
 } from './map.js';
+import { loadMapPins, removePin, markListingViewed, refreshPinStates } from './map-pins.js';
 import { openDrawer, initDrawerListeners } from './drawer.js';
 import { getStoredMapLayer } from './map-layers.js';
 import { initWelcome } from './welcome.js';
 import { initVoiceSearch } from './voice.js';
 import {
   initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen,
-  trackCitySwitch, trackFilterChange, trackMapMarkerClick, trackApiError, trackScrollDepth, trackFeedbackSubmitted,
+  trackCitySwitch, trackFilterChange, trackApiError, trackScrollDepth, trackFeedbackSubmitted, track,
 } from './analytics.js';
 
 const DISPLAY_MODE_QUERIES = [
@@ -192,10 +195,22 @@ function beginSearchRequest(append) {
   const controller = new AbortController();
   refs.searchController = controller;
   refs.isLoading = true;
-  if (!append) resetScrollTracking();
+  if (!append) {
+    resetScrollTracking();
+    showSearchAreaPill(false);
+    loadMapPins(getPinParams());
+  }
   showLoading(append);
   saveSearch();
   return { token, controller };
+}
+
+/** The filters that decide which pins the map draws: the list's, minus paging and sort. */
+function getPinParams() {
+  const p = getParams(1);
+  p.delete('page');
+  p.delete('sort');
+  return p;
 }
 
 function isActiveSearch(token, controller) {
@@ -232,8 +247,6 @@ function selectAreaFull(name, fromMap, { search = true } = {}) {
   if (refs.searchMode !== 'nearby') refs.searchMode = 'area';
   resetViewportSearchMeta({ clearVisibleAreas: true });
   refs.lastViewportSearchKey = '';
-  refs.previewArea = null;
-  refs.hoveredArea = null;
   refs._lastTriggeredBy = 'area_select';
   updateNearbyControls();
   selectArea(name, fromMap, { highlightMarker, doSearch: search ? doSearch : undefined });
@@ -246,8 +259,6 @@ function clearFilterFull(f) {
     refs.searchMode = refs.searchMode === 'nearby' ? 'nearby' : getBrowseMode();
     resetViewportSearchMeta({ clearVisibleAreas: true });
     refs.lastViewportSearchKey = '';
-    refs.previewArea = null;
-    refs.hoveredArea = null;
   }
   refs._lastTriggeredBy = 'filter_change';
   updateNearbyControls();
@@ -258,7 +269,10 @@ function openDrawerFull(item, position) {
   trackListingOpen({ item, position: position ?? null, mode: refs.searchMode, city: S.city, area: S.area, source: refs._lastSearchSource });
   openDrawer(item, selectAreaFull);
   const zid = getListingZameenId(item);
-  if (zid) personalization.recordView(zid).catch(() => {});
+  if (zid) {
+    personalization.recordView(zid).catch(() => {});
+    markListingViewed(zid);
+  }
 }
 
 function getListingZameenId(item) {
@@ -323,7 +337,8 @@ function saveSearch() {
   if (S.sort) p.set('sort', S.sort);
   const qs = p.toString();
   const newUrl = qs ? '?' + qs : location.pathname;
-  if (location.search !== '?' + qs) history.replaceState(null, '', newUrl);
+  // Keep the entry's state: the mobile map and the drawer mark their history entries.
+  if (location.search !== '?' + qs) history.replaceState(history.state, '', newUrl);
 }
 
 function loadSearch() {
@@ -438,6 +453,15 @@ function updateHeader({
     metaEl.textContent = total
       ? `Within ${refs.nearbyRadiusKm} km`
       : `No exact-pin rentals found within ${refs.nearbyRadiusKm} km`;
+  } else if (mode === 'viewport' && refs.viewportOverride?.stack) {
+    const stack = refs.viewportOverride.stack;
+    titleEl.textContent = stack.building
+      ? `Flats in one building${stack.area ? ` in ${stack.area}` : ''}`
+      : `Rentals on one map pin${stack.area ? ` in ${stack.area}` : ''}`;
+    countEl.textContent = countText;
+    metaEl.textContent = stack.building
+      ? 'All listed at the same building'
+      : 'Zameen places these at the block or society pin, not at each house';
   } else if (mode === 'viewport') {
     titleEl.textContent = 'Rentals in this map view';
     countEl.textContent = countText;
@@ -509,18 +533,6 @@ function isEmptyExactBoundsFallback(scope = refs.viewportScope) {
     && refs.viewportExactBoundsTotal === 0;
 }
 
-function isStandaloneCoverageMode() {
-  return document.documentElement.classList.contains('app-standalone');
-}
-
-function isCompactStandaloneViewport() {
-  return isStandaloneCoverageMode() && window.innerWidth < 768;
-}
-
-function shouldHideOverlayCoverageBadge() {
-  return false;
-}
-
 function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCount(), scope = refs.viewportScope } = {}) {
   if (scope === 'exact_bounds') {
     return 'No exact-pin rentals are visible here right now. Zoom out to broaden the map view.';
@@ -533,146 +545,6 @@ function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCou
   return 'Pan or zoom the map to discover other areas';
 }
 
-let coverageExpanded = false;
-
-function updateCoverageBadge() {
-  const desktop = $('#mapCoverageBadge');
-  const mobile = $('#mapCoverageBadgeMobile');
-  const badges = [desktop, mobile].filter(Boolean);
-  if (!badges.length) return;
-
-  const visibleAreas = getViewportVisibleAreaCount();
-  const coveredEntries = Object.entries(refs.mapAreaTotals || {}).sort((a, b) => b[1] - a[1]);
-  const coveredAreas = coveredEntries.length;
-  const standaloneMode = isStandaloneCoverageMode();
-  const compactStandaloneMode = isCompactStandaloneViewport();
-
-  badges.forEach(el => {
-    if (el === mobile && shouldHideOverlayCoverageBadge()) {
-      // Temporarily hide the overlay coverage UI on genuinely small screens.
-      el.classList.add('hidden');
-      el.innerHTML = '';
-      return;
-    }
-
-    if (refs.searchMode !== 'viewport') {
-      if (compactStandaloneMode) coverageExpanded = false;
-      el.classList.add('hidden');
-      el.innerHTML = '';
-      return;
-    }
-
-    const topAreas = coveredEntries.slice(0, 3);
-    const coveredHtml = topAreas.length
-      ? topAreas.map(([name]) => `<span class="coverage-chip live">${esc(name)}</span>`).join('')
-      : '<span class="coverage-chip">No areas with listings here yet</span>';
-    const summary = coveredAreas > 0
-      ? `${coveredAreas} of ${visibleAreas || coveredAreas} areas have listings`
-      : `${visibleAreas || 0} areas in view, none with listings yet`;
-    const previewingEmpty = refs.previewArea && !coveredEntries.some(([name]) => name === refs.previewArea);
-    const detail = previewingEmpty
-      ? `Previewing ${refs.previewArea}. Grey areas are preview-only until listings are available there.`
-      : coveredAreas > 0
-      ? 'Green areas have listings; grey are preview-only. Cards are ordered nearest to the map center.'
-      : 'No listings in this part of the map yet. Grey areas are preview-only.';
-    const legendHtml = `
-      <div class="coverage-legend" aria-label="Map legend">
-        <span class="coverage-legend-item"><span class="coverage-legend-dot live" aria-hidden="true"></span>Green: has listings</span>
-        <span class="coverage-legend-item"><span class="coverage-legend-dot preview" aria-hidden="true"></span>Grey: preview only</span>
-        <span class="coverage-legend-item"><span class="coverage-legend-dot exact" aria-hidden="true"></span>Red: exact listing</span>
-      </div>
-    `;
-
-    // Mobile inline mode: icon-only collapsed button next to List, dropdown when expanded
-    if (el === mobile) {
-      el.classList.add('coverage-mobile-inline');
-      el.classList.remove('coverage-badge-compact', 'coverage-badge-expanded');
-      const coverageIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linejoin="round" aria-hidden="true"><path d="M12,21 C9.5,17.5 6,14 6,10 A6,6 0 1,1 18,10 C18,14 14.5,17.5 12,21 Z" stroke-width="2"/><circle cx="10.2" cy="8.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="8.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="13.8" cy="8.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="10.2" cy="10.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="10.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="13.8" cy="10.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/><circle cx="10.2" cy="12.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/><circle cx="12" cy="12.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/><circle cx="13.8" cy="12.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/></svg>`;
-      // Standalone tablet (PWA at >=768px) has room for the full panel inline —
-      // show the "Map Coverage" label and summary alongside the icon instead of
-      // hiding everything behind a tap.
-      const standaloneTablet = standaloneMode && !compactStandaloneMode;
-      if (standaloneTablet) {
-        el.innerHTML = `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="${coverageExpanded ? 'true' : 'false'}" aria-label="Areas on map">
-             ${coverageIcon}
-           </button>
-           <div class="coverage-mobile-panel">
-             <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Areas on map</div>
-             <div style="margin-top:.25rem;font-size:.875rem;font-weight:600;color:#1f2937">${summary}</div>
-             ${coverageExpanded ? `<div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
-             <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.5rem">${coveredHtml}</div>
-             ${legendHtml}` : ''}
-           </div>`;
-      } else {
-        el.innerHTML = coverageExpanded
-          ? `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="true" aria-label="Areas on map">
-               ${coverageIcon}
-             </button>
-             <div class="coverage-mobile-panel">
-               <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Areas on map</div>
-               <div style="margin-top:.25rem;font-size:.875rem;font-weight:600;color:#1f2937">${summary}</div>
-               <div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
-               <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.5rem">${coveredHtml}</div>
-               ${legendHtml}
-             </div>`
-          : `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="false" aria-label="Areas on map">
-               ${coverageIcon}
-             </button>`;
-      }
-      el.classList.remove('hidden');
-      el.querySelector('.coverage-toggle').addEventListener('click', () => {
-        coverageExpanded = !coverageExpanded;
-        updateCoverageBadge();
-      });
-      return;
-    }
-
-    const chevron = `<svg class="w-3.5 h-3.5 text-gray-400 transition-transform ${coverageExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>`;
-    const compactSummary = coveredAreas > 0
-      ? `${coveredAreas}/${visibleAreas || coveredAreas}`
-      : `${visibleAreas || 0}`;
-    const compactMode = compactStandaloneMode && !coverageExpanded;
-
-    el.classList.toggle('coverage-badge-compact', compactMode);
-    el.classList.toggle('coverage-badge-expanded', compactStandaloneMode && coverageExpanded);
-
-    el.innerHTML = compactMode
-      ? `
-        <button class="coverage-toggle coverage-toggle-compact" aria-expanded="false" aria-label="Open areas on map">
-          <span class="coverage-toggle-compact-icon" aria-hidden="true">
-            <span class="coverage-legend-dot live"></span>
-          </span>
-          <span class="coverage-toggle-compact-text">
-            <span class="coverage-toggle-compact-label">Areas</span>
-            <span class="coverage-toggle-compact-count">${compactSummary}</span>
-          </span>
-          ${chevron}
-        </button>
-      `
-      : `
-        <button class="coverage-toggle flex items-center justify-between w-full text-left" aria-expanded="${coverageExpanded ? 'true' : 'false'}">
-          <div>
-            <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Areas on map</div>
-            <div class="mt-0.5 text-sm font-semibold text-gray-800">${summary}</div>
-          </div>
-          ${chevron}
-        </button>
-        <div class="coverage-detail ${coverageExpanded ? '' : 'hidden'}" style="margin-top:8px">
-          <div class="text-xs text-gray-500">${detail}</div>
-          <div class="mt-2 flex flex-wrap gap-2">${coveredHtml}</div>
-          ${legendHtml}
-        </div>
-      `;
-    el.classList.remove('hidden');
-
-    el.querySelector('.coverage-toggle').addEventListener('click', () => {
-      coverageExpanded = !coverageExpanded;
-      updateCoverageBadge();
-    });
-  });
-}
-
-refs._refreshCoverageUI = updateCoverageBadge;
 
 function renderNoResults(message) {
   refs.lastSearchTotal = 0;
@@ -754,10 +626,7 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
           ? getViewportEmptyStateMessage({ visibleAreas, scope: refs.viewportScope })
           : 'Try removing a filter to see more results'
       );
-      updateMapMarkers();
-      updateCoverageBadge();
-      if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
-      updateMobileCarousel(refs.currentResults);
+      syncMapsWithResults();
       return;
     }
     $('#listingsGrid').innerHTML = refs.currentResults.map((it, i) => renderCard(it, i)).join('');
@@ -786,10 +655,7 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
   });
   initCarousels();
   observeCards();
-  updateMapMarkers();
-  updateCoverageBadge();
-  if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
-  updateMobileCarousel(refs.currentResults);
+  syncMapsWithResults();
   renderFooter(data.total || 0);
   if (!append) $('#listingsPanel').scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -824,14 +690,17 @@ function buildViewportSearchKey({ visibleAreaNames, center, bounds, mobile = fal
   });
 }
 
-async function doViewportSearch(page = 1, { mobile = false } = {}) {
+async function doViewportSearch(page = 1, { mobile = false, override = null } = {}) {
   const mapInstance = mobile ? refs.mobileMap : refs.map;
   if (!mapInstance) return;
 
   const append = page > 1;
-  const visibleAreaNames = getVisibleAreaNames(mapInstance);
-  const center = mapInstance.getCenter();
-  const bounds = mapInstance.getBounds();
+  // A stack search pins the list to one point; paging keeps it, a new map search drops it.
+  if (!append) refs.viewportOverride = override;
+  const pinned = refs.viewportOverride;
+  const visibleAreaNames = pinned ? [] : getVisibleAreaNames(mapInstance);
+  const bounds = pinned ? pinned.bounds : mapInstance.getBounds();
+  const center = pinned ? bounds.getCenter() : mapInstance.getCenter();
   const viewportKey = append
     ? ''
     : buildViewportSearchKey({ visibleAreaNames, center, bounds, mobile, page });
@@ -869,6 +738,7 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     if (!isActiveSearch(token, controller)) return;
     hideLoading();
     applyResults(data, { append, mode: 'viewport' });
+    if (refs.viewportOverride) showSearchAreaPill(true, 'Show all rentals in this view');
     refs._lastSearchSource = data.source || null;
     trackSearchOutcome({ success: true, data, mode: 'viewport', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy, visibleAreasCount: refs.viewportAreaNames.length });
     if (!append) refs.lastViewportSearchKey = viewportKey;
@@ -882,9 +752,7 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
       resetViewportSearchMeta();
       updateHeader({ total: 0, source: 'unavailable', mode: 'viewport', visibleAreas: refs.viewportAreaNames.length, coveredAreas: 0, ranking: 'default' });
       renderNoResults(e.message || 'Could not update the map view right now');
-      updateMapMarkers();
-      updateCoverageBadge();
-      if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+      syncMapsWithResults();
     }
     trackSearchOutcome({ success: false, data: e.message, mode: 'viewport', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy });
   } finally {
@@ -928,9 +796,7 @@ async function doAreaSearch(page = 1) {
       refs.currentResults = [];
       updateHeader({ total: 0, source: 'unavailable', mode: refs.searchMode });
       renderNoResults(e.message || 'Search failed');
-      updateMapMarkers();
-      updateCoverageBadge();
-      if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+      syncMapsWithResults();
     }
     trackSearchOutcome({ success: false, data: e.message, mode: refs.searchMode, page: refs.currentPage, triggeredBy: refs._lastTriggeredBy });
   } finally {
@@ -996,9 +862,7 @@ async function doNearbySearch(page = 1) {
       refs.currentResults = [];
       updateHeader({ total: 0, source: 'unavailable', mode: 'nearby' });
       renderNoResults(e.message || `No exact-pin rentals were found within ${refs.nearbyRadiusKm} km.`);
-      updateMapMarkers();
-      updateCoverageBadge();
-      if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
+      syncMapsWithResults();
     }
     trackSearchOutcome({ success: false, data: e.message, mode: 'nearby', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy, radiusKm: refs.nearbyRadiusKm });
   } finally {
@@ -1007,8 +871,10 @@ async function doNearbySearch(page = 1) {
 }
 
 async function doSearch(page = 1, opts = {}) {
+  // While the mobile map is open, searches follow that map, not the hidden desktop one.
+  const searchOpts = { mobile: isMobileMapOpen(), ...opts };
   if (refs.searchMode === 'nearby') return doNearbySearch(page);
-  if (shouldUseViewportSearch(opts)) return doViewportSearch(page, opts);
+  if (shouldUseViewportSearch(searchOpts)) return doViewportSearch(page, searchOpts);
   return doAreaSearch(page);
 }
 
@@ -1021,6 +887,74 @@ function scheduleViewportSearch(opts = {}) {
     doSearch(1, { ...opts, viewport: true });
   }, 250);
 }
+
+/** A map stopped moving. The list follows it, or the "Search this area" pill offers to. */
+function handleMapMoved({ mobile = false, kind = 'user' } = {}) {
+  if (kind === 'quiet') return;
+  if (!isViewportBrowseAvailable({ mobile })) return;
+  const listFollowsMap = !S.area && refs.searchMode !== 'nearby' && isMapAutoSearch();
+  if (listFollowsMap) {
+    scheduleViewportSearch({ mobile });
+    return;
+  }
+  if (kind === 'user') showSearchAreaPill(true);
+}
+
+function clearAreaKeepingMap() {
+  if (!S.area) return;
+  trackFilterChange({ filter: 'area', value: '', previousValue: S.area, mode: refs.searchMode, city: S.city });
+  S.area = '';
+  $('#areaInput').value = '';
+  $('#areaClear').classList.add('hidden');
+  updateChips();
+  syncUnderstood();
+}
+
+/** "Search this area": list what the map shows, dropping an area or Near Me that held the list. */
+function searchThisMapArea({ mobile = isMobileMapOpen() } = {}) {
+  showSearchAreaPill(false);
+  if (!isViewportBrowseAvailable({ mobile })) return;
+  if (refs.searchMode === 'nearby') exitNearbyMode({ silent: true });
+  clearAreaKeepingMap();
+  refs.searchMode = 'viewport';
+  resetViewportSearchMeta({ clearVisibleAreas: true });
+  refs.lastViewportSearchKey = '';
+  refs._lastTriggeredBy = 'search_this_area';
+  track('map_search_this_area', { city: S.city, mobile });
+  doViewportSearch(1, { mobile });
+}
+
+// About 1 m around the point, wide enough for the 5-decimal rounding the server groups by.
+const STACK_BOX_DEG = 0.000006;
+
+/** List every rental on one shared map pin. */
+function searchStack(stack, { mobile = isMobileMapOpen() } = {}) {
+  if (!isViewportBrowseAvailable({ mobile })) return;
+  if (refs.searchMode === 'nearby') exitNearbyMode({ silent: true });
+  clearAreaKeepingMap();
+  showSearchAreaPill(false);
+  refs.searchMode = 'viewport';
+  resetViewportSearchMeta({ clearVisibleAreas: true });
+  refs.lastViewportSearchKey = '';
+  refs._lastTriggeredBy = 'map_stack';
+  const bounds = L.latLngBounds(
+    [stack.lat - STACK_BOX_DEG, stack.lng - STACK_BOX_DEG],
+    [stack.lat + STACK_BOX_DEG, stack.lng + STACK_BOX_DEG],
+  );
+  doViewportSearch(1, { mobile, override: { bounds, stack } });
+}
+
+refs._searchThisArea = searchThisMapArea;
+refs._searchStack = searchStack;
+refs._loadMoreResults = ({ mobile = false } = {}) => {
+  refs._lastTriggeredBy = 'load_more';
+  doSearch(refs.currentPage + 1, { mobile });
+};
+// Turning "Search as I move the map" back on catches the list up with the map.
+refs._onAutoSearchChange = on => {
+  if (!on) clearTimeout(refs.mapTimer);
+  else if (isSearchAreaPillVisible()) searchThisMapArea();
+};
 
 // ===== "Understood:" chips — show how a natural-language query was interpreted,
 // each removable to drop that filter and re-run the search. Driven from S so it
@@ -1163,8 +1097,6 @@ function initCityTabs() {
     refs.searchMode = getBrowseMode();
     resetViewportSearchMeta({ clearVisibleAreas: true });
     refs.lastViewportSearchKey = '';
-    refs.previewArea = null;
-    refs.hoveredArea = null;
     clearNearbyRadiusOverlays();
     refreshUserLocationOverlays();
     $('#areaInput').value = ''; $('#areaClear').classList.add('hidden');
@@ -1286,13 +1218,12 @@ async function handleHide(btn) {
 
 function removeHiddenResult(zid) {
   hideCardElement(zid);
+  removePin(zid);
   refs.currentResults = filterHiddenResults(refs.currentResults);
   $$('#listingsGrid .card-wrap:not(.card-hidden)').forEach((card, idx) => {
     card.dataset.idx = String(idx);
   });
-  updateMapMarkers();
-  if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
-  updateMobileCarousel(refs.currentResults);
+  syncMapsWithResults();
   renderFooter(refs.lastSearchTotal);
 }
 
@@ -1506,34 +1437,14 @@ async function loadCityData({ search = true } = {}) {
   await hydrateLocalListingTotals([S.city]);
   renderSizeFilter(); // re-render size presets for the new city's default unit
 
-  Object.values(refs.markers).forEach(m => { if (refs.map) refs.map.removeLayer(m); });
-  refs.markers = {};
   resetViewportSearchMeta({ clearVisibleAreas: true });
   refs.viewportTotal = 0;
   refs.viewportShown = 0;
   refs.lastViewportSearchKey = '';
-  refs.previewArea = null;
-  refs.hoveredArea = null;
-  const cd = CITY_DEFAULTS[S.city];
-  if (refs.map) fitCityOverview(refs.map);
-  if (refs.listingMarkerLayer) { refs.listingMarkerLayer.remove(); refs.listingMarkerLayer = null; }
-  if (refs.mobileMap) {
-    refs.mobileMap.remove();
-    refs.mobileMap = null;
-    refs.mobileMapBaseLayer = null;
-    refs.mobileMarkerLayer = null;
-    refs.mobileListingMarkerLayer = null;
-    refs.mobileUserLocationMarker = null;
-    refs.mobileUserLocationCircle = null;
-    refs.mobileNearbyRadiusLayer = null;
-  }
-  const carousel = $('#mapCarousel');
-  if (carousel) { carousel.innerHTML = ''; carousel.classList.add('hidden'); }
+  refs.viewportOverride = null;
+  resetMapsForCity();
   updateNearbyControls();
-  resetExactPrefetchState();
-  ensureMarkers(selectAreaFull);
-  updateMapMarkers();
-  updateCoverageBadge();
+  syncMapsWithResults();
   if (search) {
     if (refs.searchMode !== 'nearby') refs.searchMode = getBrowseMode();
     doSearch();
@@ -1601,10 +1512,11 @@ async function init() {
     for (const id of nextIds) if (!_lastCompareIds.has(id)) updateCompareButton(id, true);
     _lastCompareIds = nextIds;
   });
-  initMobileMap(selectAreaFull, openDrawerFull, () => scheduleViewportSearch({ mobile: true }));
+  initMobileMap(selectAreaFull, openDrawerFull, ({ kind } = {}) => handleMapMoved({ mobile: true, kind }));
   await chooseInitialCity();
   refs._notify = showToast;
   refs._hideListing = removeHiddenResult;
+  personalization.subscribe(() => refreshPinStates());
   refs.mapLayer = getStoredMapLayer();
   hydrateStoredUserLocation();
 
@@ -1652,7 +1564,7 @@ async function init() {
   renderSizeFilter(); // populate size presets for the active city's unit (after any restored state)
   updateNearbyControls();
   if (window.innerWidth >= 1024) {
-    initMap(selectAreaFull, () => scheduleViewportSearch(), openDrawerFull);
+    initMap(selectAreaFull, ({ kind } = {}) => handleMapMoved({ kind }), openDrawerFull);
     if (S.area) highlightMarker(S.area, true);
   }
   if (refs.searchMode !== 'nearby') refs.searchMode = getBrowseMode();

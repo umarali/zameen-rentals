@@ -309,7 +309,7 @@ test("desktop standalone keeps the header on one row", async ({
   expect(layout.searchTop, details).toBeLessThan(layout.brandBottom);
 });
 
-test("standalone mode keeps mobile coverage hidden", async ({
+test("standalone mobile map shows the map key button and the count bar", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -388,10 +388,12 @@ test("standalone mode keeps mobile coverage hidden", async ({
   await page.waitForSelector("#mapFab", { timeout: 30000 });
   await page.locator("#mapFab").click();
 
-  await expect(page.locator("#mapCoverageBadgeMobile")).toBeHidden();
+  await expect(page.locator("#mapCoverageBadgeMobile [data-map-key-toggle]")).toBeVisible();
+  await expect(page.locator("#mapSheetBar")).toBeVisible();
+  await expect(page.locator("#mapCoverageBadgeMobile [data-map-key]")).toBeHidden();
 });
 
-test("standalone tablet-width overlay still shows coverage", async ({
+test("standalone tablet-width overlay shows the map key", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -471,7 +473,8 @@ test("standalone tablet-width overlay still shows coverage", async ({
   await page.locator("#mapFab").click();
 
   const badge = page.locator("#mapCoverageBadgeMobile");
-  await expect(badge).toBeVisible();
-  await expect(badge).not.toHaveClass(/coverage-badge-compact/);
-  await expect(badge).toContainText("Areas on map");
+  await badge.locator("[data-map-key-toggle]").click();
+  await expect(badge.locator("[data-map-key]")).toBeVisible();
+  await expect(badge).toContainText("Search as I move the map");
+  await expect(badge).toContainText("Several rentals at one point");
 });

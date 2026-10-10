@@ -255,7 +255,19 @@
     </div>
   </section>
   <section id="mapPanel" class="relative border-l border-gray-200 hidden lg:block z-0">
-    <div id="mapCoverageBadge" class="hidden absolute top-4 left-4 z-[500] max-w-[280px] rounded-2xl bg-white/92 backdrop-blur border border-gray-200 shadow-sm px-4 py-3"></div>
+    <div id="mapCoverageBadge" class="map-summary absolute top-4 left-4 z-[500]" data-map-summary>
+      <div class="map-summary-count" aria-live="polite"><b data-map-count>…</b> <span data-map-count-label>Loading rentals</span></div>
+      <label class="map-autosearch"><input type="checkbox" data-map-autosearch checked> Search as I move the map</label>
+      <button type="button" class="map-key-toggle" data-map-key-toggle aria-expanded="false">Map key</button>
+      <div class="map-key hidden" data-map-key>
+        <div class="map-key-item"><span class="map-key-swatch"><span class="map-pin">85K</span></span>Rent, at the listing's own pin</div>
+        <div class="map-key-item"><span class="map-key-swatch"><span class="map-stack is-approx"><b>24</b></span></span>Rentals on a block or society pin (approximate)</div>
+        <div class="map-key-item"><span class="map-key-swatch"><span class="map-stack"><b>3</b></span></span>Several rentals at one point, such as flats in a building</div>
+        <div class="map-key-item"><span class="map-key-swatch"><span class="map-cluster">1.2k</span></span>A group of rentals: zoom in to split it</div>
+        <div class="map-key-item"><span class="map-key-swatch"><span class="map-pin is-viewed">60K</span></span>A listing you've opened</div>
+      </div>
+    </div>
+    <button type="button" class="map-search-area hidden">Search this area</button>
     <div id="mapContainer" class="absolute inset-0"></div>
   </section>
 </main>
@@ -266,17 +278,38 @@
   Show map
 </button>
 
-<!-- Mobile map overlay -->
-<div id="mapOverlay" class="fixed inset-0 bg-white z-[60] hidden">
-  <div id="mapOverlayCloseWrap" class="absolute z-[61] flex items-center gap-2">
-    <button id="mapOverlayClose" class="flex items-center gap-1 px-4 py-2 rounded-full bg-white border border-gray-200 text-sm font-semibold text-gray-700 shadow-md hover:bg-gray-50 transition-colors">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-      Show list
+<!-- Mobile map overlay: sits below the search and filter bar so both stay usable -->
+<div id="mapOverlay" class="fixed inset-x-0 bottom-0 bg-white z-[60] hidden">
+  <div id="mapCoverageBadgeMobile" class="map-key-mobile absolute z-[61]">
+    <button type="button" class="map-key-toggle map-key-toggle-mobile" data-map-key-toggle aria-expanded="false" aria-label="Map key and settings">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
     </button>
-    <div id="mapCoverageBadgeMobile" class="hidden"></div>
+    <div class="map-key map-key-panel hidden" data-map-key>
+      <label class="map-autosearch"><input type="checkbox" data-map-autosearch checked> Search as I move the map</label>
+      <div class="map-key-items">
+        <div class="map-key-item"><span class="map-key-swatch"><span class="map-pin">85K</span></span>Rent, at the listing's own pin</div>
+        <div class="map-key-item"><span class="map-key-swatch"><span class="map-stack is-approx"><b>24</b></span></span>Rentals on a block or society pin (approximate)</div>
+        <div class="map-key-item"><span class="map-key-swatch"><span class="map-stack"><b>3</b></span></span>Several rentals at one point, such as flats in a building</div>
+        <div class="map-key-item"><span class="map-key-swatch"><span class="map-cluster">1.2k</span></span>A group of rentals: zoom in to split it</div>
+        <div class="map-key-item"><span class="map-key-swatch"><span class="map-pin is-viewed">60K</span></span>A listing you've opened</div>
+      </div>
+    </div>
   </div>
+  <button type="button" class="map-search-area hidden">Search this area</button>
   <div id="mapContainerMobile" class="absolute inset-0"></div>
-  <div id="mapCarousel" class="absolute bottom-0 left-0 right-0 hidden gap-3 p-3 overflow-x-auto z-[61]" style="scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px))"></div>
+  <div id="mapSheet" class="absolute inset-x-0 bottom-0 z-[61]">
+    <div id="mapSheetBar" class="map-sheet-bar" data-map-summary>
+      <div class="map-summary-count" aria-live="polite"><b data-map-count>…</b> <span data-map-count-label>Loading rentals</span></div>
+      <button id="mapCardsToggle" type="button" class="map-sheet-btn" aria-expanded="true" aria-label="Hide listing cards">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <button id="mapOverlayClose" type="button" class="map-sheet-list">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        Show list
+      </button>
+    </div>
+    <div id="mapCarousel" class="hidden gap-3 px-3 overflow-x-auto" style="scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px))"></div>
+  </div>
 </div>
 
 <!-- Feedback trigger -->
