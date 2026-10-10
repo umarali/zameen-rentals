@@ -1,6 +1,7 @@
 /** Listing card rendering, carousels, contact actions. */
 
-import { $, $$, esc, escA, TYPE_L, fmtPrice, fmtShortDate, zameenAddedPhrase } from './utils.js';
+import { $, $$, esc, escA, TYPE_L, fmtPrice } from './utils.js';
+import { listingDateHtml } from './listing-date.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import { trackContactIntent } from './analytics.js';
 import { isFavorite, isHidden, isNewSinceLastVisit } from './personalization.js';
@@ -120,13 +121,7 @@ export function renderCard(item, idx) {
       ${distanceLabel ? `<div class="text-xs font-semibold text-brand-600 mb-1 sm:mb-2">${esc(distanceLabel)}</div>` : ''}
       ${badges.length ? `<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">${badges.join('')}</div>` : ''}
       ${repostCount > 1 ? `<div class="mt-1"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full" title="The same listing was posted ${repostCount} times by agents — showing it once" aria-label="Listed ${repostCount} times">Listed ${repostCount}&times;</span></div>` : ''}
-      ${(() => {
-        // Our own first sighting; Zameen's dates can move forward for the same ad.
-        const firstSeen = fmtShortDate(item.first_seen_at);
-        const zameenAdded = zameenAddedPhrase(item);
-        const line = firstSeen ? `First seen by us ${firstSeen}` : zameenAdded ? `Zameen: ${zameenAdded}` : '';
-        return line ? `<div class="mt-2 leading-tight text-xs text-gray-500">${esc(line)}</div>` : '';
-      })()}
+      ${listingDateHtml(item, { className: 'mt-2 text-xs text-gray-500' })}
       ${item.url ? `<div class="card-action-row pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 border-t border-gray-100">
         <div class="card-action-group">
           <button data-action="favorite" ${zameenIdAttr} aria-pressed="${favorited ? 'true' : 'false'}" class="action-btn fav-btn w-8 h-8 rounded-full transition-colors ${favorited ? 'text-rose-500 bg-rose-50 hover:bg-rose-100' : 'text-gray-500 hover:text-rose-500 hover:bg-rose-50'}" title="${favorited ? 'Remove from favorites' : 'Save to favorites'}" aria-label="${favorited ? 'Remove from favorites' : 'Save to favorites'}">${favorited ? favIconFilled : favIconHollow}</button>

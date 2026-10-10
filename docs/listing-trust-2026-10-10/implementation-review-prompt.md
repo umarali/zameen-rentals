@@ -33,12 +33,15 @@ Repo: `/Users/umarali/Workspace/MVPs/zameenrental`. Production runs on a Digital
 - Docs: verdict notes in findings.md, superseded backlog claims, CLAUDE.md/AGENTS.md corrections.
 - Tests: `tests/test_listing_observations.py`, new cases in `tests/test_scraper.py`, and `tests/timezone.spec.js`.
 
-**Branch 2: `feat/honest-listing-dates`**, worktree `../zameenrental-trust-dates`, commit `1022a48`, stacked on branch 1. Meant for 80–85% items.
-- Card date line: "First seen by us 10 Oct" instead of Zameen's "Added X ago".
-- Drawer: our first-seen date, Zameen's dates attributed to Zameen, and a caveat line.
+**Branch 2: `feat/honest-listing-dates`**, worktree `../zameenrental-trust-dates`, stacked on branch 1. Meant for 80–85% items, with UI direction from the owner.
+- `frontend/src/listing-date.js`: cards and the drawer show Zameen's date as "Updated 3 hours ago" (else "Added …") with an ⓘ.
+  - Hover or focus shows the explanation on desktop; tap toggles it on touch. A click elsewhere or Escape closes it, and tapping ⓘ must not open the drawer.
+  - The popover says the date comes from Zameen and can be refreshed forward, gives our first-seen date, and says availability isn't confirmed.
+- The results header's jargon badge ("Instant / Nearest first", "Live") becomes an inline "Sort: … ▾" control that mirrors the More panel's `#sortSelect`.
+  - The default option's label follows the real order: "Nearest" in map focus or nearby mode, "Zameen's order" for live results, otherwise "Recently updated".
 - Sort: "Newest First" becomes "Recently found", ordered by `first_seen_at DESC, id DESC`. This applies to search, map focus and nearby.
-- Compare: the freshness row is "First seen by us".
-- The default order is unchanged; its source badge still says "Newest first".
+- Compare: the freshness row shows "Date on Zameen" with no "newest" winner.
+- The default order itself is unchanged.
 
 Deliberately deferred:
 - a first-seen filter;
@@ -81,7 +84,8 @@ Deliberately deferred:
    - On a rebuilt database where most listings were first seen in the same crawl, does "Recently found" still mean something?
    - Does the map-focus ordering change break viewport results?
    - Live Zameen fallback still sorts by Zameen's `date_desc`. Is that consistent?
-   - Do the copy, the leftover "Newest first" default badge and the compare change fit the clean UI, without implying that old means rented?
+   - Do the copy, the ⓘ popover (accessibility, touch, clipping inside `overflow-hidden` cards, screen readers) and the inline sort control fit the clean UI, without implying that old means rented?
+   - Does `field-sizing: content` degrade acceptably in Safari and Firefox?
 8. **Confidence classification.** Does anything on branch 1 go beyond what review.md supports? Is anything deferred that review.md actually supported at ≥90%?
 9. **Tests.** Do they fail on the old code for the right reason? What important case is untested?
 

@@ -247,7 +247,7 @@ test.describe("Desktop Map", () => {
     await page.waitForTimeout(2000);
     await expect(page.locator("#resultsCount")).toContainText(/Showing|shown/);
     await expect(page.locator("#resultsMeta")).toContainText(/exact-pin rentals currently visible|available in|available across|No local listings|Move the map/);
-    await expect(page.locator("#dataSource")).toContainText(/Nearest first|Instant/);
+    await expect(page.locator("#resultsSortSelect option:checked")).toHaveText(/Nearest|Recently updated/);
   });
 
   test("nearby chip is available for all three cities", async ({ page }) => {

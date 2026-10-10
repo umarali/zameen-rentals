@@ -1097,3 +1097,43 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
   .area-opt, #nlSuggestions .nl-ex, #nlSuggestions .pop-search { min-height: 44px; }
   #mapCarousel { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* "Sort: Nearest ▾" beside the results count: a quiet text control, not a form field. */
+.results-sort { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--color-gray-500); }
+.results-sort.hidden { display: none; }
+.results-sort select {
+  appearance: none; -webkit-appearance: none;
+  border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--color-gray-700);
+  padding: 2px 16px 2px 2px; border-radius: 6px;
+  field-sizing: content; /* as wide as the chosen option, where supported */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath d='M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0 center; background-size: 14px;
+}
+.results-sort select:hover { color: var(--color-gray-900); }
+.results-sort select:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+
+/* Listing date with an ⓘ that explains it. */
+.listing-date { position: relative; display: flex; align-items: center; gap: 4px; line-height: 1.25; }
+.date-info {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--color-gray-400); border-radius: 9999px;
+}
+.date-info svg { width: 14px; height: 14px; }
+.date-info:hover, .date-info[aria-expanded="true"] { color: var(--color-brand-600); }
+.date-info:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 1px; }
+/* Bigger tap target on touch screens without changing the icon's size. */
+@media (pointer: coarse) { .date-info { position: relative; } .date-info::after { content: ''; position: absolute; inset: -12px; } }
+.date-tip {
+  display: none; position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 30;
+  width: max-content; max-width: min(260px, 80vw);
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--color-gray-900); color: #fff; font-size: 12px; font-weight: 400; line-height: 1.4;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.date-tip span { display: block; }
+.date-tip span + span { margin-top: 4px; }
+.date-info[aria-expanded="true"] + .date-tip,
+.date-info:focus-visible + .date-tip { display: block; }
+@media (hover: hover) { .date-info:hover + .date-tip { display: block; } }

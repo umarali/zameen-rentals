@@ -6,7 +6,8 @@
  *  cards they haven't yet decided to save.
  */
 
-import { $, $$, esc, escA, fmtPrice, fmtRelative, fmtShortDate, parseServerTime, showToast } from './utils.js';
+import { $, $$, esc, escA, fmtPrice, showToast } from './utils.js';
+import { zameenDateLabel } from './listing-date.js';
 import { eyeIcon, callIcon, whatsappIcon, favFilledIcon, favHollowIcon, imageIcon } from './icons.js';
 
 const STORE_KEY = 'zr_compare_v1';
@@ -212,14 +213,11 @@ function deriveMetrics(item) {
   const price = Number(item.price);
   const beds = Number(item.bedrooms);
   const sizeMarla = parseAreaToMarla(item.area_size);
-  const iso = item.first_seen_at || '';
   return {
     price,
     sizeMarla,
     rsPerMarla: Number.isFinite(price) && sizeMarla ? price / sizeMarla : null,
     rsPerBed: Number.isFinite(price) && beds > 0 ? price / beds : null,
-    postedTs: parseServerTime(iso),
-    postedIso: iso,
     hasContact: Boolean(item.call_phone || item.whatsapp_phone),
   };
 }
@@ -348,14 +346,12 @@ function renderTable() {
   const rsBed = metrics.map(m => m.rsPerBed);
   const prices = items.map(i => Number(i.price));
   const dists = items.map(i => Number(i.distance_km));
-  const posted = metrics.map(m => m.postedTs);
   const hasDist = dists.some(Number.isFinite);
 
   const winMarla = winnerIndex(rsMarla, 'min');
   const winBed = winnerIndex(rsBed, 'min');
   const winPrice = winnerIndex(prices, 'min');
   const winDist = winnerIndex(dists, 'min');
-  const winPosted = winnerIndex(posted, 'max');
 
   const sections = [];
   sections.push({ label: 'Value', rows: [
@@ -375,7 +371,8 @@ function renderTable() {
   }
   sections.push({ label: 'Location', rows: locRows });
   sections.push({ label: 'Freshness', rows: [
-    row('First seen by us', items.map((it, i) => Number.isFinite(posted[i]) ? (fmtShortDate(metrics[i].postedIso) || '—') : '—'), winPosted, 'Most recent'),
+    // Zameen's dates can move forward for the same ad, so no "newest" winner here.
+    row('Date on Zameen', items.map(it => zameenDateLabel(it) || '—')),
   ] });
   sections.push({ label: 'Contact', rows: [
     row('Phone / WhatsApp', items.map(it => (it.call_phone || it.whatsapp_phone) ? 'Available' : 'Not yet')),

@@ -171,16 +171,25 @@ test.describe("Image Carousel", () => {
     }
   });
 
-  // ── New: data source indicator ──
+  // ── Sort control beside the count ──
 
-  test("data source badge is shown after search", async ({ page }) => {
+  test("results say how they are sorted, in plain words", async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
-    const srcEl = page.locator("#dataSource");
-    // Can be "Instant", "Instant / Nearest first", "Instant / Nearby", "Live", "Local only"
-    const text = await srcEl.textContent();
-    if (text && text.trim()) {
-      expect(text.trim()).toMatch(/^(Instant|Live|Local only)/);
-    }
+    const sort = page.locator("#resultsSort");
+    await expect(sort).toBeVisible();
+    await expect(sort).toContainText("Sort:");
+    const label = await page.locator("#resultsSortSelect option:checked").textContent();
+    expect(label).toMatch(/^(Recently updated|Nearest)$/);
+    await expect(page.locator("#resultsSort")).not.toContainText(/Instant|Live/);
+  });
+
+  test("changing the inline sort re-sorts and syncs the More panel", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    await page.locator("#resultsSortSelect").selectOption("price_low");
+    await expect(page.locator("#sortSelect")).toHaveValue("price_low");
+    await expect(page.locator("#resultsSortSelect")).toHaveValue("price_low");
+    await expect(page.locator("#resultsSortSelect option:checked")).toHaveText("Price: Low to High");
   });
 });

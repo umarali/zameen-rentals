@@ -2,6 +2,7 @@
 
 import { $, $$, esc, TYPE_L, showToast, fmtRelative, parseServerTime } from './utils.js';
 import { S, refs, CITY_DEFAULTS, FURNISHING_L, furnishedValue, furnishingFrom } from './state.js';
+import { initListingDateInfo } from './listing-date.js';
 import {
   updateCityTabs, updateNlExamples, updateChips, clearFilter, selectArea,
   syncPriceChips, syncSizeChips, sizeChipLabel, renderSizeFilter, setFurnishing, initFilterListeners, closeDD,
@@ -420,7 +421,6 @@ function updateHeader({
   const titleEl = $('#listingsTitle');
   const countEl = $('#resultsCount');
   const metaEl = $('#resultsMeta');
-  const sourceEl = $('#dataSource');
 
   // Headline count: "Showing X–Y of Z" when more results exist, "Showing all Z"
   // when the page already holds the entire result set, otherwise empty-state.
@@ -461,34 +461,43 @@ function updateHeader({
     metaEl.textContent = total ? `Across current filters` : `No rentals match your filters in ${cityName}`;
   }
 
-  if (source === 'local') {
-    const rankingLabel = mode === 'nearby'
-      ? 'Nearby'
-      : S.sort === 'newest'
-      ? 'Recently found'
-      : S.sort === 'price_low'
-      ? 'Lowest price'
-      : S.sort === 'price_high'
-      ? 'Highest price'
-      : mode === 'viewport' && ranking === 'map_focus'
-      ? 'Nearest first'
-      : !S.sort
-      ? 'Newest first'
-      : '';
-    sourceEl.textContent = rankingLabel ? `Instant / ${rankingLabel}` : 'Instant';
-    sourceEl.className = 'text-xs text-brand-500 font-medium';
-    sourceEl.classList.remove('hidden');
-  } else if (source === 'live') {
-    sourceEl.textContent = 'Live';
-    sourceEl.className = 'text-xs text-amber-500 font-medium';
-    sourceEl.classList.remove('hidden');
-  } else if (source === 'unavailable') {
-    sourceEl.textContent = 'No live results';
-    sourceEl.className = 'text-xs text-gray-400 font-medium';
-    sourceEl.classList.remove('hidden');
-  } else {
-    sourceEl.classList.add('hidden');
+  renderResultsSort({ mode, ranking, source });
+}
+
+/** What the default order actually is right now, in a renter's words. */
+function defaultOrderLabel({ mode, ranking, source }) {
+  if (source === 'live') return 'Zameen’s order';
+  if (mode === 'nearby' || (mode === 'viewport' && ranking === 'map_focus')) return 'Nearest';
+  return 'Recently updated';
+}
+
+// "Sort: Nearest ▾" beside the count: says how results are ordered and lets
+// renters change it in place. Mirrors the More panel's #sortSelect, so both
+// show the same options and one change handler runs the search.
+function renderResultsSort({ mode, ranking, source }) {
+  const wrap = $('#resultsSort');
+  const inline = $('#resultsSortSelect');
+  const panel = $('#sortSelect');
+  if (!wrap || !inline || !panel) return;
+  if ((source !== 'local' && source !== 'live') || !refs.currentResults.length) {
+    wrap.classList.add('hidden');
+    return;
   }
+  panel.querySelector('option[value=""]').textContent = defaultOrderLabel({ mode, ranking, source });
+  inline.innerHTML = [...panel.options]
+    .filter(o => !o.hidden)
+    .map(o => `<option value="${o.value}">${esc(o.textContent)}</option>`)
+    .join('');
+  inline.value = panel.value;
+  wrap.classList.remove('hidden');
+}
+
+function initResultsSort() {
+  $('#resultsSortSelect')?.addEventListener('change', e => {
+    const panel = $('#sortSelect');
+    panel.value = e.target.value;
+    panel.dispatchEvent(new Event('change'));
+  });
 }
 
 function getViewportCoverageMessage({ total = 0, visibleAreas = 0, coveredAreas = 0 } = {}) {
@@ -1211,6 +1220,7 @@ function initCardListeners() {
 
   grid.addEventListener('click', e => {
     if (e.target.closest('[data-prev]') || e.target.closest('[data-next]')) return;
+    if (e.target.closest('.date-info')) return;
     if (e.target.closest('[data-action]')) return;
     const c = e.target.closest('.card-wrap');
     if (!c) return;
@@ -1641,6 +1651,8 @@ async function init() {
   initFilterListeners({ doSearch, selectAreaFull, clearFilterFull, resetMapView });
   initNearbyControls();
   initCardListeners();
+  initResultsSort();
+  initListingDateInfo();
   initNlListeners();
   initDrawerListeners(selectAreaFull);
   initReportBtn();

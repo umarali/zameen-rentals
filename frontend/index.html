@@ -242,9 +242,12 @@
         <h2 id="listingsTitle" class="text-base font-bold text-gray-700">Rentals in Lahore</h2>
         <p id="resultsMeta" class="mt-1 text-xs text-gray-500">Browse the map or use filters to refine results</p>
       </div>
-      <div class="flex items-center gap-2">
-        <span id="resultsCount" class="text-xs text-gray-500"></span>
-        <span id="dataSource" class="text-xs text-gray-500 hidden"></span>
+      <div class="flex flex-col items-end gap-1 shrink-0 sm:flex-row sm:items-center sm:gap-3">
+        <span id="resultsCount" class="text-xs text-gray-500 whitespace-nowrap"></span>
+        <label id="resultsSort" class="results-sort hidden">
+          <span>Sort:</span>
+          <select id="resultsSortSelect" aria-label="Sort results"></select>
+        </label>
       </div>
     </div>
     <div id="listingsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-5"></div>

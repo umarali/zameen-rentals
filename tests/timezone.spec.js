@@ -12,19 +12,32 @@ test.describe("Listing dates in a Pakistan browser", () => {
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
   });
 
-  test("card shows when we first saw the listing, not Zameen's date", async ({ page }) => {
-    const text = await page.locator(".card-wrap").first().textContent();
-    expect(text).toMatch(/First seen by us \d{1,2} [A-Z][a-z]{2}/);
-    expect(text).not.toMatch(/Added \d/);
+  test("card shows Zameen's date at the seeded age", async ({ page }) => {
+    const date = page.locator(".card-wrap").first().locator(".listing-date");
+    await expect(date).toContainText(/(Added|Updated) (1 hour|\d+ minutes) ago/);
+    await expect(date).not.toContainText(/[5-7] hours ago/);
   });
 
-  test("drawer shows Zameen's date at the seeded age, with the caveat", async ({ page }) => {
-    await page.locator(".card-wrap").first().click();
+  test("tapping ⓘ explains the date without opening the drawer", async ({ page }) => {
+    const card = page.locator(".card-wrap").first();
+    const info = card.locator(".date-info");
+    const tip = card.locator(".date-tip");
+    await expect(tip).toBeHidden();
+    await info.click();
+    await expect(info).toHaveAttribute("aria-expanded", "true");
+    await expect(tip).toBeVisible();
+    await expect(tip).toContainText("This date comes from Zameen");
+    await expect(tip).toContainText(/ZameenRentals first saw it on \d{1,2} [A-Z][a-z]{2}/);
+    await expect(tip).toContainText("Availability isn’t confirmed");
+    await expect(page.locator("#drawer")).not.toHaveClass(/drawer-open/);
+    await page.keyboard.press("Escape");
+    await page.mouse.move(0, 0); // desktop also shows it on hover
+    await expect(tip).toBeHidden();
+  });
+
+  test("drawer shows the same date line", async ({ page }) => {
+    await page.locator(".card-wrap").first().locator("h3, .line-clamp-1").first().click();
     await expect(page.locator("#drawer")).toHaveClass(/drawer-open/, { timeout: 5000 });
-    const dates = await page.locator("#drawerDates").textContent();
-    expect(dates).toMatch(/First seen by ZameenRentals: \d{1,2} [A-Z][a-z]{2}/);
-    expect(dates).toMatch(/Zameen says added (1 hour|\d+ minutes) ago/);
-    expect(dates).not.toMatch(/added [5-7] hours ago/);
-    expect(dates).toContain("Availability has not been confirmed.");
+    await expect(page.locator("#drawerDates")).toContainText(/(Added|Updated) (1 hour|\d+ minutes) ago/);
   });
 });

@@ -181,7 +181,8 @@ test("desktop Karachi falls back to live city search when local viewport coverag
   await page.waitForSelector("#listingsGrid .card-wrap", { timeout: 30000 });
 
   await expect(page.locator("#listingsTitle")).toHaveText("Rentals in Karachi");
-  await expect(page.locator("#dataSource")).toHaveText("Live");
+  // Live Zameen results keep Zameen's own order, and the sort control says so.
+  await expect(page.locator("#resultsSortSelect option:checked")).toHaveText("Zameen’s order");
   await expect(page.locator("#listingsGrid")).toContainText("2 bed flat in Karachi");
   expect(mapSearchCalls).toBe(0);
 });

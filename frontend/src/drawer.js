@@ -1,7 +1,8 @@
 /** Detail drawer, photo gallery, contact bar. */
 
 import L from 'leaflet';
-import { $, $$, esc, escA, fmtPrice, fmtRelative, fmtShortDate, zameenAddedPhrase, showToast } from './utils.js';
+import { $, $$, esc, escA, fmtPrice, showToast } from './utils.js';
+import { listingDateHtml } from './listing-date.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import {
   getAreaForListing, handleContactAction, extractZameenIdFromUrl,
@@ -157,21 +158,7 @@ export function openDrawer(item, selectAreaFull) {
       <span class="text-2xl font-extrabold text-gray-900">${esc(fmtPrice(item.price, item.price_text))}</span>
       <span class="text-sm text-gray-500">/ month</span>
     </div>
-    ${(() => {
-      const firstSeen = fmtShortDate(item.first_seen_at);
-      const zameenAdded = zameenAddedPhrase(item);
-      const updatedRel = item.updated_at ? fmtRelative(item.updated_at) : '';
-      const lines = [
-        firstSeen ? `First seen by ZameenRentals: ${firstSeen}` : '',
-        zameenAdded ? `Zameen says ${zameenAdded}` : '',
-        updatedRel ? `Zameen says updated ${updatedRel}` : '',
-      ].filter(Boolean);
-      if (!lines.length) return '';
-      return `<div id="drawerDates" class="mb-2 leading-tight space-y-0.5">
-        ${lines.map(l => `<div class="text-xs text-gray-500">${esc(l)}</div>`).join('')}
-        <div class="text-xs text-gray-400">Zameen's dates can move forward for the same ad, so it may be older. Availability has not been confirmed.</div>
-      </div>`;
-    })()}
+    <div id="drawerDates" class="mb-2">${listingDateHtml(item, { className: 'text-xs text-gray-500' })}</div>
     ${highlights.length ? `<div class="drawer-divider"></div><div class="grid grid-cols-2 gap-3 mb-1">${highlights.join('')}</div>` : ''}
     <div id="drawerEnriched">
       <div class="drawer-divider"></div>
