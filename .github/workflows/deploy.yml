@@ -1,0 +1,245 @@
+# Test, then deploy main to the production Droplet with deploy/deploy.sh.
+# One-time setup (deploy key, secrets, environment): docs/ci-deploy.md.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: >-
+          Commit SHA or tag to deploy (blank = current main). It must be on
+          main's history. Use an older main commit to roll back.
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12" # matches Ubuntu 24.04 on the Droplet
+  NODE_VERSION: "22"
+  SITE_URL: https://zameenrentals.emerssive.com
+
+jobs:
+  resolve:
+    name: Resolve commit
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve and check the commit to deploy
+        id: sha
+        env:
+          EVENT: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$GIT_REF" != "refs/heads/main" ]; then
+            echo "::error::Run this workflow from main (Use workflow from: main), not $GIT_REF."
+            exit 1
+          fi
+          ref="${INPUT_REF:-$GITHUB_SHA}"
+          if ! sha="$(git rev-parse --verify --quiet "${ref}^{commit}")"; then
+            echo "::error::Unknown commit or tag: $ref"
+            exit 1
+          fi
+          # Rollbacks may only pick commits that were on main, never a branch.
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::$sha is not on main's history; refusing to deploy it."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Deploying $sha ($(git log -1 --format=%s "$sha"))" >> "$GITHUB_STEP_SUMMARY"
+
+  test:
+    name: Tests
+    needs: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install Python dependencies
+        # requirements.txt includes faster-whisper and av, so the voice tests run.
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements.txt \
+            pytest==9.1.1 pytest-asyncio==1.4.0
+          # tests/test_restore_script.py skips itself without the sqlite3 CLI.
+          command -v sqlite3 || { sudo apt-get update -q && sudo apt-get install -yq sqlite3; }
+
+      - name: Cache the Whisper model
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/zameenrentals-whisper
+          key: whisper-small-v1
+
+      - name: pytest
+        env:
+          VOICE_MODEL_TESTS: "1" # run the real-model tests too (~460 MB, cached)
+        run: |
+          export VOICE_MODEL_DIR="$HOME/.cache/zameenrentals-whisper"
+          python -m pytest -q -rs --ignore=tests/test_claude_integration.py
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Install Playwright Chromium (headless shell)
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Playwright
+        # playwright.config.js runs headless and starts its own seeded server
+        # with tests/serve_playwright.py.
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+  deploy:
+    name: Deploy to production
+    needs: [resolve, test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ env.SITE_URL }}
+    # One deploy at a time; never cancel one that is running.
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    env:
+      ZR_DEPLOY_HOST: root@165.22.91.77
+      SHA: ${{ needs.resolve.outputs.sha }}
+    steps:
+      - name: Skip if main has moved on
+        # Two quick merges can finish their tests out of order. A push run
+        # only deploys if its commit is still main's head, so an older commit
+        # never overwrites a newer one. Manual runs (rollbacks) always deploy.
+        id: current
+        env:
+          EVENT: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          if [ "$EVENT" = "push" ] && [ "$head" != "$SHA" ]; then
+            echo "::notice::main is now at $head; skipping $SHA. The newer run deploys it."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.current.outputs.skip != 'true'
+        with:
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.current.outputs.skip != 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install npm dependencies
+        if: steps.current.outputs.skip != 'true'
+        run: npm ci
+
+      - name: Install SSH key and pinned host key
+        if: steps.current.outputs.skip != 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ]; then
+            echo "::error::Set the DEPLOY_SSH_KEY and DEPLOY_KNOWN_HOSTS secrets (docs/ci-deploy.md)."
+            exit 1
+          fi
+          install -d -m 700 ~/.ssh
+          (umask 077 && printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/deploy_key")
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          # Fail on an unknown or changed host key instead of trusting it.
+          cat > ~/.ssh/config <<'EOF'
+          Host *
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            BatchMode yes
+            IdentitiesOnly yes
+          EOF
+          host="${ZR_DEPLOY_HOST#*@}"
+          if ! ssh-keygen -F "$host" -f ~/.ssh/known_hosts > /dev/null; then
+            echo "::error::DEPLOY_KNOWN_HOSTS has no entry for $host."
+            exit 1
+          fi
+          echo "ZR_DEPLOY_KEY=$RUNNER_TEMP/deploy_key" >> "$GITHUB_ENV"
+
+      - name: Deploy with deploy/deploy.sh
+        if: steps.current.outputs.skip != 'true'
+        env:
+          # Optional. Production currently runs without PostHog; set these
+          # repository variables to turn analytics on.
+          VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
+        run: bash deploy/deploy.sh
+
+      - name: Smoke check
+        if: steps.current.outputs.skip != 'true'
+        run: |
+          # deploy.sh restarted the web service; give it time to come up.
+          for attempt in $(seq 1 30); do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "$SITE_URL/api/health" || true)"
+            [ "$code" = "200" ] && break
+            echo "Attempt $attempt: /api/health returned ${code:-no response}; retrying in 5s"
+            sleep 5
+          done
+          if [ "$code" != "200" ]; then
+            echo "::error::$SITE_URL/api/health returned $code, expected 200."
+            exit 1
+          fi
+
+          bundle_re='/static/assets/index-[A-Za-z0-9_-]*\.js'
+          built="$(grep -o "$bundle_re" static/index.html | head -1)"
+          live="$(curl -fsS --max-time 20 -H 'Cache-Control: no-cache' "$SITE_URL/" | grep -o "$bundle_re" | head -1)"
+          echo "Built bundle: ${built:-none}"
+          echo "Live bundle:  ${live:-none}"
+          if [ -z "$built" ] || [ "$built" != "$live" ]; then
+            echo "::error::Live / references '${live:-none}', but this run built '${built:-none}'."
+            exit 1
+          fi
+          curl -fsS --max-time 20 -o /dev/null "$SITE_URL$live"
+          echo "Smoke check passed: /api/health 200, live bundle $live" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove deploy key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deploy_key"
