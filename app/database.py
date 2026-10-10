@@ -434,6 +434,8 @@ def init_db():
         conn.execute("DELETE FROM listing_cache WHERE created_at < ?", (time.time() - CACHE_TTL,))
     from app.listing_tags import init_listing_tags_schema
     init_listing_tags_schema(conn)
+    from app.listing_observations import init_listing_observations_schema
+    init_listing_observations_schema(conn)
     logger.info("Database initialized at %s", _DB_PATH)
 
 

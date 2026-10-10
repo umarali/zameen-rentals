@@ -6,6 +6,8 @@
  *  X-Client-Id header. No login, no PII; clearing storage = starting over.
  */
 
+import { parseServerTime } from './utils.js';
+
 const CLIENT_ID_KEY = 'zr_client_id';
 const LOCAL_HIDDEN_KEY = 'zr_hidden_local';
 const LOCAL_FAVORITES_KEY = 'zr_favorites_local';
@@ -412,7 +414,7 @@ export async function sendTestPush() {
 /** Returns true if a listing first_seen_at is newer than the user's previous visit. */
 export function isNewSinceLastVisit(firstSeenAt) {
   if (!firstSeenAt || !state.previousVisitAt) return false;
-  const seen = Date.parse(firstSeenAt);
-  const prev = Date.parse(state.previousVisitAt);
+  const seen = parseServerTime(firstSeenAt);
+  const prev = parseServerTime(state.previousVisitAt);
   return Number.isFinite(seen) && Number.isFinite(prev) && seen > prev;
 }

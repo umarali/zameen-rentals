@@ -6,7 +6,7 @@
  *  cards they haven't yet decided to save.
  */
 
-import { $, $$, esc, escA, fmtPrice, fmtRelative, showToast } from './utils.js';
+import { $, $$, esc, escA, fmtPrice, fmtRelative, parseServerTime, showToast } from './utils.js';
 import { eyeIcon, callIcon, whatsappIcon, favFilledIcon, favHollowIcon, imageIcon } from './icons.js';
 
 const STORE_KEY = 'zr_compare_v1';
@@ -218,7 +218,7 @@ function deriveMetrics(item) {
     sizeMarla,
     rsPerMarla: Number.isFinite(price) && sizeMarla ? price / sizeMarla : null,
     rsPerBed: Number.isFinite(price) && beds > 0 ? price / beds : null,
-    postedTs: iso ? Date.parse(iso) : NaN,
+    postedTs: parseServerTime(iso),
     postedIso: iso,
     hasContact: Boolean(item.call_phone || item.whatsapp_phone),
   };

@@ -723,7 +723,11 @@ async def listing_detail(request: Request, url: str = Query(...)):
                 city=listing.get("city") or "",
                 detail_data=detail,
             )
-            detail["source"] = "live"
+        if detail:
+            # Lifecycle fields are stored as evidence, not served.
+            detail = {k: v for k, v in detail.items() if k != "zameen_lifecycle"}
+            if zid and listing:
+                detail["source"] = "live"
         return detail or local_detail or {}
     except Exception:
         logger.exception("Detail fetch error")

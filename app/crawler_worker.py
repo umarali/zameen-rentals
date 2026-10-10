@@ -229,7 +229,8 @@ async def _crawl_single_type(city, area_name, area_slug, area_id, lat, lng,
                     zameen_id=zid, url=listing_url, city=city,
                     area_name=area_name, area_slug=area_slug,
                     lat=lat, lng=lng, card_data=card_data,
-                    search_state=listing.get("search_state"), commit=False,
+                    search_state=listing.get("search_state"), source_page=url,
+                    commit=False,
                 )
                 if result == "inserted":
                     new_count += 1
@@ -311,6 +312,7 @@ async def crawl_city_latest_cards(city, client, session_headers, *, pages=3,
                     lng=lng,
                     card_data=listing,
                     search_state=listing.get("search_state"),
+                    source_page=url,
                     commit=False,
                 )
                 if result == "inserted":
@@ -653,7 +655,7 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None,
         SELECT zameen_id, url, phone, call_phone, whatsapp_phone FROM listings
         WHERE is_active = 1 AND (
             contact_fetched_at IS NULL
-            OR contact_fetched_at < datetime('now', '-3 days')
+            OR datetime(contact_fetched_at) < datetime('now', '-3 days')
         )
         ORDER BY
             """ + city_priority_sql("city") + """,

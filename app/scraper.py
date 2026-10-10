@@ -404,11 +404,13 @@ def _state_hits(html):
 
 
 def detail_from_state(html):
-    """Description, amenities and contact names from a detail page's embedded state.
+    """Description, amenities, contact names and Zameen's lifecycle fields from a
+    detail page's embedded state.
 
     Zameen renders these client-side, so the HTML selectors in the detail
     parsers find nothing; the same fields sit in `window.state.property.data`.
-    Returns only the fields that are present.
+    Returns only the fields that are present. ``zameen_lifecycle`` is evidence
+    for listing_observations, not a listing column.
     """
     data = ((_window_state(html).get("property") or {}).get("data")) or {}
     if not isinstance(data, dict):
@@ -432,7 +434,53 @@ def detail_from_state(html):
     agency = (data.get("agency") or {}).get("name") if isinstance(data.get("agency"), dict) else None
     if agency:
         out["agent_agency"] = str(agency).strip()
+    lifecycle = state_lifecycle(data)
+    if isinstance(data.get("price"), (int, float)) and not isinstance(data.get("price"), bool):
+        lifecycle["price"] = int(data["price"])
+    if _label(data.get("title")):
+        lifecycle["title"] = _label(data["title"])
+    if lifecycle:
+        out["zameen_lifecycle"] = lifecycle
     return out
+
+
+def _epoch(value):
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def _count(value):
+    return int(value) if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _label(value):
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def state_lifecycle(data):
+    """Zameen's own dates and status fields for one listing, exactly as reported.
+
+    Stored in listing_observations as evidence and never interpreted here: what
+    createdAt, reactivatedAt and approvedAt mean is not established
+    (docs/listing-trust-2026-10-10). Epochs are seconds since 1970 UTC.
+    """
+    agency = data.get("agency") if isinstance(data.get("agency"), dict) else {}
+    agency_id = agency.get("externalID")
+    out = {
+        "created_epoch": _epoch(data.get("createdAt")),
+        "updated_epoch": _epoch(data.get("updatedAt")),
+        "reactivated_epoch": _epoch(data.get("reactivatedAt")),
+        "approved_epoch": _epoch(data.get("approvedAt")),
+        "product": _label(data.get("product")),
+        "state": _label(data.get("state")),
+        "purpose": _label(data.get("purpose")),
+        "is_verified": int(data["isVerified"]) if isinstance(data.get("isVerified"), bool) else None,
+        "photo_count": _count(data.get("photoCount")),
+        "video_count": _count(data.get("videoCount")),
+        "agency_external_id": str(agency_id) if agency_id not in (None, "") else None,
+        "agency_tier": _count(agency.get("tier")),
+        "agency_product": _label(agency.get("product")),
+    }
+    return {k: v for k, v in out.items() if v is not None}
 
 
 def _state_property_type(hit):
@@ -502,8 +550,9 @@ def enrich_from_search_state(html, listings):
     """Overlay embedded search-state data onto parsed card listings, in place.
 
     Sets an authoritative ``property_type`` and attaches ``search_state``
-    (exact coordinates, contact and location path) for each card whose ID
-    appears in the embedded hits. Returns how many cards were enriched.
+    (exact coordinates, contact, location path and Zameen's lifecycle fields)
+    for each card whose ID appears in the embedded hits. Returns how many
+    cards were enriched.
     """
     hits = {str(h.get("externalID")): h for h in _state_hits(html) if isinstance(h, dict)}
     if not hits:
@@ -524,6 +573,7 @@ def enrich_from_search_state(html, listings):
             "longitude": coords[1] if coords else None,
             "contact": _state_contact(hit),
             "location_path": _state_location_path(hit),
+            "lifecycle": state_lifecycle(hit),
         }
         enriched += 1
     return enriched

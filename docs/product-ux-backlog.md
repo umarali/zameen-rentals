@@ -12,8 +12,10 @@ _Re-reviewed against the real audience (mobile-first renters on scraped Zameen d
 
 ### Verified data realities (these drive every call below)
 
+> **Superseded 2026-10-10 — duplicates and freshness.** The `content_hash` repost figures and the "collapse by `content_hash`" items below are no longer valid. Collapsing by `content_hash` merged different homes that share generic titles and prices, so it was removed in `0c35c38`, and a test now forbids it. Zameen's "Added" date also moves forward for the same listing ID, so it is not a reliable freshness signal. See [listing-trust findings](listing-trust-2026-10-10/findings.md) and the [independent review](listing-trust-2026-10-10/review.md) before building any dedup, similarity, freshness or staleness feature.
+
 - **52,829 active listings — 0 marked inactive**, and the newest `last_seen_at` in the DB snapshot is ~3 weeks old. ⚠️ **Prerequisite:** confirm the production crawler + `mark_stale_listings` are actually running. Until they are, any "new today / last seen" UI is empty or screams *"everything here is stale"* — shipping freshness UI first would **erode** trust, not build it.
-- **~28% of active listings are reposts** (15,045 listings across 4,645 `content_hash` groups). Collapsing duplicates is the single most visible quality win, and the `content_hash` primitive already exists.
+- ~~**~28% of active listings are reposts** (15,045 listings across 4,645 `content_hash` groups).~~ _Superseded: shared `content_hash` does not mean the same home (see the note above)._ Collapsing duplicates is the single most visible quality win, and the `content_hash` primitive already exists.
 - **~33% of listings have no phone number** (67% do). A "phone available" badge lets renters spend taps on contactable listings — but label it **agent contact**, never "owner".
 - **~34% of listings are geocoded to area-centroid**, not exact. This is why landmark/commute search ("near LUMS") and commute-radius overlays are a **trap right now** — a third of results would show confident-but-wrong distances.
 - **Low traffic** means anything that *learns* from aggregate behaviour (popularity, learned ranking) has almost no signal yet and will overfit/mislead.
@@ -42,7 +44,7 @@ These were checked in the backend so the effort estimates below are real, not gu
 ### Proposed priority (consequence-aware)
 
 **Build now — cheap, on data that already exists, directly on the funnel**
-- **Collapse duplicate reposts** — `content_hash` is already in every search result; group by it to turn "same flat ×6" into one card. Catches *exact* reposts (~28%); for the title-edited ones, add a looser fingerprint (price+area+beds+size) as a fast-follow. _S–M._
+- ~~**Collapse duplicate reposts**~~ _Superseded (see the note above); similarity needs a labelled evaluation first._ — `content_hash` is already in every search result; group by it to turn "same flat ×6" into one card. Catches *exact* reposts (~28%); for the title-edited ones, add a looser fingerprint (price+area+beds+size) as a fast-follow. _S–M._
 - **Copy relabels** — "Default" → "Fresh first", "Map Coverage" → "Areas on map", clarify/hide "Local only". Makes the already-built freshness sort legible = perceived trust. _S._
 - **Zero-result recovery** (drop budget / widen area / nearby) **+ editable parsed-NL chips + "Did you mean" + expose the marla filter.** Rescues the #1 abandonment moment for a budget, Roman-Urdu-typing renter; "Did you mean" and the marla filter are near-free (backend already returns `area_approximate` / accepts `size_marla`). _S–M._
 - **Filters & presets** — budget presets from real per-city price distribution (**exclude "price on request"**), property-type + bedroom as **tap chips** (not dual-thumb sliders), client-side min>max validation. _S._

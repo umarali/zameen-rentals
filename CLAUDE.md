@@ -14,6 +14,7 @@ app/
   data.py                → Multi-city area definitions, property types, Roman Urdu/Urdu translations
   cache.py               → In-memory cache with 5min TTL, rate limiter (2 req/sec)
   database.py            → SQLite: listing cache, search history, popular/recent searches
+  listing_observations.py → Append-only history of what Zameen showed per listing (raw dates, status); never deleted
   areas.json             → 366 Karachi areas with slugs, IDs, coordinates
   areas_lahore.json      → 462 Lahore areas
   areas_islamabad.json   → 303 Islamabad areas
@@ -77,6 +78,8 @@ uvicorn main:app --reload --port 8000
 ```
 
 ## Gotchas
+- Zameen's "Added" date / `createdAt` can move forward while the listing ID stays the same. It is not a creation date. Keep raw values in `listing_observations`; see `docs/listing-trust-2026-10-10/`
+- Server timestamps are naive UTC (`utcnow()`, SQLite `datetime('now')`). Parse them with `parseServerTime` in the frontend, and wrap mixed `T`/space formats in `datetime()` in SQL comparisons
 - Zameen.com may not have all blocks/sub-areas for every neighborhood
 - `_extract_property_type()` pattern priority matters — "upper portion" matches before "house"
 - `d.total` from Zameen.com is the cross-page total. Frontend shows "Showing X of Y"
@@ -85,6 +88,6 @@ uvicorn main:app --reload --port 8000
 
 ## Tech Constraints
 - Must use open-source tech only
-- No build tools — frontend is a single HTML file
-- Deployed on Heroku (Procfile)
+- Frontend is built with Vite (see Frontend Build); edit `frontend/`, never `static/`
+- Deployed on a DigitalOcean Droplet (`deploy/deploy.sh`); the Heroku Procfile is legacy
 - SQLite database in `data/zameenrentals.db` for search history

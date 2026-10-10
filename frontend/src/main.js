@@ -1,6 +1,6 @@
 /** App entry point — wires modules together, search engine, init. */
 
-import { $, $$, esc, TYPE_L, showToast, fmtRelative } from './utils.js';
+import { $, $$, esc, TYPE_L, showToast, fmtRelative, parseServerTime } from './utils.js';
 import { S, refs, CITY_DEFAULTS, FURNISHING_L, furnishedValue, furnishingFrom } from './state.js';
 import {
   updateCityTabs, updateNlExamples, updateChips, clearFilter, selectArea,
@@ -115,11 +115,9 @@ async function renderDataStatus() {
   const newest = refs.localListingNewest?.[S.city];
   const parts = [];
   if (newest) {
-    // Backend writes naive-UTC ISO (no offset); mark it UTC so the age isn't tz-skewed.
-    const newestUtc = /[Zz]|[+-]\d\d:?\d\d$/.test(newest) ? newest : newest + 'Z';
-    const rel = fmtRelative(newestUtc);
+    const rel = fmtRelative(newest);
     if (rel) {
-      const ageDays = (Date.now() - Date.parse(newestUtc)) / 86400000;
+      const ageDays = (Date.now() - parseServerTime(newest)) / 86400000;
       parts.push(ageDays > 10 ? `Data last updated ${rel} — listings may have changed` : `Data updated ${rel}`);
     }
   }

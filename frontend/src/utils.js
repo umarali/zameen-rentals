@@ -20,9 +20,21 @@ export function fmtPrice(p, t) {
   return 'Rs ' + p.toLocaleString();
 }
 
+/**
+ * Milliseconds for a server timestamp, or NaN. The backend stores UTC without
+ * an offset ('2026-10-10T00:10:51' or SQLite's '2026-10-10 00:10:51'), which
+ * Date.parse would read as the browser's local time — 5 hours off in Pakistan.
+ */
+export function parseServerTime(value) {
+  if (!value) return NaN;
+  const s = String(value).trim().replace(' ', 'T');
+  if (!s.includes('T') || /[Zz]|[+-]\d\d:?\d\d$/.test(s)) return Date.parse(s);
+  return Date.parse(s + 'Z');
+}
+
 export function fmtRelative(iso) {
   if (!iso) return '';
-  const t = Date.parse(iso);
+  const t = parseServerTime(iso);
   if (!Number.isFinite(t)) return '';
   const sec = Math.max(0, Math.round((Date.now() - t) / 1000));
   if (sec < 60) return 'just now';

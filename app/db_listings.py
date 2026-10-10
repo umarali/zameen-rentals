@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from app.database import _get_conn
 from app.data import PROPERTY_TYPES, canonical_area_name, location_id_for_area
+from app.listing_observations import card_observation_fields, record_observation
 from app.listing_tags import attach_tags, tag_filter_clauses
 
 logger = logging.getLogger("zameenrentals")
@@ -425,13 +426,44 @@ def _source_age_fields(existing, card_data, reference):
 
 def upsert_listing(*, zameen_id, url, city, area_name=None, area_slug=None,
                    lat=None, lng=None, card_data=None, detail_data=None,
-                   search_state=None, commit=True):
+                   search_state=None, source_page=None, commit=True):
     """Insert or update a listing. Returns 'inserted', 'updated', or 'unchanged'.
 
     ``search_state`` (from ``scraper.enrich_from_search_state``) is applied
     with the card, before the alert hook runs, so new-listing alerts see the
     authoritative type, coordinates and location path.
+
+    Every call also records what Zameen showed in listing_observations, even
+    when the listing row is unchanged. ``source_page`` is the search page URL
+    the card came from, when known.
     """
+    conn = _get_conn()
+    lifecycle = None
+    if detail_data and "zameen_lifecycle" in detail_data:
+        detail_data = dict(detail_data)
+        lifecycle = detail_data.pop("zameen_lifecycle")
+    result = _write_listing_row(
+        zameen_id=zameen_id, url=url, city=city, area_name=area_name, area_slug=area_slug,
+        lat=lat, lng=lng, card_data=card_data, detail_data=detail_data,
+        search_state=search_state, commit=False,
+    )
+    try:
+        if card_data:
+            record_observation(conn, zameen_id, "search_card",
+                               card_observation_fields(card_data, search_state),
+                               page_url=source_page)
+        if lifecycle:
+            record_observation(conn, zameen_id, "detail_page", lifecycle, page_url=url)
+    except Exception:
+        # History is evidence, not part of the listing: never fail a crawl write over it.
+        logger.exception("Could not record observation for %s", zameen_id)
+    _commit_if_needed(conn, commit)
+    return result
+
+
+def _write_listing_row(*, zameen_id, url, city, area_name=None, area_slug=None,
+                       lat=None, lng=None, card_data=None, detail_data=None,
+                       search_state=None, commit=True):
     conn = _get_conn()
     scraped_at = datetime.utcnow()
     now = scraped_at.isoformat()
@@ -1165,7 +1197,7 @@ def get_listings_needing_detail(limit=10):
         SELECT zameen_id, url FROM listings
         WHERE is_active = 1 AND (
             detail_scraped_at IS NULL
-            OR detail_scraped_at < datetime('now', '-7 days')
+            OR datetime(detail_scraped_at) < datetime('now', '-7 days')
             OR (card_scraped_at > detail_scraped_at)
             OR location_source IS NULL
             OR location_source != 'listing_exact'
@@ -1182,8 +1214,11 @@ def get_listings_needing_detail(limit=10):
 def mark_stale_listings(days=7):
     """Mark listings not seen in N days as inactive."""
     conn = _get_conn()
+    # last_seen_at is written as '2026-10-03T00:00:00' and datetime('now') as
+    # '2026-10-03 00:00:00'; compared as text, 'T' sorts after the space, so
+    # wrap both in datetime() to compare times.
     result = conn.execute(
-        "UPDATE listings SET is_active = 0 WHERE is_active = 1 AND last_seen_at < datetime('now', ?)",
+        "UPDATE listings SET is_active = 0 WHERE is_active = 1 AND datetime(last_seen_at) < datetime('now', ?)",
         (f'-{days} days',)
     )
     conn.commit()

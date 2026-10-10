@@ -421,6 +421,28 @@ class TestEnrichFromSearchState:
         assert enrich_from_search_state("<html>no state</html>", listings) == 0
         assert enrich_from_search_state("<script>window.state = {broken</script>", listings) == 0
 
+    def test_keeps_zameen_lifecycle_fields_raw(self):
+        from app.scraper import enrich_from_search_state
+        listings = [{"url": self.URL_A}]
+        hit = self._hit("54783265", "Flats", createdAt=1791584578, updatedAt=1791584580,
+                        product="superhot", state="active", purpose="for-rent", isVerified=False,
+                        photoCount=21, videoCount=0)
+        hit["agency"] = {"name": "GHL", "externalID": "180373", "tier": 4, "product": "titanium plus"}
+        enrich_from_search_state(self._page([hit]), listings)
+        assert listings[0]["search_state"]["lifecycle"] == {
+            "created_epoch": 1791584578.0, "updated_epoch": 1791584580.0,
+            "product": "superhot", "state": "active", "purpose": "for-rent", "is_verified": 0,
+            "photo_count": 21, "video_count": 0,
+            "agency_external_id": "180373", "agency_tier": 4, "agency_product": "titanium plus",
+        }
+
+    def test_missing_lifecycle_fields_are_left_out(self):
+        from app.scraper import enrich_from_search_state
+        listings = [{"url": self.URL_A}]
+        hit = self._hit("54783265", "Flats", createdAt="yesterday", photoCount=True)
+        enrich_from_search_state(self._page([hit]), listings)
+        assert listings[0]["search_state"]["lifecycle"] == {}
+
 
 class TestDetailFromState:
     import json as _json
@@ -445,6 +467,21 @@ class TestDetailFromState:
             "amenities": ["Parking Spaces: 2", "Lobby in Building"],
             "agent_name": "Mr David",
             "agent_agency": "David Corporation",
+        }
+
+    def test_detail_lifecycle_includes_reactivated_and_approved(self):
+        from app.scraper import detail_from_state
+        html = self._page({"createdAt": 1791591051, "updatedAt": 1791591051,
+                           "reactivatedAt": 1702355471, "approvedAt": 1702355471,
+                           "price": 1500000, "title": " 2 Kanal House ",
+                           "agency": {"name": "Baig", "externalID": "167489", "tier": 4}})
+        out = detail_from_state(html)
+        assert out["agent_agency"] == "Baig"
+        assert out["zameen_lifecycle"] == {
+            "created_epoch": 1791591051.0, "updated_epoch": 1791591051.0,
+            "reactivated_epoch": 1702355471.0, "approved_epoch": 1702355471.0,
+            "agency_external_id": "167489", "agency_tier": 4,
+            "price": 1500000, "title": "2 Kanal House",
         }
 
     def test_missing_or_broken_state_gives_nothing(self):
