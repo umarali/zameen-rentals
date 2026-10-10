@@ -1,7 +1,8 @@
-/** The listing date line ("Updated 3 hours ago ⓘ") and its explanation popover.
+/** The listing date line ("Added 2 weeks ago · Updated 3 hours ago ⓘ") and
+ *  its explanation popover.
  *
- *  The date is Zameen's own, and Zameen's dates can move forward for the same
- *  ad (docs/listing-trust-2026-10-10). The ⓘ explains that and adds what we
+ *  The dates are Zameen's own, and Zameen's dates can move forward for the
+ *  same ad (docs/listing-trust-2026-10-10). The ⓘ says so and adds what we
  *  know ourselves: when ZameenRentals first saw the listing. Hover or focus
  *  shows it on desktop; tap toggles it on touch screens.
  */
@@ -10,30 +11,35 @@ import { esc, fmtRelative, fmtShortDate } from './utils.js';
 
 let tipSeq = 0;
 
-/** "Updated 3 hours ago", else "Added 2 days ago", from Zameen's dates. */
-export function zameenDateLabel(item) {
+/** Zameen's added and updated ages; `updated` is '' when it says the same as `added`. */
+function zameenAges(item) {
+  const added = item.posted_at ? fmtRelative(item.posted_at)
+    : (item.added || '').replace(/^Added:\s*/i, '').trim();
   const updated = item.updated_at ? fmtRelative(item.updated_at) : '';
-  if (updated) return `Updated ${updated}`;
-  const added = item.posted_at ? fmtRelative(item.posted_at) : '';
-  if (added) return `Added ${added}`;
-  const raw = (item.added || '').replace(/^Added:\s*/i, '').trim();
-  return raw ? `Added ${raw}` : '';
+  return { added, updated: updated && updated !== added ? updated : '' };
+}
+
+/** One phrase: "Updated 3 hours ago", else "Added 2 days ago". */
+export function zameenDateLabel(item) {
+  const { added, updated } = zameenAges(item);
+  return updated ? `Updated ${updated}` : added ? `Added ${added}` : '';
 }
 
 /** The date line with its ⓘ popover, or '' when Zameen gave no date. */
 export function listingDateHtml(item, { className = 'text-xs text-gray-500' } = {}) {
-  const label = zameenDateLabel(item);
+  const { added, updated } = zameenAges(item);
+  const label = [added && `Added ${added}`, updated && `Updated ${updated}`].filter(Boolean).join(' · ');
   if (!label) return '';
   const id = `dateTip${++tipSeq}`;
   const firstSeen = fmtShortDate(item.first_seen_at);
   const tip = [
-    'This date comes from Zameen. Agents can refresh an ad, which moves its date forward, so the ad may be older than it looks.',
-    firstSeen ? `ZameenRentals first saw it on ${firstSeen}.` : '',
-    'Availability isn’t confirmed — check with the agent.',
+    'Agents can refresh Zameen dates, so the ad may be older.',
+    firstSeen ? `On ZameenRentals since ${firstSeen}` : '',
+    'Availability not confirmed',
   ].filter(Boolean);
   return `<div class="listing-date ${className}">
     <span>${esc(label)}</span>
-    <button type="button" class="date-info" aria-label="About this date" aria-expanded="false" aria-describedby="${id}">
+    <button type="button" class="date-info" aria-label="About these dates" aria-expanded="false" aria-describedby="${id}">
       <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
     </button>
     <span role="tooltip" id="${id}" class="date-tip">${tip.map(t => `<span>${esc(t)}</span>`).join('')}</span>

@@ -26,13 +26,34 @@ test.describe("Listing dates in a Pakistan browser", () => {
     await info.click();
     await expect(info).toHaveAttribute("aria-expanded", "true");
     await expect(tip).toBeVisible();
-    await expect(tip).toContainText("This date comes from Zameen");
-    await expect(tip).toContainText(/ZameenRentals first saw it on \d{1,2} [A-Z][a-z]{2}/);
-    await expect(tip).toContainText("Availability isn’t confirmed");
+    await expect(tip).toContainText("Agents can refresh Zameen dates, so the ad may be older.");
+    await expect(tip).toContainText(/On ZameenRentals since \d{1,2} [A-Z][a-z]{2}/);
+    await expect(tip).toContainText("Availability not confirmed");
     await expect(page.locator("#drawer")).not.toHaveClass(/drawer-open/);
     await page.keyboard.press("Escape");
     await page.mouse.move(0, 0); // desktop also shows it on hover
     await expect(tip).toBeHidden();
+  });
+
+  test("shows both Zameen dates only when they differ", async ({ page }) => {
+    // Naive UTC, like the backend writes.
+    const ago = ms => new Date(Date.now() - ms).toISOString().slice(0, 19);
+    const listing = (id, posted, updated) => ({
+      zameen_id: id, title: `Flat ${id}`, url: `https://www.zameen.com/Property/x-${id}-1-1.html`,
+      price: 90000, location: "Clifton, Karachi", property_type: "Apartment",
+      posted_at: posted, updated_at: updated, first_seen_at: ago(3 * 864e5),
+    });
+    const payload = { total: 2, page: 1, per_page: 25, source: "local", results: [
+      listing("1", ago(14 * 864e5), ago(3 * 36e5)),
+      listing("2", ago(3 * 36e5), ago(3 * 36e5)),
+    ] };
+    await page.route("**/api/search**", route => route.fulfill({ json: payload }));
+    await page.route("**/api/map-search**", route => route.fulfill({ json: payload }));
+    await page.reload();
+    await page.waitForSelector(".card-wrap", { timeout: 30000 });
+    const dates = page.locator(".card-wrap .listing-date");
+    await expect(dates.nth(0)).toContainText("Added 2 weeks ago · Updated 3 hours ago");
+    await expect(dates.nth(1)).toHaveText(/^\s*Added 3 hours ago\s*Agents/);
   });
 
   test("drawer shows the same date line", async ({ page }) => {

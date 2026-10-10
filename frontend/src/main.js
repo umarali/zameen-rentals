@@ -497,6 +497,7 @@ function initResultsSort() {
     const panel = $('#sortSelect');
     panel.value = e.target.value;
     panel.dispatchEvent(new Event('change'));
+    e.target.blur();
   });
 }
 

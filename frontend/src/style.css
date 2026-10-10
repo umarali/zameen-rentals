@@ -1111,7 +1111,9 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
   background-repeat: no-repeat; background-position: right 0 center; background-size: 14px;
 }
 .results-sort select:hover { color: var(--color-gray-900); }
-.results-sort select:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+/* No box around it: keyboard focus gets a soft highlight instead (it blurs after a choice). */
+.results-sort select:focus { outline: none; box-shadow: none; }
+.results-sort select:focus-visible { background-color: var(--color-gray-100); }
 
 /* Listing date with an ⓘ that explains it. */
 .listing-date { position: relative; display: flex; align-items: center; gap: 4px; line-height: 1.25; }
@@ -1127,13 +1129,13 @@ html.app-standalone #mapCoverageBadge.coverage-badge-expanded {
 @media (pointer: coarse) { .date-info { position: relative; } .date-info::after { content: ''; position: absolute; inset: -12px; } }
 .date-tip {
   display: none; position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 30;
-  width: max-content; max-width: min(260px, 80vw);
-  padding: 10px 12px; border-radius: 10px;
+  width: max-content; max-width: min(230px, 80vw);
+  padding: 8px 10px; border-radius: 8px;
   background: var(--color-gray-900); color: #fff; font-size: 12px; font-weight: 400; line-height: 1.4;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 .date-tip span { display: block; }
-.date-tip span + span { margin-top: 4px; }
+.date-tip span + span { margin-top: 2px; color: rgb(255 255 255 / 0.75); }
 .date-info[aria-expanded="true"] + .date-tip,
 .date-info:focus-visible + .date-tip { display: block; }
 @media (hover: hover) { .date-info:hover + .date-tip { display: block; } }
