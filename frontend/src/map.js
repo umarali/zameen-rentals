@@ -14,6 +14,7 @@ import {
 import {
   initMapPins, renderPins, refreshPinStates, setHoveredListing, setSelectedListing,
   getSelectedListing, getListingSummary, renderPreviewCard, renderStackCard,
+  loadListingPhotos, loadedListingPhotos, bindGallery, replaceGallery,
   countListingsInBounds, pinsReady, onPinsLoaded, motionAllowed,
 } from './map-pins.js';
 import { bedIcon, bathIcon } from './icons.js';
@@ -374,49 +375,41 @@ export function setMapAutoSearch(on) {
   refs._onAutoSearchChange?.(Boolean(on));
 }
 
+/** The map's search control: the auto-search checkbox, or a "Search this area" button. */
 export function showSearchAreaPill(show, label = 'Search this area') {
-  $$('.map-search-area').forEach(btn => {
-    btn.classList.toggle('hidden', !show);
-    if (show) btn.textContent = label;
+  $$('.map-search-control').forEach(control => {
+    control.classList.toggle('is-pending', show);
+    const btn = control.querySelector('.map-search-area');
+    if (btn && show) btn.textContent = label;
   });
 }
 
 export function isSearchAreaPillVisible() {
-  return $$('.map-search-area').some(btn => !btn.classList.contains('hidden'));
+  return $$('.map-search-control').some(control => control.classList.contains('is-pending'));
 }
 
-// ===== Summary and map key =====
-
-function summaryText(map) {
-  if (!map || !pinsReady()) return null;
-  const n = countListingsInBounds(map.getBounds());
-  return { count: n.toLocaleString(), label: n === 1 ? 'rental in this view' : 'rentals in this view', empty: n === 0 };
-}
+// ===== Mobile count bar =====
 
 export function updateMapSummary() {
-  const desktop = summaryText(refs.map);
-  const mobile = summaryText(refs.mobileMap);
-  $$('#mapCoverageBadge [data-map-count], #mapCoverageBadge [data-map-count-label], #mapSheetBar [data-map-count], #mapSheetBar [data-map-count-label]')
-    .forEach(el => {
-      const inMobile = Boolean(el.closest('#mapSheetBar'));
-      const summary = inMobile ? mobile : desktop;
-      if (el.hasAttribute('data-map-count')) el.textContent = summary ? summary.count : '…';
-      else el.textContent = summary ? (summary.empty ? 'No matching rentals in this view' : summary.label) : 'Loading rentals';
-      el.closest('[data-map-summary]')?.classList.toggle('is-empty', Boolean(summary?.empty));
-    });
+  const map = refs.mobileMap;
+  const count = $('#mapSheetBar [data-map-count]');
+  const label = $('#mapSheetBar [data-map-count-label]');
+  if (!count || !label) return;
+  if (!map || !pinsReady()) {
+    count.textContent = '…';
+    label.textContent = 'Loading rentals';
+    return;
+  }
+  const n = countListingsInBounds(map.getBounds());
+  count.textContent = n.toLocaleString();
+  label.textContent = n === 0 ? 'No matching rentals here' : n === 1 ? 'rental in this view' : 'rentals in this view';
+  $('#mapSheetBar').classList.toggle('is-empty', n === 0);
 }
 
 function initMapChrome() {
   $$('[data-map-autosearch]').forEach(box => {
     box.checked = isMapAutoSearch();
     box.addEventListener('change', () => setMapAutoSearch(box.checked));
-  });
-  $$('[data-map-key-toggle]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const panel = btn.parentElement.querySelector('[data-map-key]');
-      const open = panel.classList.toggle('hidden') === false;
-      btn.setAttribute('aria-expanded', String(open));
-    });
   });
   $$('.map-search-area').forEach(btn => {
     btn.addEventListener('click', () => refs._searchThisArea?.({ mobile: Boolean(btn.closest('#mapOverlay')) }));
@@ -448,14 +441,17 @@ function bindPopupAction(popup, selector, handler) {
 }
 
 function openPopup(map, latlng, html) {
+  const mobile = map === refs.mobileMap;
+  const sheetHeight = mobile ? ($('#mapSheet')?.offsetHeight || 0) : 0;
   const popup = L.popup({
     className: 'pin-popup',
     maxWidth: 300,
     minWidth: 250,
     offset: [0, -32],
-    // Clear the summary card and the layer, GPS and zoom controls.
-    autoPanPaddingTopLeft: [24, 150],
-    autoPanPaddingBottomRight: [72, 24],
+    // Keep clear of the search control, the layer/GPS/zoom controls and,
+    // on mobile, the card rail at the bottom.
+    autoPanPaddingTopLeft: mobile ? [12, 64] : [24, 72],
+    autoPanPaddingBottomRight: mobile ? [56, sheetHeight + 12] : [72, 24],
   }).setLatLng(latlng).setContent(html);
   flagMove(map, 'quiet');
   popup.openOn(map);
@@ -473,12 +469,21 @@ async function openPinPopup(id, map, latlng) {
   try {
     const item = await getListingSummary(id);
     if (!map.hasLayer(popup)) return;
-    flagMove(map, 'quiet');
-    popup.setContent(renderPreviewCard(item));
-    bindPopupAction(popup, '[data-preview-open]', () => {
+    const photos = loadListingPhotos(item);
+    const ready = loadedListingPhotos(item);
+    const openListing = () => {
       map.closePopup(popup);
-      refs._openDrawer?.(item);
-    });
+      const full = loadedListingPhotos(item);
+      refs._openDrawer?.(full && full.length > 1 ? { ...item, images: full } : item);
+    };
+    flagMove(map, 'quiet');
+    popup.setContent(renderPreviewCard(ready ? { ...item, images: ready } : item, { loadingPhotos: !ready }));
+    bindGallery(popup.getElement(), { onPhotoClick: openListing });
+    bindPopupAction(popup, '[data-preview-open]', openListing);
+    if (ready) return;
+    const full = await photos;
+    if (!map.hasLayer(popup)) return;
+    replaceGallery(popup.getElement(), full, { onPhotoClick: openListing });
   } catch {
     if (map.hasLayer(popup)) popup.setContent('<div class="pin-preview-loading">Could not load this listing.</div>');
   }
@@ -500,7 +505,7 @@ function onPinHover(id, on) {
 initMapPins({
   onPinClick: (id, map, latlng) => {
     if (map === refs.mobileMap) selectMobileListing(id);
-    else openPinPopup(id, map, latlng);
+    openPinPopup(id, map, latlng);
   },
   onStackClick: openStackPopup,
   onPinHover,

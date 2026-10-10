@@ -27,8 +27,8 @@ test.describe("Desktop Map", () => {
     ).toBeVisible();
   });
 
-  test("top-right controls align cleanly alongside the coverage badge", async ({ page }) => {
-    await expect(page.locator("#mapCoverageBadge")).toBeVisible();
+  test("top-right controls align cleanly beside the search control", async ({ page }) => {
+    await expect(page.locator("#mapSearchControl")).toBeVisible();
     const layerControl = page.locator("#mapContainer .map-layer-control").first();
     const gpsControl = page.locator("#mapContainer .map-gps-btn").first();
     const zoomControl = page.locator("#mapContainer .leaflet-control-zoom").first();
@@ -37,7 +37,7 @@ test.describe("Desktop Map", () => {
     await expect(gpsControl).toBeVisible();
     await expect(zoomControl).toBeVisible();
 
-    const badgeBox = await page.locator("#mapCoverageBadge").boundingBox();
+    const badgeBox = await page.locator("#mapSearchControl").boundingBox();
     const layerBox = await layerControl.boundingBox();
     const gpsBox = await gpsControl.boundingBox();
     const zoomBox = await zoomControl.boundingBox();
@@ -53,15 +53,13 @@ test.describe("Desktop Map", () => {
     expect(zoomBox.y).toBeGreaterThan(gpsBox.y + gpsBox.height - 2);
   });
 
-  test("map summary shows the count, the auto-search toggle and the map key", async ({ page }) => {
-    const summary = page.locator("#mapCoverageBadge");
-    await expect(summary).toBeVisible();
-    await expect(summary.locator("[data-map-count]")).toHaveText(/^\d[\d,]*$/, { timeout: 15000 });
-    await expect(summary.locator("[data-map-autosearch]")).toBeChecked();
-    await summary.locator("[data-map-key-toggle]").click();
-    await expect(summary.locator("[data-map-key]")).toBeVisible();
-    await expect(summary).toContainText("Rent, at the listing's own pin");
-    await expect(summary).toContainText("block or society pin (approximate)");
+  test("the map shows one search control and no coverage panel", async ({ page }) => {
+    const control = page.locator("#mapSearchControl");
+    await expect(control).toBeVisible();
+    await expect(control.locator("[data-map-autosearch]")).toBeChecked();
+    await expect(control).toContainText("Search as I move the map");
+    await expect(control.locator(".map-search-area")).toBeHidden();
+    await expect(page.locator("#mapPanel")).not.toContainText(/areas have listings|Map key/);
   });
 
   test("map layer toggle switches to satellite and persists after reload", async ({ page }) => {
@@ -111,6 +109,12 @@ test.describe("Desktop Map", () => {
     await page.route("**/api/map-pins**", route => route.fulfill({
       json: { total: 1, types: ["House"], stack_min: 2, stacks: [], pins: [["7700011", 31.5200, 74.3500, 85000, 2, 0]] },
     }));
+    await page.route("**/api/listing-detail**", route => route.fulfill({
+      json: {
+        images: ["/static/favicon-512.png?1", "/static/favicon-512.png?2", "/static/favicon-512.png?3", "/static/favicon-512.png?4"],
+        latitude: 31.52, longitude: 74.35, has_exact_geography: true, source: "local",
+      },
+    }));
     await page.route("**/api/listings/7700011", route => route.fulfill({
       json: {
         zameen_id: "7700011",
@@ -135,6 +139,24 @@ test.describe("Desktop Map", () => {
     const popup = page.locator("#mapContainer .pin-popup");
     await expect(popup).toContainText("Pin preview house");
     await expect(pin).toHaveClass(/is-selected/);
+
+    // The cover shows first; the listing's full photo set replaces it.
+    await expect(popup.locator(".pin-gallery-img")).toHaveCount(4);
+    await expect(popup.locator("[data-gallery-count]")).toHaveText("1 / 4");
+    await popup.locator(".pin-gallery").hover();
+    await popup.locator("[data-gallery-next]").click();
+    await expect(popup.locator("[data-gallery-count]")).toHaveText("2 / 4");
+    await popup.locator("[data-gallery-next]").click();
+    await expect(popup.locator("[data-gallery-count]")).toHaveText("3 / 4");
+    await popup.locator("[data-gallery-prev]").click();
+    await expect(popup.locator("[data-gallery-count]")).toHaveText("2 / 4");
+
+    // The whole card is on screen, inside the map.
+    const mapBox = await page.locator("#mapContainer").boundingBox();
+    const cardBox = await popup.locator(".pin-preview").boundingBox();
+    expect(cardBox.y).toBeGreaterThanOrEqual(mapBox.y);
+    expect(cardBox.y + cardBox.height).toBeLessThanOrEqual(mapBox.y + mapBox.height);
+
     await popup.locator("[data-preview-open]").click();
     await expect(page.locator("#drawer")).toHaveClass(/drawer-open/);
     await expect(page.locator("#drawerContent")).toContainText("Pin preview house");
@@ -165,7 +187,7 @@ test.describe("Desktop Map", () => {
     await popup.locator("[data-stack-search]").click();
     await expect(page.locator("#listingsTitle")).toHaveText("Rentals on one map pin in Gulberg");
     expect(stackSearches.length).toBeGreaterThan(0);
-    await expect(page.locator("#mapPanel .map-search-area")).toHaveText("Show all rentals in this view");
+    await expect(page.locator("#mapSearchControl .map-search-area")).toHaveText("Show all rentals in this view");
   });
 
   test("hovering a card highlights its pin", async ({ page }) => {
@@ -194,14 +216,16 @@ test.describe("Desktop Map", () => {
 
   test("with auto-search off, moving the map offers Search this area", async ({ page }) => {
     await page.waitForLoadState("networkidle");
-    const autosearch = page.locator("#mapCoverageBadge [data-map-autosearch]");
+    const autosearch = page.locator("#mapSearchControl [data-map-autosearch]");
     await autosearch.uncheck();
     let mapSearches = 0;
     page.on("request", req => { if (req.url().includes("/api/map-search")) mapSearches += 1; });
     await page.locator("#mapContainer").focus();
     await page.keyboard.press("ArrowRight");
-    const pill = page.locator("#mapPanel .map-search-area");
+    const pill = page.locator("#mapSearchControl .map-search-area");
     await expect(pill).toBeVisible();
+    // One control: the checkbox gives way to the button.
+    await expect(autosearch).toBeHidden();
     await page.waitForTimeout(600);
     expect(mapSearches).toBe(0);
     await pill.click();
@@ -209,7 +233,7 @@ test.describe("Desktop Map", () => {
     await expect.poll(() => mapSearches).toBeGreaterThan(0);
 
     await page.reload();
-    await expect(page.locator("#mapCoverageBadge [data-map-autosearch]")).not.toBeChecked();
+    await expect(page.locator("#mapSearchControl [data-map-autosearch]")).not.toBeChecked();
   });
 
   test("an area search sends the area to the map pins", async ({ page }) => {
@@ -347,7 +371,7 @@ test.describe("Mobile Map", () => {
     await page.waitForSelector("#mapFab", { timeout: 30000 });
     await page.locator("#mapFab").click();
 
-    const keyBtn = page.locator("#mapOverlay [data-map-key-toggle]");
+    const keyBtn = page.locator("#mapSearchControlMobile .map-autosearch");
     const layerControl = page.locator("#mapOverlay .map-layer-control").first();
     const gpsControl = page.locator("#mapOverlay .map-gps-control").first();
     const zoomControl = page.locator("#mapOverlay .leaflet-control-zoom").first();

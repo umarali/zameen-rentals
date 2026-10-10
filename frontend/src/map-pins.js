@@ -275,8 +275,14 @@ function createMarker(f, map) {
     handlers.onPinClick?.(p.id, map, [lat, lng]);
   });
   if (p.k === 'p') {
-    marker.on('mouseover', () => handlers.onPinHover?.(p.id, true));
-    marker.on('mouseout', () => handlers.onPinHover?.(p.id, false));
+    marker.on('mouseover', () => {
+      handlers.onPinHover?.(p.id, true);
+      prefetchListingPhotos(p.id);
+    });
+    marker.on('mouseout', () => {
+      handlers.onPinHover?.(p.id, false);
+      cancelPhotoPrefetch();
+    });
   }
   return marker;
 }
@@ -385,17 +391,132 @@ export async function getListingSummary(id) {
   return item;
 }
 
-export function renderPreviewCard(item) {
+// ===== Pin preview: photo gallery =====
+
+const photoRequests = new Map(); // listing url -> Promise<string[]>
+const photoResults = new Map(); // listing url -> string[], once loaded
+// Hovering a pin this long starts its photo fetch, so a click usually finds them ready.
+const PHOTO_PREFETCH_DWELL_MS = 350;
+let prefetchTimer = null;
+
+function listingPhotos(item) {
+  const photos = Array.isArray(item?.images) && item.images.length ? item.images : [];
+  if (photos.length) return photos;
+  return item?.image_url ? [item.image_url] : [];
+}
+
+/** The listing's full photo set. Crawled listings carry only a cover photo,
+ *  so this asks the detail endpoint (a live Zameen fetch the first time). */
+export function loadListingPhotos(item) {
+  const url = item?.url;
+  if (!url) return Promise.resolve(listingPhotos(item));
+  if (!photoRequests.has(url)) {
+    const request = fetch(`/api/listing-detail?url=${encodeURIComponent(url)}`)
+      .then(resp => (resp.ok ? resp.json() : {}))
+      .then(detail => {
+        const photos = Array.isArray(detail?.images) ? detail.images.filter(Boolean) : [];
+        const best = photos.length > listingPhotos(item).length ? photos : listingPhotos(item);
+        photoResults.set(url, best);
+        return best;
+      })
+      .catch(() => {
+        photoRequests.delete(url); // let a later open retry
+        return listingPhotos(item);
+      });
+    photoRequests.set(url, request);
+  }
+  return photoRequests.get(url);
+}
+
+/** Photos already fetched for this listing, or null while they are still loading. */
+export function loadedListingPhotos(item) {
+  return item?.url ? photoResults.get(item.url) || null : listingPhotos(item);
+}
+
+export function cancelPhotoPrefetch() {
+  clearTimeout(prefetchTimer);
+}
+
+/** Start fetching a pin's photos after a short hover. */
+export function prefetchListingPhotos(id) {
+  clearTimeout(prefetchTimer);
+  prefetchTimer = setTimeout(async () => {
+    try {
+      const item = await getListingSummary(id);
+      loadListingPhotos(item);
+    } catch {}
+  }, PHOTO_PREFETCH_DWELL_MS);
+}
+
+function galleryHtml(photos, { loading = false } = {}) {
+  if (!photos.length) {
+    return `<div class="pin-gallery${loading ? ' is-loading' : ''}" data-gallery>
+      <div class="pin-gallery-empty img-fallback"></div>
+      <span class="pin-gallery-count" data-gallery-count>${loading ? 'Loading photos…' : ''}</span>
+    </div>`;
+  }
+  const slides = photos.map((src, i) => `<img class="pin-gallery-img" src="${escA(src)}" alt="Photo ${i + 1} of ${photos.length}" ${i > 1 ? 'loading="lazy"' : ''} draggable="false">`).join('');
+  const many = photos.length > 1;
+  return `<div class="pin-gallery${loading ? ' is-loading' : ''}" data-gallery>
+    <div class="pin-gallery-track" data-gallery-track>${slides}</div>
+    ${many ? `<button type="button" class="pin-gallery-nav is-prev" data-gallery-prev aria-label="Previous photo" disabled>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
+    <button type="button" class="pin-gallery-nav is-next" data-gallery-next aria-label="Next photo">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></button>` : ''}
+    <span class="pin-gallery-count" data-gallery-count>${loading ? 'Loading photos…' : many ? `1 / ${photos.length}` : ''}</span>
+  </div>`;
+}
+
+/** Wire arrows, swipe position and the counter for a gallery inside `root`. */
+export function bindGallery(root, { onPhotoClick } = {}) {
+  const gallery = root?.querySelector('[data-gallery]');
+  const track = gallery?.querySelector('[data-gallery-track]');
+  if (!track) return;
+  const total = track.children.length;
+  const prev = gallery.querySelector('[data-gallery-prev]');
+  const next = gallery.querySelector('[data-gallery-next]');
+  const count = gallery.querySelector('[data-gallery-count]');
+  const current = () => Math.round(track.scrollLeft / Math.max(track.clientWidth, 1));
+  const sync = () => {
+    const i = current();
+    if (prev) prev.disabled = i <= 0;
+    if (next) next.disabled = i >= total - 1;
+    if (count && total > 1 && !gallery.classList.contains('is-loading')) count.textContent = `${i + 1} / ${total}`;
+  };
+  const go = step => {
+    const target = Math.min(Math.max(current() + step, 0), total - 1);
+    track.scrollTo({ left: target * track.clientWidth, behavior: motionAllowed() ? 'smooth' : 'auto' });
+  };
+  prev?.addEventListener('click', e => { e.stopPropagation(); go(-1); });
+  next?.addEventListener('click', e => { e.stopPropagation(); go(1); });
+  track.addEventListener('scroll', sync, { passive: true });
+  gallery.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+  });
+  if (onPhotoClick) track.addEventListener('click', onPhotoClick);
+  sync();
+}
+
+/** Swap in a fuller photo set, keeping the photo the user is looking at. */
+export function replaceGallery(root, photos, opts) {
+  const old = root?.querySelector('[data-gallery]');
+  if (!old) return;
+  const index = Math.round((old.querySelector('[data-gallery-track]')?.scrollLeft || 0) / Math.max(old.clientWidth, 1));
+  old.outerHTML = galleryHtml(photos);
+  bindGallery(root, opts);
+  const track = root.querySelector('[data-gallery-track]');
+  if (track && index) track.scrollLeft = index * track.clientWidth;
+}
+
+export function renderPreviewCard(item, { loadingPhotos = false } = {}) {
   const facts = [
     item.bedrooms ? `<span>${bedIcon('w-3.5 h-3.5')}${item.bedrooms} bed</span>` : '',
     item.bathrooms ? `<span>${bathIcon('w-3.5 h-3.5')}${item.bathrooms} bath</span>` : '',
     item.area_size ? `<span>${areaIcon('w-3.5 h-3.5')}${esc(item.area_size)}</span>` : '',
   ].filter(Boolean).join('');
-  const img = item.image_url
-    ? `<img class="pin-preview-img" src="${escA(item.image_url)}" alt="" loading="lazy">`
-    : '<div class="pin-preview-img img-fallback"></div>';
   return `<div class="pin-preview" data-zameen-id="${escA(String(item.zameen_id || ''))}">
-    ${img}
+    ${galleryHtml(listingPhotos(item), { loading: loadingPhotos })}
     <div class="pin-preview-body">
       <div class="pin-preview-price">${esc(fmtPrice(item.price, item.price_text))}${item.price || item.price_text ? '<span>/mo</span>' : ''}</div>
       <div class="pin-preview-title">${esc(item.title || 'Rental')}</div>

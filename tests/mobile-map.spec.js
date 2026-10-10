@@ -101,6 +101,11 @@ test.describe("Mobile Map Overlay", () => {
     const selected = page.locator('#mapCarousel .map-card.is-selected[data-mobile-card-id="7700031"]');
     await expect(selected).toBeVisible();
     await expect(selected).toContainText("Tapped pin house");
+    // The same photo preview as desktop opens above the rail.
+    await expect(page.locator("#mapOverlay .pin-popup")).toContainText("Tapped pin house");
+    const popupBox = await page.locator("#mapOverlay .pin-preview").boundingBox();
+    const sheetBox = await page.locator("#mapSheet").boundingBox();
+    expect(popupBox.y + popupBox.height).toBeLessThanOrEqual(sheetBox.y + 2);
   });
 
   test("the cards rail can be hidden to see more map", async ({ page }) => {
