@@ -40,81 +40,49 @@ test.describe("Mobile Map Overlay", () => {
     ).toBeAttached({ timeout: 10000 });
   });
 
-  test("map overlay fills the screen below the search and filters", async ({ page }) => {
+  test("map overlay covers full viewport", async ({ page }) => {
     await page.locator("#mapFab").click();
     await expect(page.locator("#mapOverlay")).toBeVisible();
     await page.waitForTimeout(300);
 
     const box = await page.locator("#mapOverlay").boundingBox();
-    const filters = await page.locator("#filtersShell").boundingBox();
     const viewport = page.viewportSize();
     expect(box).toBeTruthy();
     expect(Math.abs(box.width - viewport.width)).toBeLessThanOrEqual(1);
-    expect(Math.abs(box.y - (filters.y + filters.height))).toBeLessThanOrEqual(2);
-    expect(Math.abs(box.y + box.height - viewport.height)).toBeLessThanOrEqual(1);
+    expect(Math.abs(box.height - viewport.height)).toBeLessThanOrEqual(1);
   });
-
-  test("filters work while the map is open", async ({ page }) => {
-    await page.locator("#mapFab").click();
-    await expect(page.locator("#mapOverlay")).toBeVisible();
-    await page.locator("#bedsChip").click();
-    await page.locator('#bedRow .chip[data-beds="2"]').click();
-    await expect(page.locator("#bedsChip")).toHaveClass(/has-value/);
-    await expect(page.locator("#mapOverlay")).toBeVisible();
-  });
-
-  test("Back closes the map instead of leaving the page", async ({ page }) => {
-    await page.locator("#mapFab").click();
-    await expect(page.locator("#mapOverlay")).toBeVisible();
-    await page.goBack();
-    await expect(page.locator("#mapOverlay")).toBeHidden();
-    await expect(page.locator(".card-wrap").first()).toBeVisible();
-  });
-
-  test("a listing card opens over the map and Back returns to the map", async ({ page }) => {
-    await page.locator("#mapFab").click();
-    const card = page.locator("#mapCarousel .map-card[data-mobile-card-id]").first();
-    await expect(card).toBeVisible({ timeout: 15000 });
-    await card.click();
-    await expect(page.locator("#drawer")).toHaveClass(/drawer-open/);
-    await page.goBack();
-    await expect(page.locator("#drawer")).not.toHaveClass(/drawer-open/);
-    await expect(page.locator("#mapOverlay")).toBeVisible();
-  });
-
-  test("tapping a pin selects its card in the rail", async ({ page }) => {
-    await page.route("**/api/map-pins**", route => route.fulfill({
-      json: { total: 1, types: ["House"], stack_min: 2, stacks: [], pins: [["7700031", 31.5200, 74.3500, 65000, 2, 0]] },
-    }));
-    await page.route("**/api/listings/7700031", route => route.fulfill({
+  test("tapping an exact pin opens the photo preview above the cards", async ({ page }) => {
+    await page.route("**/api/map-search**", route => route.fulfill({
       json: {
-        zameen_id: "7700031", title: "Tapped pin house", price: 65000,
-        url: "https://www.zameen.com/Property/test-7700031-1-1.html",
-        latitude: 31.52, longitude: 74.35, has_exact_geography: true, is_active: true,
+        total: 1, page: 1, per_page: 25, source: "local", mode: "viewport", scope: "exact_bounds",
+        visible_areas: 1, area_totals: { Gulberg: 1 }, attempted_exact_bounds: true, exact_bounds_total: 1,
+        results: [{
+          zameen_id: "7700031", title: "Tapped pin house", price: 65000, bedrooms: 2,
+          url: "https://www.zameen.com/Property/test-7700031-1-1.html",
+          image_url: "/static/favicon-512.png", location: "Gulberg, Lahore",
+          latitude: 31.5204, longitude: 74.3587, location_source: "listing_exact", has_exact_geography: true,
+        }],
       },
     }));
-    await page.reload();
+    await page.route("**/api/listing-detail**", route => route.fulfill({
+      json: { images: ["/static/favicon-512.png?1", "/static/favicon-512.png?2"], has_exact_geography: true, source: "local" },
+    }));
     await page.locator("#mapFab").click();
-    const pin = page.locator("#mapOverlay .map-pin", { hasText: "65K" });
-    await expect(pin).toBeVisible({ timeout: 15000 });
-    await pin.click();
-    const selected = page.locator('#mapCarousel .map-card.is-selected[data-mobile-card-id="7700031"]');
-    await expect(selected).toBeVisible();
-    await expect(selected).toContainText("Tapped pin house");
-    // The same photo preview as desktop opens above the rail.
-    await expect(page.locator("#mapOverlay .pin-popup")).toContainText("Tapped pin house");
-    const popupBox = await page.locator("#mapOverlay .pin-preview").boundingBox();
-    const sheetBox = await page.locator("#mapSheet").boundingBox();
-    expect(popupBox.y + popupBox.height).toBeLessThanOrEqual(sheetBox.y + 2);
-  });
-
-  test("the cards rail can be hidden to see more map", async ({ page }) => {
-    await page.locator("#mapFab").click();
-    await expect(page.locator("#mapCarousel")).toBeVisible({ timeout: 15000 });
-    await page.locator("#mapCardsToggle").click();
-    await expect(page.locator("#mapCarousel")).toBeHidden();
-    await page.locator("#mapCardsToggle").click();
-    await expect(page.locator("#mapCarousel")).toBeVisible();
+    await expect(page.locator("#mapOverlay")).toBeVisible();
+    const pin = page.locator("#mapContainerMobile .listing-exact-marker");
+    for (let i = 0; i < 4 && !(await pin.count()); i++) {
+      await page.locator("#mapContainerMobile .leaflet-control-zoom-in").click();
+      await page.waitForTimeout(700);
+    }
+    await pin.first().click({ force: true });
+    const popup = page.locator("#mapOverlay .pin-popup");
+    await expect(popup).toContainText("Tapped pin house");
+    await expect(popup.locator("[data-gallery-count]")).toHaveText("1 / 2");
+    const cardBox = await popup.locator(".pin-preview").boundingBox();
+    const carouselBox = await page.locator("#mapCarousel").boundingBox();
+    expect(cardBox.y + cardBox.height).toBeLessThanOrEqual(carouselBox.y + 2);
+    await popup.locator("[data-preview-open]").click();
+    await expect(page.locator("#drawer")).toHaveClass(/drawer-open/);
   });
 });
 

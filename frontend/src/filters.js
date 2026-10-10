@@ -426,6 +426,8 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
     refs.viewportScope = 'area_coverage';
     refs.viewportAttemptedExactBounds = false;
     refs.viewportExactBoundsTotal = null;
+    refs.previewArea = null;
+    refs.hoveredArea = null;
     if (refs.searchMode !== 'nearby') resetMapView();
     clearNlInput();
     updateChips(); renderAreaList(refs.allAreas.slice(0, 20)); doSearch();

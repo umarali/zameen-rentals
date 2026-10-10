@@ -255,10 +255,6 @@
     </div>
   </section>
   <section id="mapPanel" class="relative border-l border-gray-200 hidden lg:block z-0">
-    <div id="mapSearchControl" class="map-search-control">
-      <label class="map-autosearch"><input type="checkbox" data-map-autosearch checked> Search as I move the map</label>
-      <button type="button" class="map-search-area">Search this area</button>
-    </div>
     <div id="mapContainer" class="absolute inset-0"></div>
   </section>
 </main>
@@ -269,26 +265,16 @@
   Show map
 </button>
 
-<!-- Mobile map overlay: sits below the search and filter bar so both stay usable -->
-<div id="mapOverlay" class="fixed inset-x-0 bottom-0 bg-white z-[60] hidden">
-  <div id="mapSearchControlMobile" class="map-search-control">
-    <label class="map-autosearch"><input type="checkbox" data-map-autosearch checked> Search as I move</label>
-    <button type="button" class="map-search-area">Search this area</button>
+<!-- Mobile map overlay -->
+<div id="mapOverlay" class="fixed inset-0 bg-white z-[60] hidden">
+  <div id="mapOverlayCloseWrap" class="absolute z-[61] flex items-center gap-2">
+    <button id="mapOverlayClose" class="flex items-center gap-1 px-4 py-2 rounded-full bg-white border border-gray-200 text-sm font-semibold text-gray-700 shadow-md hover:bg-gray-50 transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+      Show list
+    </button>
   </div>
   <div id="mapContainerMobile" class="absolute inset-0"></div>
-  <div id="mapSheet" class="absolute inset-x-0 bottom-0 z-[61]">
-    <div id="mapSheetBar" class="map-sheet-bar">
-      <div class="map-summary-count" aria-live="polite"><b data-map-count>…</b> <span data-map-count-label>Loading rentals</span></div>
-      <button id="mapCardsToggle" type="button" class="map-sheet-btn" aria-expanded="true" aria-label="Hide listing cards">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
-      </button>
-      <button id="mapOverlayClose" type="button" class="map-sheet-list">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        Show list
-      </button>
-    </div>
-    <div id="mapCarousel" class="hidden gap-3 px-3 overflow-x-auto" style="scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px))"></div>
-  </div>
+  <div id="mapCarousel" class="absolute bottom-0 left-0 right-0 hidden gap-3 p-3 overflow-x-auto z-[61]" style="scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px))"></div>
 </div>
 
 <!-- Feedback trigger -->

@@ -1,38 +1,45 @@
-/** Leaflet maps (desktop panel and mobile overlay): every matching rental as a pin, list↔map sync, Near Me. */
+/** Leaflet map: desktop viewport browsing, markers, and mobile map overlay. */
 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { $, $$, esc, escA, fmtPrice, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
-import { track } from './analytics.js';
+import { track, trackMapMarkerClick } from './analytics.js';
+import { formatDistance, getAreaForListing } from './cards.js';
 import {
   createBaseLayer,
   getStoredMapLayer,
   persistMapLayer,
   sanitizeMapLayerKey,
 } from './map-layers.js';
-import {
-  initMapPins, renderPins, refreshPinStates, setHoveredListing, setSelectedListing,
-  getSelectedListing, getListingSummary, renderPreviewCard, renderStackCard,
-  loadListingPhotos, loadedListingPhotos, bindGallery, replaceGallery,
-  countListingsInBounds, pinsReady, onPinsLoaded, motionAllowed,
-} from './map-pins.js';
-import { bedIcon, bathIcon } from './icons.js';
+import { openListingPreview, prefetchPreviewPhotos, cancelPreviewPrefetch } from './map-preview.js';
 
+const EXACT_MARKER_MIN_ZOOM = 11;
+const EXACT_MARKER_MIN_ZOOM_MOBILE = 12;
+const EXACT_PREFETCH_LIMIT = 10;
+const EXACT_PREFETCH_CONCURRENCY = 3;
+const EXACT_PREFETCH_COOLDOWN_MS = 30000;
 const USER_LOCATION_STORAGE_KEY = 'rk_userLocation';
 const USER_LOCATION_TTL_MS = 30 * 60 * 1000;
 const AREA_LABEL_Z_INDEX = 1400;
 const AREA_LABEL_HIDE_ZOOM = 13;
-const AUTOSEARCH_STORAGE_KEY = 'rk_mapAutoSearch';
-// A move we caused ourselves is "programmatic" (no "Search this area" pill)
-// or "quiet" (no search at all, e.g. a popup nudging the map into view).
+// A pin preview nudging the map into view is not the user moving it.
 const QUIET_MOVE_MS = 1200;
-const PROGRAMMATIC_MOVE_MS = 2500;
-// Share of area centroids dropped from each edge when framing a city: a few
-// outlying societies otherwise leave the city itself small in one corner.
-const CITY_FRAME_TRIM = 0.08;
 
-refs.mapAutoSearch = loadAutoSearch();
+let exactPrefetchTimer = null;
+let exactPrefetchController = null;
+let exactPrefetchSession = 0;
+const exactPrefetchPending = new Set();
+const exactPrefetchMissing = new Set();
+const exactPrefetchCooldown = new Map();
+
+function markQuietMove(map) {
+  if (map) map._zrQuietUntil = Date.now() + QUIET_MOVE_MS;
+}
+
+function isQuietMove(map) {
+  return Boolean(map && (map._zrQuietUntil || 0) > Date.now());
+}
 
 function notify(message, options) {
   if (refs._notify) refs._notify(message, options);
@@ -229,8 +236,7 @@ export function refreshUserLocationOverlays({ recenter = false, mapInstance = nu
   }
   if (recenter && refs.userLocation && mapInstance) {
     const targetZoom = Math.max(mapInstance.getZoom?.() || 0, 14);
-    flagMove(mapInstance, 'programmatic');
-    mapInstance.flyTo([refs.userLocation.lat, refs.userLocation.lng], targetZoom, { duration: 0.8, animate: motionAllowed() });
+    mapInstance.flyTo([refs.userLocation.lat, refs.userLocation.lng], targetZoom, { duration: 0.8 });
   }
   syncGpsButtons();
 }
@@ -339,222 +345,291 @@ function createGpsControl(mapInstance) {
   });
 }
 
-// ===== Who moved the map =====
+function getAreaCounts() {
+  if (refs.searchMode === 'viewport' && refs.mapAreaTotals && Object.keys(refs.mapAreaTotals).length) {
+    return { ...refs.mapAreaTotals };
+  }
 
-function flagMove(map, kind) {
-  if (!map) return;
-  map._zrMove = { kind, until: Date.now() + (kind === 'quiet' ? QUIET_MOVE_MS : PROGRAMMATIC_MOVE_MS) };
-}
-
-function consumeMoveKind(map) {
-  const flag = map._zrMove;
-  map._zrMove = null;
-  return flag && Date.now() <= flag.until ? flag.kind : 'user';
-}
-
-function watchMoves(map, onMoveEnd) {
-  map.on('dragstart', () => { map._zrMove = null; });
-  map.on('moveend', () => onMoveEnd(consumeMoveKind(map)));
-}
-
-// ===== "Search as I move the map" =====
-
-function loadAutoSearch() {
-  try { return localStorage.getItem(AUTOSEARCH_STORAGE_KEY) !== '0'; } catch { return true; }
-}
-
-export function isMapAutoSearch() {
-  return refs.mapAutoSearch !== false;
-}
-
-export function setMapAutoSearch(on) {
-  refs.mapAutoSearch = Boolean(on);
-  try { localStorage.setItem(AUTOSEARCH_STORAGE_KEY, on ? '1' : '0'); } catch {}
-  track('map_autosearch_toggle', { on: Boolean(on) });
-  $$('[data-map-autosearch]').forEach(box => { box.checked = Boolean(on); });
-  refs._onAutoSearchChange?.(Boolean(on));
-}
-
-/** The map's search control: the auto-search checkbox, or a "Search this area" button. */
-export function showSearchAreaPill(show, label = 'Search this area') {
-  $$('.map-search-control').forEach(control => {
-    control.classList.toggle('is-pending', show);
-    const btn = control.querySelector('.map-search-area');
-    if (btn && show) btn.textContent = label;
+  const counts = {};
+  const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
+  refs.currentResults.forEach(r => {
+    const area = getAreaForListing(r);
+    if (area && area.name !== cityName) counts[area.name] = (counts[area.name] || 0) + 1;
   });
+  return counts;
 }
 
-export function isSearchAreaPillVisible() {
-  return $$('.map-search-control').some(control => control.classList.contains('is-pending'));
+function clearTransientAreaFocus() {
+  refs.hoveredArea = null;
+  if (!S.area) refs.previewArea = null;
 }
 
-// ===== Mobile count bar =====
+function getCityBounds() {
+  const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
+  const points = refs.allAreas
+    .filter(area => area.name !== cityName && area.lat && area.lng)
+    .map(area => L.latLng(area.lat, area.lng));
+  return points.length ? L.latLngBounds(points) : null;
+}
 
-export function updateMapSummary() {
-  const map = refs.mobileMap;
-  const count = $('#mapSheetBar [data-map-count]');
-  const label = $('#mapSheetBar [data-map-count-label]');
-  if (!count || !label) return;
-  if (!map || !pinsReady()) {
-    count.textContent = '…';
-    label.textContent = 'Loading rentals';
+function showAreaPreview(areaName) {
+  refs.previewArea = areaName;
+  refs.hoveredArea = null;
+}
+
+function isMobileOverlayVisible() {
+  const overlay = $('#mapOverlay');
+  return Boolean(overlay && !overlay.classList.contains('hidden'));
+}
+
+function cancelExactLocationPrefetch() {
+  clearTimeout(exactPrefetchTimer);
+  if (exactPrefetchController) {
+    exactPrefetchController.abort();
+    exactPrefetchController = null;
+  }
+  exactPrefetchSession += 1;
+}
+
+export function resetExactPrefetchState() {
+  cancelExactLocationPrefetch();
+  exactPrefetchPending.clear();
+  exactPrefetchMissing.clear();
+  exactPrefetchCooldown.clear();
+}
+
+function canPrefetchExactLocation(item) {
+  if (!item?.url || hasExactLocation(item)) return false;
+  if (exactPrefetchPending.has(item.url) || exactPrefetchMissing.has(item.url)) return false;
+  const lastAttempt = exactPrefetchCooldown.get(item.url) || 0;
+  return Date.now() - lastAttempt > EXACT_PREFETCH_COOLDOWN_MS;
+}
+
+async function hydrateExactLocation(item, signal) {
+  if (!canPrefetchExactLocation(item)) return false;
+
+  exactPrefetchPending.add(item.url);
+  exactPrefetchCooldown.set(item.url, Date.now());
+  try {
+    const resp = await fetch(`/api/listing-detail?url=${encodeURIComponent(item.url)}`, { signal });
+    if (!resp.ok) return false;
+    const data = await resp.json();
+    if (data?.has_exact_geography && Number.isFinite(Number(data.latitude)) && Number.isFinite(Number(data.longitude))) {
+      Object.assign(item, {
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
+        location_source: data.location_source || 'listing_exact',
+        has_exact_geography: true,
+      });
+      return true;
+    }
+    if (data?.source === 'live') exactPrefetchMissing.add(item.url);
+    return false;
+  } catch (error) {
+    if (error?.name === 'AbortError') return false;
+    return false;
+  } finally {
+    exactPrefetchPending.delete(item.url);
+  }
+}
+
+function scheduleExactLocationPrefetch(mapInstance = refs.map, { mobile = false } = {}) {
+  cancelExactLocationPrefetch();
+  if (!mapInstance || refs.isLoading) return;
+  if (mobile && !isMobileOverlayVisible()) return;
+
+  const minZoom = mobile ? EXACT_MARKER_MIN_ZOOM_MOBILE : EXACT_MARKER_MIN_ZOOM;
+  if (mapInstance.getZoom() < minZoom || !refs.currentResults.length) return;
+
+  exactPrefetchTimer = setTimeout(async () => {
+    const candidates = refs.currentResults
+      .filter(canPrefetchExactLocation)
+      .slice(0, EXACT_PREFETCH_LIMIT);
+    if (!candidates.length) return;
+
+    const controller = new AbortController();
+    const session = exactPrefetchSession;
+    const resultSet = refs.currentResults;
+    exactPrefetchController = controller;
+    let anyUpdated = false;
+    try {
+      for (let i = 0; i < candidates.length; i += EXACT_PREFETCH_CONCURRENCY) {
+        const batch = candidates.slice(i, i + EXACT_PREFETCH_CONCURRENCY);
+        const results = await Promise.all(batch.map(item => hydrateExactLocation(item, controller.signal)));
+        if (controller.signal.aborted || refs.currentResults !== resultSet || session !== exactPrefetchSession) return;
+        if (results.some(Boolean)) anyUpdated = true;
+      }
+
+      if (anyUpdated && refs.currentResults === resultSet && session === exactPrefetchSession) {
+        if (exactPrefetchController === controller) exactPrefetchController = null;
+        updateMapMarkers();
+        if (refs.mobileMap) updateMobileMarkers(refs._selectAreaFull);
+      }
+    } finally {
+      if (exactPrefetchController === controller) exactPrefetchController = null;
+    }
+  }, 250);
+}
+
+function hasExactLocation(item) {
+  return Boolean(
+    item?.has_exact_geography
+    && Number.isFinite(Number(item.latitude))
+    && Number.isFinite(Number(item.longitude))
+  );
+}
+
+function clearListingLayer(layerKey) {
+  if (refs[layerKey]) {
+    refs[layerKey].remove();
+    refs[layerKey] = null;
+  }
+}
+
+function getMarkerOffset(lat, lng, index, zoom = 15) {
+  if (!index) return [lat, lng];
+  const angle = (index * 55) * (Math.PI / 180);
+  const distance = 0.00008 * Math.pow(2, 15 - zoom) * Math.ceil(index / 6);
+  return [lat + (Math.sin(angle) * distance), lng + (Math.cos(angle) * distance)];
+}
+
+function syncListingCardHighlight(listingUrl, active) {
+  if (!listingUrl || !window.CSS?.escape) return;
+  const card = document.querySelector(`.card-wrap[data-url="${window.CSS.escape(listingUrl)}"]`);
+  if (card) card.classList.toggle('card-map-active', active);
+}
+
+function handleAreaMarkerClick(area, selectAreaFull, mapInstance = refs.map, { mobile = false } = {}) {
+  trackMapMarkerClick({ areaName: area.name, markerType: 'area', city: S.city, mode: refs.searchMode });
+  const count = refs.areaCounts[area.name] || 0;
+  const hasResults = count > 0 || area.name === S.area;
+
+  if (hasResults) {
+    refs.previewArea = null;
+    refs.hoveredArea = null;
+    if (mobile) {
+      selectAreaFull(area.name, true);
+    } else {
+      selectAreaFull(area.name);
+    }
     return;
   }
-  const n = countListingsInBounds(map.getBounds());
-  count.textContent = n.toLocaleString();
-  label.textContent = n === 0 ? 'No matching rentals here' : n === 1 ? 'rental in this view' : 'rentals in this view';
-  $('#mapSheetBar').classList.toggle('is-empty', n === 0);
+
+  showAreaPreview(area.name);
+  updateMapMarkers();
+  if (mobile) updateMobileMarkers(selectAreaFull);
+
+  const targetZoom = Math.max(mapInstance?.getZoom?.() ?? 11, 13);
+  mapInstance?.flyTo([area.lat, area.lng], targetZoom, { duration: 0.6 });
 }
 
-function initMapChrome() {
-  $$('[data-map-autosearch]').forEach(box => {
-    box.checked = isMapAutoSearch();
-    box.addEventListener('change', () => setMapAutoSearch(box.checked));
+function updateListingMarkers(mapInstance = refs.map, { mobile = false } = {}) {
+  const layerKey = mobile ? 'mobileListingMarkerLayer' : 'listingMarkerLayer';
+  clearListingLayer(layerKey);
+  if (!mapInstance) return;
+  if (!['viewport', 'nearby', 'area'].includes(refs.searchMode)) return;
+
+  const minZoom = mobile ? EXACT_MARKER_MIN_ZOOM_MOBILE : EXACT_MARKER_MIN_ZOOM;
+  if (mapInstance.getZoom() < minZoom) return;
+
+  const bounds = mapInstance.getBounds();
+  const exactListings = refs.currentResults.filter(item => {
+    if (!hasExactLocation(item)) return false;
+    return bounds.contains(L.latLng(Number(item.latitude), Number(item.longitude)));
   });
-  $$('.map-search-area').forEach(btn => {
-    btn.addEventListener('click', () => refs._searchThisArea?.({ mobile: Boolean(btn.closest('#mapOverlay')) }));
+  if (!exactListings.length) return;
+
+  const layer = L.layerGroup();
+  const duplicateCounts = new Map();
+
+  exactListings.forEach(item => {
+    const lat = Number(item.latitude);
+    const lng = Number(item.longitude);
+    const key = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+    const duplicateIndex = duplicateCounts.get(key) || 0;
+    duplicateCounts.set(key, duplicateIndex + 1);
+    const [markerLat, markerLng] = getMarkerOffset(lat, lng, duplicateIndex, mapInstance.getZoom());
+    const radius = mobile ? 5.5 : 6.5;
+    const marker = L.circleMarker([markerLat, markerLng], {
+      radius,
+      className: 'listing-exact-marker',
+      color: '#ffffff',
+      weight: 2,
+      opacity: 1,
+      fillColor: '#ef4444',
+      fillOpacity: 0.95,
+      bubblingMouseEvents: true,
+    });
+
+    marker.on('click', () => {
+      trackMapMarkerClick({ areaName: null, markerType: 'listing', city: S.city, mode: refs.searchMode });
+      marker.closeTooltip();
+      openListingPreview(item, mapInstance, {
+        // Clear the layer, GPS and zoom controls, and on mobile the card carousel.
+        padding: mobile
+          ? { topLeft: [12, 64], bottomRight: [56, ($('#mapCarousel')?.offsetHeight || 0) + 12] }
+          : { topLeft: [24, 72], bottomRight: [72, 24] },
+        beforePan: () => markQuietMove(mapInstance),
+        onOpen: listing => {
+          if (mobile) {
+            cancelExactLocationPrefetch();
+            $('#mapOverlay').classList.add('hidden');
+          }
+          refs._openDrawer?.(listing);
+        },
+      });
+    });
+    marker.on('mouseover', () => {
+      marker.setStyle({ radius: radius + 1.5, fillColor: '#dc2626' });
+      syncListingCardHighlight(item.url, true);
+      prefetchPreviewPhotos(item);
+    });
+    marker.on('mouseout', () => {
+      marker.setStyle({ radius, fillColor: '#ef4444' });
+      syncListingCardHighlight(item.url, false);
+      cancelPreviewPrefetch();
+    });
+
+    if (!mobile) {
+      marker.bindTooltip(
+        `<div class="text-[11px] font-semibold text-gray-800">${esc(item.title || 'Rental')}</div><div class="text-[10px] text-gray-500">${esc(fmtPrice(item.price, item.price_text))}</div>`,
+        { direction: 'top', offset: [0, -8], opacity: 0.96 },
+      );
+    }
+
+    marker.addTo(layer);
   });
-  onPinsLoaded(() => {
-    updateMapSummary();
-    if (refs.mobileMap && isMobileOverlayVisible()) updateMobileCarousel();
-  });
+
+  layer.addTo(mapInstance);
+  refs[layerKey] = layer;
 }
 
-// ===== Pins: clicks, popups, list sync =====
-
-function cardFor(id) {
-  if (!id || !window.CSS?.escape) return null;
-  return document.querySelector(`#listingsGrid .card-wrap[data-zameen-id="${window.CSS.escape(String(id))}"]`);
-}
-
-function highlightCard(id, { scroll = false } = {}) {
-  $$('#listingsGrid .card-map-selected').forEach(card => card.classList.remove('card-map-selected'));
-  const card = cardFor(id);
-  if (!card) return;
-  card.classList.add('card-map-selected');
-  if (scroll) card.scrollIntoView({ block: 'nearest', behavior: motionAllowed() ? 'smooth' : 'auto' });
-}
-
-function bindPopupAction(popup, selector, handler) {
-  const el = popup.getElement()?.querySelector(selector);
-  if (el) el.addEventListener('click', handler);
-}
-
-function openPopup(map, latlng, html) {
-  const mobile = map === refs.mobileMap;
-  const sheetHeight = mobile ? ($('#mapSheet')?.offsetHeight || 0) : 0;
-  const popup = L.popup({
-    className: 'pin-popup',
-    maxWidth: 300,
-    minWidth: 250,
-    offset: [0, -32],
-    // Keep clear of the search control, the layer/GPS/zoom controls and,
-    // on mobile, the card rail at the bottom.
-    autoPanPaddingTopLeft: mobile ? [12, 64] : [24, 72],
-    autoPanPaddingBottomRight: mobile ? [56, sheetHeight + 12] : [72, 24],
-  }).setLatLng(latlng).setContent(html);
-  flagMove(map, 'quiet');
-  popup.openOn(map);
-  return popup;
-}
-
-async function openPinPopup(id, map, latlng) {
-  setSelectedListing(id);
-  highlightCard(id, { scroll: true });
-  const popup = openPopup(map, latlng, '<div class="pin-preview-loading">Loading…</div>');
-  popup.on('remove', () => {
-    if (getSelectedListing() === id) setSelectedListing(null);
-    highlightCard(null);
-  });
-  try {
-    const item = await getListingSummary(id);
-    if (!map.hasLayer(popup)) return;
-    const photos = loadListingPhotos(item);
-    const ready = loadedListingPhotos(item);
-    const openListing = () => {
-      map.closePopup(popup);
-      const full = loadedListingPhotos(item);
-      refs._openDrawer?.(full && full.length > 1 ? { ...item, images: full } : item);
-    };
-    flagMove(map, 'quiet');
-    popup.setContent(renderPreviewCard(ready ? { ...item, images: ready } : item, { loadingPhotos: !ready }));
-    bindGallery(popup.getElement(), { onPhotoClick: openListing });
-    bindPopupAction(popup, '[data-preview-open]', openListing);
-    if (ready) return;
-    const full = await photos;
-    if (!map.hasLayer(popup)) return;
-    replaceGallery(popup.getElement(), full, { onPhotoClick: openListing });
-  } catch {
-    if (map.hasLayer(popup)) popup.setContent('<div class="pin-preview-loading">Could not load this listing.</div>');
+function createIcon(name, active, count, mapInstance = refs.map || refs.mobileMap, variant = 'covered', showLabel = active) {
+  if (showLabel) {
+    const cls = active ? 'area-label area-label-active' : 'area-label';
+    const badge = count ? `<span class="area-badge">${count}</span>` : '';
+    return L.divIcon({
+      className: 'area-marker',
+      html: `<div class="${cls}" style="transform:translate(-50%,-50%)">${esc(name)}${badge}</div>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
   }
-}
 
-function openStackPopup(stack, map) {
-  const popup = openPopup(map, [stack.lat, stack.lng], renderStackCard(stack));
-  bindPopupAction(popup, '[data-stack-search]', () => {
-    map.closePopup(popup);
-    refs._searchStack?.(stack, { mobile: map === refs.mobileMap });
-  });
-}
-
-function onPinHover(id, on) {
-  const card = cardFor(id);
-  if (card) card.classList.toggle('card-map-active', on);
-}
-
-initMapPins({
-  onPinClick: (id, map, latlng) => {
-    if (map === refs.mobileMap) selectMobileListing(id);
-    openPinPopup(id, map, latlng);
-  },
-  onStackClick: openStackPopup,
-  onPinHover,
-});
-
-export function initHoverSync() {
-  const grid = $('#listingsGrid');
-  let current = null;
-  grid.addEventListener('mouseover', e => {
-    const card = e.target.closest('.card-wrap[data-zameen-id]');
-    const id = card?.dataset.zameenId || null;
-    if (id === current) return;
-    current = id;
-    setHoveredListing(id);
-  });
-  grid.addEventListener('mouseleave', () => {
-    current = null;
-    setHoveredListing(null);
-  });
-}
-
-// ===== Active area label =====
-
-function createAreaLabelIcon(name, count) {
-  const badge = count ? `<span class="area-badge">${count.toLocaleString()}</span>` : '';
+  if (variant === 'coverage') {
+    return L.divIcon({
+      className: 'area-marker',
+      html: '<div class="coverage-dot"></div>',
+      iconSize: [6, 6],
+      iconAnchor: [3, 3],
+    });
+  }
   return L.divIcon({
     className: 'area-marker',
-    html: `<div class="area-label area-label-active" style="transform:translate(-50%,-50%)">${esc(name)}${badge}</div>`,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
+    html: `<div class="${active ? 'area-dot area-dot-active' : 'area-dot area-dot-live'}"></div>`,
+    iconSize: [10, 10],
+    iconAnchor: [5, 5],
   });
-}
-
-function updateAreaLabel(map, refKey) {
-  if (!map) return;
-  const area = S.area ? refs.allAreas.find(a => a.name === S.area) : null;
-  if (!area?.lat || !area?.lng || map.getZoom() >= AREA_LABEL_HIDE_ZOOM) {
-    clearLayerRef(refKey);
-    return;
-  }
-  const icon = createAreaLabelIcon(area.name, refs.lastSearchTotal || 0);
-  if (!refs[refKey]) {
-    refs[refKey] = L.marker([area.lat, area.lng], {
-      icon, interactive: false, keyboard: false, zIndexOffset: AREA_LABEL_Z_INDEX,
-    }).addTo(map);
-  } else {
-    refs[refKey].setLatLng([area.lat, area.lng]);
-    refs[refKey].setIcon(icon);
-  }
 }
 
 function isSubArea(childName, parentName) {
@@ -564,83 +639,137 @@ function isSubArea(childName, parentName) {
   return cl !== pl && (cl.startsWith(pl + ' ') || cl.startsWith(pl + ' - '));
 }
 
-// ===== Framing =====
-
-function cityAreaPoints() {
-  const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
-  return refs.allAreas.filter(area => area.name !== cityName && area.lat && area.lng);
-}
-
-function getCityBounds() {
-  const points = cityAreaPoints();
-  if (!points.length) return null;
-  const lats = points.map(a => a.lat).sort((a, b) => a - b);
-  const lngs = points.map(a => a.lng).sort((a, b) => a - b);
-  const cut = Math.floor(points.length * CITY_FRAME_TRIM);
-  const last = points.length - 1 - cut;
-  return L.latLngBounds([lats[cut], lngs[cut]], [lats[last], lngs[last]]);
+function shouldShowAreaLabel(mapInstance, { active = false, hovered = false, preview = false } = {}) {
+  if (!active && !hovered && !preview) return false;
+  const zoom = mapInstance?.getZoom?.() ?? 0;
+  return zoom < AREA_LABEL_HIDE_ZOOM;
 }
 
 export function getVisibleAreaNames(mapInstance = refs.map) {
   if (!mapInstance || !refs.allAreas.length) return [];
   const bounds = mapInstance.getBounds();
-  return cityAreaPoints()
-    .filter(a => bounds.contains(L.latLng(a.lat, a.lng)))
+  const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
+  return refs.allAreas
+    .filter(a => a.name !== cityName && a.lat && a.lng && bounds.contains(L.latLng(a.lat, a.lng)))
     .map(a => a.name);
 }
 
 export function fitCityOverview(mapInstance = refs.map, { animate = false } = {}) {
   if (!mapInstance) return;
-  flagMove(mapInstance, 'programmatic');
   const bounds = getCityBounds();
   if (!bounds) {
     const cd = CITY_DEFAULTS[S.city];
     mapInstance.setView([cd.lat, cd.lng], cd.zoom, { animate });
     return;
   }
-  mapInstance.fitBounds(bounds, { animate: animate && motionAllowed(), maxZoom: 13, padding: [16, 16] });
+  mapInstance.fitBounds(bounds, {
+    animate,
+    maxZoom: CITY_DEFAULTS[S.city]?.zoom || 11,
+    padding: [24, 24],
+  });
+}
+
+export function updateMapMarkers() {
+  const map = refs.map;
+  if (!map) return;
+
+  refs.areaCounts = getAreaCounts();
+  const bounds = map.getBounds();
+  const active = S.area;
+
+  Object.entries(refs.markers).forEach(([name, marker]) => {
+    const count = refs.areaCounts[name] || 0;
+    const hasResults = count > 0;
+    const isActive = name === active;
+    const isHovered = refs.hoveredArea === name;
+    const isPreview = refs.previewArea === name;
+    const inView = bounds.contains(marker.getLatLng());
+    const showLabel = shouldShowAreaLabel(map, {
+      active: isActive,
+      hovered: isHovered,
+      preview: isPreview,
+    });
+    const variant = hasResults || isActive ? 'covered' : 'coverage';
+    marker.setZIndexOffset(showLabel ? AREA_LABEL_Z_INDEX : 0);
+
+    if (isActive) {
+      const zoom = map.getZoom();
+      if (zoom >= AREA_LABEL_HIDE_ZOOM) {
+        if (map.hasLayer(marker)) map.removeLayer(marker);
+        return;
+      }
+      const activeCount = refs.lastSearchTotal || count || 0;
+      marker.setIcon(createIcon(name, true, showLabel ? activeCount : 0, map, 'covered', showLabel));
+      if (!map.hasLayer(marker)) marker.addTo(map);
+      return;
+    }
+
+    if (!inView) {
+      if (map.hasLayer(marker)) map.removeLayer(marker);
+      return;
+    }
+
+    marker.setIcon(createIcon(name, false, showLabel ? count : 0, map, variant, showLabel));
+    if (!map.hasLayer(marker)) marker.addTo(map);
+  });
+
+  updateListingMarkers(map);
+  scheduleExactLocationPrefetch(map);
+}
+
+export function ensureMarkers(selectAreaFull) {
+  const map = refs.map;
+  if (!map || !refs.allAreas.length) return;
+
+  refs.allAreas.forEach(area => {
+    const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
+    if (!area.lat || !area.lng || area.name === cityName || refs.markers[area.name]) return;
+
+    const marker = L.marker([area.lat, area.lng], { icon: createIcon(area.name, false, 0, map, 'coverage', false) });
+    marker._areaName = area.name;
+    marker.on('click', () => {
+      handleAreaMarkerClick(area, selectAreaFull, map);
+    });
+    marker.on('mouseover', () => {
+      refs.hoveredArea = area.name;
+      updateMapMarkers();
+      $$(`[data-area="${area.name}"]`).forEach(card => card.classList.add('card-map-active'));
+    });
+    marker.on('mouseout', () => {
+      if (refs.hoveredArea === area.name) {
+        refs.hoveredArea = null;
+        updateMapMarkers();
+      }
+      $$(`[data-area="${area.name}"]`).forEach(card => card.classList.remove('card-map-active'));
+    });
+    refs.markers[area.name] = marker;
+  });
+
+  updateMapMarkers();
 }
 
 export function highlightMarker(name, flyTo) {
   const map = refs.map;
   if (!map) return;
+  refs.previewArea = null;
+  refs.hoveredArea = null;
   updateMapMarkers();
-  const area = name ? refs.allAreas.find(a => a.name === name) : null;
-  if (area?.lat && area?.lng && flyTo) {
+  if (name && refs.markers[name] && flyTo) {
     const hasSubs = refs.allAreas.some(a => isSubArea(a.name, name));
-    flagMove(map, 'programmatic');
-    map.flyTo([area.lat, area.lng], hasSubs ? 13 : 14, { duration: 0.8, animate: motionAllowed() });
+    map.flyTo(refs.markers[name].getLatLng(), hasSubs ? 13 : 14, { duration: 0.8 });
   }
 }
 
 export function resetMapView() {
-  if (refs.map) fitCityOverview(refs.map, { animate: true });
+  const map = refs.map;
+  if (!map) return;
+  fitCityOverview(map, { animate: true });
 }
 
-/** City switch: drop the old city's label, popup and selection, then frame the new city. */
-export function resetMapsForCity() {
-  [refs.map, refs.mobileMap].forEach(map => map?.closePopup());
-  clearLayerRef('areaLabelMarker');
-  clearLayerRef('mobileAreaLabelMarker');
-  setSelectedListing(null);
-  setHoveredListing(null);
-  mobileExtraItem = null;
-  if (refs.map) fitCityOverview(refs.map);
-  if (refs.mobileMap) fitCityOverview(refs.mobileMap);
-}
-
-// ===== Desktop map =====
-
-export function updateMapMarkers() {
-  if (!refs.map) return;
-  updateAreaLabel(refs.map, 'areaLabelMarker');
-  renderPins(refs.map);
-  updateMapSummary();
-}
-
-// Kept for callers that predate pins: area markers are now just the active label.
-export function ensureMarkers() {
+function syncDesktopViewport() {
+  refs.hoveredArea = null;
   updateMapMarkers();
+  if (!isQuietMove(refs.map)) refs._onViewportChange?.();
 }
 
 export function initMap(selectAreaFull, onViewportChange, openDrawer) {
@@ -650,287 +779,174 @@ export function initMap(selectAreaFull, onViewportChange, openDrawer) {
 
   const cd = CITY_DEFAULTS[S.city];
   ensureMapLayerState();
-  refs.map = L.map('mapContainer', { zoomControl: false, maxZoom: 19 }).setView([cd.lat, cd.lng], cd.zoom);
+  refs.map = L.map('mapContainer', { zoomControl: false }).setView([cd.lat, cd.lng], cd.zoom);
   applyBaseLayerAfterPageLoad(refs.map, 'mapBaseLayer');
   refs.map.addControl(new (createLayerToggleControl())());
   refs.map.addControl(new (createGpsControl(refs.map))());
   L.control.zoom({ position: 'topright' }).addTo(refs.map);
 
   setTimeout(() => refs.map?.invalidateSize(), 100);
-  watchMoves(refs.map, kind => {
-    updateMapMarkers();
-    refs._onViewportChange?.({ kind });
-  });
   fitCityOverview(refs.map);
-  updateMapMarkers();
+  ensureMarkers(selectAreaFull);
   refreshUserLocationOverlays();
   syncLayerToggleButtons();
+
+  refs.map.on('dragstart', () => { refs.map._zrQuietUntil = 0; });
+  refs.map.on('moveend', syncDesktopViewport);
+  refs.map.on('zoomend', syncDesktopViewport);
 
   if (window.ResizeObserver) {
     new ResizeObserver(() => { if (refs.map) refs.map.invalidateSize(); }).observe($('#mapPanel'));
   }
 }
 
-// ===== Mobile map overlay =====
-
-let mobileExtraItem = null;
-let mobileHistoryPushed = false;
-let carouselObserver = null;
-
-function isMobileOverlayVisible() {
-  const overlay = $('#mapOverlay');
-  return Boolean(overlay && !overlay.classList.contains('hidden'));
-}
-
-export function isMobileMapOpen() {
-  return isMobileOverlayVisible();
-}
-
-function syncOverlayTop() {
-  const shell = $('#filtersShell');
-  const top = shell ? Math.max(0, Math.round(shell.getBoundingClientRect().bottom)) : 0;
-  document.documentElement.style.setProperty('--map-overlay-top', `${top}px`);
-}
-
-function itemId(item) {
-  return item?.zameen_id ? String(item.zameen_id) : '';
-}
-
-function renderMobileMapCard(item, { extra = false } = {}) {
-  const id = itemId(item);
+function renderMobileMapCard(item) {
   const img = item.image_url;
-  const facts = [
-    item.bedrooms ? `<span>${bedIcon('w-3 h-3')}${item.bedrooms}</span>` : '',
-    item.bathrooms ? `<span>${bathIcon('w-3 h-3')}${item.bathrooms}</span>` : '',
-    item.area_size ? `<span>${esc(item.area_size)}</span>` : '',
-  ].filter(Boolean).join('');
-  return `<div class="map-card${extra ? ' is-extra' : ''}${id && id === getSelectedListing() ? ' is-selected' : ''}" role="button" tabindex="0" data-mobile-card-id="${escA(id)}" data-mobile-card-url="${escA(item.url || '')}">
-    ${img ? `<img class="map-card-img" src="${escA(img)}" alt="" loading="lazy">` : '<div class="map-card-img img-fallback"></div>'}
-    <div class="map-card-body">
-      <div class="map-card-price">${esc(fmtPrice(item.price, item.price_text))}</div>
-      <div class="map-card-title">${esc(item.title || 'Rental')}</div>
-      ${item.location ? `<div class="map-card-loc">${esc(item.location)}</div>` : ''}
-      ${facts ? `<div class="map-card-facts">${facts}</div>` : ''}
+  const distanceLabel = formatDistance(item.distance_km, { approximate: item.is_distance_approximate });
+  return `<div class="shrink-0 w-72 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" style="scroll-snap-align:start" data-mobile-card-url="${escA(item.url || '')}">
+    ${img ? `<img class="w-full h-36 object-cover" src="${escA(img)}" alt="" loading="lazy">` : `<div class="w-full h-36 bg-gray-100 flex items-center justify-center text-3xl text-gray-300">&#x1f3e0;</div>`}
+    <div class="p-3">
+      <div class="text-sm font-bold text-gray-800">${esc(fmtPrice(item.price, item.price_text))}</div>
+      <div class="text-xs text-gray-500 line-clamp-1 mt-0.5">${esc(item.title || 'Rental')}</div>
+      ${distanceLabel ? `<div class="mt-1 text-[11px] font-semibold text-brand-600">${esc(distanceLabel)}</div>` : ''}
+      <div class="flex gap-2.5 mt-1.5 text-[11px] text-gray-400">
+        ${item.bedrooms ? `<span>${item.bedrooms} bed</span>` : ''}
+        ${item.bathrooms ? `<span>${item.bathrooms} bath</span>` : ''}
+        ${item.area_size ? `<span>${esc(item.area_size)}</span>` : ''}
+      </div>
     </div>
   </div>`;
 }
 
-function carouselItems() {
-  const items = refs.currentResults.slice();
-  if (mobileExtraItem && !items.some(r => itemId(r) === itemId(mobileExtraItem))) items.unshift(mobileExtraItem);
-  return items;
-}
-
-export function updateMobileCarousel() {
+export function updateMobileCarousel(items = refs.currentResults) {
   const carousel = $('#mapCarousel');
   if (!carousel) return;
-  const items = carouselItems();
   if (!items.length) {
-    carousel.innerHTML = '';
     carousel.classList.add('hidden');
-    carousel.classList.remove('flex');
+    carousel.innerHTML = '';
     return;
   }
-  const more = refs.lastSearchTotal > refs.currentResults.length
-    ? '<button type="button" class="map-card map-card-more" data-carousel-more>Load more</button>'
-    : '';
-  carousel.innerHTML = items.map(item => renderMobileMapCard(item, { extra: item === mobileExtraItem })).join('') + more;
+  carousel.innerHTML = items.slice(0, 10).map(renderMobileMapCard).join('');
   carousel.classList.remove('hidden');
   carousel.classList.add('flex');
-  observeCarousel(carousel);
 }
 
-function observeCarousel(carousel) {
-  carouselObserver?.disconnect();
-  if (!window.IntersectionObserver) return;
-  carouselObserver = new IntersectionObserver(entries => {
-    const visible = entries.filter(e => e.isIntersecting && e.intersectionRatio >= 0.6);
-    if (!visible.length || !isMobileOverlayVisible()) return;
-    const id = visible[0].target.dataset.mobileCardId;
-    if (!id || id === getSelectedListing()) return;
-    selectCarouselCard(id);
-  }, { root: carousel, threshold: [0.6] });
-  carousel.querySelectorAll('[data-mobile-card-id]').forEach(card => carouselObserver.observe(card));
-}
-
-function selectCarouselCard(id) {
-  setSelectedListing(id);
-  $$('#mapCarousel .map-card').forEach(card => card.classList.toggle('is-selected', card.dataset.mobileCardId === id));
-  const map = refs.mobileMap;
-  const item = carouselItems().find(r => itemId(r) === id);
-  const lat = Number(item?.latitude);
-  const lng = Number(item?.longitude);
-  if (!map || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
-  if (!map.getBounds().pad(-0.15).contains([lat, lng])) {
-    flagMove(map, 'quiet');
-    map.panTo([lat, lng], { animate: motionAllowed() });
-  }
-}
-
-function scrollCarouselTo(id) {
-  const carousel = $('#mapCarousel');
-  const card = carousel && window.CSS?.escape
-    ? carousel.querySelector(`[data-mobile-card-id="${window.CSS.escape(id)}"]`)
-    : null;
-  if (!card) return;
-  carousel.scrollTo({ left: card.offsetLeft - 12, behavior: motionAllowed() ? 'smooth' : 'auto' });
-}
-
-async function selectMobileListing(id) {
-  setCarouselCollapsed(false);
-  if (!refs.currentResults.some(r => itemId(r) === id)) {
-    try {
-      mobileExtraItem = await getListingSummary(id);
-    } catch {
-      showToast('Could not load this listing.', { tone: 'error' });
-      return;
-    }
-    updateMobileCarousel();
-  }
-  selectCarouselCard(id);
-  scrollCarouselTo(id);
-}
-
-function setCarouselCollapsed(collapsed) {
-  const overlay = $('#mapOverlay');
-  overlay?.classList.toggle('cards-collapsed', collapsed);
-  const btn = $('#mapCardsToggle');
-  if (btn) {
-    btn.setAttribute('aria-expanded', String(!collapsed));
-    btn.setAttribute('aria-label', collapsed ? 'Show listing cards' : 'Hide listing cards');
-  }
-}
-
-export function updateMobileMarkers() {
+export function updateMobileMarkers(selectAreaFull) {
   const map = refs.mobileMap;
   if (!map) return;
-  updateAreaLabel(map, 'mobileAreaLabelMarker');
-  renderPins(map);
-  updateMapSummary();
-}
+  if (refs.mobileMarkerLayer) refs.mobileMarkerLayer.remove();
 
-function ensureMobileMap() {
-  if (refs.mobileMap) return refs.mobileMap;
-  const cd = CITY_DEFAULTS[S.city];
-  ensureMapLayerState();
-  const map = L.map('mapContainerMobile', { zoomControl: false, maxZoom: 19 }).setView([cd.lat, cd.lng], cd.zoom);
-  refs.mobileMap = map;
-  applyBaseLayer(map, 'mobileMapBaseLayer', refs.mapLayer);
-  map.addControl(new (createLayerToggleControl())());
-  map.addControl(new (createGpsControl(map))());
-  L.control.zoom({ position: 'topright' }).addTo(map);
-  watchMoves(map, kind => {
-    updateMobileMarkers();
-    if (isMobileOverlayVisible()) refs._onMobileViewportChange?.({ kind, mobile: true });
+  const layer = L.layerGroup();
+  const counts = getAreaCounts();
+  const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
+  const bounds = map.getBounds();
+
+  refs.allAreas.forEach(area => {
+    if (!area.lat || !area.lng || area.name === cityName || !bounds.contains(L.latLng(area.lat, area.lng))) return;
+    const count = counts[area.name] || 0;
+    const isActive = area.name === S.area;
+    if (isActive && map.getZoom() >= AREA_LABEL_HIDE_ZOOM) return;
+    const showLabel = shouldShowAreaLabel(map, {
+      active: isActive,
+      preview: refs.previewArea === area.name,
+    });
+    const variant = count || isActive ? 'covered' : 'coverage';
+    const icon = createIcon(area.name, isActive, showLabel ? count : 0, map, variant, showLabel);
+    L.marker([area.lat, area.lng], { icon, zIndexOffset: showLabel ? AREA_LABEL_Z_INDEX : 0 }).on('click', () => {
+      handleAreaMarkerClick(area, selectAreaFull, map, { mobile: true });
+    }).addTo(layer);
   });
-  fitCityOverview(map);
-  refreshUserLocationOverlays();
-  syncLayerToggleButtons();
-  return map;
-}
 
-function openMapOverlay() {
-  refs._closeOtherOverlays?.('mapOverlay');
-  syncOverlayTop();
-  document.body.classList.add('map-open');
-  $('#mapOverlay').classList.remove('hidden');
-  try {
-    history.pushState({ ...(history.state || {}), zrMap: true }, '');
-    mobileHistoryPushed = true;
-  } catch {
-    mobileHistoryPushed = false;
-  }
-  track('map_opened', { surface: 'mobile', mode: refs.searchMode });
-
-  const map = ensureMobileMap();
-  const area = S.area ? refs.allAreas.find(a => a.name === S.area) : null;
-  if (area?.lat && area?.lng) {
-    flagMove(map, 'programmatic');
-    map.setView([area.lat, area.lng], 14);
-  } else if (refs.searchMode === 'nearby' && refs.userLocation) {
-    flagMove(map, 'programmatic');
-    map.setView([refs.userLocation.lat, refs.userLocation.lng], 14);
-  }
-  setTimeout(() => {
-    map.invalidateSize();
-    updateMobileMarkers();
-    updateMobileCarousel();
-    if (!S.area && refs.searchMode !== 'nearby') refs._onMobileViewportChange?.({ kind: 'programmatic', mobile: true });
-  }, 100);
-}
-
-function closeMapOverlay({ fromPopState = false } = {}) {
-  if (!isMobileOverlayVisible()) return;
-  refs.mobileMap?.closePopup();
-  $('#mapOverlay').classList.add('hidden');
-  document.body.classList.remove('map-open');
-  showSearchAreaPill(false);
-  setSelectedListing(null);
-  mobileExtraItem = null;
-  if (!fromPopState && mobileHistoryPushed) {
-    mobileHistoryPushed = false;
-    history.back();
-  } else {
-    mobileHistoryPushed = false;
-  }
+  layer.addTo(map);
+  refs.mobileMarkerLayer = layer;
+  updateListingMarkers(map, { mobile: true });
+  scheduleExactLocationPrefetch(map, { mobile: true });
 }
 
 export function initMobileMap(selectAreaFull, openDrawer, onViewportChange) {
   refs._onMobileViewportChange = onViewportChange;
   refs._openDrawer = openDrawer;
   refs._selectAreaFull = selectAreaFull;
-  initMapChrome();
 
-  $('#mapFab').addEventListener('click', openMapOverlay);
-  $('#mapOverlayClose').addEventListener('click', () => closeMapOverlay());
-  $('#mapCardsToggle')?.addEventListener('click', () => {
-    setCarouselCollapsed(!$('#mapOverlay').classList.contains('cards-collapsed'));
+  $('#mapFab').addEventListener('click', () => {
+    refs._closeOtherOverlays?.('mapOverlay');
+    $('#mapOverlay').classList.remove('hidden');
+
+    if (!refs.mobileMap) {
+      const cd = CITY_DEFAULTS[S.city];
+      ensureMapLayerState();
+      refs.mobileMap = L.map('mapContainerMobile', { zoomControl: false }).setView([cd.lat, cd.lng], cd.zoom);
+      applyBaseLayer(refs.mobileMap, 'mobileMapBaseLayer', refs.mapLayer);
+      refs.mobileMap.addControl(new (createLayerToggleControl())());
+      refs.mobileMap.addControl(new (createGpsControl(refs.mobileMap))());
+      L.control.zoom({ position: 'topright' }).addTo(refs.mobileMap);
+      fitCityOverview(refs.mobileMap);
+      refreshUserLocationOverlays();
+      syncLayerToggleButtons();
+      refs.mobileMap.on('dragstart', () => { refs.mobileMap._zrQuietUntil = 0; });
+      refs.mobileMap.on('moveend', () => {
+        if (!isMobileOverlayVisible() || isQuietMove(refs.mobileMap)) return;
+        refs._onMobileViewportChange?.();
+      });
+      refs.mobileMap.on('zoomend', () => {
+        updateMobileMarkers(selectAreaFull);
+        if (isMobileOverlayVisible() && !isQuietMove(refs.mobileMap)) refs._onMobileViewportChange?.();
+      });
+    }
+
+    setTimeout(() => {
+      refs.mobileMap?.invalidateSize();
+      // Trigger viewport search after map has laid out correctly
+      setTimeout(() => {
+        updateMobileMarkers(selectAreaFull);
+        if (!S.area && isMobileOverlayVisible()) refs._onMobileViewportChange?.();
+      }, 50);
+    }, 100);
+    if (S.area && refs.markers[S.area]) refs.mobileMap.setView(refs.markers[S.area].getLatLng(), 14);
+    updateMobileCarousel(refs.currentResults);
   });
 
-  const carousel = $('#mapCarousel');
-  const openCard = target => {
-    if (target.closest('[data-carousel-more]')) {
-      refs._loadMoreResults?.({ mobile: true });
-      return;
-    }
-    const card = target.closest('[data-mobile-card-id]');
+  $('#mapCarousel').addEventListener('click', e => {
+    const card = e.target.closest('[data-mobile-card-url]');
     if (!card) return;
-    const item = carouselItems().find(r => itemId(r) === card.dataset.mobileCardId)
-      || refs.currentResults.find(r => (r.url || '') === card.dataset.mobileCardUrl);
-    // The drawer opens over the map, so Back returns here.
-    if (item) openDrawer(item);
-  };
-  carousel.addEventListener('click', e => openCard(e.target));
-  carousel.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      openCard(e.target);
+    const idx = [...$('#mapCarousel').children].indexOf(card);
+    if (refs.currentResults[idx]) {
+      cancelExactLocationPrefetch();
+      $('#mapOverlay').classList.add('hidden');
+      openDrawer(refs.currentResults[idx]);
     }
   });
 
-  window.addEventListener('popstate', e => {
-    if (isMobileOverlayVisible() && !e.state?.zrMap) closeMapOverlay({ fromPopState: true });
-  });
-  window.addEventListener('resize', () => { if (isMobileOverlayVisible()) syncOverlayTop(); });
-
+  function closeMapOverlay() {
+    cancelExactLocationPrefetch();
+    $('#mapOverlay').classList.add('hidden');
+  }
+  $('#mapOverlayClose').addEventListener('click', closeMapOverlay);
   refs._registerOverlay?.({
     name: 'mapOverlay',
-    isOpen: isMobileOverlayVisible,
-    close: () => closeMapOverlay(),
+    isOpen: () => !$('#mapOverlay').classList.contains('hidden'),
+    close: closeMapOverlay,
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && isMobileOverlayVisible() && !$('#drawer').classList.contains('drawer-open')) closeMapOverlay();
+    if (e.key === 'Escape' && !$('#mapOverlay').classList.contains('hidden')) closeMapOverlay();
   });
 }
 
-/** After a search: refresh the pins' view of the list, labels and the mobile cards. */
-export function syncMapsWithResults() {
-  mobileExtraItem = mobileExtraItem && refs.currentResults.some(r => itemId(r) === itemId(mobileExtraItem))
-    ? null
-    : mobileExtraItem;
-  refreshPinStates();
-  updateMapMarkers();
-  if (refs.mobileMap) updateMobileMarkers();
-  if (isMobileOverlayVisible()) updateMobileCarousel();
-}
+export function initHoverSync() {
+  const grid = $('#listingsGrid');
+  grid.addEventListener('mouseover', e => {
+    const card = e.target.closest('[data-area]');
+    if (!card || !refs.map) return;
+    refs.hoveredArea = card.dataset.area;
+    updateMapMarkers();
+  });
 
+  grid.addEventListener('mouseout', e => {
+    const card = e.target.closest('[data-area]');
+    if (!card || !refs.map) return;
+    if (refs.hoveredArea === card.dataset.area) {
+      refs.hoveredArea = null;
+      updateMapMarkers();
+    }
+  });
+}

@@ -7,7 +7,6 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
@@ -22,7 +21,6 @@ APP_VERSION = "1.1.0"
 
 app = FastAPI(title="ZameenRentals", version=APP_VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
-app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 from app.cache import limiter as api_limiter  # noqa: E402
 app.state.limiter = api_limiter

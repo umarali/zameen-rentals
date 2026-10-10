@@ -9,7 +9,6 @@ import {
   FAV_FILLED_SVG, FAV_HOLLOW_SVG, HIDE_SVG, COMPARE_SVG,
 } from './cards.js';
 import { createBaseLayer } from './map-layers.js';
-import { sharedPinKind } from './map-pins.js';
 import { isFavorite, addFavorite, removeFavorite, addHidden } from './personalization.js';
 import { has as compareHas, toggle as compareToggle, openModal as openCompareModal } from './compare.js';
 
@@ -55,11 +54,12 @@ function getDrawerMapTarget(item, area) {
     && Number.isFinite(Number(item.latitude))
     && Number.isFinite(Number(item.longitude))
   ) {
-    const lat = Number(item.latitude);
-    const lng = Number(item.longitude);
-    // Many listings share a block or society's pin; that is not the house itself.
-    const shared = sharedPinKind(lat, lng);
-    return { lat, lng, zoom: shared === 'block' ? 15 : 16, exact: shared !== 'block', shared };
+    return {
+      lat: Number(item.latitude),
+      lng: Number(item.longitude),
+      zoom: 16,
+      exact: true,
+    };
   }
   if (area?.lat && area?.lng) {
     return {
@@ -70,13 +70,6 @@ function getDrawerMapTarget(item, area) {
     };
   }
   return null;
-}
-
-function locationNote(target) {
-  if (target.shared === 'building') return 'Building pin, shared by the flats listed there';
-  if (target.shared === 'shared') return 'Listing pin, shared with a few other listings';
-  if (target.exact) return 'Exact listing pin';
-  return target.shared ? 'Block or society pin: the exact house isn’t marked' : 'Approximate area location';
 }
 
 function renderDrawerMiniMap(target) {
@@ -184,7 +177,7 @@ export function openDrawer(item, selectAreaFull) {
         <div class="skeleton h-10 w-full mt-4"></div>
       </div>
     </div>
-    ${mapTarget ? `<div class="drawer-divider"></div><div class="mb-3"><div class="text-sm font-semibold text-gray-800">Location</div><div id="drawerLocationMeta" class="text-xs text-gray-500 mt-1">${locationNote(mapTarget)}</div></div><div id="drawerMiniMap" class="w-full h-44 rounded-xl overflow-hidden mb-1"></div>` : ''}
+    ${mapTarget ? `<div class="drawer-divider"></div><div class="mb-3"><div class="text-sm font-semibold text-gray-800">Location</div><div id="drawerLocationMeta" class="text-xs text-gray-500 mt-1">${mapTarget.exact ? 'Exact listing pin' : 'Approximate area location'}</div></div><div id="drawerMiniMap" class="w-full h-44 rounded-xl overflow-hidden mb-1"></div>` : ''}
     ${nearbyHtml ? `<div class="drawer-divider"></div>${nearbyHtml}` : ''}
     <div class="h-20"></div>
     <div class="drawer-contact-bar">
@@ -256,7 +249,7 @@ async function fetchDrawerDetail(item, existingImgs) {
     });
     const locationMeta = document.getElementById('drawerLocationMeta');
     if (locationMeta && mapTarget) {
-      locationMeta.textContent = locationNote(mapTarget);
+      locationMeta.textContent = mapTarget.exact ? 'Exact listing pin' : 'Approximate area location';
       setTimeout(() => renderDrawerMiniMap(mapTarget), 60);
     }
 

@@ -1012,77 +1012,6 @@ def search_exact_listings_in_bounds(*, city="lahore", south, west, north, east,
     }
 
 
-# Listings at the same point are drawn as one "stack" so their pins don't hide
-# each other. Small stacks are flats in one building or a repost; large ones are
-# usually Zameen's default pin for a whole block or society (one Lahore
-# coordinate held 637 listings in October 2026), which the map marks approximate.
-MAP_PIN_STACK_MIN = 2
-_MAP_PIN_PRECISION = 5  # decimal places; ~1 m
-_FLAT_LABEL = PROPERTY_TYPES["apartment"]["label"]
-
-
-def get_map_pins(*, city="lahore", area=None, property_type=None, bedrooms=None,
-                 bedrooms_max=None, price_min=None, price_max=None,
-                 size_marla_min=None, size_marla_max=None, furnished=None):
-    """Every exact-coordinate listing matching the filters, in a compact form for the map.
-
-    Returns single pins as [zameen_id, lat, lng, price, bedrooms, type_index]
-    (type_index points into `types`) and coordinates shared by
-    MAP_PIN_STACK_MIN or more listings as stacks
-    [lat, lng, count, area_name, min_price, max_price, is_building].
-    is_building is 1 when every listing at the point is a flat (one apartment
-    building); otherwise the point is a block or society pin and the listings'
-    own locations are unknown.
-    """
-    conn = _get_conn()
-    conditions, params = _listing_filter_clauses(
-        city=city, area=area, property_type=property_type,
-        bedrooms=bedrooms, bedrooms_max=bedrooms_max,
-        price_min=price_min, price_max=price_max,
-        size_marla_min=size_marla_min, size_marla_max=size_marla_max,
-        furnished=furnished, exact_only=True, geocoded_only=True,
-    )
-    conditions.append("zameen_id IS NOT NULL")
-    rows = conn.execute(
-        f"""SELECT zameen_id, latitude, longitude, price, bedrooms, property_type, area_name
-            FROM listings WHERE {' AND '.join(conditions)}""",
-        params,
-    ).fetchall()
-
-    groups = {}
-    for row in rows:
-        lat = round(row["latitude"], _MAP_PIN_PRECISION)
-        lng = round(row["longitude"], _MAP_PIN_PRECISION)
-        groups.setdefault((lat, lng), []).append(row)
-
-    types, type_index = [], {}
-    pins, stacks = [], []
-    for (lat, lng), members in groups.items():
-        if len(members) >= MAP_PIN_STACK_MIN:
-            prices = [m["price"] for m in members if m["price"]]
-            areas = [m["area_name"] for m in members if m["area_name"]]
-            area_name = max(set(areas), key=areas.count) if areas else None
-            is_building = all(m["property_type"] == _FLAT_LABEL for m in members)
-            stacks.append([lat, lng, len(members), area_name,
-                           min(prices) if prices else None, max(prices) if prices else None,
-                           1 if is_building else 0])
-            continue
-        for m in members:
-            label = m["property_type"] or ""
-            if label not in type_index:
-                type_index[label] = len(types)
-                types.append(label)
-            pins.append([str(m["zameen_id"]), lat, lng, m["price"], m["bedrooms"], type_index[label]])
-
-    return {
-        "total": len(rows),
-        "pins": pins,
-        "stacks": stacks,
-        "types": types,
-        "stack_min": MAP_PIN_STACK_MIN,
-    }
-
-
 def get_nearby_enrichment_candidates(*, city="lahore", lat, lng, radius_km=5,
                                      area=None, property_type=None, bedrooms=None,
                                      bedrooms_max=None, price_min=None, price_max=None,
@@ -1220,19 +1149,6 @@ def _row_to_listing(row):
     if "_repost_count" in row.keys() and row["_repost_count"] and row["_repost_count"] > 1:
         d["repost_count"] = row["_repost_count"]
     return d
-
-
-def get_listing_summary(zameen_id):
-    """One listing in the same shape as a search result, or None if unknown."""
-    conn = _get_conn()
-    row = conn.execute("SELECT * FROM listings WHERE zameen_id = ?", (str(zameen_id),)).fetchone()
-    if not row:
-        return None
-    listing = attach_tags([_row_to_listing(row)])[0]
-    listing["city"] = row["city"]
-    listing["area_name"] = row["area_name"]
-    listing["is_active"] = bool(row["is_active"])
-    return listing
 
 
 def get_listing_by_zameen_id(zameen_id):
