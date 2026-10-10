@@ -12,6 +12,7 @@ import {
   persistMapLayer,
   sanitizeMapLayerKey,
 } from './map-layers.js';
+import { openListingPreview, prefetchPreviewPhotos, cancelPreviewPrefetch } from './map-preview.js';
 
 const EXACT_MARKER_MIN_ZOOM = 11;
 const EXACT_MARKER_MIN_ZOOM_MOBILE = 12;
@@ -22,6 +23,8 @@ const USER_LOCATION_STORAGE_KEY = 'rk_userLocation';
 const USER_LOCATION_TTL_MS = 30 * 60 * 1000;
 const AREA_LABEL_Z_INDEX = 1400;
 const AREA_LABEL_HIDE_ZOOM = 13;
+// A pin preview nudging the map into view is not the user moving it.
+const QUIET_MOVE_MS = 1200;
 
 let exactPrefetchTimer = null;
 let exactPrefetchController = null;
@@ -29,6 +32,14 @@ let exactPrefetchSession = 0;
 const exactPrefetchPending = new Set();
 const exactPrefetchMissing = new Set();
 const exactPrefetchCooldown = new Map();
+
+function markQuietMove(map) {
+  if (map) map._zrQuietUntil = Date.now() + QUIET_MOVE_MS;
+}
+
+function isQuietMove(map) {
+  return Boolean(map && (map._zrQuietUntil || 0) > Date.now());
+}
 
 function notify(message, options) {
   if (refs._notify) refs._notify(message, options);
@@ -506,7 +517,6 @@ function handleAreaMarkerClick(area, selectAreaFull, mapInstance = refs.map, { m
 
   showAreaPreview(area.name);
   updateMapMarkers();
-  refs._refreshCoverageUI?.();
   if (mobile) updateMobileMarkers(selectAreaFull);
 
   const targetZoom = Math.max(mapInstance?.getZoom?.() ?? 11, 13);
@@ -553,19 +563,31 @@ function updateListingMarkers(mapInstance = refs.map, { mobile = false } = {}) {
 
     marker.on('click', () => {
       trackMapMarkerClick({ areaName: null, markerType: 'listing', city: S.city, mode: refs.searchMode });
-      if (mobile) {
-        cancelExactLocationPrefetch();
-        $('#mapOverlay').classList.add('hidden');
-      }
-      refs._openDrawer?.(item);
+      marker.closeTooltip();
+      openListingPreview(item, mapInstance, {
+        // Clear the layer, GPS and zoom controls, and on mobile the card carousel.
+        padding: mobile
+          ? { topLeft: [12, 64], bottomRight: [56, ($('#mapCarousel')?.offsetHeight || 0) + 12] }
+          : { topLeft: [24, 72], bottomRight: [72, 24] },
+        beforePan: () => markQuietMove(mapInstance),
+        onOpen: listing => {
+          if (mobile) {
+            cancelExactLocationPrefetch();
+            $('#mapOverlay').classList.add('hidden');
+          }
+          refs._openDrawer?.(listing);
+        },
+      });
     });
     marker.on('mouseover', () => {
       marker.setStyle({ radius: radius + 1.5, fillColor: '#dc2626' });
       syncListingCardHighlight(item.url, true);
+      prefetchPreviewPhotos(item);
     });
     marker.on('mouseout', () => {
       marker.setStyle({ radius, fillColor: '#ef4444' });
       syncListingCardHighlight(item.url, false);
+      cancelPreviewPrefetch();
     });
 
     if (!mobile) {
@@ -747,7 +769,7 @@ export function resetMapView() {
 function syncDesktopViewport() {
   refs.hoveredArea = null;
   updateMapMarkers();
-  refs._onViewportChange?.();
+  if (!isQuietMove(refs.map)) refs._onViewportChange?.();
 }
 
 export function initMap(selectAreaFull, onViewportChange, openDrawer) {
@@ -769,6 +791,7 @@ export function initMap(selectAreaFull, onViewportChange, openDrawer) {
   refreshUserLocationOverlays();
   syncLayerToggleButtons();
 
+  refs.map.on('dragstart', () => { refs.map._zrQuietUntil = 0; });
   refs.map.on('moveend', syncDesktopViewport);
   refs.map.on('zoomend', syncDesktopViewport);
 
@@ -860,13 +883,14 @@ export function initMobileMap(selectAreaFull, openDrawer, onViewportChange) {
       fitCityOverview(refs.mobileMap);
       refreshUserLocationOverlays();
       syncLayerToggleButtons();
+      refs.mobileMap.on('dragstart', () => { refs.mobileMap._zrQuietUntil = 0; });
       refs.mobileMap.on('moveend', () => {
-        if (!isMobileOverlayVisible()) return;
+        if (!isMobileOverlayVisible() || isQuietMove(refs.mobileMap)) return;
         refs._onMobileViewportChange?.();
       });
       refs.mobileMap.on('zoomend', () => {
         updateMobileMarkers(selectAreaFull);
-        if (isMobileOverlayVisible()) refs._onMobileViewportChange?.();
+        if (isMobileOverlayVisible() && !isQuietMove(refs.mobileMap)) refs._onMobileViewportChange?.();
       });
     }
 

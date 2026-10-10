@@ -51,6 +51,39 @@ test.describe("Mobile Map Overlay", () => {
     expect(Math.abs(box.width - viewport.width)).toBeLessThanOrEqual(1);
     expect(Math.abs(box.height - viewport.height)).toBeLessThanOrEqual(1);
   });
+  test("tapping an exact pin opens the photo preview above the cards", async ({ page }) => {
+    await page.route("**/api/map-search**", route => route.fulfill({
+      json: {
+        total: 1, page: 1, per_page: 25, source: "local", mode: "viewport", scope: "exact_bounds",
+        visible_areas: 1, area_totals: { Gulberg: 1 }, attempted_exact_bounds: true, exact_bounds_total: 1,
+        results: [{
+          zameen_id: "7700031", title: "Tapped pin house", price: 65000, bedrooms: 2,
+          url: "https://www.zameen.com/Property/test-7700031-1-1.html",
+          image_url: "/static/favicon-512.png", location: "Gulberg, Lahore",
+          latitude: 31.5204, longitude: 74.3587, location_source: "listing_exact", has_exact_geography: true,
+        }],
+      },
+    }));
+    await page.route("**/api/listing-detail**", route => route.fulfill({
+      json: { images: ["/static/favicon-512.png?1", "/static/favicon-512.png?2"], has_exact_geography: true, source: "local" },
+    }));
+    await page.locator("#mapFab").click();
+    await expect(page.locator("#mapOverlay")).toBeVisible();
+    const pin = page.locator("#mapContainerMobile .listing-exact-marker");
+    for (let i = 0; i < 4 && !(await pin.count()); i++) {
+      await page.locator("#mapContainerMobile .leaflet-control-zoom-in").click();
+      await page.waitForTimeout(700);
+    }
+    await pin.first().click({ force: true });
+    const popup = page.locator("#mapOverlay .pin-popup");
+    await expect(popup).toContainText("Tapped pin house");
+    await expect(popup.locator("[data-gallery-count]")).toHaveText("1 / 2");
+    const cardBox = await popup.locator(".pin-preview").boundingBox();
+    const carouselBox = await page.locator("#mapCarousel").boundingBox();
+    expect(cardBox.y + cardBox.height).toBeLessThanOrEqual(carouselBox.y + 2);
+    await popup.locator("[data-preview-open]").click();
+    await expect(page.locator("#drawer")).toHaveClass(/drawer-open/);
+  });
 });
 
 test.describe("Map FAB Desktop Behavior", () => {

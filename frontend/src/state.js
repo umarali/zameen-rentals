@@ -102,7 +102,6 @@ export const refs = {
   hoveredArea: null,
   previewArea: null,
   _openDrawer: null,
-  _refreshCoverageUI: null,
   _notify: null,
   _hideListing: null,
   _lastTriggeredBy: null,

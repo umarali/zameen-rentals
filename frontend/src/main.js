@@ -509,18 +509,6 @@ function isEmptyExactBoundsFallback(scope = refs.viewportScope) {
     && refs.viewportExactBoundsTotal === 0;
 }
 
-function isStandaloneCoverageMode() {
-  return document.documentElement.classList.contains('app-standalone');
-}
-
-function isCompactStandaloneViewport() {
-  return isStandaloneCoverageMode() && window.innerWidth < 768;
-}
-
-function shouldHideOverlayCoverageBadge() {
-  return false;
-}
-
 function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCount(), scope = refs.viewportScope } = {}) {
   if (scope === 'exact_bounds') {
     return 'No exact-pin rentals are visible here right now. Zoom out to broaden the map view.';
@@ -533,146 +521,6 @@ function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCou
   return 'Pan or zoom the map to discover other areas';
 }
 
-let coverageExpanded = false;
-
-function updateCoverageBadge() {
-  const desktop = $('#mapCoverageBadge');
-  const mobile = $('#mapCoverageBadgeMobile');
-  const badges = [desktop, mobile].filter(Boolean);
-  if (!badges.length) return;
-
-  const visibleAreas = getViewportVisibleAreaCount();
-  const coveredEntries = Object.entries(refs.mapAreaTotals || {}).sort((a, b) => b[1] - a[1]);
-  const coveredAreas = coveredEntries.length;
-  const standaloneMode = isStandaloneCoverageMode();
-  const compactStandaloneMode = isCompactStandaloneViewport();
-
-  badges.forEach(el => {
-    if (el === mobile && shouldHideOverlayCoverageBadge()) {
-      // Temporarily hide the overlay coverage UI on genuinely small screens.
-      el.classList.add('hidden');
-      el.innerHTML = '';
-      return;
-    }
-
-    if (refs.searchMode !== 'viewport') {
-      if (compactStandaloneMode) coverageExpanded = false;
-      el.classList.add('hidden');
-      el.innerHTML = '';
-      return;
-    }
-
-    const topAreas = coveredEntries.slice(0, 3);
-    const coveredHtml = topAreas.length
-      ? topAreas.map(([name]) => `<span class="coverage-chip live">${esc(name)}</span>`).join('')
-      : '<span class="coverage-chip">No areas with listings here yet</span>';
-    const summary = coveredAreas > 0
-      ? `${coveredAreas} of ${visibleAreas || coveredAreas} areas have listings`
-      : `${visibleAreas || 0} areas in view, none with listings yet`;
-    const previewingEmpty = refs.previewArea && !coveredEntries.some(([name]) => name === refs.previewArea);
-    const detail = previewingEmpty
-      ? `Previewing ${refs.previewArea}. Grey areas are preview-only until listings are available there.`
-      : coveredAreas > 0
-      ? 'Green areas have listings; grey are preview-only. Cards are ordered nearest to the map center.'
-      : 'No listings in this part of the map yet. Grey areas are preview-only.';
-    const legendHtml = `
-      <div class="coverage-legend" aria-label="Map legend">
-        <span class="coverage-legend-item"><span class="coverage-legend-dot live" aria-hidden="true"></span>Green: has listings</span>
-        <span class="coverage-legend-item"><span class="coverage-legend-dot preview" aria-hidden="true"></span>Grey: preview only</span>
-        <span class="coverage-legend-item"><span class="coverage-legend-dot exact" aria-hidden="true"></span>Red: exact listing</span>
-      </div>
-    `;
-
-    // Mobile inline mode: icon-only collapsed button next to List, dropdown when expanded
-    if (el === mobile) {
-      el.classList.add('coverage-mobile-inline');
-      el.classList.remove('coverage-badge-compact', 'coverage-badge-expanded');
-      const coverageIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linejoin="round" aria-hidden="true"><path d="M12,21 C9.5,17.5 6,14 6,10 A6,6 0 1,1 18,10 C18,14 14.5,17.5 12,21 Z" stroke-width="2"/><circle cx="10.2" cy="8.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="8.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="13.8" cy="8.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="10.2" cy="10.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="10.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="13.8" cy="10.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/><circle cx="10.2" cy="12.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/><circle cx="12" cy="12.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/><circle cx="13.8" cy="12.5" r="0.9" fill="currentColor" stroke="none" opacity="0.3"/></svg>`;
-      // Standalone tablet (PWA at >=768px) has room for the full panel inline —
-      // show the "Map Coverage" label and summary alongside the icon instead of
-      // hiding everything behind a tap.
-      const standaloneTablet = standaloneMode && !compactStandaloneMode;
-      if (standaloneTablet) {
-        el.innerHTML = `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="${coverageExpanded ? 'true' : 'false'}" aria-label="Areas on map">
-             ${coverageIcon}
-           </button>
-           <div class="coverage-mobile-panel">
-             <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Areas on map</div>
-             <div style="margin-top:.25rem;font-size:.875rem;font-weight:600;color:#1f2937">${summary}</div>
-             ${coverageExpanded ? `<div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
-             <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.5rem">${coveredHtml}</div>
-             ${legendHtml}` : ''}
-           </div>`;
-      } else {
-        el.innerHTML = coverageExpanded
-          ? `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="true" aria-label="Areas on map">
-               ${coverageIcon}
-             </button>
-             <div class="coverage-mobile-panel">
-               <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Areas on map</div>
-               <div style="margin-top:.25rem;font-size:.875rem;font-weight:600;color:#1f2937">${summary}</div>
-               <div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
-               <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.5rem">${coveredHtml}</div>
-               ${legendHtml}
-             </div>`
-          : `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="false" aria-label="Areas on map">
-               ${coverageIcon}
-             </button>`;
-      }
-      el.classList.remove('hidden');
-      el.querySelector('.coverage-toggle').addEventListener('click', () => {
-        coverageExpanded = !coverageExpanded;
-        updateCoverageBadge();
-      });
-      return;
-    }
-
-    const chevron = `<svg class="w-3.5 h-3.5 text-gray-400 transition-transform ${coverageExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>`;
-    const compactSummary = coveredAreas > 0
-      ? `${coveredAreas}/${visibleAreas || coveredAreas}`
-      : `${visibleAreas || 0}`;
-    const compactMode = compactStandaloneMode && !coverageExpanded;
-
-    el.classList.toggle('coverage-badge-compact', compactMode);
-    el.classList.toggle('coverage-badge-expanded', compactStandaloneMode && coverageExpanded);
-
-    el.innerHTML = compactMode
-      ? `
-        <button class="coverage-toggle coverage-toggle-compact" aria-expanded="false" aria-label="Open areas on map">
-          <span class="coverage-toggle-compact-icon" aria-hidden="true">
-            <span class="coverage-legend-dot live"></span>
-          </span>
-          <span class="coverage-toggle-compact-text">
-            <span class="coverage-toggle-compact-label">Areas</span>
-            <span class="coverage-toggle-compact-count">${compactSummary}</span>
-          </span>
-          ${chevron}
-        </button>
-      `
-      : `
-        <button class="coverage-toggle flex items-center justify-between w-full text-left" aria-expanded="${coverageExpanded ? 'true' : 'false'}">
-          <div>
-            <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Areas on map</div>
-            <div class="mt-0.5 text-sm font-semibold text-gray-800">${summary}</div>
-          </div>
-          ${chevron}
-        </button>
-        <div class="coverage-detail ${coverageExpanded ? '' : 'hidden'}" style="margin-top:8px">
-          <div class="text-xs text-gray-500">${detail}</div>
-          <div class="mt-2 flex flex-wrap gap-2">${coveredHtml}</div>
-          ${legendHtml}
-        </div>
-      `;
-    el.classList.remove('hidden');
-
-    el.querySelector('.coverage-toggle').addEventListener('click', () => {
-      coverageExpanded = !coverageExpanded;
-      updateCoverageBadge();
-    });
-  });
-}
-
-refs._refreshCoverageUI = updateCoverageBadge;
 
 function renderNoResults(message) {
   refs.lastSearchTotal = 0;
@@ -755,7 +603,6 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
           : 'Try removing a filter to see more results'
       );
       updateMapMarkers();
-      updateCoverageBadge();
       if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
       updateMobileCarousel(refs.currentResults);
       return;
@@ -787,7 +634,6 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
   initCarousels();
   observeCards();
   updateMapMarkers();
-  updateCoverageBadge();
   if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
   updateMobileCarousel(refs.currentResults);
   renderFooter(data.total || 0);
@@ -883,7 +729,6 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
       updateHeader({ total: 0, source: 'unavailable', mode: 'viewport', visibleAreas: refs.viewportAreaNames.length, coveredAreas: 0, ranking: 'default' });
       renderNoResults(e.message || 'Could not update the map view right now');
       updateMapMarkers();
-      updateCoverageBadge();
       if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
     }
     trackSearchOutcome({ success: false, data: e.message, mode: 'viewport', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy });
@@ -929,7 +774,6 @@ async function doAreaSearch(page = 1) {
       updateHeader({ total: 0, source: 'unavailable', mode: refs.searchMode });
       renderNoResults(e.message || 'Search failed');
       updateMapMarkers();
-      updateCoverageBadge();
       if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
     }
     trackSearchOutcome({ success: false, data: e.message, mode: refs.searchMode, page: refs.currentPage, triggeredBy: refs._lastTriggeredBy });
@@ -997,7 +841,6 @@ async function doNearbySearch(page = 1) {
       updateHeader({ total: 0, source: 'unavailable', mode: 'nearby' });
       renderNoResults(e.message || `No exact-pin rentals were found within ${refs.nearbyRadiusKm} km.`);
       updateMapMarkers();
-      updateCoverageBadge();
       if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
     }
     trackSearchOutcome({ success: false, data: e.message, mode: 'nearby', page: refs.currentPage, triggeredBy: refs._lastTriggeredBy, radiusKm: refs.nearbyRadiusKm });
@@ -1533,7 +1376,6 @@ async function loadCityData({ search = true } = {}) {
   resetExactPrefetchState();
   ensureMarkers(selectAreaFull);
   updateMapMarkers();
-  updateCoverageBadge();
   if (search) {
     if (refs.searchMode !== 'nearby') refs.searchMode = getBrowseMode();
     doSearch();

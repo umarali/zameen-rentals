@@ -27,8 +27,7 @@ test.describe("Desktop Map", () => {
     ).toBeVisible();
   });
 
-  test("top-right controls align cleanly alongside the coverage badge", async ({ page }) => {
-    await expect(page.locator("#mapCoverageBadge")).toBeVisible();
+  test("top-right controls align cleanly", async ({ page }) => {
     const layerControl = page.locator("#mapContainer .map-layer-control").first();
     const gpsControl = page.locator("#mapContainer .map-gps-btn").first();
     const zoomControl = page.locator("#mapContainer .leaflet-control-zoom").first();
@@ -37,72 +36,78 @@ test.describe("Desktop Map", () => {
     await expect(gpsControl).toBeVisible();
     await expect(zoomControl).toBeVisible();
 
-    const badgeBox = await page.locator("#mapCoverageBadge").boundingBox();
     const layerBox = await layerControl.boundingBox();
     const gpsBox = await gpsControl.boundingBox();
     const zoomBox = await zoomControl.boundingBox();
 
-    expect(badgeBox).toBeTruthy();
     expect(layerBox).toBeTruthy();
     expect(gpsBox).toBeTruthy();
     expect(zoomBox).toBeTruthy();
-    expect(gpsBox.x).toBeGreaterThan(badgeBox.x + badgeBox.width - 8);
     expect(Math.abs((layerBox.x + layerBox.width) - (gpsBox.x + gpsBox.width))).toBeLessThanOrEqual(2);
     expect(Math.abs((layerBox.x + layerBox.width) - (zoomBox.x + zoomBox.width))).toBeLessThanOrEqual(2);
     expect(gpsBox.y).toBeGreaterThan(layerBox.y + layerBox.height - 2);
     expect(zoomBox.y).toBeGreaterThan(gpsBox.y + gpsBox.height - 2);
   });
 
-  test("coverage badge shows a legend for map markers", async ({ page }) => {
-    const badge = page.locator("#mapCoverageBadge");
-    await expect(badge).toBeVisible();
-    await expect(badge).toContainText("Green: has listings");
-    await expect(badge).toContainText("Grey: preview only");
-    await expect(badge).toContainText("Red: exact listing");
+  test("the map has no areas-on-map panel", async ({ page }) => {
+    await expect(page.locator("#mapCoverageBadge")).toHaveCount(0);
+    await expect(page.locator("#mapPanel")).not.toContainText(/areas have listings|Areas on map/);
   });
 
-  test("coverage badge uses normalized visible-area counts from viewport search", async ({ page }) => {
-    await page.route("**/api/map-search**", async route => {
-      await route.fulfill({
-        json: {
-          total: 2,
-          page: 1,
-          per_page: 25,
-          results: [
-            {
-              title: "Exact listing 1",
-              url: "https://www.zameen.com/Property/test-visible-1.html",
-              price: 65000,
-              property_type: "Apartment",
-              latitude: 24.861,
-              longitude: 67.002,
-              location_source: "listing_exact",
-              has_exact_geography: true,
-            },
-            {
-              title: "Exact listing 2",
-              url: "https://www.zameen.com/Property/test-visible-2.html",
-              price: 60000,
-              property_type: "Apartment",
-              latitude: 24.862,
-              longitude: 67.003,
-              location_source: "listing_exact",
-              has_exact_geography: true,
-            },
-          ],
-          source: "local",
-          mode: "viewport",
-          scope: "exact_bounds",
-          visible_areas: 2,
-          area_totals: { "Garden West": 1, "Saddar Town": 1 },
-          attempted_exact_bounds: true,
-          exact_bounds_total: 2,
-        },
-      });
-    });
-
+  test("an exact pin opens a photo preview, and the preview opens the listing", async ({ page }) => {
+    await page.route("**/api/map-search**", route => route.fulfill({
+      json: {
+        total: 1, page: 1, per_page: 25, source: "local", mode: "viewport", scope: "exact_bounds",
+        visible_areas: 1, area_totals: { Gulberg: 1 }, attempted_exact_bounds: true, exact_bounds_total: 1,
+        results: [{
+          zameen_id: "7700011",
+          title: "Pin preview house",
+          url: "https://www.zameen.com/Property/test-7700011-1-1.html",
+          price: 85000, bedrooms: 2, bathrooms: 2, area_size: "5 Marla",
+          location: "Gulberg, Lahore", property_type: "House",
+          image_url: "/static/favicon-512.png",
+          latitude: 31.5204, longitude: 74.3587,
+          location_source: "listing_exact", has_exact_geography: true,
+        }],
+      },
+    }));
+    await page.route("**/api/listing-detail**", route => route.fulfill({
+      json: {
+        images: ["/static/favicon-512.png?1", "/static/favicon-512.png?2", "/static/favicon-512.png?3", "/static/favicon-512.png?4"],
+        latitude: 31.5204, longitude: 74.3587, has_exact_geography: true, source: "local",
+      },
+    }));
     await page.reload();
-    await expect(page.locator("#mapCoverageBadge")).toContainText("2 of 2 areas have listings");
+    await expect(page.locator("#listingsGrid")).toContainText("Pin preview house");
+    // Exact pins appear from street-level zooms.
+    const pin = page.locator("#mapContainer .listing-exact-marker");
+    for (let i = 0; i < 3 && !(await pin.count()); i++) {
+      await page.locator("#mapContainer .leaflet-control-zoom-in").click();
+      await page.waitForTimeout(700);
+    }
+    await expect(pin).toHaveCount(1, { timeout: 15000 });
+    await pin.click({ force: true });
+
+    const popup = page.locator("#mapContainer .pin-popup");
+    await expect(popup).toContainText("Pin preview house");
+    // The cover shows first; the listing's full photo set replaces it.
+    await expect(popup.locator(".pin-gallery-img")).toHaveCount(4);
+    await expect(popup.locator("[data-gallery-count]")).toHaveText("1 / 4");
+    await popup.locator(".pin-gallery").hover();
+    await popup.locator("[data-gallery-next]").click();
+    await expect(popup.locator("[data-gallery-count]")).toHaveText("2 / 4");
+    await popup.locator("[data-gallery-prev]").click();
+    await expect(popup.locator("[data-gallery-count]")).toHaveText("1 / 4");
+
+    // The whole card is on screen, inside the map.
+    const mapBox = await page.locator("#mapContainer").boundingBox();
+    const cardBox = await popup.locator(".pin-preview").boundingBox();
+    expect(cardBox.y).toBeGreaterThanOrEqual(mapBox.y);
+    expect(cardBox.y + cardBox.height).toBeLessThanOrEqual(mapBox.y + mapBox.height);
+
+    await popup.locator("[data-preview-open]").click();
+    await expect(page.locator("#drawer")).toHaveClass(/drawer-open/);
+    await expect(page.locator("#drawerContent")).toContainText("Pin preview house");
   });
 
   test("map layer toggle switches to satellite and persists after reload", async ({ page }) => {

@@ -309,7 +309,7 @@ test("desktop standalone keeps the header on one row", async ({
   expect(layout.searchTop, details).toBeLessThan(layout.brandBottom);
 });
 
-test("standalone mode keeps mobile coverage hidden", async ({
+test("standalone mobile map has no areas-on-map panel", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -388,90 +388,6 @@ test("standalone mode keeps mobile coverage hidden", async ({
   await page.waitForSelector("#mapFab", { timeout: 30000 });
   await page.locator("#mapFab").click();
 
-  await expect(page.locator("#mapCoverageBadgeMobile")).toBeHidden();
-});
-
-test("standalone tablet-width overlay still shows coverage", async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    const originalMatchMedia = window.matchMedia.bind(window);
-    window.matchMedia = (query) => {
-      if (query === '(display-mode: standalone)') {
-        return {
-          matches: true,
-          media: query,
-          onchange: null,
-          addListener() {},
-          removeListener() {},
-          addEventListener() {},
-          removeEventListener() {},
-          dispatchEvent() { return false; },
-        };
-      }
-      if (query.startsWith('(display-mode:')) {
-        return {
-          matches: false,
-          media: query,
-          onchange: null,
-          addListener() {},
-          removeListener() {},
-          addEventListener() {},
-          removeEventListener() {},
-          dispatchEvent() { return false; },
-        };
-      }
-      return originalMatchMedia(query);
-    };
-  });
-
-  await page.route("**/api/crawl-status**", async (route) => {
-    await route.fulfill({
-      json: {
-        total_listings: 24,
-        detail_coverage: 100,
-        areas_crawled: 3,
-        areas_total: 3,
-        last_crawl_at: "2026-04-09T19:00:00",
-      },
-    });
-  });
-
-  await page.route("**/api/map-search**", async (route) => {
-    await route.fulfill({
-      json: {
-        total: 2,
-        page: 1,
-        per_page: 25,
-        source: "local",
-        mode: "viewport",
-        visible_areas: 3,
-        area_totals: { Clifton: 1, Saddar: 1 },
-        ranking: "map_focus",
-        scope: "area_coverage",
-        results: [
-          {
-            title: "Coverage test listing",
-            url: "https://www.zameen.com/Property/coverage-test-1.html",
-            price: 90000,
-            property_type: "Apartment",
-            location: "Clifton, Karachi",
-            latitude: 24.821,
-            longitude: 67.031,
-            has_exact_geography: true,
-          },
-        ],
-      },
-    });
-  });
-
-  await page.setViewportSize({ width: 900, height: 900 });
-  await page.goto("/");
-  await page.waitForSelector("#mapFab", { timeout: 30000 });
-  await page.locator("#mapFab").click();
-
-  const badge = page.locator("#mapCoverageBadgeMobile");
-  await expect(badge).toBeVisible();
-  await expect(badge).not.toHaveClass(/coverage-badge-compact/);
-  await expect(badge).toContainText("Areas on map");
+  await expect(page.locator("#mapOverlayClose")).toBeVisible();
+  await expect(page.locator("#mapCoverageBadgeMobile")).toHaveCount(0);
 });
