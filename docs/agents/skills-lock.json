@@ -1,0 +1,239 @@
+{
+  "created": "2026-10-10",
+  "update_policy": "Manual; inspect upstream diff and preserve adaptations.",
+  "skills": [
+    {
+      "name": "codebase-design",
+      "author": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "commit": "49dd158d1076134a641b33efb035946536778336",
+      "path": "skills/engineering/codebase-design",
+      "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/codebase-design",
+      "adaptations": [
+        "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+        "Use project terminology in user-facing prose; no compulsory jargon."
+      ],
+      "upstream_skill_sha256": "2c20617f87ec8af6a434859f381b2f061a69b530444e74eb39e78bb016a6d1e2",
+      "files_sha256": {
+        "DEEPENING.md": "f3dd099ce99289bd213914d8ee3e2429b78309c3957ca4583f7659551b1d53c1",
+        "DESIGN-IT-TWICE.md": "52b52e75655a27aea59c6966b410bac82448968ad46ef1ebb9f07c274e3ae010",
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "66c072da5a325d151ff2a0cf3db7f9098fc4506313a48b87852d0037f7491ad2",
+        "SOURCE.json": "2126b5b2c0501f35176007056e03f7727841b76e368960776dc2b8d6a9f39274",
+        "agents/openai.yaml": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f"
+      }
+    },
+    {
+      "name": "diagnosing-bugs",
+      "author": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "commit": "49dd158d1076134a641b33efb035946536778336",
+      "path": "skills/engineering/diagnosing-bugs",
+      "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/diagnosing-bugs",
+      "adaptations": [
+        "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+        "Require a useful bug-specific signal; report missing evidence without overstating confidence."
+      ],
+      "upstream_skill_sha256": "849198df88cdb65fd0d97236604c1fca7ff2f22d2f705f9724a800d0266b118d",
+      "files_sha256": {
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "a20c61a8ff2961c2d88279f0dc6d09197d94f25c93d42d76cfefae2d6a40398b",
+        "SOURCE.json": "24b434ffed0525cf766c340ba6b7a36d4469056abfe5464d1d3d68c880da8a1d",
+        "agents/openai.yaml": "3e430dbe4334a87597488c060cb3dc3786bb00c9182877d6f5ec41f62490e90b",
+        "scripts/hitl-loop.template.sh": "35103539fc36873eea36074769ad454f9379d6fc8b2dc0e26ce987fd3bfe5503"
+      }
+    },
+    {
+      "name": "domain-modeling",
+      "author": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "commit": "49dd158d1076134a641b33efb035946536778336",
+      "path": "skills/engineering/domain-modeling",
+      "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/domain-modeling",
+      "adaptations": [
+        "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+        "Publish an HTML counterpart when a glossary or ADR is presented for human review."
+      ],
+      "upstream_skill_sha256": "7b925d7b1e341a2eeae33ad68a8a8c0ab889a38ddd22a7598e4c240e5a7556a3",
+      "files_sha256": {
+        "ADR-FORMAT.md": "944c92aa790e8fbdc9199640b170979abb8a34ba8d0fe18c2a01a63bce140ca0",
+        "GLOSSARY-FORMAT.md": "21dcc40cdec8e151a829b98ab1517c1867bc444e3665134a98c6983411996801",
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "d6db61ca23d22b58cf4794c243606366d5b91d3bf0f757228e9406fe67311455",
+        "SOURCE.json": "9b32a2f2384e9882e8cad429689245c6869496214b91473ed957fd5ce6910e70",
+        "agents/openai.yaml": "f6bf2aa996c6e6f53fdd0708e18a0d16a56aed8322cca59fedbe3c0d2c75f06b"
+      }
+    },
+    {
+      "name": "grill-with-docs",
+      "author": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "commit": "49dd158d1076134a641b33efb035946536778336",
+      "path": "skills/engineering/grill-with-docs",
+      "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/grill-with-docs",
+      "adaptations": [
+        "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+        "Replace unsupported Skill tool calls with local dependency reads.",
+        "Removed non-Codex frontmatter flag; preserved upstream explicit invocation policy in agents/openai.yaml."
+      ],
+      "upstream_skill_sha256": "7de372c13488f1ee96cc11cd8907b56b6809cc93eef776eeddd37de6b6cbe3fe",
+      "files_sha256": {
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "71de0ddb7c5ddb01cab66d3c8ef473c9752a7a1337086e00eaf967a754c41c30",
+        "SOURCE.json": "1855f032483ddda2365a7f9aa528ec7e72882dbf7100d7f2529fa515c347f42b",
+        "agents/openai.yaml": "94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9"
+      }
+    },
+    {
+      "name": "grilling",
+      "author": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "commit": "49dd158d1076134a641b33efb035946536778336",
+      "path": "skills/productivity/grilling",
+      "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/productivity/grilling",
+      "adaptations": [
+        "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+        "Batch only material unanswered decisions. Research locally without mandatory delegation; avoid interviewing on facts already known."
+      ],
+      "upstream_skill_sha256": "befdff1e27a1dfe2a294d5871169ac1afe16d983911daa4f32627514a48c1e15",
+      "files_sha256": {
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "f6a19ba1e97a002bc38a8a535d2699e8f465ef14ffa1ba3099b7056b839a535b",
+        "SOURCE.json": "2c3a4d729a0f8f5955664ac87d9e10767b27007bdd67928c549c58953e8757b1",
+        "agents/openai.yaml": "1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b"
+      }
+    },
+    {
+      "name": "html-review",
+      "author": "Local Codex setup for Umar",
+      "purpose": "HTML review documents and offline renderer",
+      "files_sha256": {
+        "SKILL.md": "652726e03b8a526bbf4147d3f367534f26afdeb3ce6795a30b1ca799697e5afc",
+        "agents/openai.yaml": "a67ec61de9c60988882d6663d93d42753bc033257a6d325c4e50cdd36d21a618",
+        "assets/review.css": "f0ed1f57cc7d4194dafba78db175d6dc2c7c88de3f7e00f8eb72d7b33b71f7b3",
+        "scripts/render_review.py": "540a0c64aab0026bf86123cf9f88ff41a4da8035d3ac581eba708e46379cf35d"
+      }
+    },
+    {
+      "name": "pstack-benchmark-checklist",
+      "author": "Lauren Tan",
+      "repository": "cursor/plugins",
+      "commit": "d73344bee8cf22e53b9d5f4cf5749d38ba38c174",
+      "path": "pstack/skills/benchmark-checklist",
+      "url": "https://github.com/cursor/plugins/tree/d73344bee8cf22e53b9d5f4cf5749d38ba38c174/pstack/skills/benchmark-checklist",
+      "adaptations": [
+        "Namespaced for Codex; HTML deliverables; inherited model and no mandatory Cursor tools or external models; evidence workflow retained",
+        "macOS core-count command; process ownership; bundled number-interpretation reference"
+      ],
+      "upstream_skill_sha256": "6a767e788a60428fa14e645ee10fe2e49896e514ff654f668b1d824deb9038e8",
+      "files_sha256": {
+        "LICENSE": "bc957ca6bee02792566a1a028d105e02e247c6e77cf057061674273da77b200e",
+        "SKILL.md": "1e6d99a87d3e7c0ce445e0e16babc5b3ecb5d79067a6068afeef249bdc2aa584",
+        "SOURCE.json": "e15666d7fc5fe5dcfa476ab6b395ef3ad4a8ee5b41f04b6fe97b492ae7222acc",
+        "agents/openai.yaml": "fde33bd0173031f14f066972e660403bca4f9b02ad0255f01aa3404e64710b2f",
+        "references/explain-the-number.md": "4ea8a623928e2d0195946ee6e68289d0a0c43014d5a4117c58faff3ef213277d"
+      }
+    },
+    {
+      "name": "pstack-blast-radius",
+      "author": "Lauren Tan",
+      "repository": "cursor/plugins",
+      "commit": "d73344bee8cf22e53b9d5f4cf5749d38ba38c174",
+      "path": "pstack/skills/blast-radius",
+      "url": "https://github.com/cursor/plugins/tree/d73344bee8cf22e53b9d5f4cf5749d38ba38c174/pstack/skills/blast-radius",
+      "adaptations": [
+        "Namespaced for Codex; HTML deliverables; inherited model and no mandatory Cursor tools or external models; evidence workflow retained",
+        "Single-agent execution is honest default; delegation requires active authorization"
+      ],
+      "upstream_skill_sha256": "2e10745b97f5862323dcda3b29ca60d56b5c3c98e37020085d26b48efbe0a436",
+      "files_sha256": {
+        "LICENSE": "bc957ca6bee02792566a1a028d105e02e247c6e77cf057061674273da77b200e",
+        "SKILL.md": "79eeda0927e8d334cd8677097105277633cbcf46fb78dc77a46982a98daa3afb",
+        "SOURCE.json": "4cc42f53ac5299b9a1ad690f7799f5c64e5cb86a73902d01df09a1677d03e012",
+        "agents/openai.yaml": "8afb43e0cfe9ab8db90a4396a4da55ca2a4d34787492e3bfc0705a46884b0250"
+      }
+    },
+    {
+      "name": "pstack-how",
+      "author": "Lauren Tan",
+      "repository": "cursor/plugins",
+      "commit": "d73344bee8cf22e53b9d5f4cf5749d38ba38c174",
+      "path": "pstack/skills/how",
+      "url": "https://github.com/cursor/plugins/tree/d73344bee8cf22e53b9d5f4cf5749d38ba38c174/pstack/skills/how",
+      "adaptations": [
+        "Namespaced for Codex; HTML deliverables; inherited model and no mandatory Cursor tools or external models; evidence workflow retained",
+        "Single-agent execution is honest default; delegation requires active authorization"
+      ],
+      "upstream_skill_sha256": "7e0d902484a90eba73dcf518bff478dc5b962b456d23c3d0a188c2ce36b236d8",
+      "files_sha256": {
+        "LICENSE": "bc957ca6bee02792566a1a028d105e02e247c6e77cf057061674273da77b200e",
+        "SKILL.md": "d22923dcb3b87d33b09a4da0e525268e406b20e6d78358d8d089d15e4755f779",
+        "SOURCE.json": "2ed451c83d917a6a894897d6dd6ed38e1b17b17c1d501560e5447f14089c9cf4",
+        "agents/openai.yaml": "4079613f30a74749c90e73ad795dfe5885a4a93a2a43bfc3536d5ea7690fbd5a",
+        "references/explainer-prompt.md": "86a7a35d38baf38f1ab157b78662ac9a42847f1d1bff928ad2bba9926691111d",
+        "references/explorer-prompt.md": "818a493860455fbd358d27b10ce845345a19ad1e0257db783035e17362f62c62"
+      }
+    },
+    {
+      "name": "tdd",
+      "author": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "commit": "49dd158d1076134a641b33efb035946536778336",
+      "path": "skills/engineering/tdd",
+      "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/tdd",
+      "adaptations": [
+        "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+        "Reuse accepted behavior and established test interfaces without repeated approval. Allow real database persistence checks for transaction contracts. Refactoring may follow a green test when in scope."
+      ],
+      "upstream_skill_sha256": "5505d25bbaa8fc14a79e4d20163936958992a2995b7f1dd1d6197edc9ed722e0",
+      "files_sha256": {
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "d171b829e8c79201a63cd5c3d557b49694afcec3a55f0ade5a85ff1b0e2e7d70",
+        "SOURCE.json": "236aae5485ac64dfe51d2a0a90afd0bf5dbda498cc4d514c82acd7ac39aa8787",
+        "agents/openai.yaml": "ea6f01cf1b8c06a4b0f5b649d74b1b8ce8685e72af1b38d70d877693e092af0b",
+        "mocking.md": "3ceb807fdf4a47d6a93d4d9a891e5ba6d362a6247bd08adc451feebfc17361ef",
+        "tests.md": "add60ed1343403457b995b918412aa10943d5992206188a5b2e7619a51aa6738"
+      }
+    },
+    {
+      "name": "to-spec",
+      "author": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "commit": "49dd158d1076134a641b33efb035946536778336",
+      "path": "skills/engineering/to-spec",
+      "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/to-spec",
+      "adaptations": [
+        "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+        "Local files are the default when no tracker is configured; concise acceptance criteria; no repeated test-interface approval.",
+        "Removed non-Codex frontmatter flag; preserved upstream explicit invocation policy in agents/openai.yaml."
+      ],
+      "upstream_skill_sha256": "43ad9cf318e5e7d3d1fa360253a37021796dc87a0c2e595ad262661a10f85088",
+      "files_sha256": {
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "dd686efc79f97d6ec94129f0140e48ff8181827abd8aa49b353182faef49b1a0",
+        "SOURCE.json": "cd382adeff33490b08a776cfaa85d6dfe81d4ba5c8bbfe25bd8449f596c5aa7b",
+        "agents/openai.yaml": "1c5b4d1e3d8e52287ef19cc2742fdbbfae1914ac75d33af3e4c8174f08cc55bb"
+      }
+    },
+    {
+      "name": "to-tickets",
+      "author": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "commit": "49dd158d1076134a641b33efb035946536778336",
+      "path": "skills/engineering/to-tickets",
+      "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/to-tickets",
+      "adaptations": [
+        "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+        "Local-file tracker default; HTML review copy; publish only within authorization already provided.",
+        "Removed non-Codex frontmatter flag; preserved upstream explicit invocation policy in agents/openai.yaml."
+      ],
+      "upstream_skill_sha256": "56ec23c5b2782785d4e65bff9e315b6d3aeb4ef977c174a219e99489fada1995",
+      "files_sha256": {
+        "LICENSE": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "SKILL.md": "4cff392be6a7b1d3b254dac89ab3ce0f39758574014124d7643e66396c79b45e",
+        "SOURCE.json": "96aa5686c7d543684d75946c8c96dcbf390ce7f1a1067f01615e1239b4cbb751",
+        "agents/openai.yaml": "21bc6215fffcd7614e9f772bb1760e87cc5fc7dcc707e7d282bc9414267a6090"
+      }
+    }
+  ]
+}

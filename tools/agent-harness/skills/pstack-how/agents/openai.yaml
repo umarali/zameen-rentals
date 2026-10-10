@@ -1,0 +1,4 @@
+interface:
+  display_name: "PStack · how"
+  short_description: "Trace call paths and explain runtime behavior"
+  default_prompt: "Use $pstack-how for the relevant investigation and present review material as HTML."

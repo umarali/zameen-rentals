@@ -1,0 +1,4 @@
+interface:
+  display_name: "HTML review"
+  short_description: "Readable offline HTML for every review deliverable"
+  default_prompt: "Use $html-review to produce a standalone HTML review with evidence and clear next steps."

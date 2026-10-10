@@ -88,3 +88,10 @@ uvicorn main:app --reload --port 8000
 - No build tools — frontend is a single HTML file
 - Deployed on Heroku (Procfile)
 - SQLite database in `data/zameenrentals.db` for search history
+
+## Agent harness
+
+- Present substantive review material as standalone HTML. See `docs/agents/review.html` for the harness overview.
+- Read `docs/agents/working-agreement.md` and `docs/agents/claude-verification.md` for skill routing, the required Opus 5.5/high review, and concurrent-work rules.
+- The reviewed skill copies live under `tools/agent-harness/skills/`. Read only the relevant skill. They are versioned references, not a second automatically installed skill bundle.
+- Before pushing a new branch, pull the latest `origin/main` into an isolated checkout, incorporate any newer main changes, and recheck the reviewed candidate. Do not pull into another agent's dirty worktree.

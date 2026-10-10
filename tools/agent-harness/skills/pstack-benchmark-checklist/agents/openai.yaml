@@ -1,0 +1,4 @@
+interface:
+  display_name: "PStack · benchmark checklist"
+  short_description: "Check whether performance measurements support a claim"
+  default_prompt: "Use $pstack-benchmark-checklist for the relevant investigation and present review material as HTML."

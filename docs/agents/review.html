@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Agent harness review</title><style>:root{color-scheme:light;--ink:#18313b;--muted:#556871;--line:#d5dfdf;--accent:#087c68;--paper:#fff;--back:#f2f5f4}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--back);color:var(--ink);font:16px/1.7 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:#006a65;text-underline-offset:3px;overflow-wrap:anywhere}a:hover{text-decoration-thickness:2px}a:focus-visible,button:focus-visible{outline:3px solid #d18715;outline-offset:4px}.skip{position:absolute;top:-80px;left:12px;background:white;padding:10px;z-index:4}.skip:focus{top:12px}.layout{max-width:1340px;margin:auto;display:grid;grid-template-columns:225px minmax(0,1fr);gap:48px;padding:56px 40px 90px}aside{position:sticky;top:32px;align-self:start;max-height:calc(100vh - 64px);overflow:auto;font-size:13px}.eyebrow{font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.14em;color:var(--accent)}aside .brand{font-size:17px;font-weight:720;margin:10px 0 22px}aside nav ul{padding:0;list-style:none}aside nav li{margin:8px 0}aside nav ul ul{padding-left:12px;border-left:1px solid var(--line)}aside a{text-decoration:none;color:var(--muted)}aside a:hover{color:var(--accent)}main{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:44px 48px;min-width:0}header{border-bottom:2px solid var(--accent);padding-bottom:26px;margin-bottom:32px}h1{font-size:clamp(28px,3vw,42px);line-height:1.15;letter-spacing:-.035em;font-weight:700;margin:12px 0 18px}header p{color:var(--muted);margin:0}h2{font-size:24px;line-height:1.25;letter-spacing:-.02em;margin:52px 0 20px;border-top:1px solid var(--line);padding-top:24px}h3{font-size:19px;line-height:1.4;margin-top:32px}p{margin:14px 0}li{padding-left:3px;margin:8px 0}ol>li>p:first-child{font-size:17px}ol>li{margin-bottom:26px}strong{font-weight:700}code{font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;background:#f0f4f4;padding:2px 5px;border-radius:3px;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f0f4f4;border:1px solid var(--line);padding:16px;border-radius:4px}pre code{padding:0;background:none}.table-wrap{overflow:auto;margin:24px 0;border:1px solid var(--line);border-radius:4px}table{width:100%;border-collapse:collapse;font-size:14px;text-align:left}th{background:#eaf1ef;color:#24473f;font-weight:700}td,th{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;min-width:115px}tr:last-child td{border-bottom:0}blockquote{margin:24px 0;padding:6px 22px;border-left:3px solid var(--accent);background:#f2f7f5}footer{border-top:1px solid var(--line);font-size:12px;color:var(--muted);margin-top:44px;padding-top:20px}.badge{display:inline-block;padding:4px 8px;border-radius:3px;background:#e8f3ec;color:#25603e;font-size:12px;font-weight:700}hr{border:0;border-top:1px solid var(--line);margin:36px 0}@media(max-width:880px){.layout{display:block;padding:24px 16px}aside{position:static;max-height:none;margin-bottom:24px}aside nav>ul{display:flex;flex-wrap:wrap;gap:4px 16px}aside nav ul ul{display:none}aside .brand{margin:6px 0}main{padding:28px 24px}h2{margin-top:36px}}@media(max-width:440px){body{font-size:15px}.layout{padding:16px 10px}main{padding:24px 18px}table{font-size:13px}td,th{padding:10px}ol,ul{padding-left:23px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}@media print{body{background:white;font-size:10pt}.layout{display:block;padding:0}aside,.skip{display:none}main{border:0;padding:0}h1{font-size:25pt}h2{break-after:avoid;font-size:16pt}.table-wrap{overflow:visible}tr{break-inside:avoid}a{color:inherit;text-decoration:none}pre{white-space:pre-wrap}footer{font-size:9pt}}
+</style></head>
+<body><a class="skip" href="#content">Skip to content</a><div class="layout"><aside aria-label="Document navigation"><div class="eyebrow">Review desk</div><div class="brand">Umar Ali</div><nav aria-label="Sections"><ul><li><a href="#section-1">Branch and scope</a></li><li><a href="#section-2">The working rules</a></li><li><a href="#section-3">Selected skills</a></li><li><a href="#section-4">How the review runner works</a></li><li><a href="#section-5">What to inspect</a></li><li><a href="#section-6">Validation and limitations</a></li></ul></nav></aside><main id="content"><header><div class="eyebrow">Review document</div><h1>Agent harness review</h1><p>Rules, pinned skills and independent verification</p></header><article>
+<p><strong>This branch packages the review workflow for inspection.</strong> It contains the standing rules, twelve pinned skill copies, the HTML renderer and a command-line runner for independent Claude review. Checking out the branch does not install skills, modify your global settings or change the rental application.</p>
+<h2 id="section-1">Branch and scope</h2>
+<p>The branch is <code>chore/agent-harness-review</code>, created in a separate clone after <code>git pull --ff-only origin main</code>. The starting main commit is <code>e9506fc6eb513173c412f4cd2631111aff3cd3ab</code>. The final push procedure pulls main again and verifies the branch contains the fetched commit.</p>
+<p>Only <code>AGENTS.md</code>, <code>docs/agents/</code> and <code>tools/agent-harness/</code> are in scope. The existing main checkout and Claude's active worktrees stay untouched. The prior listing-trust implementation review and experimental date changes are not included.</p>
+<h2 id="section-2">The working rules</h2>
+<div aria-label="Scrollable table" class="table-wrap" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th scope="col">Rule</th>
+<th scope="col">Concrete behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HTML first</td>
+<td>Reviews, plans and other substantive material for Umar have an HTML primary deliverable. Editable Markdown and raw evidence remain supporting sources.</td>
+</tr>
+<tr>
+<td>Independent review</td>
+<td>Request exactly Claude Opus 5.5 with high effort before declaring completion or applying shared edits. No silent model fallback.</td>
+</tr>
+<tr>
+<td>Evidence attached</td>
+<td>Send the exact candidate and meaningful test evidence. Record the returned model, requested effort, verdict and file hashes.</td>
+</tr>
+<tr>
+<td>Recheck changed files</td>
+<td>A changed candidate needs another review. Verify hashes again before applying or publishing.</td>
+</tr>
+<tr>
+<td>Protect concurrent work</td>
+<td>Inspect branches and ownership, prepare overlapping work in isolation, and never overwrite or stop Claude's work.</td>
+</tr>
+<tr>
+<td>Test real behavior</td>
+<td>Reproduce the symptom, test the relevant contract, and use real disposable storage for transaction behavior.</td>
+</tr>
+<tr>
+<td>Keep claims bounded</td>
+<td>Distinguish observations from inference and state what remains unverified. High effort is a requested CLI setting, not independently attested metadata.</td>
+</tr>
+<tr>
+<td>Keep authorization scoped</td>
+<td>The user's request authorizes these review calls through the existing subscription. It does not enable billing, external publication or deployment beyond the active task.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read the full <a href="working-agreement.md">working agreement</a> and <a href="claude-verification.md">Claude verification rule</a>. The root instruction change points to these documents instead of copying them into every skill.</p>
+<h2 id="section-3">Selected skills</h2>
+<div aria-label="Scrollable table" class="table-wrap" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th scope="col">Source</th>
+<th scope="col">Skill</th>
+<th scope="col">Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Matt Pocock</td>
+<td><code>diagnosing-bugs</code></td>
+<td>Build a symptom-specific reproduction before choosing a fix</td>
+</tr>
+<tr>
+<td>Matt Pocock</td>
+<td><code>tdd</code></td>
+<td>Verify one behavior at a time through a meaningful interface</td>
+</tr>
+<tr>
+<td>Matt Pocock</td>
+<td><code>codebase-design</code></td>
+<td>Design useful modules and caller contracts</td>
+</tr>
+<tr>
+<td>Matt Pocock</td>
+<td><code>domain-modeling</code></td>
+<td>Keep terminology and durable decisions precise</td>
+</tr>
+<tr>
+<td>Matt Pocock</td>
+<td><code>grilling</code></td>
+<td>Resolve material unanswered design decisions</td>
+</tr>
+<tr>
+<td>Matt Pocock</td>
+<td><code>grill-with-docs</code></td>
+<td>Combine design questions with useful domain records</td>
+</tr>
+<tr>
+<td>Matt Pocock</td>
+<td><code>to-spec</code></td>
+<td>Turn settled discussion into a proportional specification</td>
+</tr>
+<tr>
+<td>Matt Pocock</td>
+<td><code>to-tickets</code></td>
+<td>Divide scope into complete, verifiable work with dependencies</td>
+</tr>
+<tr>
+<td>Lauren Tan / PStack</td>
+<td><code>pstack-how</code></td>
+<td>Trace the actual runtime call path</td>
+</tr>
+<tr>
+<td>Lauren Tan / PStack</td>
+<td><code>pstack-blast-radius</code></td>
+<td>Prove assumptions about callers, storage and caches</td>
+</tr>
+<tr>
+<td>Lauren Tan / PStack</td>
+<td><code>pstack-benchmark-checklist</code></td>
+<td>Check correctness, work performed, fairness and measurement limits</td>
+</tr>
+<tr>
+<td>Local</td>
+<td><code>html-review</code></td>
+<td>Produce a standalone review document and retain its evidence</td>
+</tr>
+</tbody>
+</table></div>
+<p>These are local Codex adaptations, not official distributions from either author. They replace tool assumptions that do not fit Codex, preserve existing authorization, and avoid mandatory external model panels. PStack's useful evidence procedures remain. Upstream licenses, revisions and changes are recorded per skill and in the <a href="skills-lock.json">inventory</a>.</p>
+<p>Sources are <a href="https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336" rel="noreferrer">Matt Pocock's repository</a> and <a href="https://github.com/cursor/plugins/tree/d73344bee8cf22e53b9d5f4cf5749d38ba38c174/pstack" rel="noreferrer">Lauren Tan's official PStack</a>.</p>
+<h2 id="section-4">How the review runner works</h2>
+<p>The runner takes a sanitized context file and an explicit list of text files. It snapshots their contents and modes, launches a new tool-disabled Claude session outside the checkout, and asks for a structured verdict. It writes a PASS receipt only when the exact model is confirmed, no material findings remain, and the files still match their snapshots.</p>
+<p>A separate <code>check</code> command verifies the receipt and selected files before applying changes. The runner never modifies the candidate, stages files, commits or pushes. It does not discover omitted files or prevent a human bypass. It is a local review aid, not a signed security control.</p>
+<p>The <a href="../../tools/agent-harness/README.md">usage guide</a> has the commands and limits. Raw review packets remain outside the repository because they can contain local paths or sensitive context. Publish only a sanitized review receipt when appropriate.</p>
+<h2 id="section-5">What to inspect</h2>
+<ul>
+<li><a href="../../AGENTS.md">Root project instructions</a>: the small routing change.</li>
+<li><a href="claude-verification.md">Verification policy</a>: exact-model gate and concurrency rules.</li>
+<li><a href="../../tools/agent-harness/review.py">Review runner</a>: invocation, verdict handling and content checks.</li>
+<li><a href="../../tools/agent-harness/tests/test_review.py">Offline tests</a>: rejection and integrity cases.</li>
+<li><a href="skills-lock.json">Skill inventory</a>: sources and hashes for the exact copies.</li>
+<li><a href="../../tools/agent-harness/skills/html-review/scripts/render_review.py">HTML renderer</a>: offline output and source-content handling.</li>
+</ul>
+<h2 id="section-6">Validation and limitations</h2>
+<p>Validation for this branch consists of the offline runner tests, the twelve-skill inventory check, headless HTML checks, and independent Opus review of the substantive candidate. The final sanitized review receipt is recorded separately so the receipt itself does not trigger recursive review.</p>
+<p>This change does not run or alter the application, crawler or production database. Application suites are not substitutes for the harness-specific checks and are not needed for unchanged application code. The skills themselves are instructions; static validation is not proof of their behavior in every future task.</p>
+<p>The review runner requires Python 3.10 or newer and a compatible Claude CLI with an existing subscription login. It sends the selected content to Claude and shares the account's usage limits. An operator must inspect the input for secrets and confirm that the file list covers the intended change.</p>
+<p>Do not install a duplicate global skill bundle when those names already exist. You can read the versioned copies directly. Nothing here enables auto-merge, deployment or unattended shipping.</p>
+</article><footer>Standalone HTML · No external assets · Print from your browser. Local evidence links require the original workspace.</footer></main></div></body></html>

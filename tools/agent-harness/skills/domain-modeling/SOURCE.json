@@ -1,0 +1,12 @@
+{
+  "author": "Matt Pocock",
+  "repository": "mattpocock/skills",
+  "commit": "49dd158d1076134a641b33efb035946536778336",
+  "path": "skills/engineering/domain-modeling",
+  "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/domain-modeling",
+  "adaptations": [
+    "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+    "Publish an HTML counterpart when a glossary or ADR is presented for human review."
+  ],
+  "upstream_skill_sha256": "7b925d7b1e341a2eeae33ad68a8a8c0ab889a38ddd22a7598e4c240e5a7556a3"
+}

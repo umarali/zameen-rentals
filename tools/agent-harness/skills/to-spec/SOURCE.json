@@ -1,0 +1,13 @@
+{
+  "author": "Matt Pocock",
+  "repository": "mattpocock/skills",
+  "commit": "49dd158d1076134a641b33efb035946536778336",
+  "path": "skills/engineering/to-spec",
+  "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/to-spec",
+  "adaptations": [
+    "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+    "Local files are the default when no tracker is configured; concise acceptance criteria; no repeated test-interface approval.",
+    "Removed non-Codex frontmatter flag; preserved upstream explicit invocation policy in agents/openai.yaml."
+  ],
+  "upstream_skill_sha256": "43ad9cf318e5e7d3d1fa360253a37021796dc87a0c2e595ad262661a10f85088"
+}

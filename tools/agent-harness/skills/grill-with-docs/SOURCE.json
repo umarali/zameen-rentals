@@ -1,0 +1,13 @@
+{
+  "author": "Matt Pocock",
+  "repository": "mattpocock/skills",
+  "commit": "49dd158d1076134a641b33efb035946536778336",
+  "path": "skills/engineering/grill-with-docs",
+  "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/grill-with-docs",
+  "adaptations": [
+    "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+    "Replace unsupported Skill tool calls with local dependency reads.",
+    "Removed non-Codex frontmatter flag; preserved upstream explicit invocation policy in agents/openai.yaml."
+  ],
+  "upstream_skill_sha256": "7de372c13488f1ee96cc11cd8907b56b6809cc93eef776eeddd37de6b6cbe3fe"
+}

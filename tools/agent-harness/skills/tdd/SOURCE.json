@@ -1,0 +1,12 @@
+{
+  "author": "Matt Pocock",
+  "repository": "mattpocock/skills",
+  "commit": "49dd158d1076134a641b33efb035946536778336",
+  "path": "skills/engineering/tdd",
+  "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/tdd",
+  "adaptations": [
+    "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+    "Reuse accepted behavior and established test interfaces without repeated approval. Allow real database persistence checks for transaction contracts. Refactoring may follow a green test when in scope."
+  ],
+  "upstream_skill_sha256": "5505d25bbaa8fc14a79e4d20163936958992a2995b7f1dd1d6197edc9ed722e0"
+}

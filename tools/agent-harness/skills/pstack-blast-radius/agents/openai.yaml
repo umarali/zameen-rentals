@@ -1,0 +1,4 @@
+interface:
+  display_name: "PStack · blast radius"
+  short_description: "Prove what a change could break outside its diff"
+  default_prompt: "Use $pstack-blast-radius for the relevant investigation and present review material as HTML."

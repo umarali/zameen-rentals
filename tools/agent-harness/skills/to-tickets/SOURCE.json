@@ -1,0 +1,13 @@
+{
+  "author": "Matt Pocock",
+  "repository": "mattpocock/skills",
+  "commit": "49dd158d1076134a641b33efb035946536778336",
+  "path": "skills/engineering/to-tickets",
+  "url": "https://github.com/mattpocock/skills/tree/49dd158d1076134a641b33efb035946536778336/skills/engineering/to-tickets",
+  "adaptations": [
+    "Codex tools, existing authorization, HTML deliverables and inherited-model guidance",
+    "Local-file tracker default; HTML review copy; publish only within authorization already provided.",
+    "Removed non-Codex frontmatter flag; preserved upstream explicit invocation policy in agents/openai.yaml."
+  ],
+  "upstream_skill_sha256": "56ec23c5b2782785d4e65bff9e315b6d3aeb4ef977c174a219e99489fada1995"
+}
