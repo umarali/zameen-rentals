@@ -1,0 +1,32 @@
+[
+  {
+    "q": "furnished apartment in Gulberg Lahore",
+    "parsed": {
+      "query": "furnished apartment in Gulberg Lahore",
+      "filters": {
+        "area": "Gulberg",
+        "property_type": "apartment",
+        "furnished": true,
+        "city_hint": "lahore"
+      },
+      "parser": "ai"
+    },
+    "searchUrl": "https://zameenrentals.emerssive.com/api/search?city=lahore&area=Gulberg&property_type=apartment&furnished=true&page=1",
+    "status": 200
+  },
+  {
+    "q": "unfurnished apartment in Gulberg Lahore",
+    "parsed": {
+      "query": "unfurnished apartment in Gulberg Lahore",
+      "filters": {
+        "area": "Gulberg",
+        "property_type": "apartment",
+        "furnished": false,
+        "city_hint": "lahore"
+      },
+      "parser": "ai"
+    },
+    "searchUrl": "https://zameenrentals.emerssive.com/api/search?city=lahore&area=Gulberg&property_type=apartment&furnished=true&page=1",
+    "status": 200
+  }
+]

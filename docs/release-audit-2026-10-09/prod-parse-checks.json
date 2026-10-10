@@ -1,0 +1,42 @@
+[
+ {
+  "q": "Gulberg mein unfurnished flat 80 hazar tak",
+  "parser": "ai",
+  "furnished": false,
+  "area": "Gulberg",
+  "ok": true,
+  "secs": 2.35
+ },
+ {
+  "q": "گلبرگ میں ان فرنشڈ فلیٹ",
+  "parser": "ai",
+  "furnished": false,
+  "area": "Gulberg",
+  "ok": true,
+  "secs": 2.26
+ },
+ {
+  "q": "DHA mein furnished ghar 1 lakh tak",
+  "parser": "ai",
+  "furnished": true,
+  "area": "DHA Defence",
+  "ok": true,
+  "secs": 2.22
+ },
+ {
+  "q": "F-8 mein bina furniture 2 bed flat",
+  "parser": "ai",
+  "furnished": false,
+  "area": "F 8",
+  "ok": true,
+  "secs": 2.2
+ },
+ {
+  "q": "2 bed flat in Clifton under 75k",
+  "parser": "ai",
+  "furnished": null,
+  "area": "Clifton",
+  "ok": true,
+  "secs": 1.66
+ }
+]

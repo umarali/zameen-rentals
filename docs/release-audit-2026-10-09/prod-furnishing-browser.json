@@ -1,0 +1,88 @@
+[
+  {
+    "name": "desktop",
+    "steps": [
+      {
+        "step": "furnished",
+        "parser": "ai",
+        "parsed": true,
+        "param": "true",
+        "status": 200,
+        "total": 200,
+        "shown": 25
+      },
+      {
+        "step": "unfurnished",
+        "parser": "ai",
+        "parsed": false,
+        "param": "false",
+        "status": 200,
+        "total": 10,
+        "shown": 10
+      },
+      {
+        "step": "reload",
+        "requests": [
+          {
+            "path": "/api/search",
+            "area": "Gulberg",
+            "furnished": "false"
+          }
+        ],
+        "total": 10
+      },
+      {
+        "step": "any",
+        "param": null,
+        "total": 374
+      },
+      {
+        "step": "nearby",
+        "status": 200,
+        "param": "false",
+        "total": 11
+      }
+    ],
+    "failures": []
+  },
+  {
+    "name": "mobile",
+    "steps": [
+      {
+        "step": "furnished",
+        "parser": "ai",
+        "parsed": true,
+        "param": "true",
+        "status": 200,
+        "total": 200,
+        "shown": 25
+      },
+      {
+        "step": "unfurnished",
+        "parser": "ai",
+        "parsed": false,
+        "param": "false",
+        "status": 200,
+        "total": 10,
+        "shown": 10
+      },
+      {
+        "step": "reload",
+        "requests": [
+          {
+            "path": "/api/search",
+            "area": "Gulberg",
+            "furnished": "false"
+          }
+        ],
+        "total": 10
+      },
+      {
+        "step": "any",
+        "param": null,
+        "total": 374
+      }
+    ],
+    "failures": []
+  }
+]
