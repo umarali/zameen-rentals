@@ -919,3 +919,37 @@ class TestHealthChecks:
         res = client.get("/api/health/crawler")
         assert res.status_code == 503
         assert res.json()["newest_listing_seen_minutes_ago"] is None
+
+
+class TestFeedbackEndpoint:
+    @pytest.fixture
+    def sent(self, monkeypatch):
+        calls = []
+
+        async def fake_notify(message, context, email):
+            calls.append((message, context, email))
+            return True
+
+        monkeypatch.setattr("app.routes.notify_feedback", fake_notify)
+        return calls
+
+    def _rows(self):
+        return [dict(r) for r in _get_conn().execute("SELECT message, context, email FROM feedback")]
+
+    def test_stores_and_notifies_with_email(self, client, sent):
+        res = client.post("/api/feedback", json={"message": "Map is slow", "context": "{}", "email": "a@b.co"})
+        assert res.status_code == 200
+        assert self._rows() == [{"message": "Map is slow", "context": "{}", "email": "a@b.co"}]
+        assert sent == [("Map is slow", "{}", "a@b.co")]
+
+    def test_email_is_optional(self, client, sent):
+        res = client.post("/api/feedback", json={"message": "Nice", "email": "  "})
+        assert res.status_code == 200
+        assert self._rows()[0]["email"] is None
+        assert sent == [("Nice", None, None)]
+
+    def test_rejects_invalid_email_without_storing(self, client, sent):
+        res = client.post("/api/feedback", json={"message": "Hi", "email": "not-an-email"})
+        assert res.status_code == 400
+        assert self._rows() == []
+        assert sent == []

@@ -175,7 +175,8 @@ def init_db():
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 created_at  TEXT NOT NULL DEFAULT (datetime('now')),
                 message     TEXT NOT NULL,
-                context     TEXT
+                context     TEXT,
+                email       TEXT
             );
 
             -- ── Zameen location hierarchy ──
@@ -224,6 +225,12 @@ def init_db():
         }
         if "crawl_claimed_at" not in crawl_columns:
             conn.execute("ALTER TABLE crawl_state ADD COLUMN crawl_claimed_at TEXT")
+
+        feedback_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(feedback)").fetchall()
+        }
+        if "email" not in feedback_columns:
+            conn.execute("ALTER TABLE feedback ADD COLUMN email TEXT")
 
         conn.execute(
             """
@@ -524,7 +531,10 @@ def get_recent_searches(city: str = "lahore", limit: int = 8):
 
 # ── Feedback ──
 
-def save_feedback(message: str, context: str | None = None):
+def save_feedback(message: str, context: str | None = None, email: str | None = None):
     conn = _get_conn()
-    conn.execute("INSERT INTO feedback (message, context) VALUES (?, ?)", (message, context))
+    conn.execute(
+        "INSERT INTO feedback (message, context, email) VALUES (?, ?, ?)",
+        (message, context, email),
+    )
     conn.commit()

@@ -83,6 +83,40 @@ test.describe("Feedback Modal", () => {
     );
   });
 
+  test("optional email is sent with the feedback", async ({ page }) => {
+    let body = null;
+    await page.route("**/api/feedback", (route) => {
+      body = route.request().postDataJSON();
+      return route.fulfill({ status: 200, json: { ok: true } });
+    });
+
+    await page.locator("#reportBtn").click();
+    await page.locator("#feedbackMsg").fill("Please add Bahria Town");
+    await page.locator("#feedbackEmail").fill("renter@example.com");
+    await page.locator("#feedbackSubmit").click();
+
+    await expect(page.locator("#feedbackModal")).toHaveClass(/hidden/);
+    expect(body.message).toBe("Please add Bahria Town");
+    expect(body.email).toBe("renter@example.com");
+  });
+
+  test("invalid email keeps the modal open and sends nothing", async ({ page }) => {
+    let posted = false;
+    await page.route("**/api/feedback", (route) => {
+      posted = true;
+      return route.fulfill({ status: 200, json: { ok: true } });
+    });
+
+    await page.locator("#reportBtn").click();
+    await page.locator("#feedbackMsg").fill("Hello");
+    await page.locator("#feedbackEmail").fill("not-an-email");
+    await page.locator("#feedbackSubmit").click();
+
+    await expect(page.locator("#feedbackModal")).not.toHaveClass(/hidden/);
+    await expect(page.locator("#toastStack")).toContainText("Check the email address");
+    expect(posted).toBe(false);
+  });
+
   test("failed submission shows error toast and keeps modal open", async ({
     page,
   }) => {

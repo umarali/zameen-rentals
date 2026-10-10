@@ -10,7 +10,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Literal, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from app.data import (
@@ -18,6 +18,7 @@ from app.data import (
     PARENT_FALLBACK_ALIASES, ROMAN_URDU_AREAS_BY_CITY, URDU_AREAS,
 )
 from app.listing_tags import attach_tags
+from app.notify import notify_feedback
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
@@ -801,17 +802,24 @@ async def recent_searches(city: str = Query("lahore"), limit: int = Query(8, ge=
     return get_recent_searches(city, limit)
 
 
+_EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+
+
 @router.post("/api/feedback")
 @limiter.limit("5/minute")
-async def submit_feedback(request: Request):
+async def submit_feedback(request: Request, background: BackgroundTasks):
     body = await request.json()
     message = (body.get("message") or "").strip()
     if not message:
         raise HTTPException(status_code=400, detail="Message is required")
     if len(message) > 2000:
         raise HTTPException(status_code=400, detail="Message too long")
+    email = (body.get("email") or "").strip() or None
+    if email and (len(email) > 254 or not _EMAIL_RE.fullmatch(email)):
+        raise HTTPException(status_code=400, detail="Enter a valid email address")
     context = body.get("context")
-    save_feedback(message, context)
+    save_feedback(message, context, email)
+    background.add_task(notify_feedback, message, context, email)
     return {"ok": True}
 
 

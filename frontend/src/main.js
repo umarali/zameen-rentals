@@ -1277,6 +1277,7 @@ function initReportBtn() {
   const overlay = $('#feedbackOverlay');
   const modal = $('#feedbackModal');
   const msg = $('#feedbackMsg');
+  const emailInput = $('#feedbackEmail');
   const submitBtn = $('#feedbackSubmit');
 
   function openFeedback() {
@@ -1284,6 +1285,7 @@ function initReportBtn() {
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
     msg.value = '';
+    emailInput.value = '';
     submitBtn.disabled = true;
     msg.focus();
   }
@@ -1311,6 +1313,12 @@ function initReportBtn() {
   submitBtn.addEventListener('click', async () => {
     const text = msg.value.trim();
     if (!text) return;
+    const email = emailInput.value.trim();
+    if (email && !emailInput.checkValidity()) {
+      showToast('Check the email address, or leave it blank.', { tone: 'error' });
+      emailInput.focus();
+      return;
+    }
     const context = gatherFeedbackContext();
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending...';
@@ -1318,7 +1326,7 @@ function initReportBtn() {
       const resp = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, context }),
+        body: JSON.stringify({ message: text, context, email }),
       });
       if (!resp.ok) throw new Error();
       trackFeedbackSubmitted({ messageLength: text.length });
@@ -1326,7 +1334,7 @@ function initReportBtn() {
       showToast('Thanks for your feedback!');
     } catch {
       if (!navigator.onLine) {
-        queueFeedback(text, context);
+        queueFeedback(text, context, email);
         closeFeedback();
         showToast('You are offline. Feedback queued for delivery.');
       } else {

@@ -27,10 +27,10 @@ export function registerSW() {
 
 // ===== OFFLINE FEEDBACK QUEUE =====
 
-export function queueFeedback(message, context) {
+export function queueFeedback(message, context, email = '') {
   try {
     const queue = JSON.parse(localStorage.getItem(FEEDBACK_QUEUE_KEY) || '[]');
-    queue.push({ message, context, queuedAt: Date.now() });
+    queue.push({ message, context, email, queuedAt: Date.now() });
     localStorage.setItem(FEEDBACK_QUEUE_KEY, JSON.stringify(queue));
   } catch { /* storage full — silently drop */ }
 }
@@ -48,7 +48,7 @@ export async function replayFeedbackQueue() {
       const resp = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: item.message, context: item.context }),
+        body: JSON.stringify({ message: item.message, context: item.context, email: item.email || '' }),
       });
       if (!resp.ok) remaining.push(item);
     } catch {
