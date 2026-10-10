@@ -1249,3 +1249,21 @@ class TestApplySearchState:
         assert row["property_type"] == "Upper Portion"
         assert (row["latitude"], row["longitude"]) == (24.81, 67.03)
         assert row["location_source"] == "area_centroid"
+
+
+def test_init_db_adds_feedback_email_to_existing_table(db_conn):
+    db_conn.executescript("""
+        DROP TABLE feedback;
+        CREATE TABLE feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            message TEXT NOT NULL,
+            context TEXT
+        );
+        INSERT INTO feedback (message) VALUES ('old row');
+    """)
+    init_db()
+    conn = _get_conn()
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(feedback)")}
+    assert "email" in cols
+    assert conn.execute("SELECT message, email FROM feedback").fetchone()[:] == ("old row", None)
