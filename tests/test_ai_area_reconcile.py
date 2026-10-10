@@ -176,3 +176,24 @@ def test_bed_size_price_numbers_are_not_area_evidence():
     f = _build_parse_query_response("2 bed flat", "karachi",
                                     {"area": "DHA Phase 2", "bedrooms": 2, "parser": "ai"})["filters"]
     assert f["area_approximate"] is True
+
+
+@pytest.mark.parametrize("query,city,ai_area,area", [
+    # Production 2026-10-11: Claude returned the parent area for both.
+    ("ڈیفنس فیز 6 میں 3 بیڈروم گھر کرائے پر", "karachi", "DHA Defence", "DHA Phase 6"),
+    ("furnished 1 bed apartment Gulberg III for bachelors", "lahore", "Gulberg", "Gulberg 3"),
+])
+def test_literal_sub_area_beats_the_parent_ai_choice(query, city, ai_area, area):
+    assert _reconcile_ai_area(query, {"area": ai_area}, city)["area"] == area
+
+
+def test_bare_portion_from_the_model_is_upper_portion():
+    # Production 2026-10-11: Haiku answered "G-10 or G-9 portion" with
+    # property_type "portion", which failed validation and fell back to regex.
+    assert parsing.RentalFilters(property_type="portion").property_type == "upper_portion"
+
+
+def test_roman_numeral_area_is_an_exact_mention_end_to_end():
+    q = "furnished 1 bed apartment Gulberg III for bachelors"
+    f = _build_parse_query_response(q, "lahore", {"area": "Gulberg 3", "parser": "ai"})["filters"]
+    assert "area_approximate" not in f

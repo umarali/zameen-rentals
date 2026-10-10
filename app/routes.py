@@ -182,7 +182,8 @@ def _build_parse_query_response(q, city, result):
     effective_city = result.get("city_hint") or city
     areas = get_areas(effective_city)
     selected = result.get("areas") or [result.get("area")]
-    exact_mentions = {name for _, _, name in _area_spans(q.lower(), effective_city)}
+    # Normalized like the parsers, so "Gulberg III" counts as naming Gulberg 3.
+    exact_mentions = {name for _, _, name in _area_spans(_normalize_number_words(q).lower(), effective_city)}
     exact_selection = all(name in exact_mentions for name in selected)
     if result.get("area") and result["area"] in areas and not exact_selection:
         ql = q.lower()
