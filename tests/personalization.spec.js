@@ -104,40 +104,33 @@ test.describe("Personalization UI — save search modal", () => {
   });
 });
 
-test.describe("First visit guidance", () => {
-  test("shows the inline guide (not the modal) once the tour is done", async ({ page }) => {
+test.describe("On-demand guidance", () => {
+  test("new visitors reach search without automatic guidance", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.removeItem('zr_welcomed');
+      localStorage.removeItem('zr_tour_done');
+    });
     await gotoApp(page);
-    // Tour already completed (storageState) — only the welcome flag is cleared.
-    await page.evaluate(() => localStorage.removeItem("zr_welcomed"));
-    await page.reload();
-    await page.waitForLoadState("networkidle");
-
-    await expect(page.locator("#firstVisitGuide")).toBeVisible();
-    await expect(page.locator("#welcomeOverlay")).toHaveClass(/(?:^|\s)hidden(?:\s|$)/);
-    await expect(page.locator("#nlInput")).toBeVisible();
+    await expect(page.locator('#siteInfoDialog')).toHaveCount(1);
+    await expect(page.locator('.card-wrap').first()).toBeVisible();
+    await expect(page.locator('#firstVisitGuide')).toHaveCount(0);
+    await expect(page.locator('.driver-popover')).toHaveCount(0);
+    await expect(page.locator('#welcomeOverlay .welcome-panel')).toBeHidden();
+    await page.locator('#nlInput').fill('DHA');
+    await expect(page.locator('#nlInput')).toHaveValue('DHA');
   });
 
-  test("runs the guided tour on the very first visit, then dismisses cleanly", async ({ page }) => {
+  test("search tips and the tour remain available from the menu", async ({ page }) => {
     await gotoApp(page);
-    // Simulate a brand-new visitor: clear both onboarding flags.
-    await page.evaluate(() => {
-      localStorage.removeItem("zr_welcomed");
-      localStorage.removeItem("zr_tour_done");
-    });
-    await page.reload();
-    await page.waitForLoadState("networkidle");
-
-    // The Driver.js tour auto-starts (waits for listing cards, then highlights).
-    const popover = page.locator(".driver-popover.zr-tour");
-    await expect(popover).toBeVisible({ timeout: 20_000 });
-    await expect(popover.locator(".driver-popover-title")).toContainText("Search");
-    // It must not be the blocking welcome modal.
-    await expect(page.locator("#welcomeOverlay")).toHaveClass(/(?:^|\s)hidden(?:\s|$)/);
-
-    // Esc closes it and the flag is set so it never auto-runs again.
-    await page.keyboard.press("Escape");
-    await expect(popover).toHaveCount(0);
-    await expect.poll(() => page.evaluate(() => localStorage.getItem("zr_tour_done"))).toBe("1");
+    await page.getByRole('button', {name:'Open menu', exact:true}).click();
+    await page.getByRole('button', {name:'Search tips'}).click();
+    await expect(page.locator('#welcomeOverlay .welcome-panel')).toBeVisible();
+    await page.getByRole('button', {name:'Take a quick tour'}).click();
+    const tour = page.locator('.driver-popover.zr-tour');
+    await expect(tour).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(tour).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('zr_tour_done'))).toBe('1');
   });
 });
 
