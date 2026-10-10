@@ -1,0 +1,140 @@
+/* Urdu (RTL) layout, the Nastaliq font, and the header language switch.
+ *
+ * Kept apart from style.css so the RTL rules read as one list. Most mirroring
+ * comes from logical Tailwind utilities (ms-*, me-*, start-*, end-*) in the
+ * markup; this file covers the hand-written CSS that still uses left/right.
+ * The Leaflet map containers stay dir="ltr"; only their text is translated.
+ */
+
+/* ===== Language switch (header) ===== */
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: #f3f4f6;
+}
+.lang-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.75rem;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #4b5563;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color .15s ease, color .15s ease;
+}
+.lang-option[lang="ur"] {
+  font-family: 'Noto Nastaliq Urdu', 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+  padding-bottom: 0.2rem;
+}
+.lang-option:hover { color: var(--color-brand-600); }
+.lang-option.active {
+  background: #fff;
+  color: var(--color-brand-700);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  cursor: default;
+}
+.lang-option:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 1px; }
+/* Header switch on tablets and up; on phones a single button at the start of
+ * the filter bar offers the other language. */
+.lang-toggle-bar { display: none; }
+@media (max-width: 639px) {
+  .lang-toggle-header { display: none; }
+  .lang-toggle-bar { display: inline-flex; padding: 0; background: none; }
+  .lang-toggle-bar .lang-option.active { display: none; }
+  .lang-toggle-bar .lang-option {
+    height: 1.9rem;
+    border: 1px solid var(--color-brand-200);
+    background: var(--color-brand-50);
+    color: var(--color-brand-700);
+  }
+}
+
+/* ===== Urdu typography =====
+ * Inter stays first so Latin text and Western digits keep their shapes;
+ * Urdu glyphs fall through to Noto Nastaliq Urdu (OFL). Nastaliq needs a much
+ * taller line box than Latin, so the Tailwind line-height tokens grow. */
+html:lang(ur) {
+  --font-sans: 'Inter', 'Noto Nastaliq Urdu', system-ui, -apple-system, sans-serif;
+  --font-brand: 'Sora', 'Inter', 'Noto Nastaliq Urdu', system-ui, sans-serif;
+  --text-xs--line-height: 2.1;
+  --text-sm--line-height: 2;
+  --text-base--line-height: 1.95;
+  --text-lg--line-height: 1.9;
+  --text-xl--line-height: 1.85;
+  --text-2xl--line-height: 1.8;
+}
+html:lang(ur) body { line-height: 2; }
+html:lang(ur) .leading-tight,
+html:lang(ur) .leading-snug,
+html:lang(ur) .leading-relaxed { line-height: 2; }
+/* Single-line clamps cut Nastaliq descenders unless the box is tall enough. */
+html:lang(ur) .line-clamp-1 { line-height: 2.1; }
+html:lang(ur) .chip,
+html:lang(ur) .chip-filter { line-height: 1.7; padding-block: 0.3rem; }
+html:lang(ur) .filter-dd .chip { padding-block: 0.4rem; }
+html:lang(ur) .toast { line-height: 1.9; }
+html:lang(ur) .driver-popover.zr-tour .driver-popover-title,
+html:lang(ur) .driver-popover.zr-tour .driver-popover-description { line-height: 2; }
+html:lang(ur) .welcome-eyebrow,
+html:lang(ur) .compare-section th { letter-spacing: 0; text-transform: none; }
+html:lang(ur) .uppercase { text-transform: none; letter-spacing: 0; }
+
+/* English listing text from Zameen.com keeps its own reading order but lines
+ * up with the Urdu around it. */
+[dir="rtl"] .card-wrap .line-clamp-1,
+[dir="rtl"] #drawerContent h2,
+[dir="rtl"] #drawerDesc,
+[dir="rtl"] .amenity-pill,
+[dir="rtl"] .compare-hloc {
+  unicode-bidi: plaintext;
+  text-align: right;
+}
+
+/* ===== Mirrored components ===== */
+[dir="rtl"] .chip-clear { margin-left: 0; margin-right: 0.25rem; }
+[dir="rtl"] .toast-action { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .intent-strip-x { margin-left: 0; margin-right: auto; }
+
+/* Filter bar: the overflow fade sits on the side the bar scrolls toward. */
+[dir="rtl"] .filter-bar-wrap::after {
+  right: auto;
+  left: 0;
+  background: linear-gradient(to left, transparent, white);
+}
+
+/* Listing drawer slides in from the left on desktop. */
+@media (min-width: 1024px) {
+  [dir="rtl"] #drawer:not(.drawer-open) { transform: translate3d(-100%, 0, 0); }
+}
+@media (max-width: 1023px) {
+  [dir="rtl"] #drawerClose { right: auto; left: 0.75rem; }
+  [dir="rtl"] header.header-has-clear #clearAllBtn,
+  html.app-standalone[dir="rtl"] #clearAllBtn { margin-left: 0; margin-right: auto; }
+}
+
+/* Compare tray + modal */
+[dir="rtl"] .compare-tray-thumbs .compare-thumb-remove { right: auto; left: -4px; }
+[dir="rtl"] .compare-col-remove { right: auto; left: 0.35rem; }
+[dir="rtl"] .compare-corner,
+[dir="rtl"] .compare-rlabel,
+[dir="rtl"] .compare-section th { left: auto; right: 0; text-align: right; }
+[dir="rtl"] .compare-rlabel { border-right: 0; border-left: 1px solid #f1f5f9; }
+[dir="rtl"] .compare-hcell,
+[dir="rtl"] .compare-cell { text-align: right; border-left: 0; border-right: 1px solid #f1f5f9; }
+[dir="rtl"] .compare-badge,
+[dir="rtl"] .compare-same-pill { margin-left: 0; margin-right: 0.35rem; }
+
+/* Map text: containers stay LTR, but Urdu inside tooltips reads right to left. */
+[dir="rtl"] .leaflet-tooltip,
+[dir="rtl"] .leaflet-popup-content { direction: rtl; text-align: right; }
+[dir="rtl"] .map-layer-btn { font-family: inherit; }
+html:lang(ur) .compare-tray-btn { white-space: nowrap; }

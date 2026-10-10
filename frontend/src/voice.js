@@ -4,6 +4,7 @@
 import { $, esc } from './utils.js';
 import { S } from './state.js';
 import { track } from './analytics.js';
+import { t, onLangChange } from './i18n.js';
 
 const MAX_MS = 12000;        // server rejects clips over 15s
 const SILENCE_MS = 1500;     // stop this long after the user stops talking
@@ -14,7 +15,7 @@ const MIC_SVG = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox=
 const STOP_SVG = '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
 const SPINNER_SVG = '<svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>';
 
-const BTN_BASE = 'w-8 h-8 mr-1 rounded-full flex items-center justify-center shrink-0 transition-colors disabled:opacity-50';
+const BTN_BASE = 'w-8 h-8 me-1 rounded-full flex items-center justify-center shrink-0 transition-colors disabled:opacity-50';
 const BTN_IDLE = 'text-gray-400 hover:text-brand-600 hover:bg-brand-50';
 const BTN_RECORDING = 'bg-red-500 text-white animate-pulse';
 
@@ -45,9 +46,9 @@ function hideStatus() {
 }
 
 function micErrorMessage(err) {
-  if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError') return 'Microphone access is blocked. Allow it in your browser settings to search by voice.';
-  if (err?.name === 'NotFoundError') return 'No microphone found.';
-  return 'Could not start the microphone.';
+  if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError') return t('voice.blocked');
+  if (err?.name === 'NotFoundError') return t('voice.noMic');
+  return t('voice.cantStart');
 }
 
 /** Stop the recorder once the user has spoken and then gone quiet. */
@@ -102,10 +103,15 @@ export async function initVoiceSearch({ anchor = $('#nlSearchBtn'), onTranscript
     btn.innerHTML = recording ? STOP_SVG : MIC_SVG;
     btn.disabled = state === 'busy';
     btn.setAttribute('aria-pressed', String(recording));
-    btn.setAttribute('aria-label', recording ? 'Stop recording' : 'Search by voice');
-    btn.title = recording ? 'Stop recording' : 'Search by voice';
+    btn.setAttribute('aria-label', t(recording ? 'voice.stop' : 'voice.search'));
+    btn.title = t(recording ? 'voice.stop' : 'voice.search');
   };
   setState('idle');
+  onLangChange(() => {
+    const recording = btn.getAttribute('aria-pressed') === 'true';
+    btn.setAttribute('aria-label', t(recording ? 'voice.stop' : 'voice.search'));
+    btn.title = t(recording ? 'voice.stop' : 'voice.search');
+  });
 
   const stop = () => {
     clearTimeout(maxTimer); clearInterval(tickTimer);
@@ -115,7 +121,7 @@ export async function initVoiceSearch({ anchor = $('#nlSearchBtn'), onTranscript
 
   const send = async (blob, durationMs) => {
     setState('busy');
-    showStatus(`<span class="inline-flex items-center gap-1.5 text-gray-400">${SPINNER_SVG}Transcribing...</span>`);
+    showStatus(`<span class="inline-flex items-center gap-1.5 text-gray-400">${SPINNER_SVG}${esc(t('voice.transcribing'))}</span>`);
     try {
       const r = await fetch('/api/voice/transcribe?city=' + encodeURIComponent(S.city), {
         method: 'POST',
@@ -123,15 +129,15 @@ export async function initVoiceSearch({ anchor = $('#nlSearchBtn'), onTranscript
         body: blob,
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.detail || 'Could not transcribe. Please try again.');
+      if (!r.ok) throw new Error(d.detail || t('voice.transcribeError'));
       const text = (d.text || '').trim();
       trackVoiceSearch({ phase: 'transcribed', durationMs, language: d.language, ok: Boolean(text) });
-      if (!text) { showStatus("Didn't catch that. Tap the mic and try again."); return; }
+      if (!text) { showStatus(esc(t('voice.didntCatch'))); return; }
       hideStatus();
       onTranscript?.(text);
     } catch (err) {
       trackVoiceSearch({ phase: 'transcribed', durationMs, ok: false, error: 'server' });
-      showStatus(esc(err.message || 'Could not transcribe. Please try again.'));
+      showStatus(esc(err.message || t('voice.transcribeError')));
     } finally {
       setState('idle');
     }
@@ -166,7 +172,7 @@ export async function initVoiceSearch({ anchor = $('#nlSearchBtn'), onTranscript
         recorder = null;
         if (durationMs < 400 || blob.size < 500) {
           setState('idle');
-          showStatus("Didn't catch that. Tap the mic and try again.");
+          showStatus(esc(t('voice.didntCatch')));
           return;
         }
         send(blob, durationMs);
@@ -179,7 +185,7 @@ export async function initVoiceSearch({ anchor = $('#nlSearchBtn'), onTranscript
         stream.getTracks().forEach(t => t.stop());
         recorder = null;
         setState('idle');
-        showStatus('Recording failed. Tap the mic and try again.');
+        showStatus(esc(t('voice.recordFailed')));
       };
       startedAt = performance.now();
       recorder.start();
@@ -188,7 +194,7 @@ export async function initVoiceSearch({ anchor = $('#nlSearchBtn'), onTranscript
       $('#nlSuggestions')?.classList.add('hidden');
       const tick = () => {
         const secs = Math.floor((performance.now() - startedAt) / 1000);
-        showStatus(`<span class="inline-flex items-center gap-1.5 text-red-600"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span><span class="hidden sm:inline">Listening...</span> 0:${String(secs).padStart(2, '0')}<span class="hidden sm:inline"> · tap to stop</span></span>`);
+        showStatus(`<span class="inline-flex items-center gap-1.5 text-red-600"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span><span class="hidden sm:inline">${esc(t('voice.listening'))}</span> <span dir="ltr">0:${String(secs).padStart(2, '0')}</span><span class="hidden sm:inline">${esc(t('voice.tapStop'))}</span></span>`);
       };
       tick();
       tickTimer = setInterval(tick, 500);
@@ -203,7 +209,7 @@ export async function initVoiceSearch({ anchor = $('#nlSearchBtn'), onTranscript
       recorder = null;
       stream.getTracks().forEach(t => t.stop());
       setState('idle');
-      showStatus('Could not start recording. Tap the mic and try again.');
+      showStatus(esc(t('voice.recordStartFailed')));
       trackVoiceSearch({ phase: 'mic_error', error: err?.name || 'recorder' });
     }
   };

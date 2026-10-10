@@ -30,6 +30,7 @@ import {
   initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen,
   trackCitySwitch, trackFilterChange, trackMapMarkerClick, trackApiError, trackScrollDepth, trackFeedbackSubmitted,
 } from './analytics.js';
+import { t, initI18n, onLangChange, getLang, fmtShortPrice, cityLabel, areaLabel, fmtNum } from './i18n.js';
 
 const DISPLAY_MODE_QUERIES = [
   '(display-mode: standalone)',
@@ -120,7 +121,7 @@ async function renderDataStatus() {
     const rel = fmtRelative(newestUtc);
     if (rel) {
       const ageDays = (Date.now() - Date.parse(newestUtc)) / 86400000;
-      parts.push(ageDays > 10 ? `Data last updated ${rel} — listings may have changed` : `Data updated ${rel}`);
+      parts.push(t(ageDays > 10 ? 'data.updatedStale' : 'data.updated', { rel }));
     }
   }
   if (_appVersion) parts.push('v' + _appVersion);
@@ -154,13 +155,13 @@ function updateNearbyControls() {
 
   const sortDist = $('#sortDistance');
   if (refs.searchMode === 'nearby') {
-    nearbyChip.innerHTML = `Near Me<span class="chip-clear" data-nearby-clear="1">&times;</span>`;
+    nearbyChip.innerHTML = `${esc(t('filter.nearMe'))}<span class="chip-clear" data-nearby-clear="1">&times;</span>`;
     nearbyChip.classList.add('has-value');
     radiusChip.classList.remove('hidden');
-    radiusChip.innerHTML = `${refs.nearbyRadiusKm} km <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>`;
+    radiusChip.innerHTML = `${esc(t('unit.km', { n: refs.nearbyRadiusKm }))} <svg class="w-3 h-3 ms-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>`;
     if (sortDist) sortDist.hidden = false;
   } else {
-    nearbyChip.textContent = 'Near Me';
+    nearbyChip.textContent = t('filter.nearMe');
     nearbyChip.classList.remove('has-value');
     radiusChip.classList.add('hidden');
     if (sortDist) {
@@ -182,7 +183,7 @@ function exitNearbyMode({ silent = false } = {}) {
   clearNearbyRadiusOverlays();
   refreshUserLocationOverlays();
   updateNearbyControls();
-  if (!silent) showToast('Returned to browse mode.');
+  if (!silent) showToast(t('toast.browseMode'));
   return true;
 }
 
@@ -321,6 +322,7 @@ function saveSearch() {
   if (S.sizeMarlaMax) p.set('size_marla_max', S.sizeMarlaMax);
   if (S.furnishing) p.set('furnished', S.furnishing === 'furnished' ? '1' : '0');
   if (S.sort) p.set('sort', S.sort);
+  if (getLang() === 'ur') p.set('lang', 'ur');
   const qs = p.toString();
   const newUrl = qs ? '?' + qs : location.pathname;
   if (location.search !== '?' + qs) history.replaceState(null, '', newUrl);
@@ -398,7 +400,7 @@ function showLoading(append) {
     const s = document.createElement('div');
     s.id = 'spinner';
     s.className = 'flex flex-col items-center gap-3 py-12';
-    s.innerHTML = '<div class="w-8 h-8 border-3 border-gray-200 border-t-brand-500 rounded-full animate-spin"></div><p class="text-sm text-gray-400">Loading more...</p>';
+    s.innerHTML = '<div class="w-8 h-8 border-3 border-gray-200 border-t-brand-500 rounded-full animate-spin"></div><p class="text-sm text-gray-400">' + esc(t('loading.more')) + '</p>';
     $('#listingsFooter').appendChild(s);
   }
 }
@@ -407,6 +409,9 @@ function hideLoading() {
   const s = $('#spinner');
   if (s) s.remove();
 }
+
+// Last header inputs, so a language switch can repaint it without a refetch.
+let _lastHeaderArgs = null;
 
 function updateHeader({
   total = 0,
@@ -417,7 +422,8 @@ function updateHeader({
   ranking = refs.viewportRanking,
   scope = refs.viewportScope,
 } = {}) {
-  const cityName = CITY_DEFAULTS[S.city]?.name || 'Karachi';
+  _lastHeaderArgs = { total, source, mode, visibleAreas, coveredAreas, ranking, scope };
+  const cityName = cityLabel(S.city) || CITY_DEFAULTS[S.city]?.name || 'Karachi';
   const shown = refs.currentResults.length;
   const titleEl = $('#listingsTitle');
   const countEl = $('#resultsCount');
@@ -426,66 +432,66 @@ function updateHeader({
 
   // Headline count: "Showing X–Y of Z" when more results exist, "Showing all Z"
   // when the page already holds the entire result set, otherwise empty-state.
-  const fmt = n => Number(n).toLocaleString();
+  const fmt = fmtNum;
   let countText;
-  if (!shown) countText = total ? '0 shown' : 'No results';
-  else if (total > shown) countText = `Showing 1–${fmt(shown)} of ${fmt(total)}`;
-  else countText = `Showing all ${fmt(shown)}`;
+  if (!shown) countText = total ? t('results.zeroShown') : t('results.noResults');
+  else if (total > shown) countText = t('results.showingRange', { shown: fmt(shown), total: fmt(total) });
+  else countText = t('results.showingAll', { n: fmt(shown) });
 
   if (mode === 'nearby') {
-    titleEl.textContent = 'Rentals near you';
+    titleEl.textContent = t('title.nearby');
     countEl.textContent = countText;
     metaEl.textContent = total
-      ? `Within ${refs.nearbyRadiusKm} km`
-      : `No exact-pin rentals found within ${refs.nearbyRadiusKm} km`;
+      ? t('meta.withinKm', { km: refs.nearbyRadiusKm })
+      : t('meta.noExactWithinKm', { km: refs.nearbyRadiusKm });
   } else if (mode === 'viewport') {
-    titleEl.textContent = 'Rentals in this map view';
+    titleEl.textContent = t('title.viewport');
     countEl.textContent = countText;
     const coverageMessage = getViewportCoverageMessage({ total, visibleAreas, coveredAreas });
     if (scope === 'exact_bounds') {
       metaEl.textContent = total
-        ? `${fmt(total)} exact-pin rentals currently visible on the map`
-        : 'No exact-pin rentals are visible in this map view';
+        ? t('meta.exactVisible', { n: fmt(total) })
+        : t('meta.noExactVisible');
     } else if (isEmptyExactBoundsFallback(scope)) {
       metaEl.textContent = total
-        ? `No exact-pin rentals visible here. ${coverageMessage}`
-        : `No exact-pin rentals are visible in this map view. ${coverageMessage}`;
+        ? t('meta.noExactHere', { msg: coverageMessage })
+        : t('meta.noExactInView', { msg: coverageMessage });
     } else {
       metaEl.textContent = coverageMessage;
     }
   } else if (S.area) {
-    titleEl.textContent = 'Rentals in ' + S.area;
+    titleEl.textContent = t('title.in', { place: areaLabel(S.area) });
     countEl.textContent = countText;
-    metaEl.textContent = total ? `In this area` : 'No rentals match this area right now';
+    metaEl.textContent = total ? t('meta.inArea') : t('meta.noneInArea');
   } else {
-    titleEl.textContent = 'Rentals in ' + cityName;
+    titleEl.textContent = t('title.in', { place: cityName });
     countEl.textContent = countText;
-    metaEl.textContent = total ? `Across current filters` : `No rentals match your filters in ${cityName}`;
+    metaEl.textContent = total ? t('meta.acrossFilters') : t('meta.noneInCity', { city: cityName });
   }
 
   if (source === 'local') {
     const rankingLabel = mode === 'nearby'
-      ? 'Nearby'
+      ? t('rank.nearby')
       : S.sort === 'newest'
-      ? 'Newest first'
+      ? t('rank.newest')
       : S.sort === 'price_low'
-      ? 'Lowest price'
+      ? t('rank.lowest')
       : S.sort === 'price_high'
-      ? 'Highest price'
+      ? t('rank.highest')
       : mode === 'viewport' && ranking === 'map_focus'
-      ? 'Nearest first'
+      ? t('rank.nearest')
       : !S.sort
-      ? 'Newest first'
+      ? t('rank.newest')
       : '';
-    sourceEl.textContent = rankingLabel ? `Instant / ${rankingLabel}` : 'Instant';
+    sourceEl.textContent = rankingLabel ? t('source.instantWith', { r: rankingLabel }) : t('source.instant');
     sourceEl.className = 'text-xs text-brand-500 font-medium';
     sourceEl.classList.remove('hidden');
   } else if (source === 'live') {
-    sourceEl.textContent = 'Live';
+    sourceEl.textContent = t('source.live');
     sourceEl.className = 'text-xs text-amber-500 font-medium';
     sourceEl.classList.remove('hidden');
   } else if (source === 'unavailable') {
-    sourceEl.textContent = 'No live results';
+    sourceEl.textContent = t('source.unavailable');
     sourceEl.className = 'text-xs text-gray-400 font-medium';
     sourceEl.classList.remove('hidden');
   } else {
@@ -496,11 +502,11 @@ function updateHeader({
 function getViewportCoverageMessage({ total = 0, visibleAreas = 0, coveredAreas = 0 } = {}) {
   if (total && coveredAreas > 0) {
     return coveredAreas === visibleAreas
-      ? `${total} across ${coveredAreas} areas in view`
-      : `${total} across ${coveredAreas} of ${visibleAreas} areas in view`;
+      ? t('cov.acrossAll', { total, covered: coveredAreas })
+      : t('cov.acrossSome', { total, covered: coveredAreas, visible: visibleAreas });
   }
-  if (visibleAreas > 0) return `No listings in the ${visibleAreas} areas in view yet`;
-  return 'Move the map to explore nearby areas';
+  if (visibleAreas > 0) return t('cov.noneInVisible', { n: visibleAreas });
+  return t('cov.moveMap');
 }
 
 function isEmptyExactBoundsFallback(scope = refs.viewportScope) {
@@ -523,14 +529,14 @@ function shouldHideOverlayCoverageBadge() {
 
 function getViewportEmptyStateMessage({ visibleAreas = getViewportVisibleAreaCount(), scope = refs.viewportScope } = {}) {
   if (scope === 'exact_bounds') {
-    return 'No exact-pin rentals are visible here right now. Zoom out to broaden the map view.';
+    return t('empty.exactZoomOut');
   }
   if (isEmptyExactBoundsFallback(scope)) {
     return visibleAreas > 0
-      ? 'No exact-pin rentals are visible here right now. Pan or zoom the map to find nearby areas with listings.'
-      : 'No exact-pin rentals are visible in this map view.';
+      ? t('empty.exactPan')
+      : t('empty.exactNone');
   }
-  return 'Pan or zoom the map to discover other areas';
+  return t('empty.pan');
 }
 
 let coverageExpanded = false;
@@ -564,22 +570,22 @@ function updateCoverageBadge() {
 
     const topAreas = coveredEntries.slice(0, 3);
     const coveredHtml = topAreas.length
-      ? topAreas.map(([name]) => `<span class="coverage-chip live">${esc(name)}</span>`).join('')
-      : '<span class="coverage-chip">No areas with listings here yet</span>';
-    const summary = coveredAreas > 0
-      ? `${coveredAreas} of ${visibleAreas || coveredAreas} areas have listings`
-      : `${visibleAreas || 0} areas in view, none with listings yet`;
+      ? topAreas.map(([name]) => `<span class="coverage-chip live">${esc(areaLabel(name))}</span>`).join('')
+      : `<span class="coverage-chip">${esc(t('cov.noAreasYet'))}</span>`;
+    const summary = esc(coveredAreas > 0
+      ? t('cov.summary', { covered: coveredAreas, visible: visibleAreas || coveredAreas })
+      : t('cov.summaryNone', { n: visibleAreas || 0 }));
     const previewingEmpty = refs.previewArea && !coveredEntries.some(([name]) => name === refs.previewArea);
-    const detail = previewingEmpty
-      ? `Previewing ${refs.previewArea}. Grey areas are preview-only until listings are available there.`
+    const detail = esc(previewingEmpty
+      ? t('cov.previewing', { area: areaLabel(refs.previewArea) })
       : coveredAreas > 0
-      ? 'Green areas have listings; grey are preview-only. Cards are ordered nearest to the map center.'
-      : 'No listings in this part of the map yet. Grey areas are preview-only.';
+      ? t('cov.detailSome')
+      : t('cov.detailNone'));
     const legendHtml = `
-      <div class="coverage-legend" aria-label="Map legend">
-        <span class="coverage-legend-item"><span class="coverage-legend-dot live" aria-hidden="true"></span>Green: has listings</span>
-        <span class="coverage-legend-item"><span class="coverage-legend-dot preview" aria-hidden="true"></span>Grey: preview only</span>
-        <span class="coverage-legend-item"><span class="coverage-legend-dot exact" aria-hidden="true"></span>Red: exact listing</span>
+      <div class="coverage-legend" aria-label="${esc(t('cov.legend'))}">
+        <span class="coverage-legend-item"><span class="coverage-legend-dot live" aria-hidden="true"></span>${esc(t('cov.green'))}</span>
+        <span class="coverage-legend-item"><span class="coverage-legend-dot preview" aria-hidden="true"></span>${esc(t('cov.grey'))}</span>
+        <span class="coverage-legend-item"><span class="coverage-legend-dot exact" aria-hidden="true"></span>${esc(t('cov.red'))}</span>
       </div>
     `;
 
@@ -593,11 +599,11 @@ function updateCoverageBadge() {
       // hiding everything behind a tap.
       const standaloneTablet = standaloneMode && !compactStandaloneMode;
       if (standaloneTablet) {
-        el.innerHTML = `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="${coverageExpanded ? 'true' : 'false'}" aria-label="Areas on map">
+        el.innerHTML = `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="${coverageExpanded ? 'true' : 'false'}" aria-label="${esc(t('cov.areasOnMap'))}">
              ${coverageIcon}
            </button>
            <div class="coverage-mobile-panel">
-             <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Areas on map</div>
+             <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">${esc(t('cov.areasOnMap'))}</div>
              <div style="margin-top:.25rem;font-size:.875rem;font-weight:600;color:#1f2937">${summary}</div>
              ${coverageExpanded ? `<div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
              <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.5rem">${coveredHtml}</div>
@@ -605,17 +611,17 @@ function updateCoverageBadge() {
            </div>`;
       } else {
         el.innerHTML = coverageExpanded
-          ? `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="true" aria-label="Areas on map">
+          ? `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="true" aria-label="${esc(t('cov.areasOnMap'))}">
                ${coverageIcon}
              </button>
              <div class="coverage-mobile-panel">
-               <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">Areas on map</div>
+               <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af">${esc(t('cov.areasOnMap'))}</div>
                <div style="margin-top:.25rem;font-size:.875rem;font-weight:600;color:#1f2937">${summary}</div>
                <div style="font-size:.75rem;color:#6b7280;margin-top:.5rem">${detail}</div>
                <div style="margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.5rem">${coveredHtml}</div>
                ${legendHtml}
              </div>`
-          : `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="false" aria-label="Areas on map">
+          : `<button class="coverage-toggle coverage-toggle-mobile-icon" aria-expanded="false" aria-label="${esc(t('cov.areasOnMap'))}">
                ${coverageIcon}
              </button>`;
       }
@@ -638,21 +644,21 @@ function updateCoverageBadge() {
 
     el.innerHTML = compactMode
       ? `
-        <button class="coverage-toggle coverage-toggle-compact" aria-expanded="false" aria-label="Open areas on map">
+        <button class="coverage-toggle coverage-toggle-compact" aria-expanded="false" aria-label="${esc(t('cov.openAreas'))}">
           <span class="coverage-toggle-compact-icon" aria-hidden="true">
             <span class="coverage-legend-dot live"></span>
           </span>
           <span class="coverage-toggle-compact-text">
-            <span class="coverage-toggle-compact-label">Areas</span>
+            <span class="coverage-toggle-compact-label">${esc(t('cov.areas'))}</span>
             <span class="coverage-toggle-compact-count">${compactSummary}</span>
           </span>
           ${chevron}
         </button>
       `
       : `
-        <button class="coverage-toggle flex items-center justify-between w-full text-left" aria-expanded="${coverageExpanded ? 'true' : 'false'}">
+        <button class="coverage-toggle flex items-center justify-between w-full text-start" aria-expanded="${coverageExpanded ? 'true' : 'false'}">
           <div>
-            <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Areas on map</div>
+            <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">${esc(t('cov.areasOnMap'))}</div>
             <div class="mt-0.5 text-sm font-semibold text-gray-800">${summary}</div>
           </div>
           ${chevron}
@@ -679,20 +685,20 @@ function renderNoResults(message) {
   refs.viewportTotal = 0;
   refs.viewportRanking = 'default';
   refs.currentResults = [];
-  $('#resultsCount').textContent = '0 shown';
+  $('#resultsCount').textContent = t('results.zeroShown');
   $('#resultsMeta').textContent = message;
 
   const activeFilters = [];
-  if (S.area) activeFilters.push({ label: 'Area: ' + S.area, filter: 'area' });
-  if (S.type) activeFilters.push({ label: 'Type: ' + (TYPE_L[S.type] || S.type), filter: 'type' });
-  if (S.beds) activeFilters.push({ label: S.beds + ' Bed', filter: 'beds' });
-  if (S.priceMin || S.priceMax) activeFilters.push({ label: 'Price range', filter: 'price' });
+  if (S.area) activeFilters.push({ label: t('empty.areaLabel', { v: areaLabel(S.area) }), filter: 'area' });
+  if (S.type) activeFilters.push({ label: t('empty.typeLabel', { v: TYPE_L[S.type] || S.type }), filter: 'type' });
+  if (S.beds) activeFilters.push({ label: t('chip.bed', { n: S.beds }), filter: 'beds' });
+  if (S.priceMin || S.priceMax) activeFilters.push({ label: t('empty.priceRange'), filter: 'price' });
   if (S.furnishing) activeFilters.push({ label: FURNISHING_L[S.furnishing], filter: 'furnishing' });
   const filterHtml = activeFilters.length
-    ? `<div class="flex flex-wrap justify-center gap-2 mt-4">${activeFilters.map(f => `<button class="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 transition-colors" data-remove-filter="${f.filter}">Remove ${esc(f.label)} &times;</button>`).join('')}</div>`
+    ? `<div class="flex flex-wrap justify-center gap-2 mt-4">${activeFilters.map(f => `<button class="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 transition-colors" data-remove-filter="${f.filter}">${esc(t('empty.remove', { label: f.label }))} &times;</button>`).join('')}</div>`
     : '';
 
-  $('#listingsGrid').innerHTML = `<div class="col-span-full text-center py-12"><div class="text-5xl mb-3">&#x1f3e0;</div><h3 class="text-base font-semibold text-gray-600">No rentals found</h3><p class="text-sm text-gray-400 mt-1">${esc(message)}</p>${filterHtml}</div>`;
+  $('#listingsGrid').innerHTML = `<div class="col-span-full text-center py-12"><div class="text-5xl mb-3">&#x1f3e0;</div><h3 class="text-base font-semibold text-gray-600">${esc(t('empty.title'))}</h3><p class="text-sm text-gray-400 mt-1">${esc(message)}</p>${filterHtml}</div>`;
   $$('[data-remove-filter]').forEach(btn => btn.addEventListener('click', () => clearFilterFull(btn.dataset.removeFilter)));
 }
 
@@ -703,10 +709,10 @@ function renderFooter(total) {
     const btn = document.createElement('button');
     btn.className = 'w-full py-3 mt-4 border-2 border-brand-500 rounded-lg text-brand-500 text-sm font-semibold hover:bg-brand-50 transition-colors';
     btn.textContent = refs.searchMode === 'nearby'
-      ? 'Load More Nearby Results'
+      ? t('more.nearby')
       : refs.searchMode === 'viewport'
-      ? 'Load More From This View'
-      : 'Load More Results';
+      ? t('more.view')
+      : t('more.results');
     btn.addEventListener('click', () => { refs._lastTriggeredBy = 'load_more'; doSearch(refs.currentPage + 1); });
     footer.appendChild(btn);
   }
@@ -749,10 +755,10 @@ function applyResults(data, { append = false, mode = refs.searchMode } = {}) {
       });
       renderNoResults(
         mode === 'nearby'
-          ? `No exact-pin rentals were found within ${refs.nearbyRadiusKm} km.`
+          ? t('empty.nearbyNone', { km: refs.nearbyRadiusKm })
           : mode === 'viewport'
           ? getViewportEmptyStateMessage({ visibleAreas, scope: refs.viewportScope })
-          : 'Try removing a filter to see more results'
+          : t('empty.tryRemoving')
       );
       updateMapMarkers();
       updateCoverageBadge();
@@ -861,9 +867,9 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
 
     const r = await fetch('/api/map-search?' + params.toString(), { signal: controller.signal });
     if (!r.ok) {
-      const e = await r.json().catch(() => ({ detail: 'Map search failed' }));
+      const e = await r.json().catch(() => ({ detail: t('err.mapSearch') }));
       trackApiError({ endpoint: '/api/map-search', statusCode: r.status, errorMessage: e.detail, mode: 'viewport', city: S.city });
-      throw new Error(e.detail || 'Map search failed');
+      throw new Error(e.detail || t('err.mapSearch'));
     }
     const data = await r.json();
     if (!isActiveSearch(token, controller)) return;
@@ -876,12 +882,12 @@ async function doViewportSearch(page = 1, { mobile = false } = {}) {
     if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
     if (append) {
-      showToast('Could not load more results.', { tone: 'error' });
+      showToast(t('err.loadMore'), { tone: 'error' });
     } else {
       refs.currentResults = [];
       resetViewportSearchMeta();
       updateHeader({ total: 0, source: 'unavailable', mode: 'viewport', visibleAreas: refs.viewportAreaNames.length, coveredAreas: 0, ranking: 'default' });
-      renderNoResults(e.message || 'Could not update the map view right now');
+      renderNoResults(e.message || t('err.mapView'));
       updateMapMarkers();
       updateCoverageBadge();
       if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
@@ -909,9 +915,9 @@ async function doAreaSearch(page = 1) {
     updateNearbyControls();
     const r = await fetch('/api/search?' + getParams(refs.currentPage).toString(), { signal: controller.signal });
     if (!r.ok) {
-      const e = await r.json().catch(() => ({ detail: 'Search failed' }));
+      const e = await r.json().catch(() => ({ detail: t('err.search') }));
       trackApiError({ endpoint: '/api/search', statusCode: r.status, errorMessage: e.detail, mode: refs.searchMode, city: S.city });
-      throw new Error(e.detail || 'Search failed');
+      throw new Error(e.detail || t('err.search'));
     }
     const data = await r.json();
     if (!isActiveSearch(token, controller)) return;
@@ -923,11 +929,11 @@ async function doAreaSearch(page = 1) {
     if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
     if (append) {
-      showToast('Could not load more results.', { tone: 'error' });
+      showToast(t('err.loadMore'), { tone: 'error' });
     } else {
       refs.currentResults = [];
       updateHeader({ total: 0, source: 'unavailable', mode: refs.searchMode });
-      renderNoResults(e.message || 'Search failed');
+      renderNoResults(e.message || t('err.search'));
       updateMapMarkers();
       updateCoverageBadge();
       if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
@@ -943,14 +949,14 @@ async function doNearbySearch(page = 1) {
   refs.lastViewportSearchKey = '';
 
   if (!refs.userLocation) {
-    showToast('Set your location first to search nearby.', { tone: 'error' });
+    showToast(t('toast.setLocation'), { tone: 'error' });
     refs.searchMode = getBrowseMode();
     updateNearbyControls();
     clearNearbyRadiusOverlays();
     return doAreaSearch(1);
   }
   if (!isNearbySupportedCity()) {
-    showToast('Nearby search is not available for this city.', { tone: 'warning' });
+    showToast(t('toast.nearbyUnavailable'), { tone: 'warning' });
     refs.searchMode = getBrowseMode();
     updateNearbyControls();
     clearNearbyRadiusOverlays();
@@ -977,9 +983,9 @@ async function doNearbySearch(page = 1) {
 
     const r = await fetch('/api/nearby-search?' + params.toString(), { signal: controller.signal });
     if (!r.ok) {
-      const e = await r.json().catch(() => ({ detail: 'Nearby search failed' }));
+      const e = await r.json().catch(() => ({ detail: t('err.nearby') }));
       trackApiError({ endpoint: '/api/nearby-search', statusCode: r.status, errorMessage: e.detail, mode: 'nearby', city: S.city });
-      throw new Error(e.detail || 'Nearby search failed');
+      throw new Error(e.detail || t('err.nearby'));
     }
     const data = await r.json();
     if (!isActiveSearch(token, controller)) return;
@@ -991,11 +997,11 @@ async function doNearbySearch(page = 1) {
     if (e?.name === 'AbortError' || !isActiveSearch(token, controller)) return;
     hideLoading();
     if (append) {
-      showToast('Could not load more results.', { tone: 'error' });
+      showToast(t('err.loadMore'), { tone: 'error' });
     } else {
       refs.currentResults = [];
       updateHeader({ total: 0, source: 'unavailable', mode: 'nearby' });
-      renderNoResults(e.message || `No exact-pin rentals were found within ${refs.nearbyRadiusKm} km.`);
+      renderNoResults(e.message || t('empty.nearbyNone', { km: refs.nearbyRadiusKm }));
       updateMapMarkers();
       updateCoverageBadge();
       if (refs.mobileMap) updateMobileMarkers(selectAreaFull);
@@ -1026,16 +1032,16 @@ function scheduleViewportSearch(opts = {}) {
 // each removable to drop that filter and re-run the search. Driven from S so it
 // stays consistent after a chip is removed or filters change. =====
 function _priceChipLabel() {
-  const mn = S.priceMin ? (Number(S.priceMin) / 1e3 | 0) + 'K' : '';
-  const mx = S.priceMax ? (Number(S.priceMax) / 1e3 | 0) + 'K' : '';
-  return mn && mx ? `${mn}–${mx}` : mx ? `Under ${mx}` : mn ? `${mn}+` : '';
+  const mn = S.priceMin ? fmtShortPrice(S.priceMin) : '';
+  const mx = S.priceMax ? fmtShortPrice(S.priceMax) : '';
+  return mn && mx ? t('understood.priceRange', { a: mn, b: mx }) : mx ? t('understood.under', { v: mx }) : mn ? t('understood.plus', { v: mn }) : '';
 }
 
 function understoodChips() {
-  const chips = [{ field: 'city', label: CITY_DEFAULTS[S.city]?.name || S.city, removable: false }];
-  if (S.area) chips.push({ field: 'area', label: S.area, removable: true });
+  const chips = [{ field: 'city', label: cityLabel(S.city) || S.city, removable: false }];
+  if (S.area) chips.push({ field: 'area', label: areaLabel(S.area), removable: true });
   if (S.type) chips.push({ field: 'type', label: TYPE_L[S.type] || S.type, removable: true });
-  if (S.beds) chips.push({ field: 'beds', label: S.bedsMax ? `${S.beds}–${S.bedsMax} bed` : `${S.beds} bed`, removable: true });
+  if (S.beds) chips.push({ field: 'beds', label: S.bedsMax ? t('understood.bedsRange', { a: S.beds, b: S.bedsMax }) : t('understood.beds', { n: S.beds }), removable: true });
   if (S.priceMin || S.priceMax) chips.push({ field: 'price', label: _priceChipLabel(), removable: true });
   if (S.sizeMarlaMin || S.sizeMarlaMax) chips.push({ field: 'size', label: sizeChipLabel(S.sizeMarlaMin, S.sizeMarlaMax), removable: true });
   if (S.furnishing) chips.push({ field: 'furnishing', label: FURNISHING_L[S.furnishing], removable: true });
@@ -1044,7 +1050,7 @@ function understoodChips() {
 
 function understoodChipHtml(c) {
   const x = c.removable
-    ? `<button type="button" data-chip-remove="${c.field}" aria-label="Remove ${esc(c.label)} filter" class="ml-0.5 -mr-1 w-4 h-4 inline-flex items-center justify-center rounded-full text-gray-400 hover:text-brand-700 hover:bg-brand-100 text-sm leading-none">&times;</button>`
+    ? `<button type="button" data-chip-remove="${c.field}" aria-label="${esc(t('nl.removeFilter', { label: c.label }))}" class="ms-0.5 -me-1 w-4 h-4 inline-flex items-center justify-center rounded-full text-gray-400 hover:text-brand-700 hover:bg-brand-100 text-sm leading-none">&times;</button>`
     : '';
   return `<span class="inline-flex items-center gap-1 rounded-full bg-white border border-brand-100 text-brand-700 px-2.5 py-1 font-medium" data-chip-field="${c.field}">${esc(c.label)}${x}</span>`;
 }
@@ -1055,9 +1061,9 @@ function renderUnderstood({ approxQuery = '', approxArea = '' } = {}) {
   const chips = understoodChips();
   if (!chips.some(c => c.removable) && !approxQuery) { hideUnderstood(); return; }
   const approxHtml = approxQuery
-    ? `<span class="inline-flex items-center text-amber-600 ml-1">No exact match for “${esc(approxQuery)}” — showing ${esc(approxArea)}</span>`
+    ? `<span class="inline-flex items-center text-amber-600 ms-1">${esc(t('nl.approx', { q: approxQuery, area: areaLabel(approxArea) }))}</span>`
     : '';
-  box.innerHTML = `<span class="font-semibold text-brand-700 mr-0.5">Understood:</span>${chips.map(understoodChipHtml).join('')}${approxHtml}`;
+  box.innerHTML = `<span class="font-semibold text-brand-700 me-0.5">${esc(t('nl.understood'))}</span>${chips.map(understoodChipHtml).join('')}${approxHtml}`;
   box.classList.remove('hidden');
   box.classList.add('flex');
 }
@@ -1085,7 +1091,7 @@ async function doNlSearch() {
   const parsed = $('#nlParsed');
   parsed.classList.remove('hidden');
   parsed.classList.add('flex');
-  parsed.innerHTML = '<span class="inline-flex items-center gap-1.5 text-gray-400"><svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Parsing filters...</span>';
+  parsed.innerHTML = '<span class="inline-flex items-center gap-1.5 text-gray-400"><svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>' + esc(t('nl.parsing')) + '</span>';
   const queryLength = q.length;
   trackNlSearch({ phase: 'submitted', queryLength });
   try {
@@ -1098,15 +1104,15 @@ async function doNlSearch() {
       trackNlSearch({ phase: 'parsed', queryLength, parseSuccess: false, filters: f, parser: d.parser });
       const suggestions = Array.isArray(f.area_suggestions) ? f.area_suggestions : [];
       if (suggestions.length) {
-        parsed.innerHTML = 'Did you mean: ' + suggestions.map(name =>
-          `<button type="button" class="nl-suggestion underline text-brand-700 mx-1" data-area="${esc(name)}">${esc(name)}</button>`).join('') + '?';
+        parsed.innerHTML = esc(t('nl.didYouMean')) + ' ' + suggestions.map(name =>
+          `<button type="button" class="nl-suggestion underline text-brand-700 mx-1" data-area="${esc(name)}">${esc(areaLabel(name))}</button>`).join('') + (getLang() === 'ur' ? '؟' : '?');
         parsed.querySelectorAll('.nl-suggestion').forEach(btn => btn.addEventListener('click', () => {
           parsed.classList.add('hidden');
           parsed.classList.remove('flex');
           selectAreaFull(btn.dataset.area);
         }));
       } else {
-        parsed.innerHTML = 'Could not understand. Try "2 bed flat in DHA under 50k"';
+        parsed.textContent = t('nl.notUnderstood', { ex: t('nl.notUnderstoodExample') });
       }
       return;
     }
@@ -1146,7 +1152,7 @@ async function doNlSearch() {
     parsed.classList.remove('flex');
     renderUnderstood(f.area_approximate ? { approxQuery: f.area_query, approxArea: f.area } : {});
   } catch {
-    parsed.innerHTML = 'Something went wrong.';
+    parsed.textContent = t('nl.error');
   } finally {
     $('#nlSearchBtn').disabled = false;
   }
@@ -1242,11 +1248,11 @@ function handleCompareToggle(btn) {
   const ok = compare.toggle(item);
   if (wasIn && !compare.has(zid)) {
     updateCompareButton(zid, false);
-    showToast('Removed from compare');
+    showToast(t('toast.compareRemoved'));
   } else if (!wasIn && compare.has(zid)) {
     updateCompareButton(zid, true);
-    showToast(`Added to compare (${compare.count()}/4)`, {
-      action: compare.count() >= 2 ? { label: 'Compare now', onClick: () => compare.openModal() } : null,
+    showToast(t('toast.compareAdded', { n: compare.count() }), {
+      action: compare.count() >= 2 ? { label: t('toast.compareNow'), onClick: () => compare.openModal() } : null,
     });
   }
 }
@@ -1259,14 +1265,14 @@ async function handleFavoriteToggle(btn) {
     if (wasFavorited) {
       await personalization.removeFavorite(zid);
       updateFavoriteButton(zid, false);
-      showToast('Removed from favorites');
+      showToast(t('toast.favRemoved'));
     } else {
       await personalization.addFavorite(zid);
       updateFavoriteButton(zid, true);
-      showToast('Saved to favorites');
+      showToast(t('toast.favSaved'));
     }
   } catch (err) {
-    showToast(err?.message || 'Could not update favorite', { tone: 'error' });
+    showToast(err?.message || t('toast.favError'), { tone: 'error' });
   }
 }
 
@@ -1276,11 +1282,11 @@ async function handleHide(btn) {
   try {
     await personalization.addHidden(zid);
     removeHiddenResult(zid);
-    showToast('Hidden — it won\'t appear in your results', {
-      action: { label: 'View hidden', onClick: () => openPersonalizationPanel({ tab: 'hidden' }) },
+    showToast(t('toast.hidden'), {
+      action: { label: t('toast.viewHidden'), onClick: () => openPersonalizationPanel({ tab: 'hidden' }) },
     });
   } catch (err) {
-    showToast(err?.message || 'Could not hide listing', { tone: 'error' });
+    showToast(err?.message || t('toast.hideError'), { tone: 'error' });
   }
 }
 
@@ -1356,7 +1362,7 @@ function initNearbyControls() {
     }
 
     if (!isNearbySupportedCity()) {
-      showToast('Nearby search is not available for this city.', { tone: 'warning' });
+      showToast(t('toast.nearbyUnavailable'), { tone: 'warning' });
       return;
     }
 
@@ -1370,7 +1376,7 @@ function initNearbyControls() {
 
     const { city: nearestCity, km } = getNearestCityWithDistance(refs.userLocation);
     if (km > NEAR_ME_MAX_CITY_KM) {
-      showToast(`Near Me covers Karachi, Lahore and Islamabad. You're about ${Math.round(km)} km from ${CITY_DEFAULTS[nearestCity].name}.`,
+      showToast(t('toast.nearMeRange', { km: Math.round(km), city: cityLabel(nearestCity) }),
         { tone: 'warning' });
       return;
     }
@@ -1470,7 +1476,7 @@ function initReportBtn() {
     if (!text) return;
     const context = gatherFeedbackContext();
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Sending...';
+    submitBtn.textContent = t('feedback.sending');
     try {
       const resp = await fetch('/api/feedback', {
         method: 'POST',
@@ -1480,18 +1486,18 @@ function initReportBtn() {
       if (!resp.ok) throw new Error();
       trackFeedbackSubmitted({ messageLength: text.length });
       closeFeedback();
-      showToast('Thanks for your feedback!');
+      showToast(t('toast.feedbackThanks'));
     } catch {
       if (!navigator.onLine) {
         queueFeedback(text, context);
         closeFeedback();
-        showToast('You are offline. Feedback queued for delivery.');
+        showToast(t('toast.feedbackQueued'));
       } else {
-        showToast('Could not send feedback. Please try again.', { tone: 'error' });
+        showToast(t('toast.feedbackError'), { tone: 'error' });
         submitBtn.disabled = false;
       }
     } finally {
-      submitBtn.textContent = 'Send';
+      submitBtn.textContent = t('feedback.send');
     }
   });
 }
@@ -1556,7 +1562,48 @@ refs._closeOtherOverlays = (exceptName) => {
   }
 };
 
+/** "2 bed House in DHA" / "DHA میں 2 بیڈ گھر" for a popular-search row. */
+function popularSearchLabel({ bedrooms, property_type: type, area }) {
+  const beds = bedrooms ? t('card.bed', { n: bedrooms }) : '';
+  const typeText = type ? (TYPE_L[type] || type) : '';
+  const parts = getLang() === 'ur'
+    ? [area ? t('summary.in', { place: areaLabel(area) }) : '', beds, typeText]
+    : [beds, typeText, area ? 'in ' + area : ''];
+  return parts.filter(Boolean).join(' ') || t('search.allListings');
+}
+
+/** Repaint everything rendered from JS after the language changes (no refetch). */
+function rerenderForLanguage() {
+  updateNlExamples();
+  updateChips();
+  updateNearbyControls();
+  renderSizeFilter();
+  renderDataStatus();
+  $$('#nlSuggestions .pop-search').forEach(el => {
+    const label = el.querySelector('.pop-label');
+    if (label) label.textContent = popularSearchLabel({ bedrooms: el.dataset.beds, property_type: el.dataset.type, area: el.dataset.area });
+  });
+  if (refs.isLoading) return; // the in-flight search renders in the new language
+  if (refs.currentResults.length) {
+    $('#listingsGrid').innerHTML = refs.currentResults.map((it, i) => renderCard(it, i)).join('');
+    initCarousels();
+    observeCards();
+    renderFooter(refs.lastSearchTotal);
+    if (_lastHeaderArgs) updateHeader(_lastHeaderArgs);
+    updateCoverageBadge();
+    updateMobileCarousel(refs.currentResults);
+    syncUnderstood();
+  } else {
+    // Empty states carry computed messages; rebuilding them is a cheap re-search.
+    refs._lastTriggeredBy = 'language_change';
+    refs.lastViewportSearchKey = '';
+    doSearch(1);
+  }
+}
+
 async function init() {
+  initI18n();
+  onLangChange(rerenderForLanguage);
   initDisplayModeSync();
   initAnalytics();
   registerSW();
@@ -1577,15 +1624,15 @@ async function init() {
         if (wasFav) {
           await personalization.removeFavorite(zid);
           updateFavoriteButton(zid, false);
-          showToast('Removed from favorites');
+          showToast(t('toast.favRemoved'));
         } else {
           await personalization.addFavorite(zid);
           updateFavoriteButton(zid, true);
-          showToast('Saved to favorites');
+          showToast(t('toast.favSaved'));
         }
         return !wasFav;
       } catch (err) {
-        showToast(err?.message || 'Could not update favorite', { tone: 'error' });
+        showToast(err?.message || t('toast.favError'), { tone: 'error' });
         return wasFav;
       }
     },
@@ -1623,14 +1670,9 @@ async function init() {
       .then(popular => {
         if (popular.length) {
           const container = $('#nlSuggestions');
-          let html = '<div class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Popular</div>';
+          let html = '<div class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide" data-i18n="search.popular">' + esc(t('search.popular')) + '</div>';
           popular.forEach(p => {
-            const parts = [];
-            if (p.bedrooms) parts.push(p.bedrooms + ' bed');
-            if (p.property_type) parts.push(TYPE_L[p.property_type] || p.property_type);
-            if (p.area) parts.push('in ' + p.area);
-            const label = parts.join(' ') || 'All listings';
-            html += `<div class="pop-search px-3 py-2 text-sm text-gray-600 hover:bg-brand-50 hover:text-brand-500 cursor-pointer transition-colors" data-area="${p.area || ''}" data-type="${p.property_type || ''}" data-beds="${p.bedrooms || ''}">${label} <span class="text-gray-300 text-xs">(${p.count})</span></div>`;
+            html += `<div class="pop-search px-3 py-2 text-sm text-gray-600 hover:bg-brand-50 hover:text-brand-500 cursor-pointer transition-colors" data-area="${esc(p.area || '')}" data-type="${esc(p.property_type || '')}" data-beds="${esc(String(p.bedrooms || ''))}"><span class="pop-label">${esc(popularSearchLabel(p))}</span> <span class="text-gray-300 text-xs">(${p.count})</span></div>`;
           });
           container.insertAdjacentHTML('afterbegin', html);
         }

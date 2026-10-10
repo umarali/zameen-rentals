@@ -1,6 +1,7 @@
 /** PWA install prompt — subtle bottom banner with 30s delay. */
 
 import { track } from './analytics.js';
+import { t } from './i18n.js';
 
 const DISMISS_KEY = 'zr_install_dismissed';
 const DISMISS_DAYS = 7;
@@ -44,7 +45,8 @@ function showBanner() {
 
   const msgEl = banner.querySelector('#installMsg');
   if (msgEl && isIOS()) {
-    msgEl.textContent = 'Tap Share then "Add to Home Screen" for faster access';
+    msgEl.removeAttribute('data-i18n');
+    msgEl.textContent = t('install.ios');
   }
 
   // Hide install button on iOS (they must use Share menu)

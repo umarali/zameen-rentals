@@ -55,6 +55,15 @@ class TestAreasEndpoint:
         assert "lat" in area
         assert "lng" in area
 
+    @pytest.mark.parametrize("city,name,urdu", [
+        ("karachi", "Clifton", "کلفٹن"),
+        ("lahore", "Johar Town", "جوہر ٹاؤن"),
+        ("islamabad", "Bani Gala", "بنی گالا"),
+    ])
+    def test_urdu_name_for_the_urdu_ui(self, client, city, name, urdu):
+        areas = {a["name"]: a for a in client.get(f"/api/areas?city={city}").json()}
+        assert areas[name]["name_ur"] == urdu
+
 
 class TestSearchAreasEndpoint:
     def test_fuzzy_search(self, client):

@@ -29,6 +29,7 @@ frontend/                → Vite project root (SOURCE — edit here, not in sta
     personalization*.js  → Saved searches/alerts/favorites/hidden + My-rentals UI
     welcome.js / tour.js → First-run intent strip, help modal, Driver.js tour
     state.js             → Global `S` filter state + `refs` shared handles
+    i18n.js / rtl.css    → English/Urdu UI strings (`t()`), language switch, RTL + Nastaliq rules
     utils.js / icons.js / analytics.js / sw-register.js / install-prompt.js
 static/                  → BUILD OUTPUT (vite build → emptied + regenerated; do NOT hand-edit)
 tools/
@@ -39,6 +40,7 @@ tools/
 - Source lives in `frontend/`; `vite build` outputs to `static/` (config: vite.config.js, `outDir: ../static`, `emptyOutDir: true`).
 - **Always edit `frontend/src/*` and `frontend/index.html`, then `npm run build`.** Editing `static/index.html` or `static/assets/*` directly is pointless — the next build wipes it.
 - Dev: `npm run dev` (Vite on :5173, proxies `/api` → :8000). Prod: FastAPI serves the built `static/`.
+- **UI text goes through `t(key, vars)` from `frontend/src/i18n.js`** (add the key to both `en` and `ur`). Static markup uses `data-i18n`, `data-i18n-placeholder`, `data-i18n-title`, `data-i18n-aria-label`. Use logical utilities (`ms-*`, `me-*`, `start-*`, `end-*`) so Urdu (RTL) mirrors; Leaflet containers stay `dir="ltr"`.
 - Tailwind v4 via `@tailwindcss/vite`; brand colors are CSS `@theme` vars (`--color-brand-50..900`) in `frontend/src/style.css`. New utility classes must appear in source for the scanner to emit them.
 
 ## Multi-City Architecture

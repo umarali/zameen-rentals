@@ -1,19 +1,23 @@
 /** DOM helpers & formatting utilities. */
 
+import { t, getLang, fmtPriceUr } from './i18n.js';
+
 export const $ = s => document.querySelector(s);
 export const $$ = s => [...document.querySelectorAll(s)];
 
 export const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
 export const escA = s => s.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-export const TYPE_L = {
-  house: 'House', apartment: 'Apartment', upper_portion: 'Upper Portion',
-  lower_portion: 'Lower Portion', room: 'Room', penthouse: 'Penthouse', farm_house: 'Farm House',
-};
+// Property-type labels in the active UI language (read at render time).
+export const TYPE_L = Object.defineProperties({}, Object.fromEntries(
+  ['house', 'apartment', 'upper_portion', 'lower_portion', 'room', 'penthouse', 'farm_house']
+    .map(k => [k, { enumerable: true, get: () => t('type.' + k) }]),
+));
 
-export function fmtPrice(p, t) {
-  if (t) return t;
-  if (!p) return 'Price on request';
+export function fmtPrice(p, text) {
+  if (getLang() === 'ur') return fmtPriceUr(p, text);
+  if (text) return text;
+  if (!p) return t('price.onRequest');
   if (p >= 1e7) return 'Rs ' + (p / 1e7).toFixed(1) + ' Crore';
   if (p >= 1e5) return 'Rs ' + (p / 1e5).toFixed(1) + ' Lakh';
   if (p >= 1e3) return 'Rs ' + (p / 1e3).toFixed(0) + 'K';
@@ -22,20 +26,19 @@ export function fmtPrice(p, t) {
 
 export function fmtRelative(iso) {
   if (!iso) return '';
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return '';
-  const sec = Math.max(0, Math.round((Date.now() - t) / 1000));
-  if (sec < 60) return 'just now';
+  const ts = Date.parse(iso);
+  if (!Number.isFinite(ts)) return '';
+  const sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (sec < 60) return t('time.justNow');
   const min = Math.round(sec / 60);
-  if (min < 60) return `${min} minute${min === 1 ? '' : 's'} ago`;
+  if (min < 60) return t('time.minutes', { n: min });
   const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr} hour${hr === 1 ? '' : 's'} ago`;
+  if (hr < 24) return t('time.hours', { n: hr });
   const day = Math.round(hr / 24);
-  if (day < 7) return `${day} day${day === 1 ? '' : 's'} ago`;
-  if (day < 30) { const w = Math.round(day / 7); return `${w} week${w === 1 ? '' : 's'} ago`; }
-  if (day < 365) { const mo = Math.round(day / 30); return `${mo} month${mo === 1 ? '' : 's'} ago`; }
-  const yr = Math.round(day / 365);
-  return `${yr} year${yr === 1 ? '' : 's'} ago`;
+  if (day < 7) return t('time.days', { n: day });
+  if (day < 30) return t('time.weeks', { n: Math.round(day / 7) });
+  if (day < 365) return t('time.months', { n: Math.round(day / 30) });
+  return t('time.years', { n: Math.round(day / 365) });
 }
 
 export function showToast(message, { tone = 'default', duration = 3200, action = null } = {}) {

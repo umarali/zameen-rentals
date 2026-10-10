@@ -1,6 +1,7 @@
 /** Service worker registration, update handling, offline feedback queue replay. */
 
 import { showToast } from './utils.js';
+import { t } from './i18n.js';
 
 const FEEDBACK_QUEUE_KEY = 'zr_feedback_queue';
 
@@ -14,8 +15,8 @@ export function registerSW() {
       if (!newWorker) return;
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-          showToast('App updated. Refresh for the latest version.', {
-            action: { label: 'Refresh', onClick: () => location.reload() },
+          showToast(t('sw.updated'), {
+            action: { label: t('sw.refresh'), onClick: () => location.reload() },
           });
         }
       });
@@ -60,7 +61,7 @@ export async function replayFeedbackQueue() {
     localStorage.setItem(FEEDBACK_QUEUE_KEY, JSON.stringify(remaining));
   } else {
     localStorage.removeItem(FEEDBACK_QUEUE_KEY);
-    showToast('Queued feedback sent successfully.');
+    showToast(t('sw.queuedSent'));
   }
 }
 

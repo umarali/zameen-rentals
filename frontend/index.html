@@ -32,60 +32,77 @@
 <meta name="twitter:image:alt" content="ZameenRentals — Find your rental in seconds.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/src/style.css">
+<script>
+  // Set lang/dir before first paint so an Urdu visitor never sees an LTR flash.
+  (function() {
+    var lang = 'en';
+    try {
+      var q = new URLSearchParams(location.search).get('lang');
+      var stored = localStorage.getItem('rk_lang');
+      lang = (q === 'ur' || q === 'en') ? q : (stored === 'ur' ? 'ur' : 'en');
+    } catch (e) {}
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ur' ? 'rtl' : 'ltr';
+  })();
+</script>
 </head>
 <body class="font-sans bg-gray-50 text-gray-800 antialiased">
 
 <!-- ===== OFFLINE BANNER ===== -->
 <div id="offlineBanner" class="hidden fixed top-0 inset-x-0 bg-amber-500 text-white text-xs text-center py-1.5 z-[500] font-medium">
-  You're offline — showing cached data
+  <span data-i18n="offline.banner">You're offline — showing cached data</span>
 </div>
 
 <!-- ===== NAVBAR ===== -->
 <header id="appHeader" class="flex items-center gap-3 px-4 lg:px-6 bg-white border-b border-gray-200 z-50 min-w-0">
-  <a class="brand-link shrink-0" href="/" aria-label="ZameenRentals home">
+  <a class="brand-link shrink-0" href="/" aria-label="ZameenRentals home" data-i18n-aria-label="header.home">
     <img class="brand-mark" src="/logo.svg" alt="" width="40" height="40">
-    <span class="brand-wordmark">
+    <span class="brand-wordmark" dir="ltr">
       <span>Zameen</span>
       <span class="brand-wordmark-accent">Rentals</span>
     </span>
   </a>
-  <button id="welcomeBtn" title="Help &amp; examples" aria-label="Help and search examples" class="w-8 h-8 rounded-full border border-gray-200 hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center text-gray-400 hover:text-brand-500 transition-all shrink-0">
+  <button id="welcomeBtn" title="Help &amp; examples" aria-label="Help and search examples" data-i18n-title="header.helpTitle" data-i18n-aria-label="header.helpAria" class="w-8 h-8 rounded-full border border-gray-200 hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center text-gray-400 hover:text-brand-500 transition-all shrink-0">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
   </button>
   <div class="flex-1 min-w-0 max-w-xl mx-auto relative">
-    <div class="flex items-center min-w-0 border border-gray-200 rounded-full bg-white px-4 pr-1 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
+    <div class="flex items-center min-w-0 border border-gray-200 rounded-full bg-white ps-4 pe-1 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
       <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
       <input id="nlInput" type="text" class="flex-1 min-w-0 w-full py-2.5 px-3 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Try: 2 bed flat DHA under 50k" autocomplete="off" enterkeyhint="search">
-      <button id="nlSearchBtn" type="button" aria-label="Search rentals" title="Search rentals" class="w-8 h-8 rounded-full bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shrink-0 transition-colors disabled:opacity-50">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+      <button id="nlSearchBtn" type="button" aria-label="Search rentals" title="Search rentals" data-i18n-aria-label="search.button" data-i18n-title="search.button" class="w-8 h-8 rounded-full bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shrink-0 transition-colors disabled:opacity-50">
+        <svg class="w-4 h-4 rtl:-scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
       </button>
     </div>
     <div id="nlSuggestions" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-2 max-h-[70vh] overflow-y-auto overscroll-contain">
-      <div class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Try searching</div>
+      <div class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide" data-i18n="search.trySearching">Try searching</div>
       <div id="nlExamples"></div>
     </div>
   </div>
   <div id="nlParsed" class="hidden items-center text-xs text-gray-600 bg-brand-50 rounded-lg px-3 py-1.5 whitespace-nowrap"></div>
-  <button id="saveSearchBtn" title="Get alerts for this search" aria-label="Get alerts for this search" class="relative z-10 w-8 xl:w-auto h-8 xl:px-2 rounded-full border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center gap-1.5 text-gray-400 hover:text-brand-500 transition-all shrink-0">
+  <button id="saveSearchBtn" title="Get alerts for this search" aria-label="Get alerts for this search" data-i18n-title="header.alertsTitle" data-i18n-aria-label="header.alertsTitle" class="relative z-10 w-8 xl:w-auto h-8 xl:px-2 rounded-full border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center gap-1.5 text-gray-400 hover:text-brand-500 transition-all shrink-0">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
-    <span class="hidden xl:inline text-xs font-semibold">Get alerts</span>
+    <span class="hidden xl:inline text-xs font-semibold" data-i18n="header.alertsLabel">Get alerts</span>
   </button>
-  <button id="alertsBellBtn" title="My rentals: new matches and saved homes" aria-label="My rentals: new matches, saved homes, viewed, and hidden listings" class="relative z-10 w-8 xl:w-auto h-8 xl:px-2 rounded-full border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center gap-1.5 text-gray-400 hover:text-brand-500 transition-all shrink-0">
+  <button id="alertsBellBtn" title="My rentals: new matches and saved homes" aria-label="My rentals: new matches, saved homes, viewed, and hidden listings" data-i18n-title="header.myRentalsTitle" data-i18n-aria-label="header.myRentalsAria" class="relative z-10 w-8 xl:w-auto h-8 xl:px-2 rounded-full border border-gray-200 bg-white hover:border-brand-500 hover:bg-brand-50 flex items-center justify-center gap-1.5 text-gray-400 hover:text-brand-500 transition-all shrink-0">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0"/></svg>
-    <span class="hidden xl:inline text-xs font-semibold">My rentals</span>
-    <span class="alerts-badge hidden absolute -top-1 -right-1 text-[10px] font-bold bg-brand-500 text-white px-1.5 py-0.5 rounded-full leading-none min-w-[18px] text-center"></span>
+    <span class="hidden xl:inline text-xs font-semibold" data-i18n="header.myRentals">My rentals</span>
+    <span class="alerts-badge hidden absolute -top-1 -end-1 text-[10px] font-bold bg-brand-500 text-white px-1.5 py-0.5 rounded-full leading-none min-w-[18px] text-center"></span>
   </button>
-  <button id="clearAllBtn" class="hidden text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 rounded-full px-3 py-1.5 transition-colors shrink-0">Clear All</button>
+  <button id="clearAllBtn" class="hidden text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 rounded-full px-3 py-1.5 transition-colors shrink-0" data-i18n="header.clearAll">Clear All</button>
+  <div id="langToggle" class="lang-toggle lang-toggle-header shrink-0" role="group" aria-label="Switch language" data-i18n-aria-label="lang.switch">
+    <button type="button" class="lang-option" data-lang-option="en" lang="en" dir="ltr" aria-pressed="true" title="English">English</button>
+    <button type="button" class="lang-option" data-lang-option="ur" lang="ur" dir="rtl" aria-pressed="false" title="اردو">اردو</button>
+  </div>
 </header>
 
 <!-- ===== INFO BANNER ===== -->
 <div id="infoBanner" class="bg-brand-50 border-b border-brand-100 px-4 lg:px-6 py-2.5 flex items-center gap-3 text-xs text-brand-700">
   <svg class="w-4 h-4 shrink-0 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-  <span class="flex-1">Listings are sourced from Zameen.com and refreshed periodically — some may already be rented, so confirm with the agent before visiting. Spotted something off? <button class="font-semibold underline underline-offset-2 hover:text-brand-900 transition-colors" onclick="document.getElementById('reportBtn').click()">Let us know</button>.</span>
-  <button id="infoBannerClose" aria-label="Dismiss" class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-brand-100 text-brand-400 hover:text-brand-600 transition-colors text-base leading-none">&times;</button>
+  <span class="flex-1"><span data-i18n="banner.text">Listings are sourced from Zameen.com and refreshed periodically — some may already be rented, so confirm with the agent before visiting. Spotted something off?</span> <button class="font-semibold underline underline-offset-2 hover:text-brand-900 transition-colors" onclick="document.getElementById('reportBtn').click()" data-i18n="banner.letUsKnow">Let us know</button></span>
+  <button id="infoBannerClose" aria-label="Dismiss" data-i18n-aria-label="common.dismiss" class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-brand-100 text-brand-400 hover:text-brand-600 transition-colors text-base leading-none">&times;</button>
 </div>
 <script>
   (function() {
@@ -105,48 +122,53 @@
 <div id="filtersShell" class="relative bg-white border-b border-gray-200 z-40 min-w-0">
 <div class="filter-bar-wrap">
 <div class="flex items-center gap-2 px-4 lg:px-6 py-2 overflow-x-auto scroll-thin" id="filterBar" style="scrollbar-width:none">
-  <div id="cityTabs" class="flex items-center bg-gray-100 rounded-lg p-0.5 shrink-0 mr-1">
-    <button class="city-tab text-xs font-semibold px-3 py-1.5 rounded-md transition-all" data-city="lahore">Lahore</button>
-    <button class="city-tab text-xs font-semibold px-3 py-1.5 rounded-md transition-all" data-city="karachi">Karachi</button>
-    <button class="city-tab text-xs font-semibold px-3 py-1.5 rounded-md transition-all" data-city="islamabad">Islamabad</button>
+  <!-- Phones: the language switch lives here, where the header has no room. -->
+  <div class="lang-toggle lang-toggle-bar shrink-0" role="group" aria-label="Switch language" data-i18n-aria-label="lang.switch">
+    <button type="button" class="lang-option" data-lang-option="en" lang="en" dir="ltr" aria-pressed="true">English</button>
+    <button type="button" class="lang-option" data-lang-option="ur" lang="ur" dir="rtl" aria-pressed="false">اردو</button>
+  </div>
+  <div id="cityTabs" class="flex items-center bg-gray-100 rounded-lg p-0.5 shrink-0 me-1">
+    <button class="city-tab text-xs font-semibold px-3 py-1.5 rounded-md transition-all" data-city="lahore" data-i18n="city.lahore">Lahore</button>
+    <button class="city-tab text-xs font-semibold px-3 py-1.5 rounded-md transition-all" data-city="karachi" data-i18n="city.karachi">Karachi</button>
+    <button class="city-tab text-xs font-semibold px-3 py-1.5 rounded-md transition-all" data-city="islamabad" data-i18n="city.islamabad">Islamabad</button>
   </div>
   <div class="w-px h-5 bg-gray-200 shrink-0"></div>
   <button class="chip-filter shrink-0" id="nearbyChip">Near Me</button>
-  <button class="chip-filter shrink-0 hidden" data-filter="radius" id="radiusChip">5 km <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
-  <button class="chip-filter shrink-0" data-filter="area" id="areaChip">Area <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
-  <button class="chip-filter shrink-0" data-filter="type" id="typeChip">Type <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
-  <button class="chip-filter shrink-0" data-filter="beds" id="bedsChip">Beds <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
-  <button class="chip-filter shrink-0" data-filter="size" id="sizeChip">Size <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
-  <button class="chip-filter shrink-0" data-filter="price" id="priceChip">Price <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
-  <button class="chip-filter shrink-0" data-filter="more" id="moreChip">More <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0 hidden" data-filter="radius" id="radiusChip">5 km <svg class="w-3 h-3 ms-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="area" id="areaChip">Area <svg class="w-3 h-3 ms-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="type" id="typeChip">Type <svg class="w-3 h-3 ms-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="beds" id="bedsChip">Beds <svg class="w-3 h-3 ms-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="size" id="sizeChip">Size <svg class="w-3 h-3 ms-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="price" id="priceChip">Price <svg class="w-3 h-3 ms-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+  <button class="chip-filter shrink-0" data-filter="more" id="moreChip">More <svg class="w-3 h-3 ms-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
 </div>
 </div>
 
   <!-- Dropdowns -->
   <div id="dd-area" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
-    <div class="text-sm font-semibold text-gray-700 mb-3">Select Area</div>
+    <div class="text-sm font-semibold text-gray-700 mb-3" data-i18n="filter.selectArea">Select Area</div>
     <div class="flex items-center border border-gray-200 rounded-lg px-3 focus-within:border-brand-500 transition-colors">
-      <input id="areaInput" type="text" class="flex-1 py-2.5 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Type area name..." autocomplete="off">
-      <button id="areaClear" type="button" aria-label="Clear area search" class="hidden text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+      <input id="areaInput" type="text" class="flex-1 py-2.5 text-sm border-none outline-none bg-transparent placeholder:text-gray-400" placeholder="Type area name..." data-i18n-placeholder="filter.areaPlaceholder" autocomplete="off">
+      <button id="areaClear" type="button" aria-label="Clear area search" data-i18n-aria-label="filter.clearAreaSearch" class="hidden text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
     </div>
     <div id="areaList" class="mt-2 max-h-52 overflow-y-auto scroll-thin"></div>
   </div>
   <div id="dd-type" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
-    <div class="text-sm font-semibold text-gray-700 mb-3">Property Type</div>
+    <div class="text-sm font-semibold text-gray-700 mb-3" data-i18n="filter.propertyType">Property Type</div>
     <div class="flex flex-wrap gap-2" id="typeGrid">
-      <button type="button" class="chip" data-type="house">House</button>
-      <button type="button" class="chip" data-type="apartment">Apartment</button>
-      <button type="button" class="chip" data-type="upper_portion">Upper Portion</button>
-      <button type="button" class="chip" data-type="lower_portion">Lower Portion</button>
-      <button type="button" class="chip" data-type="room">Room</button>
-      <button type="button" class="chip" data-type="penthouse">Penthouse</button>
-      <button type="button" class="chip" data-type="farm_house">Farm House</button>
+      <button type="button" class="chip" data-type="house" data-i18n="type.house">House</button>
+      <button type="button" class="chip" data-type="apartment" data-i18n="type.apartment">Apartment</button>
+      <button type="button" class="chip" data-type="upper_portion" data-i18n="type.upper_portion">Upper Portion</button>
+      <button type="button" class="chip" data-type="lower_portion" data-i18n="type.lower_portion">Lower Portion</button>
+      <button type="button" class="chip" data-type="room" data-i18n="type.room">Room</button>
+      <button type="button" class="chip" data-type="penthouse" data-i18n="type.penthouse">Penthouse</button>
+      <button type="button" class="chip" data-type="farm_house" data-i18n="type.farm_house">Farm House</button>
     </div>
   </div>
   <div id="dd-beds" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
-    <div class="text-sm font-semibold text-gray-700 mb-3">Bedrooms</div>
+    <div class="text-sm font-semibold text-gray-700 mb-3" data-i18n="filter.bedrooms">Bedrooms</div>
     <div class="flex gap-2" id="bedRow">
-      <button type="button" class="chip active" data-beds="">Any</button>
+      <button type="button" class="chip active" data-beds="" data-i18n="common.any">Any</button>
       <button type="button" class="chip" data-beds="1">1</button>
       <button type="button" class="chip" data-beds="2">2</button>
       <button type="button" class="chip" data-beds="3">3</button>
@@ -155,7 +177,7 @@
     </div>
   </div>
   <div id="dd-radius" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50">
-    <div class="text-sm font-semibold text-gray-700 mb-3">Nearby Radius</div>
+    <div class="text-sm font-semibold text-gray-700 mb-3" data-i18n="filter.nearbyRadius">Nearby Radius</div>
     <div class="flex gap-2" id="radiusOptions">
       <button type="button" class="chip" data-radius-km="1">1 km</button>
       <button type="button" class="chip" data-radius-km="2">2 km</button>
@@ -165,29 +187,29 @@
     </div>
   </div>
   <div id="dd-price" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
-    <div class="text-sm font-semibold text-gray-700 mb-3">Price Range</div>
+    <div class="text-sm font-semibold text-gray-700 mb-3" data-i18n="filter.priceRange">Price Range</div>
     <div class="flex flex-wrap gap-2" id="priceGrid">
-      <button type="button" class="chip" data-pmin="0" data-pmax="30000">Under 30K</button>
-      <button type="button" class="chip" data-pmin="30000" data-pmax="60000">30-60K</button>
-      <button type="button" class="chip" data-pmin="60000" data-pmax="100000">60-100K</button>
-      <button type="button" class="chip" data-pmin="100000" data-pmax="200000">100-200K</button>
-      <button type="button" class="chip" data-pmin="200000" data-pmax="">200K+</button>
-      <button type="button" class="chip" data-custom="1">Custom</button>
+      <button type="button" class="chip" data-pmin="0" data-pmax="30000" data-i18n="price.under30">Under 30K</button>
+      <button type="button" class="chip" data-pmin="30000" data-pmax="60000" data-i18n="price.30to60">30-60K</button>
+      <button type="button" class="chip" data-pmin="60000" data-pmax="100000" data-i18n="price.60to100">60-100K</button>
+      <button type="button" class="chip" data-pmin="100000" data-pmax="200000" data-i18n="price.100to200">100-200K</button>
+      <button type="button" class="chip" data-pmin="200000" data-pmax="" data-i18n="price.200plus">200K+</button>
+      <button type="button" class="chip" data-custom="1" data-i18n="common.custom">Custom</button>
     </div>
     <div id="customPrice" class="hidden mt-3">
       <div class="grid grid-cols-2 gap-2">
-        <input id="priceMin" type="number" class="px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors" placeholder="Min (PKR)" min="0">
-        <input id="priceMax" type="number" class="px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors" placeholder="Max (PKR)" min="0">
+        <input id="priceMin" type="number" class="px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors" placeholder="Min (PKR)" data-i18n-placeholder="filter.minPkr" min="0">
+        <input id="priceMax" type="number" class="px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors" placeholder="Max (PKR)" data-i18n-placeholder="filter.maxPkr" min="0">
       </div>
-      <button id="priceApply" class="w-full mt-2 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors">Apply</button>
+      <button id="priceApply" class="w-full mt-2 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors" data-i18n="common.apply">Apply</button>
     </div>
   </div>
   <div id="dd-size" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-80">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-700">Property Size</div>
-      <div id="sizeUnitToggle" class="flex items-center bg-gray-100 rounded-lg p-0.5" role="group" aria-label="Size unit">
-        <button type="button" class="size-unit-btn text-xs font-semibold px-2.5 py-1 rounded-md transition-colors" data-unit="marla">Marla</button>
-        <button type="button" class="size-unit-btn text-xs font-semibold px-2.5 py-1 rounded-md transition-colors" data-unit="sqyd">Sq Yd</button>
+      <div class="text-sm font-semibold text-gray-700" data-i18n="filter.propertySize">Property Size</div>
+      <div id="sizeUnitToggle" class="flex items-center bg-gray-100 rounded-lg p-0.5" role="group" aria-label="Size unit" data-i18n-aria-label="filter.sizeUnit">
+        <button type="button" class="size-unit-btn text-xs font-semibold px-2.5 py-1 rounded-md transition-colors" data-unit="marla" data-i18n="unit.marla">Marla</button>
+        <button type="button" class="size-unit-btn text-xs font-semibold px-2.5 py-1 rounded-md transition-colors" data-unit="sqyd" data-i18n="unit.sqyd">Sq Yd</button>
       </div>
     </div>
     <div class="flex flex-wrap gap-2" id="sizeGrid"><!-- presets rendered by renderSizeFilter() per unit --></div>
@@ -197,33 +219,33 @@
         <input id="sizeMax" type="number" class="px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors" placeholder="Max (Marla)" min="0" step="0.5">
       </div>
       <p id="sizeUnitHint" class="text-[11px] text-gray-400 mt-2">1 Kanal = 20 Marla</p>
-      <button id="sizeApply" class="w-full mt-2 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors">Apply</button>
+      <button id="sizeApply" class="w-full mt-2 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors" data-i18n="common.apply">Apply</button>
     </div>
   </div>
   <div id="dd-more" class="filter-dd absolute top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 w-72">
-    <div class="text-sm font-semibold text-gray-700 mb-2">More Filters</div>
-    <div id="furnishingLabel" class="text-sm text-gray-600 mb-2">Furnishing</div>
+    <div class="text-sm font-semibold text-gray-700 mb-2" data-i18n="filter.moreFilters">More Filters</div>
+    <div id="furnishingLabel" class="text-sm text-gray-600 mb-2" data-i18n="filter.furnishing">Furnishing</div>
     <div class="flex flex-wrap gap-2" id="furnishingRow" role="group" aria-labelledby="furnishingLabel">
-      <button type="button" class="chip active" data-furnishing="">Any</button>
-      <button type="button" class="chip" data-furnishing="furnished">Furnished</button>
-      <button type="button" class="chip" data-furnishing="unfurnished">Unfurnished</button>
+      <button type="button" class="chip active" data-furnishing="" data-i18n="common.any">Any</button>
+      <button type="button" class="chip" data-furnishing="furnished" data-i18n="furnishing.furnished">Furnished</button>
+      <button type="button" class="chip" data-furnishing="unfurnished" data-i18n="furnishing.unfurnished">Unfurnished</button>
     </div>
     <hr class="my-2 border-gray-200">
-    <div class="text-sm font-semibold text-gray-700 mb-2">Sort By</div>
+    <div class="text-sm font-semibold text-gray-700 mb-2" data-i18n="filter.sortBy">Sort By</div>
     <select id="sortSelect" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-brand-500 transition-colors">
-      <option value="">Default</option>
-      <option value="distance" id="sortDistance" hidden>Distance: Nearest</option>
-      <option value="price_low">Price: Low to High</option>
-      <option value="price_high">Price: High to Low</option>
-      <option value="newest">Newest First</option>
+      <option value="" data-i18n="sort.default">Default</option>
+      <option value="distance" id="sortDistance" hidden data-i18n="sort.distance">Distance: Nearest</option>
+      <option value="price_low" data-i18n="sort.priceLow">Price: Low to High</option>
+      <option value="price_high" data-i18n="sort.priceHigh">Price: High to Low</option>
+      <option value="newest" data-i18n="sort.newest">Newest First</option>
     </select>
     <hr class="my-2 border-gray-200">
-    <div class="text-sm font-semibold text-gray-700 mb-2">Quick Presets</div>
+    <div class="text-sm font-semibold text-gray-700 mb-2" data-i18n="filter.quickPresets">Quick Presets</div>
     <div class="flex flex-wrap gap-2" id="presetRow">
-      <button type="button" class="chip" data-type="apartment" data-beds="1" data-pmin="0" data-pmax="40000">Budget 1BR</button>
-      <button type="button" class="chip" data-type="house" data-beds="3" data-pmin="50000" data-pmax="150000">Family Home</button>
-      <button type="button" class="chip" data-type="apartment" data-beds="3" data-pmin="150000" data-pmax="">Luxury Flat</button>
-      <button type="button" class="chip" data-type="room" data-beds="1" data-pmin="0" data-pmax="30000">Studio/Room</button>
+      <button type="button" class="chip" data-type="apartment" data-beds="1" data-pmin="0" data-pmax="40000" data-i18n="preset.budget1br">Budget 1BR</button>
+      <button type="button" class="chip" data-type="house" data-beds="3" data-pmin="50000" data-pmax="150000" data-i18n="preset.familyHome">Family Home</button>
+      <button type="button" class="chip" data-type="apartment" data-beds="3" data-pmin="150000" data-pmax="" data-i18n="preset.luxuryFlat">Luxury Flat</button>
+      <button type="button" class="chip" data-type="room" data-beds="1" data-pmin="0" data-pmax="30000" data-i18n="preset.studioRoom">Studio/Room</button>
     </div>
   </div>
 </div>
@@ -239,8 +261,8 @@
   <section id="listingsPanel" class="overflow-y-auto overscroll-contain p-3 sm:p-4 lg:p-6 pb-20 lg:pb-6 scroll-thin min-w-0">
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h2 id="listingsTitle" class="text-base font-bold text-gray-700">Rentals in Lahore</h2>
-        <p id="resultsMeta" class="mt-1 text-xs text-gray-500">Browse the map or use filters to refine results</p>
+        <h2 id="listingsTitle" class="text-base font-bold text-gray-700"></h2>
+        <p id="resultsMeta" class="mt-1 text-xs text-gray-500" data-i18n="meta.default">Browse the map or use filters to refine results</p>
       </div>
       <div class="flex items-center gap-2">
         <span id="resultsCount" class="text-xs text-gray-500"></span>
@@ -250,79 +272,79 @@
     <div id="listingsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-5"></div>
     <div id="listingsFooter"></div>
     <div class="text-center py-6 text-xs text-gray-500">
-      <span>Powered by Zameen.com data</span>
+      <span data-i18n="footer.powered">Powered by Zameen.com data</span>
       <span id="dataStatus" class="block mt-1 text-xs text-gray-500"></span>
     </div>
   </section>
-  <section id="mapPanel" class="relative border-l border-gray-200 hidden lg:block z-0">
+  <section id="mapPanel" class="relative border-s border-gray-200 hidden lg:block z-0">
     <div id="mapCoverageBadge" class="hidden absolute top-4 left-4 z-[500] max-w-[280px] rounded-2xl bg-white/92 backdrop-blur border border-gray-200 shadow-sm px-4 py-3"></div>
-    <div id="mapContainer" class="absolute inset-0"></div>
+    <div id="mapContainer" class="absolute inset-0" dir="ltr"></div>
   </section>
 </main>
 
 <!-- Mobile map FAB -->
 <button id="mapFab" class="fixed bottom-6 left-1/2 -translate-x-1/2 lg:hidden flex items-center gap-2 px-5 py-3 rounded-full bg-gray-900 hover:bg-gray-800 active:scale-95 text-white text-sm font-bold shadow-xl z-30 transition-all">
   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-  Show map
+  <span data-i18n="map.show">Show map</span>
 </button>
 
 <!-- Mobile map overlay -->
 <div id="mapOverlay" class="fixed inset-0 bg-white z-[60] hidden">
   <div id="mapOverlayCloseWrap" class="absolute z-[61] flex items-center gap-2">
     <button id="mapOverlayClose" class="flex items-center gap-1 px-4 py-2 rounded-full bg-white border border-gray-200 text-sm font-semibold text-gray-700 shadow-md hover:bg-gray-50 transition-colors">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-      Show list
+      <svg class="w-4 h-4 rtl:-scale-x-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+      <span data-i18n="map.showList">Show list</span>
     </button>
     <div id="mapCoverageBadgeMobile" class="hidden"></div>
   </div>
-  <div id="mapContainerMobile" class="absolute inset-0"></div>
+  <div id="mapContainerMobile" class="absolute inset-0" dir="ltr"></div>
   <div id="mapCarousel" class="absolute bottom-0 left-0 right-0 hidden gap-3 p-3 overflow-x-auto z-[61]" style="scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px))"></div>
 </div>
 
 <!-- Feedback trigger -->
-<button id="reportBtn" title="Send feedback"
-  style="position:fixed; bottom:1.25rem; right:1.25rem; z-index:30"
+<button id="reportBtn" title="Send feedback" data-i18n-title="feedback.btnTitle"
+  style="position:fixed; bottom:1.25rem; inset-inline-end:1.25rem; z-index:30"
   class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 bg-white border border-gray-200 rounded-full shadow-md hover:text-brand-600 hover:border-brand-300 transition-all">
   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
       d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/>
   </svg>
-  Feedback
+  <span data-i18n="feedback.btn">Feedback</span>
 </button>
 
 <!-- ===== FEEDBACK MODAL ===== -->
 <div id="feedbackOverlay" class="fixed inset-0 bg-black/40 z-[250] hidden"></div>
 <div id="feedbackModal" class="fixed z-[251] hidden top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] max-w-[92vw] bg-white rounded-2xl shadow-2xl p-6">
   <div class="flex items-center justify-between mb-4">
-    <h3 class="text-base font-bold text-gray-700">Send Feedback</h3>
-    <button id="feedbackClose" type="button" aria-label="Close feedback" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 text-lg transition-colors">&times;</button>
+    <h3 class="text-base font-bold text-gray-700" data-i18n="feedback.title">Send Feedback</h3>
+    <button id="feedbackClose" type="button" aria-label="Close feedback" data-i18n-aria-label="feedback.close" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 text-lg transition-colors">&times;</button>
   </div>
-  <textarea id="feedbackMsg" class="w-full h-28 p-3 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors" placeholder="What's wrong? What could be better?"></textarea>
-  <p class="text-[11px] text-gray-400 mt-2">Your current search context is attached automatically.</p>
+  <textarea id="feedbackMsg" class="w-full h-28 p-3 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors" placeholder="What's wrong? What could be better?" data-i18n-placeholder="feedback.placeholder"></textarea>
+  <p class="text-[11px] text-gray-400 mt-2" data-i18n="feedback.context">Your current search context is attached automatically.</p>
   <div class="flex justify-end gap-2 mt-4">
-    <button id="feedbackCancel" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">Cancel</button>
-    <button id="feedbackSubmit" class="px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>Send</button>
+    <button id="feedbackCancel" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors" data-i18n="common.cancel">Cancel</button>
+    <button id="feedbackSubmit" class="px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled data-i18n="feedback.send">Send</button>
   </div>
 </div>
 
 <!-- ===== DRAWER ===== -->
 <div id="drawerOverlay" class="fixed inset-0 bg-black/40 z-[200] opacity-0 pointer-events-none transition-opacity duration-300"></div>
-<div id="drawer" class="fixed z-[201] bg-white overflow-y-auto overscroll-contain transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)] top-0 right-0 bottom-0 w-[480px] max-w-[95vw] shadow-2xl max-md:inset-0 max-md:w-full max-md:max-w-full max-md:h-[100dvh] max-md:max-h-none max-md:rounded-none">
+<div id="drawer" class="fixed z-[201] bg-white overflow-y-auto overscroll-contain transition-transform duration-300 ease-[cubic-bezier(.32,.72,0,1)] top-0 end-0 bottom-0 w-[480px] max-w-[95vw] shadow-2xl max-md:inset-0 max-md:w-full max-md:max-w-full max-md:h-[100dvh] max-md:max-h-none max-md:rounded-none">
   <div class="relative">
-    <button id="drawerClose" type="button" aria-label="Close listing details" class="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur hover:bg-gray-100 flex items-center justify-center text-gray-600 text-xl z-10 transition-colors shadow-sm">&times;</button>
+    <button id="drawerClose" type="button" aria-label="Close listing details" data-i18n-aria-label="drawer.close" class="absolute top-3 end-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur hover:bg-gray-100 flex items-center justify-center text-gray-600 text-xl z-10 transition-colors shadow-sm">&times;</button>
     <div id="drawerImgArea"></div>
   </div>
   <div id="drawerContent" class="px-6 pb-8"></div>
 </div>
 
 <!-- ===== GALLERY ===== -->
-<div id="galleryModal" class="fixed inset-0 z-[300] bg-black hidden">
+<div id="galleryModal" class="fixed inset-0 z-[300] bg-black hidden" dir="ltr">
   <div class="absolute top-4 right-4 z-10 flex items-center gap-3" style="top:calc(16px + env(safe-area-inset-top, 0px))">
     <span id="galleryCounter" class="text-white/80 text-sm font-medium"></span>
-    <button id="galleryClose" type="button" aria-label="Close gallery" class="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl active:bg-white/30 transition-colors">&times;</button>
+    <button id="galleryClose" type="button" aria-label="Close gallery" data-i18n-aria-label="gallery.close" class="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl active:bg-white/30 transition-colors">&times;</button>
   </div>
-  <button id="galleryPrev" type="button" aria-label="Previous photo" class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 active:bg-white/30 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
-  <button id="galleryNext" type="button" aria-label="Next photo" class="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 active:bg-white/30 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
+  <button id="galleryPrev" type="button" aria-label="Previous photo" data-i18n-aria-label="gallery.prev" class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 active:bg-white/30 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
+  <button id="galleryNext" type="button" aria-label="Next photo" data-i18n-aria-label="gallery.next" class="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 active:bg-white/30 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
   <div id="galleryImg" class="w-full h-full flex items-center justify-center p-6 md:p-12"><img class="max-w-full max-h-full object-contain select-none" src="" alt="" draggable="false"></div>
 </div>
 
@@ -330,13 +352,13 @@
 <div id="installBanner" class="hidden fixed bottom-0 inset-x-0 z-[450] bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] px-4 py-3 safe-bottom">
   <div class="flex items-center gap-3 max-w-lg mx-auto">
     <img src="/logo.svg" alt="" class="w-10 h-10 shrink-0 rounded-xl">
-    <p id="installMsg" class="flex-1 text-sm text-gray-700 font-medium">Add ZameenRentals to your home screen for faster access</p>
-    <button id="installBtn" class="px-4 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-full transition-colors shrink-0">Install</button>
-    <button id="installDismiss" type="button" aria-label="Dismiss install prompt" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 text-lg shrink-0">&times;</button>
+    <p id="installMsg" class="flex-1 text-sm text-gray-700 font-medium" data-i18n="install.msg">Add ZameenRentals to your home screen for faster access</p>
+    <button id="installBtn" class="px-4 py-2 text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-full transition-colors shrink-0" data-i18n="install.btn">Install</button>
+    <button id="installDismiss" type="button" aria-label="Dismiss install prompt" data-i18n-aria-label="install.dismiss" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 text-lg shrink-0">&times;</button>
   </div>
 </div>
 
 <script type="module" src="/src/main.js"></script>
-<div id="toastStack" class="pointer-events-none fixed top-4 right-4 z-[400] flex w-[min(92vw,360px)] flex-col gap-2"></div>
+<div id="toastStack" class="pointer-events-none fixed top-4 end-4 z-[400] flex w-[min(92vw,360px)] flex-col gap-2"></div>
 </body>
 </html>

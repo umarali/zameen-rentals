@@ -3,6 +3,7 @@
 import { $, $$, esc, escA, TYPE_L } from './utils.js';
 import { S, refs, CITY_DEFAULTS, POPULAR_AREAS_BY_CITY, NL_EXAMPLES } from './state.js';
 import { trackFilterChange } from './analytics.js';
+import { t, fmtShortPrice, areaLabel } from './i18n.js';
 
 // ===== NL EXAMPLES (city-aware) =====
 
@@ -29,7 +30,7 @@ function setChipVal(el, val, def) {
     el.innerHTML = esc(val) + `<span class="chip-clear" data-chip-clear="${f}">&times;</span>`;
     el.classList.add('has-value');
   } else {
-    el.innerHTML = def + ' <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>';
+    el.innerHTML = def + ' <svg class="w-3 h-3 ms-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>';
     el.classList.remove('has-value');
   }
 }
@@ -73,23 +74,23 @@ const SIZE_PRESETS = {
   // backend filter (gate is `if size_marla_min:`), which would drop NULL/unparseable
   // sizes; '' means "no lower bound" and is omitted from the query.
   marla: [
-    { min: '',   max: '5',  label: '≤ 5 Marla' },
-    { min: '5',  max: '10', label: '5–10 Marla' },
-    { min: '10', max: '20', label: '10–20 Marla' },
-    { min: '20', max: '',   label: '1 Kanal+' },
+    { min: '',   max: '5' },
+    { min: '5',  max: '10' },
+    { min: '10', max: '20' },
+    { min: '20', max: '' },
   ],
   sqyd: [
-    { min: '',    max: '4.8', label: '≤ 120 sq yd' },
-    { min: '4.8', max: '9.6', label: '120–240 sq yd' },
-    { min: '9.6', max: '20',  label: '240–500 sq yd' },
-    { min: '20',  max: '',    label: '500+ sq yd' },
+    { min: '',    max: '4.8' },
+    { min: '4.8', max: '9.6' },
+    { min: '9.6', max: '20' },
+    { min: '20',  max: '' },
   ],
 };
 
 function _fmtSizeBound(marla, unit) {
-  if (unit === 'sqyd') return `${marlaToUnit(marla, 'sqyd')} sq yd`;
+  if (unit === 'sqyd') return t('size.sqyd', { v: marlaToUnit(marla, 'sqyd') });
   const v = Number(marla);
-  return (v >= 20 && v % 20 === 0) ? `${v / 20} Kanal` : `${v} Marla`;
+  return (v >= 20 && v % 20 === 0) ? t('size.kanal', { v: v / 20 }) : t('size.marla', { v });
 }
 
 // Human label for a canonical marla range, rendered in the current display unit.
@@ -98,11 +99,11 @@ export function sizeChipLabel(min, max, unit = currentSizeUnit()) {
   const mx = (max && Number(max) > 0) ? Number(max) : null;
   if (mn != null && mx != null) {
     return unit === 'sqyd'
-      ? `${marlaToUnit(mn, 'sqyd')}–${marlaToUnit(mx, 'sqyd')} sq yd`
-      : `${mn}–${mx} Marla`;
+      ? t('size.rangeSqyd', { a: marlaToUnit(mn, 'sqyd'), b: marlaToUnit(mx, 'sqyd') })
+      : t('size.rangeMarla', { a: mn, b: mx });
   }
-  if (mx != null) return `≤ ${_fmtSizeBound(mx, unit)}`;
-  if (mn != null) return unit === 'sqyd' ? `${marlaToUnit(mn, 'sqyd')}+ sq yd` : `${_fmtSizeBound(mn, unit)}+`;
+  if (mx != null) return t('size.upTo', { v: _fmtSizeBound(mx, unit) });
+  if (mn != null) return unit === 'sqyd' ? t('size.sqydPlus', { v: marlaToUnit(mn, 'sqyd') }) : t('size.plus', { v: _fmtSizeBound(mn, unit) });
   return '';
 }
 
@@ -113,18 +114,18 @@ export function renderSizeFilter() {
   if (!grid) return;
   const unit = currentSizeUnit();
   grid.innerHTML = SIZE_PRESETS[unit].map(p =>
-    `<button type="button" class="chip" data-smin="${p.min}" data-smax="${p.max}">${p.label}</button>`
-  ).join('') + '<button type="button" class="chip" data-custom="1">Custom</button>';
+    `<button type="button" class="chip" data-smin="${p.min}" data-smax="${p.max}">${esc(sizeChipLabel(p.min, p.max, unit))}</button>`
+  ).join('') + `<button type="button" class="chip" data-custom="1">${esc(t('common.custom'))}</button>`;
   $$('#sizeUnitToggle [data-unit]').forEach(b => {
     const on = b.dataset.unit === unit;
     b.classList.toggle('active', on);
     b.setAttribute('aria-pressed', String(on));
   });
   const hint = $('#sizeUnitHint');
-  if (hint) hint.textContent = unit === 'sqyd' ? '1 Marla ≈ 25 sq yd' : '1 Kanal = 20 Marla';
-  const unitLabel = unit === 'sqyd' ? 'Sq Yd' : 'Marla';
-  if ($('#sizeMin')) $('#sizeMin').placeholder = `Min (${unitLabel})`;
-  if ($('#sizeMax')) $('#sizeMax').placeholder = `Max (${unitLabel})`;
+  if (hint) hint.textContent = unit === 'sqyd' ? t('size.hintSqyd') : t('size.hintMarla');
+  const unitLabel = unit === 'sqyd' ? t('unit.sqyd') : t('unit.marla');
+  if ($('#sizeMin')) $('#sizeMin').placeholder = t('filter.minUnit', { unit: unitLabel });
+  if ($('#sizeMax')) $('#sizeMax').placeholder = t('filter.maxUnit', { unit: unitLabel });
   syncSizeChips();
 }
 
@@ -165,25 +166,25 @@ function clearNlInput() {
 
 export function updateChips() {
   const hasActiveFilters = countFilters() > 0;
-  setChipVal($('#areaChip'), S.area, 'Area');
-  setChipVal($('#typeChip'), S.type ? TYPE_L[S.type] || S.type : '', 'Type');
+  setChipVal($('#areaChip'), areaLabel(S.area), t('filter.area'));
+  setChipVal($('#typeChip'), S.type ? TYPE_L[S.type] || S.type : '', t('filter.type'));
   const bedLabel = S.beds
-    ? (S.bedsMax && S.bedsMax !== S.beds ? S.beds + '-' + S.bedsMax + ' Bed' : S.beds + (S.beds === '5' ? '+' : '') + ' Bed')
+    ? (S.bedsMax && S.bedsMax !== S.beds ? t('chip.bedRange', { a: S.beds, b: S.bedsMax }) : S.beds === '5' ? t('chip.bedPlus', { n: S.beds }) : t('chip.bed', { n: S.beds }))
     : '';
-  setChipVal($('#bedsChip'), bedLabel, 'Beds');
+  setChipVal($('#bedsChip'), bedLabel, t('filter.beds'));
 
   let pl = '';
   if (S.priceMin || S.priceMax) {
-    const mn = S.priceMin ? (S.priceMin / 1e3 | 0) + 'K' : '';
-    const mx = S.priceMax ? (S.priceMax / 1e3 | 0) + 'K' : '';
-    pl = mn && mx ? mn + '-' + mx : mx ? '<' + mx : mn + '+';
+    const mn = S.priceMin ? fmtShortPrice(S.priceMin) : '';
+    const mx = S.priceMax ? fmtShortPrice(S.priceMax) : '';
+    pl = mn && mx ? t('chip.priceRange', { a: mn, b: mx }) : mx ? t('chip.priceMax', { v: mx }) : t('chip.priceMin', { v: mn });
   }
-  setChipVal($('#priceChip'), pl, 'Price');
+  setChipVal($('#priceChip'), pl, t('filter.price'));
 
-  setChipVal($('#sizeChip'), sizeChipLabel(S.sizeMarlaMin, S.sizeMarlaMax), 'Size');
+  setChipVal($('#sizeChip'), sizeChipLabel(S.sizeMarlaMin, S.sizeMarlaMax), t('filter.size'));
 
   const mc = (S.furnishing ? 1 : 0) + (S.sort ? 1 : 0);
-  setChipVal($('#moreChip'), mc ? 'More (' + mc + ')' : '', 'More');
+  setChipVal($('#moreChip'), mc ? t('filter.moreCount', { n: mc }) : '', t('filter.more'));
 
   $('#clearAllBtn').classList.toggle('hidden', !hasActiveFilters);
   $('#appHeader')?.classList.toggle('header-has-clear', hasActiveFilters);
@@ -217,9 +218,12 @@ export function openDD(name) {
     const bar = el.parentElement;
     const chipRect = chip.getBoundingClientRect();
     const barRect = bar.getBoundingClientRect();
-    let left = chipRect.left - barRect.left;
+    let left = document.dir === 'rtl'
+      ? chipRect.right - barRect.left - el.offsetWidth
+      : chipRect.left - barRect.left;
     const maxLeft = barRect.width - el.offsetWidth;
     if (left > maxLeft) left = Math.max(0, maxLeft);
+    if (left < 0) left = 0;
     el.style.left = left + 'px';
   }
 
@@ -275,10 +279,10 @@ function filterAreas(q) {
 
 function renderAreaList(items) {
   const areaList = $('#areaList');
-  if (!items.length) { areaList.innerHTML = '<div class="p-3 text-sm text-gray-400">No areas found</div>'; return; }
+  if (!items.length) { areaList.innerHTML = `<div class="p-3 text-sm text-gray-400">${esc(t('filter.noAreas'))}</div>`; return; }
   hlIdx = -1;
   areaList.innerHTML = items.map((a, i) =>
-    `<div class="area-opt" data-i="${i}" data-name="${a.name}"><span>${esc(a.name)}</span>${a.name_ur ? `<span class="text-xs text-gray-400" dir="rtl">${a.name_ur}</span>` : ''}</div>`
+    `<div class="area-opt" data-i="${i}" data-name="${escA(a.name)}"><span dir="ltr">${esc(a.name)}</span>${a.name_ur ? `<span class="text-xs text-gray-400" lang="ur" dir="rtl">${esc(a.name_ur)}</span>` : ''}</div>`
   ).join('');
 }
 

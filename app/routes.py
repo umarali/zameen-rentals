@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from app.data import (
-    KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, _ENGLISH_TO_URDU,
+    KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, URDU_DISPLAY_NAMES_BY_CITY,
     PARENT_FALLBACK_ALIASES, ROMAN_URDU_AREAS_BY_CITY, URDU_AREAS,
 )
 from app.listing_tags import attach_tags
@@ -346,7 +346,7 @@ async def get_cities():
 @router.get("/api/areas")
 async def get_areas_api(city: str = Query("lahore")):
     areas = get_areas(city)
-    urdu_map = _ENGLISH_TO_URDU if city == "karachi" else {}
+    urdu_map = URDU_DISPLAY_NAMES_BY_CITY.get(city, {})
     return [{"name": n, "slug": s, "id": i, "lat": lat, "lng": lng, "name_ur": urdu_map.get(n, "")} for n, (s, i, lat, lng) in sorted(areas.items())]
 
 
@@ -384,7 +384,7 @@ async def search_areas(q: str = Query(..., min_length=1), city: str = Query("lah
             scored.append((int(ratio * 40), name))
 
     scored.sort(key=lambda x: -x[0])
-    urdu_map = _ENGLISH_TO_URDU if city == "karachi" else {}
+    urdu_map = URDU_DISPLAY_NAMES_BY_CITY.get(city, {})
     results = []
     for _, name in scored[:limit]:
         s, i, lat, lng = areas[name]

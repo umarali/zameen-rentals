@@ -233,6 +233,23 @@ for _name in CITY_AREAS["islamabad"]:
         for _separator in (" ", "-"):
             URDU_AREAS_BY_CITY["islamabad"][f"{_letter}{_separator}{_parts[1]}"] = _name
 
+
+def _urdu_display_names(aliases: dict) -> dict:
+    """English area name -> the first Urdu alias listed for it (the preferred spelling)."""
+    names = {}
+    for urdu, english in aliases.items():
+        names.setdefault(english, urdu)
+    return names
+
+
+# Urdu labels shown in the Urdu UI (/api/areas `name_ur`). Areas without one
+# keep their English name there.
+URDU_DISPLAY_NAMES_BY_CITY = {
+    "karachi": _ENGLISH_TO_URDU,
+    "lahore": _urdu_display_names(URDU_AREAS_BY_CITY["lahore"]),
+    "islamabad": _urdu_display_names(URDU_AREAS_BY_CITY["islamabad"]),
+}
+
 ROMAN_URDU_TYPES = {
     "house": "house", "ghar": "house", "makan": "house", "makaan": "house",
     "apartment": "apartment", "flat": "apartment", "flaat": "apartment",

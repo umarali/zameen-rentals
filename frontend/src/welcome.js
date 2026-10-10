@@ -10,6 +10,7 @@ import { $, $$, esc, escA } from './utils.js';
 import { S, CITY_DEFAULTS, NL_EXAMPLES } from './state.js';
 import { track } from './analytics.js';
 import { startTour, tourDone } from './tour.js';
+import { t, onLangChange, cityLabel } from './i18n.js';
 
 const WELCOMED_KEY = 'zr_welcomed';
 
@@ -22,6 +23,10 @@ export function initWelcome(deps) {
   _deps = deps;
   buildDOM();
   wireEvents();
+  onLangChange(() => {
+    syncModalCity();
+    if (_guide) syncGuide();
+  });
 
   if (!tourDone()) {
     // First-ever visit: run the guided tour, then hand off to the lightweight
@@ -43,7 +48,7 @@ function markFirstRunDone() {
   rememberWelcomeSeen();
 }
 
-function cityName() { return CITY_DEFAULTS[S.city]?.name || 'Lahore'; }
+function cityName() { return cityLabel(S.city) || CITY_DEFAULTS[S.city]?.name || 'Lahore'; }
 
 function getIntentChips() {
   const ex = (NL_EXAMPLES[S.city] || NL_EXAMPLES.lahore).examples || [];
@@ -69,23 +74,17 @@ function showFirstVisitGuide() {
   el.className = 'intent-strip';
   el.innerHTML = `
     <div class="intent-strip-inner">
-      <span class="intent-strip-label">What are you looking for in <strong>${esc(cityName())}</strong>?</span>
+      <span class="intent-strip-label">${guideQuestionHtml()}</span>
       <span class="intent-strip-chips">${chips}</span>
-      <button id="firstVisitTips" class="intent-strip-tips">See tips</button>
-      <button id="firstVisitDismiss" class="intent-strip-x" aria-label="Dismiss getting-started guide">&times;</button>
+      <button id="firstVisitTips" class="intent-strip-tips" data-i18n="welcome.seeTips">${esc(t('welcome.seeTips'))}</button>
+      <button id="firstVisitDismiss" class="intent-strip-x" aria-label="${escA(t('welcome.dismissAria'))}" data-i18n-aria-label="welcome.dismissAria">&times;</button>
     </div>`;
   const anchor = $('#filtersShell');
   if (anchor) anchor.insertAdjacentElement('beforebegin', el);
   else document.body.prepend(el);
   _guide = el;
 
-  el.querySelectorAll('[data-intent-q]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      track('welcome_intent_chip', { q: btn.dataset.intentQ });
-      markFirstRunDone();
-      runQuery(btn.dataset.intentQ);
-    });
-  });
+  wireGuideChips(el);
   el.querySelector('#firstVisitDismiss').addEventListener('click', () => {
     track('welcome_dismissed', { method: 'strip' });
     markFirstRunDone();
@@ -99,6 +98,32 @@ function showFirstVisitGuide() {
   const onSelfStart = () => markFirstRunDone();
   $('#nlInput')?.addEventListener('focus', onSelfStart, { once: true });
   $('#filterBar')?.addEventListener('pointerdown', onSelfStart, { once: true });
+}
+
+function guideQuestionHtml() {
+  return esc(t('welcome.question')).replace('{city}', `<strong>${esc(cityName())}</strong>`);
+}
+
+function wireGuideChips(el) {
+  el.querySelectorAll('[data-intent-q]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      track('welcome_intent_chip', { q: btn.dataset.intentQ });
+      markFirstRunDone();
+      runQuery(btn.dataset.intentQ);
+    });
+  });
+}
+
+/** Repaint the intent strip's question and example chips (language switch). */
+function syncGuide() {
+  const label = _guide.querySelector('.intent-strip-label');
+  if (label) label.innerHTML = guideQuestionHtml();
+  const chipsEl = _guide.querySelector('.intent-strip-chips');
+  if (chipsEl) {
+    chipsEl.innerHTML = getIntentChips().map(c =>
+      `<button class="chip intent-chip" data-intent-q="${escA(c)}">${esc(c)}</button>`).join('');
+    wireGuideChips(chipsEl);
+  }
 }
 
 // ── On-demand welcome / help modal ────────────────────────────────────────────
@@ -154,10 +179,12 @@ function intentChipsHtml() {
  *  sync with the current city (called on open and whenever a pill is picked). */
 function syncModalCity() {
   if (!_overlay) return;
-  _overlay.querySelectorAll('[data-wcity]').forEach(btn =>
-    btn.classList.toggle('active', btn.dataset.wcity === S.city));
+  _overlay.querySelectorAll('[data-wcity]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.wcity === S.city);
+    btn.textContent = cityLabel(btn.dataset.wcity);
+  });
   const browse = _overlay.querySelector('#welcomeBrowse');
-  if (browse) browse.textContent = `Browse fresh ${cityName()} rentals`;
+  if (browse) browse.textContent = t('welcome.browse', { city: cityName() });
   const row = _overlay.querySelector('#welcomeIntentRow');
   if (row) { row.innerHTML = intentChipsHtml(); wireIntentChips(row); }
 }
@@ -165,7 +192,7 @@ function syncModalCity() {
 function buildDOM() {
   const cityOrder = ['lahore', 'karachi', 'islamabad'];
   const cityPills = cityOrder.map(key =>
-    `<button data-wcity="${key}" class="chip${S.city === key ? ' active' : ''}">${esc(CITY_DEFAULTS[key].name)}</button>`
+    `<button data-wcity="${key}" class="chip${S.city === key ? ' active' : ''}">${esc(cityLabel(key))}</button>`
   ).join('');
 
   const el = document.createElement('div');
@@ -183,30 +210,30 @@ function buildDOM() {
             <img src="/static/logo.svg" alt="" width="36" height="36" class="brand-mark">
             <span class="font-brand text-sm font-bold tracking-tight text-gray-800">Zameen<span class="brand-wordmark-accent">Rentals</span></span>
           </div>
-          <button id="welcomeClose" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
+          <button id="welcomeClose" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors" aria-label="${escA(t('common.close'))}" data-i18n-aria-label="common.close">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
 
-        <h2 id="welcomeTitle" class="font-brand text-xl sm:text-2xl font-extrabold text-gray-900 leading-tight">How to find your rental</h2>
-        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Search in plain English or Roman Urdu, pick a starter below, or just browse the freshest listings.</p>
+        <h2 id="welcomeTitle" class="font-brand text-xl sm:text-2xl font-extrabold text-gray-900 leading-tight" data-i18n="welcome.title">${esc(t('welcome.title'))}</h2>
+        <p class="mt-2 text-sm text-gray-500 leading-relaxed" data-i18n="welcome.body">${esc(t('welcome.body'))}</p>
 
         <div class="mt-5">
-          <div class="welcome-eyebrow">Searching in</div>
+          <div class="welcome-eyebrow" data-i18n="welcome.searchingIn">${esc(t('welcome.searchingIn'))}</div>
           <div class="flex items-center gap-2 mt-2" id="welcomeCityRow">${cityPills}</div>
         </div>
 
-        <button id="welcomeBrowse" class="welcome-primary mt-5">Browse fresh ${esc(cityName())} rentals</button>
+        <button id="welcomeBrowse" class="welcome-primary mt-5">${esc(t('welcome.browse', { city: cityName() }))}</button>
 
         <div class="mt-5">
-          <div class="welcome-eyebrow">Or try a search</div>
+          <div class="welcome-eyebrow" data-i18n="welcome.orTry">${esc(t('welcome.orTry'))}</div>
           <div class="flex flex-wrap gap-2 mt-2" id="welcomeIntentRow">${intentChipsHtml()}</div>
         </div>
 
         <div class="mt-5 flex items-center justify-center gap-4">
-          <button id="welcomeTour" class="text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors">Take a quick tour</button>
+          <button id="welcomeTour" class="text-sm font-semibold text-brand-600 hover:text-brand-700 transition-colors" data-i18n="welcome.tour">${esc(t('welcome.tour'))}</button>
           <span class="text-gray-300">·</span>
-          <button id="welcomeDismiss" class="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">Skip</button>
+          <button id="welcomeDismiss" class="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors" data-i18n="welcome.skip">${esc(t('welcome.skip'))}</button>
         </div>
       </div>
     </div>`;

@@ -3,6 +3,7 @@
 import { $, $$, esc, escA, TYPE_L, fmtPrice, fmtRelative } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import { trackContactIntent } from './analytics.js';
+import { t, propertyTypeLabel, localizeAreaSize } from './i18n.js';
 import { isFavorite, isHidden, isNewSinceLastVisit } from './personalization.js';
 import { has as compareHas } from './compare.js';
 import {
@@ -45,12 +46,12 @@ export function getAreaForListing(item) {
 export function formatDistance(distanceKm, { approximate = false } = {}) {
   const distance = Number(distanceKm);
   if (!Number.isFinite(distance)) return '';
-  const prefix = approximate ? '~' : '';
+  const prefix = approximate ? t('distance.approx') : '';
   if (distance < 1) {
     const meters = Math.max(50, Math.round((distance * 1000) / 50) * 50);
-    return `${prefix}${meters} m away`;
+    return prefix + t('distance.m', { n: meters });
   }
-  return `${prefix}${distance.toFixed(distance < 10 ? 1 : 0)} km away`;
+  return prefix + t('distance.km', { n: distance.toFixed(distance < 10 ? 1 : 0) });
 }
 
 // ===== RENDER CARD =====
@@ -65,10 +66,10 @@ export function renderCard(item, idx) {
   let imgHtml;
   if (mainImg) {
     if (hasMulti) {
-      imgHtml = `<div class="relative aspect-[4/3] overflow-hidden bg-gray-100 group" data-carousel>
+      imgHtml = `<div class="relative aspect-[4/3] overflow-hidden bg-gray-100 group" data-carousel dir="ltr">
         <div class="flex h-full transition-transform duration-300" data-slides>${imgs.slice(0, 5).map(u => `<img class="w-full h-full object-cover shrink-0 card-img-zoom" src="${escA(u)}" alt="" loading="lazy" onerror="this.src=''">`).join('')}</div>
-        <button data-prev type="button" aria-label="Previous photo" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
-        <button data-next type="button" aria-label="Next photo" class="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
+        <button data-prev type="button" aria-label="${escA(t('gallery.prev'))}" class="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
+        <button data-next type="button" aria-label="${escA(t('gallery.next'))}" class="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow"><svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
         <div class="absolute bottom-1.5 sm:bottom-2 left-1/2 -translate-x-1/2 flex gap-1">${imgs.slice(0, 5).map((_, i) => `<span class="carousel-dot w-1.5 h-1.5 rounded-full bg-white/60 ${i === 0 ? 'active' : ''}"></span>`).join('')}</div>
       </div>`;
     } else {
@@ -79,11 +80,11 @@ export function renderCard(item, idx) {
   }
 
   const badges = [];
-  if (item.bedrooms) badges.push(`<span class="flex items-center gap-1">${bedIcon('w-3.5 h-3.5')}${item.bedrooms} bed</span>`);
-  if (item.bathrooms) badges.push(`<span class="flex items-center gap-1">${bathIcon('w-3.5 h-3.5')}${item.bathrooms} bath</span>`);
-  if (item.area_size) badges.push(`<span class="flex items-center gap-1">${areaIcon('w-3.5 h-3.5')}${esc(item.area_size)}</span>`);
+  if (item.bedrooms) badges.push(`<span class="flex items-center gap-1">${bedIcon('w-3.5 h-3.5')}${esc(t('card.bed', { n: item.bedrooms }))}</span>`);
+  if (item.bathrooms) badges.push(`<span class="flex items-center gap-1">${bathIcon('w-3.5 h-3.5')}${esc(t('card.bath', { n: item.bathrooms }))}</span>`);
+  if (item.area_size) badges.push(`<span class="flex items-center gap-1">${areaIcon('w-3.5 h-3.5')}${esc(localizeAreaSize(item.area_size))}</span>`);
 
-  const typeLabel = item.property_type ? `<span class="text-[10px] font-semibold uppercase tracking-wide text-brand-500 bg-brand-50 px-2 py-0.5 rounded-full">${esc(item.property_type)}</span>` : '';
+  const typeLabel = item.property_type ? `<span class="text-[10px] font-semibold uppercase tracking-wide text-brand-500 bg-brand-50 px-2 py-0.5 rounded-full">${esc(propertyTypeLabel(item.property_type))}</span>` : '';
   const callPhone = item.call_phone || item.phone || '';
   const whatsappPhone = item.whatsapp_phone || '';
   const distanceLabel = formatDistance(item.distance_km, { approximate: item.is_distance_approximate });
@@ -100,7 +101,7 @@ export function renderCard(item, idx) {
   const compared = compareHas(zameenId);
   const isNew = isNewSinceLastVisit(item.first_seen_at || item.posted_at);
   const newBadge = isNew
-    ? '<span class="absolute top-2 left-2 z-10 text-[10px] font-bold uppercase tracking-wide bg-brand-500 text-white px-2 py-0.5 rounded-full shadow-sm">New</span>'
+    ? `<span class="absolute top-2 start-2 z-10 text-[10px] font-bold uppercase tracking-wide bg-brand-500 text-white px-2 py-0.5 rounded-full shadow-sm">${esc(t('card.new'))}</span>`
     : '';
   const favIconFilled = FAV_FILLED_SVG;
   const favIconHollow = FAV_HOLLOW_SVG;
@@ -112,34 +113,34 @@ export function renderCard(item, idx) {
     ${newBadge}
     <div class="p-2 sm:p-3">
       <div class="flex items-center justify-between gap-1 sm:gap-2 mb-0.5 sm:mb-1">
-        <div class="text-sm sm:text-base font-bold text-gray-800">${esc(fmtPrice(item.price, item.price_text))}${(item.price || item.price_text) ? '<span class="ml-0.5 text-xs font-medium text-gray-500">/mo</span>' : ''}</div>
+        <div class="text-sm sm:text-base font-bold text-gray-800">${esc(fmtPrice(item.price, item.price_text))}${(item.price || item.price_text) ? `<span class="ms-0.5 text-xs font-medium text-gray-500">${esc(t('card.perMonth'))}</span>` : ''}</div>
         ${typeLabel}
       </div>
-      <div class="text-xs sm:text-sm text-gray-600 line-clamp-1 mb-0.5 sm:mb-1">${esc(item.title || 'Rental Property')}</div>
+      <div class="text-xs sm:text-sm text-gray-600 line-clamp-1 mb-0.5 sm:mb-1">${esc(item.title || t('card.untitled'))}</div>
       ${item.location ? `<div class="flex items-center gap-1 text-xs text-gray-500 mb-1 sm:mb-2">${pinIcon('w-3 h-3 shrink-0')}<span class="line-clamp-1">${esc(item.location)}</span></div>` : ''}
       ${distanceLabel ? `<div class="text-xs font-semibold text-brand-600 mb-1 sm:mb-2">${esc(distanceLabel)}</div>` : ''}
       ${badges.length ? `<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">${badges.join('')}</div>` : ''}
-      ${repostCount > 1 ? `<div class="mt-1"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full" title="The same listing was posted ${repostCount} times by agents — showing it once" aria-label="Listed ${repostCount} times">Listed ${repostCount}&times;</span></div>` : ''}
+      ${repostCount > 1 ? `<div class="mt-1"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full" title="${escA(t('card.repostTitle', { n: repostCount }))}" aria-label="${escA(t('card.repostAria', { n: repostCount }))}">${esc(t('card.repost', { n: repostCount }))}</span></div>` : ''}
       ${(() => {
         const addedRel = item.posted_at ? fmtRelative(item.posted_at) : '';
-        const addedLine = addedRel ? `Added ${addedRel}` : (item.added || '');
+        const addedLine = addedRel ? t('card.added', { rel: addedRel }) : (item.added || '');
         const updatedRel = item.updated_at ? fmtRelative(item.updated_at) : '';
         if (!addedLine && !updatedRel) return '';
         return `<div class="mt-2 leading-tight">
           ${addedLine ? `<div class="text-xs text-gray-500">${esc(addedLine)}</div>` : ''}
-          ${updatedRel ? `<div class="hidden sm:block text-xs text-gray-500">Updated ${esc(updatedRel)}</div>` : ''}
+          ${updatedRel ? `<div class="hidden sm:block text-xs text-gray-500">${esc(t('card.updated', { rel: updatedRel }))}</div>` : ''}
         </div>`;
       })()}
       ${item.url ? `<div class="card-action-row pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 border-t border-gray-100">
         <div class="card-action-group">
-          <button data-action="favorite" ${zameenIdAttr} aria-pressed="${favorited ? 'true' : 'false'}" class="action-btn fav-btn w-8 h-8 rounded-full transition-colors ${favorited ? 'text-rose-500 bg-rose-50 hover:bg-rose-100' : 'text-gray-500 hover:text-rose-500 hover:bg-rose-50'}" title="${favorited ? 'Remove from favorites' : 'Save to favorites'}" aria-label="${favorited ? 'Remove from favorites' : 'Save to favorites'}">${favorited ? favIconFilled : favIconHollow}</button>
-          <button data-action="hide" ${zameenIdAttr} class="action-btn hide-btn w-8 h-8 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Hide this listing — it won't show up in your results" aria-label="Hide this listing">${hideIcon}</button>
-          <button data-action="compare" ${zameenIdAttr} aria-pressed="${compared ? 'true' : 'false'}" class="action-btn compare-btn w-8 h-8 rounded-full transition-colors ${compared ? 'text-brand-600 bg-brand-50 hover:bg-brand-100' : 'text-gray-500 hover:text-brand-600 hover:bg-brand-50'}" title="${compared ? 'Remove from compare' : 'Add to compare'}" aria-label="${compared ? 'Remove from compare' : 'Add to compare'}">${compareIcon}</button>
+          <button data-action="favorite" ${zameenIdAttr} aria-pressed="${favorited ? 'true' : 'false'}" class="action-btn fav-btn w-8 h-8 rounded-full transition-colors ${favorited ? 'text-rose-500 bg-rose-50 hover:bg-rose-100' : 'text-gray-500 hover:text-rose-500 hover:bg-rose-50'}" title="${escA(t(favorited ? 'fav.remove' : 'fav.save'))}" aria-label="${escA(t(favorited ? 'fav.remove' : 'fav.save'))}">${favorited ? favIconFilled : favIconHollow}</button>
+          <button data-action="hide" ${zameenIdAttr} class="action-btn hide-btn w-8 h-8 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="${escA(t('card.hideTitle'))}" aria-label="${escA(t('card.hideAria'))}">${hideIcon}</button>
+          <button data-action="compare" ${zameenIdAttr} aria-pressed="${compared ? 'true' : 'false'}" class="action-btn compare-btn w-8 h-8 rounded-full transition-colors ${compared ? 'text-brand-600 bg-brand-50 hover:bg-brand-100' : 'text-gray-500 hover:text-brand-600 hover:bg-brand-50'}" title="${escA(t(compared ? 'compare.remove' : 'compare.add'))}" aria-label="${escA(t(compared ? 'compare.remove' : 'compare.add'))}">${compareIcon}</button>
         </div>
         <div class="card-action-group">
-          <a data-action="open" href="${escA(item.url)}" target="_blank" rel="noopener" class="action-btn w-8 h-8 rounded-full text-gray-500 hover:text-brand-500 hover:bg-brand-50 transition-colors" title="Open on Zameen.com" aria-label="Open on Zameen.com">${externalIcon()}</a>
-          <button data-action="call" data-url="${escA(item.url)}" ${contactAttrs} class="action-btn w-8 h-8 rounded-full text-gray-500 hover:text-brand-500 hover:bg-brand-50 transition-colors" title="Call" aria-label="Call">${callIcon()}</button>
-          <button data-action="whatsapp" data-url="${escA(item.url)}" ${contactAttrs} class="action-btn w-8 h-8 rounded-full text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors" title="WhatsApp" aria-label="WhatsApp">${whatsappIcon()}</button>
+          <a data-action="open" href="${escA(item.url)}" target="_blank" rel="noopener" class="action-btn w-8 h-8 rounded-full text-gray-500 hover:text-brand-500 hover:bg-brand-50 transition-colors" title="${escA(t('card.openZameen'))}" aria-label="${escA(t('card.openZameen'))}">${externalIcon()}</a>
+          <button data-action="call" data-url="${escA(item.url)}" ${contactAttrs} class="action-btn w-8 h-8 rounded-full text-gray-500 hover:text-brand-500 hover:bg-brand-50 transition-colors" title="${escA(t('contact.call'))}" aria-label="${escA(t('contact.call'))}">${callIcon()}</button>
+          <button data-action="whatsapp" data-url="${escA(item.url)}" ${contactAttrs} class="action-btn w-8 h-8 rounded-full text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors" title="${escA(t('contact.whatsapp'))}" aria-label="${escA(t('contact.whatsapp'))}">${whatsappIcon()}</button>
         </div>
       </div>` : ''}
     </div>
@@ -164,7 +165,7 @@ export function updateFavoriteButton(zameenId, favorited) {
   const selector = `.fav-btn[data-zameen-id="${_cssEscape(zameenId)}"]`;
   document.querySelectorAll(selector).forEach(btn => {
     btn.setAttribute('aria-pressed', favorited ? 'true' : 'false');
-    btn.title = favorited ? 'Remove from favorites' : 'Save to favorites';
+    btn.title = t(favorited ? 'fav.remove' : 'fav.save');
     btn.setAttribute('aria-label', btn.title);
     btn.classList.toggle('text-rose-500', favorited);
     btn.classList.toggle('bg-rose-50', favorited);
@@ -181,7 +182,7 @@ export function updateCompareButton(zameenId, compared) {
   const selector = `.compare-btn[data-zameen-id="${_cssEscape(zameenId)}"]`;
   document.querySelectorAll(selector).forEach(btn => {
     btn.setAttribute('aria-pressed', compared ? 'true' : 'false');
-    btn.title = compared ? 'Remove from compare' : 'Add to compare';
+    btn.title = t(compared ? 'compare.remove' : 'compare.add');
     btn.setAttribute('aria-label', btn.title);
     btn.classList.toggle('text-brand-600', compared);
     btn.classList.toggle('bg-brand-50', compared);
@@ -271,7 +272,7 @@ function openContact(action, listingUrl, contact) {
   }
   if (action === 'whatsapp' && whatsappPhone) {
     const waNum = whatsappPhone.replace(/^0/, '92').replace(/[^0-9]/g, '');
-    window.open(`https://wa.me/${waNum}?text=${encodeURIComponent('Salaam, is this property still available? ' + listingUrl)}`, '_blank');
+    window.open(`https://wa.me/${waNum}?text=${encodeURIComponent(t('contact.waMessage') + listingUrl)}`, '_blank');
     return true;
   }
   return false;

@@ -8,6 +8,7 @@
 
 import { $, $$, esc, escA, fmtPrice, fmtRelative, showToast } from './utils.js';
 import { eyeIcon, callIcon, whatsappIcon, favFilledIcon, favHollowIcon, imageIcon } from './icons.js';
+import { t, onLangChange, propertyTypeLabel, localizeAreaSize } from './i18n.js';
 
 const STORE_KEY = 'zr_compare_v1';
 const MAX_ITEMS = 4;
@@ -59,11 +60,11 @@ export function add(listing) {
   const zid = String(listing.zameen_id || extractZid(listing.url));
   if (!zid) return false;
   if (has(zid)) {
-    showToast('Already in compare', { tone: 'default' });
+    showToast(t('compare.already'), { tone: 'default' });
     return false;
   }
   if (isFull()) {
-    showToast(`You can compare up to ${MAX_ITEMS} listings at a time.`, { tone: 'error' });
+    showToast(t('compare.max', { n: MAX_ITEMS }), { tone: 'error' });
     return false;
   }
   _items.push(snapshotListing(listing, zid));
@@ -135,7 +136,7 @@ function ensureTrayDom() {
   el.className = 'compare-tray hidden';
   el.id = 'compareTray';
   el.setAttribute('role', 'region');
-  el.setAttribute('aria-label', 'Compare listings tray');
+  el.setAttribute('aria-label', t('compare.trayAria'));
   document.body.appendChild(el);
   _trayEl = el;
   return el;
@@ -153,19 +154,20 @@ function renderTray() {
     const item = _items[i];
     if (item) {
       const bg = item.image_url ? `style="background-image: url('${escA(item.image_url)}')"` : '';
-      thumbs.push(`<div class="compare-thumb" ${bg} title="${escA(item.title || 'Listing')}" data-compare-thumb="${escA(item.zameen_id)}">
-        <button class="compare-thumb-remove" data-compare-remove="${escA(item.zameen_id)}" aria-label="Remove from compare">×</button>
+      thumbs.push(`<div class="compare-thumb" ${bg} title="${escA(item.title || t('compare.listing'))}" data-compare-thumb="${escA(item.zameen_id)}">
+        <button class="compare-thumb-remove" data-compare-remove="${escA(item.zameen_id)}" aria-label="${escA(t('compare.remove'))}">×</button>
       </div>`);
     } else {
       thumbs.push('<div class="compare-thumb compare-thumb-empty" aria-hidden="true"></div>');
     }
   }
   const canCompare = _items.length >= 2;
+  el.setAttribute('aria-label', t('compare.trayAria'));
   el.innerHTML = `
-    <button class="compare-tray-close" data-compare-close aria-label="Clear compare list">×</button>
+    <button class="compare-tray-close" data-compare-close aria-label="${escA(t('compare.clearList'))}">×</button>
     <div class="compare-tray-thumbs">${thumbs.join('')}</div>
-    <button class="compare-tray-btn" data-compare-open ${canCompare ? '' : 'disabled'} title="${canCompare ? 'Compare selected listings' : 'Add at least 2 listings to compare'}">
-      Compare ${_items.length}/${MAX_ITEMS}
+    <button class="compare-tray-btn" data-compare-open ${canCompare ? '' : 'disabled'} title="${escA(t(canCompare ? 'compare.selected' : 'compare.needTwo'))}">
+      ${esc(t('compare.trayBtn', { n: _items.length, max: MAX_ITEMS }))}
     </button>
   `;
   el.classList.remove('hidden');
@@ -235,9 +237,9 @@ function sizeLabel(areaSize, marla) {
   // with an approximate Marla figure so sizes are comparable at a glance.
   if (marla && !/marla/i.test(areaSize)) {
     const m = marla < 10 ? marla.toFixed(1) : String(Math.round(marla));
-    return `${areaSize} (≈${m} marla)`;
+    return t('compare.sizeApprox', { size: localizeAreaSize(areaSize), m });
   }
-  return String(areaSize);
+  return String(localizeAreaSize(areaSize));
 }
 
 function trimWords(str, n) {
@@ -284,16 +286,16 @@ function byId(zid) {
 function buildModalInner() {
   const toggle = _items.length >= 2
     ? `<button class="compare-diff-toggle ${_diffOnly ? 'is-on' : ''}" data-compare-difftoggle role="switch" aria-checked="${_diffOnly}">
-        <span class="compare-diff-dot"></span>Only differences
+        <span class="compare-diff-dot"></span>${esc(t('compare.onlyDiff'))}
       </button>`
     : '';
   return `
     <div class="compare-modal-header">
-      <h2 id="compareModalTitle" class="text-lg font-bold text-gray-800">Compare (${_items.length})</h2>
+      <h2 id="compareModalTitle" class="text-lg font-bold text-gray-800">${esc(t('compare.title', { n: _items.length }))}</h2>
       <div class="flex items-center gap-2 sm:gap-3">
         ${toggle}
-        <button id="compareClearBtn" class="text-sm text-gray-500 hover:text-rose-600">Clear all</button>
-        <button id="compareCloseBtn" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 text-xl" aria-label="Close">&times;</button>
+        <button id="compareClearBtn" class="text-sm text-gray-500 hover:text-rose-600">${esc(t('compare.clearAll'))}</button>
+        <button id="compareCloseBtn" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 text-xl" aria-label="${escA(t('common.close'))}">&times;</button>
       </div>
     </div>
     <div class="compare-modal-body">
@@ -310,10 +312,10 @@ function buildVerdict() {
   metrics.forEach((mt, i) => { if (mt.rsPerMarla != null && mt.rsPerMarla < best) { best = mt.rsPerMarla; bestIdx = i; } });
   if (bestIdx < 0) return ''; // no listing has both a price and a parseable size
   const item = _items[bestIdx];
-  const where = item.location || item.title || 'This listing';
+  const where = item.location || item.title || t('compare.thisListing');
   return `<div class="compare-verdict">
     <span class="compare-verdict-star">★</span>
-    <span><strong>Best value:</strong> ${esc(trimWords(where, 6))} — ${esc(fmtRsCompact(best))}/marla</span>
+    <span><strong>${esc(t('compare.bestValue'))}</strong> ${esc(trimWords(where, 6))} — ${esc(t('compare.perMarla', { v: fmtRsCompact(best) }))}</span>
   </div>`;
 }
 
@@ -336,7 +338,7 @@ function row(label, values, winIdx = -1, badge = '') {
     const badgeHtml = win && badge ? `<span class="compare-badge">${esc(badge)}</span>` : '';
     return `<td class="compare-cell${win ? ' compare-cell--win' : ''}">${esc(String(v))}${badgeHtml}</td>`;
   }).join('');
-  const samePill = same ? '<span class="compare-same-pill">Same</span>' : '';
+  const samePill = same ? `<span class="compare-same-pill">${esc(t('compare.same'))}</span>` : '';
   return { same, html: `<tr class="compare-row" data-same="${same}"><th class="compare-rlabel">${esc(label)}${samePill}</th>${tds}</tr>` };
 }
 
@@ -358,27 +360,27 @@ function renderTable() {
   const winPosted = winnerIndex(posted, 'max');
 
   const sections = [];
-  sections.push({ label: 'Value', rows: [
-    row('Rs / marla', items.map((it, i) => fmtRsCompact(rsMarla[i])), winMarla, 'Best value'),
-    row('Rs / bedroom', items.map((it, i) => fmtRsCompact(rsBed[i])), winBed, 'Per room'),
-    row('Price', items.map(it => fmtPrice(it.price, it.price_text)), winPrice, 'Lowest'),
+  sections.push({ label: t('compare.secValue'), rows: [
+    row(t('compare.rsMarla'), items.map((it, i) => fmtRsCompact(rsMarla[i])), winMarla, t('compare.badgeBest')),
+    row(t('compare.rsBed'), items.map((it, i) => fmtRsCompact(rsBed[i])), winBed, t('compare.badgePerRoom')),
+    row(t('compare.price'), items.map(it => fmtPrice(it.price, it.price_text)), winPrice, t('compare.badgeLowest')),
   ] });
-  sections.push({ label: 'Space', rows: [
-    row('Bedrooms', items.map(it => it.bedrooms || '—')),
-    row('Bathrooms', items.map(it => it.bathrooms || '—')),
-    row('Size', items.map((it, i) => sizeLabel(it.area_size, metrics[i].sizeMarla))),
-    row('Type', items.map(it => it.property_type || '—')),
+  sections.push({ label: t('compare.secSpace'), rows: [
+    row(t('compare.bedrooms'), items.map(it => it.bedrooms || '—')),
+    row(t('compare.bathrooms'), items.map(it => it.bathrooms || '—')),
+    row(t('compare.size'), items.map((it, i) => sizeLabel(it.area_size, metrics[i].sizeMarla))),
+    row(t('compare.type'), items.map(it => propertyTypeLabel(it.property_type) || '—')),
   ] });
-  const locRows = [row('Area', items.map(it => it.location ? trimWords(it.location, 8) : '—'))];
+  const locRows = [row(t('compare.area'), items.map(it => it.location ? trimWords(it.location, 8) : '—'))];
   if (hasDist) {
-    locRows.push(row('Distance', items.map(it => Number.isFinite(Number(it.distance_km)) ? `${Number(it.distance_km).toFixed(1)} km` : '—'), winDist, 'Closest'));
+    locRows.push(row(t('compare.distance'), items.map(it => Number.isFinite(Number(it.distance_km)) ? t('unit.km', { n: Number(it.distance_km).toFixed(1) }) : '—'), winDist, t('compare.badgeClosest')));
   }
-  sections.push({ label: 'Location', rows: locRows });
-  sections.push({ label: 'Freshness', rows: [
-    row('Posted', items.map((it, i) => Number.isFinite(posted[i]) ? (fmtRelative(metrics[i].postedIso) || '—') : '—'), winPosted, 'Newest'),
+  sections.push({ label: t('compare.secLocation'), rows: locRows });
+  sections.push({ label: t('compare.secFreshness'), rows: [
+    row(t('compare.posted'), items.map((it, i) => Number.isFinite(posted[i]) ? (fmtRelative(metrics[i].postedIso) || '—') : '—'), winPosted, t('compare.badgeNewest')),
   ] });
-  sections.push({ label: 'Contact', rows: [
-    row('Phone / WhatsApp', items.map(it => (it.call_phone || it.whatsapp_phone) ? 'Available' : 'Not yet')),
+  sections.push({ label: t('compare.secContact'), rows: [
+    row(t('compare.phone'), items.map(it => (it.call_phone || it.whatsapp_phone) ? t('compare.available') : t('compare.notYet'))),
   ] });
 
   let body = '';
@@ -401,15 +403,15 @@ function headerCell(item) {
     : `<span class="compare-hthumb compare-hthumb-empty">${imageIcon('w-7 h-7')}</span>`;
   const fav = Boolean(_hooks.isFavorite && _hooks.isFavorite(item.zameen_id));
   return `<th class="compare-hcell">
-    <button class="compare-col-remove" data-compare-col-remove="${zid}" aria-label="Remove from compare">&times;</button>
+    <button class="compare-col-remove" data-compare-col-remove="${zid}" aria-label="${escA(t('compare.remove'))}">&times;</button>
     ${img}
     <span class="compare-hprice">${esc(fmtPrice(item.price, item.price_text))}</span>
     <span class="compare-hloc">${esc(trimWords(item.location || item.title || '', 6))}</span>
     <span class="compare-hactions">
-      <button class="compare-act" data-compare-open="${zid}" title="View details" aria-label="View details">${eyeIcon()}</button>
-      <button class="compare-act compare-act-fav${fav ? ' is-fav' : ''}" data-compare-fav="${zid}" title="${fav ? 'Saved' : 'Save'}" aria-label="${fav ? 'Remove from favorites' : 'Save to favorites'}" aria-pressed="${fav}">${fav ? favFilledIcon() : favHollowIcon()}</button>
-      <button class="compare-act" data-compare-call="${zid}" title="Call" aria-label="Call">${callIcon()}</button>
-      <button class="compare-act compare-act-wa" data-compare-wa="${zid}" title="WhatsApp" aria-label="WhatsApp">${whatsappIcon()}</button>
+      <button class="compare-act" data-compare-open="${zid}" title="${escA(t('compare.viewDetails'))}" aria-label="${escA(t('compare.viewDetails'))}">${eyeIcon()}</button>
+      <button class="compare-act compare-act-fav${fav ? ' is-fav' : ''}" data-compare-fav="${zid}" title="${escA(t(fav ? 'drawer.saved' : 'drawer.save'))}" aria-label="${escA(t(fav ? 'fav.remove' : 'fav.save'))}" aria-pressed="${fav}">${fav ? favFilledIcon() : favHollowIcon()}</button>
+      <button class="compare-act" data-compare-call="${zid}" title="${escA(t('contact.call'))}" aria-label="${escA(t('contact.call'))}">${callIcon()}</button>
+      <button class="compare-act compare-act-wa" data-compare-wa="${zid}" title="${escA(t('contact.whatsapp'))}" aria-label="${escA(t('contact.whatsapp'))}">${whatsappIcon()}</button>
     </span>
   </th>`;
 }
@@ -452,8 +454,8 @@ function wireModal() {
       const nowFav = await _hooks.onFavorite(zid);
       btn.classList.toggle('is-fav', !!nowFav);
       btn.setAttribute('aria-pressed', String(!!nowFav));
-      btn.title = nowFav ? 'Saved' : 'Save';
-      btn.setAttribute('aria-label', nowFav ? 'Remove from favorites' : 'Save to favorites');
+      btn.title = t(nowFav ? 'drawer.saved' : 'drawer.save');
+      btn.setAttribute('aria-label', t(nowFav ? 'fav.remove' : 'fav.save'));
       btn.innerHTML = nowFav ? favFilledIcon() : favHollowIcon();
     });
   });
@@ -500,4 +502,5 @@ export function init(hooks = {}) {
   _hooks = hooks || {};
   ensureTrayDom();
   renderTray();
+  onLangChange(() => { renderTray(); rerender(); });
 }

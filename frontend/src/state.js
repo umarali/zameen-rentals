@@ -1,5 +1,7 @@
 /** Global application state & city config. */
 
+import { t, getLang } from './i18n.js';
+
 export const CITY_DEFAULTS = {
   karachi:   { lat: 24.8607, lng: 67.0011, zoom: 11, name: 'Karachi' },
   lahore:    { lat: 31.5204, lng: 74.3587, zoom: 11, name: 'Lahore' },
@@ -12,7 +14,7 @@ export const POPULAR_AREAS_BY_CITY = {
   islamabad: new Set(['DHA Defence','DHA Phase 2','Bahria Town Islamabad','F-6','F-7','F-8','F-10','F-11','G-9','G-10','G-11','G-13','E-11','I-8','I-10','I-14','Blue Area','Gulberg Greens','B-17','D-12','Soan Garden','PWD Housing Scheme','Pakistan Town','CBR Town']),
 };
 
-export const NL_EXAMPLES = {
+const NL_EXAMPLES_EN = {
   karachi: {
     placeholder: 'Try: 2 bed flat DHA under 50k',
     examples: ['2 bed flat in DHA under 50k','gulshan mein sasta ghar','furnished apartment Bahria','3 bedroom house Gulistan-e-Jauhar'],
@@ -27,6 +29,30 @@ export const NL_EXAMPLES = {
   },
 };
 
+// Urdu-script examples the search parser understands (see tests/test_search_languages.py).
+const NL_EXAMPLES_UR = {
+  karachi: {
+    placeholder: 'مثلاً: ڈی ایچ اے میں 2 بیڈ فلیٹ 50 ہزار تک',
+    examples: ['ڈی ایچ اے میں 2 بیڈ فلیٹ 50 ہزار تک','گلشن اقبال میں سستا گھر','کلفٹن میں فرنشڈ فلیٹ','گلستان جوہر میں 3 کمروں کا گھر'],
+  },
+  lahore: {
+    placeholder: 'مثلاً: بحریہ ٹاؤن میں 3 بیڈ گھر 80 ہزار تک',
+    examples: ['گلبرگ میں 2 بیڈ فلیٹ 50 ہزار تک','جوہر ٹاؤن میں پانچ مرلہ گھر ایک لاکھ تک','ڈی ایچ اے میں فرنشڈ فلیٹ','ماڈل ٹاؤن میں 3 کمروں کا گھر'],
+  },
+  islamabad: {
+    placeholder: 'مثلاً: ایف 8 میں 2 بیڈ فلیٹ 60 ہزار تک',
+    examples: ['ایف 10 میں 2 بیڈ فلیٹ 60 ہزار تک','بحریہ ٹاؤن میں سستا گھر','ڈی ایچ اے میں فرنشڈ فلیٹ','جی 11 میں 3 کمروں کا گھر'],
+  },
+};
+
+/** Search placeholder + example queries per city, in the active UI language. */
+export const NL_EXAMPLES = Object.defineProperties({}, Object.fromEntries(
+  Object.keys(NL_EXAMPLES_EN).map(city => [city, {
+    enumerable: true,
+    get: () => (getLang() === 'ur' ? NL_EXAMPLES_UR : NL_EXAMPLES_EN)[city],
+  }]),
+));
+
 /** Reactive-ish filter state. */
 export const S = {
   city: 'lahore', area: '', type: '', beds: '', bedsMax: '',
@@ -39,7 +65,10 @@ export const S = {
   sizeMarlaMin: '', sizeMarlaMax: '', sizeUnit: '',
 };
 
-export const FURNISHING_L = { furnished: 'Furnished', unfurnished: 'Unfurnished' };
+export const FURNISHING_L = Object.defineProperties({}, {
+  furnished: { enumerable: true, get: () => t('furnishing.furnished') },
+  unfurnished: { enumerable: true, get: () => t('furnishing.unfurnished') },
+});
 
 /** The API's `furnished` value for a furnishing: true, false, or null for no preference. */
 export function furnishedValue(furnishing = S.furnishing) {

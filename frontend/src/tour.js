@@ -7,6 +7,7 @@
 
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
+import { t } from './i18n.js';
 
 const TOUR_KEY = 'zr_tour_done';
 // A real (non-skeleton, non-hidden) listing card's compare button.
@@ -15,52 +16,55 @@ const COMPARE_SEL = '#listingsGrid .card-wrap:not(.card-hidden) button[data-acti
 let _driver = null;
 
 function isDesktop() { return window.innerWidth >= 1024; }
+/** Mirror a horizontal popover side in RTL so it still points at its target. */
+function side(s) { return document.dir === 'rtl' ? ({ left: 'right', right: 'left' }[s] || s) : s; }
+function align(a) { return document.dir === 'rtl' ? ({ start: 'end', end: 'start' }[a] || a) : a; }
 
 function buildSteps() {
   const steps = [
     { element: '#nlInput', popover: {
-      title: 'Search in plain words',
-      description: 'Type what you want — “2 bed flat DHA under 50k” or “DHA mein 2 bed flat 50k tak”. We pull out the area, type, beds and budget for you.',
-      side: 'bottom', align: 'start',
+      title: t('tour.searchTitle'),
+      description: t('tour.searchBody'),
+      side: side('bottom'), align: align('start'),
     } },
     { element: '#cityTabs', popover: {
-      title: 'Pick your city',
-      description: 'Switch between Lahore, Karachi and Islamabad. Each city reloads its areas and re-centres the map.',
-      side: 'bottom', align: 'start',
+      title: t('tour.cityTitle'),
+      description: t('tour.cityBody'),
+      side: side('bottom'), align: align('start'),
     } },
     { element: '#filterBar', popover: {
-      title: 'Refine with filters',
-      description: 'Narrow by area, type, beds and price — or tap Near Me to search around your location.',
-      side: 'bottom', align: 'start',
+      title: t('tour.filtersTitle'),
+      description: t('tour.filtersBody'),
+      side: side('bottom'), align: align('start'),
     } },
   ];
 
   // Compare lives on the listing cards, which render after the search resolves.
   const compareBtn = document.querySelector(COMPARE_SEL);
   if (compareBtn) steps.push({ element: compareBtn, popover: {
-    title: 'Compare homes side by side',
-    description: 'Tap the compare icon on any listing to add it to your tray, then see up to four homes in one table — best value per marla, distance, freshness and more.',
-    side: 'left', align: 'start',
+    title: t('tour.compareTitle'),
+    description: t('tour.compareBody'),
+    side: side('left'), align: align('start'),
   } });
 
   steps.push({ element: '#alertsBellBtn', popover: {
-    title: 'Save homes & get alerts',
-    description: 'Open “My rentals” for your saved favourites, recently viewed listings, and alerts when new matches appear.',
-    side: 'bottom', align: 'end',
+    title: t('tour.alertsTitle'),
+    description: t('tour.alertsBody'),
+    side: side('bottom'), align: align('end'),
   } });
 
   // The map is desktop-only; on mobile the floating map button opens it.
   const mapSel = isDesktop() ? '#mapPanel' : '#mapFab';
   if (document.querySelector(mapSel)) steps.push({ element: mapSel, popover: {
-    title: 'Explore on the map',
-    description: 'Browse by neighbourhood — green dots are areas with listings, red pins are exact addresses.',
-    side: isDesktop() ? 'left' : 'top', align: isDesktop() ? 'center' : 'end',
+    title: t('tour.mapTitle'),
+    description: t('tour.mapBody'),
+    side: side(isDesktop() ? 'left' : 'top'), align: align(isDesktop() ? 'center' : 'end'),
   } });
 
   steps.push({ element: '#welcomeBtn', popover: {
-    title: 'Help is always here',
-    description: 'Tap the help button anytime to reopen tips, search examples and this tour.',
-    side: 'bottom', align: 'start',
+    title: t('tour.helpTitle'),
+    description: t('tour.helpBody'),
+    side: side('bottom'), align: align('start'),
   } });
 
   return steps;
@@ -87,7 +91,7 @@ export function startTour({ force = false, onDone } = {}) {
   waitForCards(() => {
     _driver = driver({
       showProgress: true,
-      progressText: '{{current}} of {{total}}',
+      progressText: t('tour.progress'),
       allowClose: true,
       disableActiveInteraction: true,   // don't fire the highlighted control mid-tour
       overlayColor: '#0f172a',
@@ -96,9 +100,9 @@ export function startTour({ force = false, onDone } = {}) {
       stagePadding: 6,
       stageRadius: 12,
       popoverClass: 'zr-tour',
-      nextBtnText: 'Next',
-      prevBtnText: 'Back',
-      doneBtnText: 'Got it',
+      nextBtnText: t('tour.next'),
+      prevBtnText: t('tour.back'),
+      doneBtnText: t('tour.done'),
       steps: buildSteps(),
       onDestroyed: () => {
         localStorage.setItem(TOUR_KEY, '1');

@@ -6,6 +6,7 @@ import { $, $$, esc, escA, fmtPrice, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import { track, trackMapMarkerClick } from './analytics.js';
 import { formatDistance, getAreaForListing } from './cards.js';
+import { t, localizeAreaSize } from './i18n.js';
 import {
   createBaseLayer,
   getStoredMapLayer,
@@ -117,7 +118,7 @@ function syncGpsButtons() {
     const active = Boolean(refs.userLocation);
     btn.classList.toggle('is-active', active);
     btn.setAttribute('aria-pressed', String(active));
-    btn.title = active ? 'Center on my location' : 'Use my location';
+    btn.title = t(active ? 'map.centerMe' : 'map.useLocation');
   });
 }
 
@@ -135,8 +136,8 @@ function createLayerToggleControl() {
     onAdd() {
       const container = L.DomUtil.create('div', 'map-layer-control');
       container.innerHTML = `
-        <button type="button" class="map-layer-btn" data-map-layer="osm" aria-pressed="false">Street</button>
-        <button type="button" class="map-layer-btn" data-map-layer="satellite" aria-pressed="false">Satellite</button>
+        <button type="button" class="map-layer-btn" data-map-layer="osm" aria-pressed="false" data-i18n="map.street">${esc(t('map.street'))}</button>
+        <button type="button" class="map-layer-btn" data-map-layer="satellite" aria-pressed="false" data-i18n="map.satellite">${esc(t('map.satellite'))}</button>
       `;
       L.DomEvent.disableClickPropagation(container);
       L.DomEvent.disableScrollPropagation(container);
@@ -260,17 +261,17 @@ export function isUserLocationFresh(location = refs.userLocation) {
 }
 
 function geolocationErrorMessage(error) {
-  if (!error) return 'Could not get your location right now.';
-  if (error.code === 1) return 'Location permission was denied.';
-  if (error.code === 2) return 'Your location is unavailable right now.';
-  if (error.code === 3) return 'Getting your location timed out.';
-  return 'Could not get your location right now.';
+  if (!error) return t('geo.error');
+  if (error.code === 1) return t('geo.denied');
+  if (error.code === 2) return t('geo.unavailable');
+  if (error.code === 3) return t('geo.timeout');
+  return t('geo.error');
 }
 
 export async function requestUserLocation({ mapInstance = refs.map || refs.mobileMap, recenter = true } = {}) {
   if (!navigator.geolocation) {
     track('location_permission_result', { outcome: 'error' });
-    notify('Your browser does not support location services.', { tone: 'error' });
+    notify(t('geo.unsupported'), { tone: 'error' });
     throw new Error('unsupported');
   }
 
@@ -305,8 +306,9 @@ function createGpsControl(mapInstance) {
       const container = L.DomUtil.create('div', 'map-gps-control');
       const button = L.DomUtil.create('button', 'map-gps-btn', container);
       button.type = 'button';
-      button.title = 'Use my location';
-      button.setAttribute('aria-label', 'Use my location');
+      button.title = t('map.useLocation');
+      button.setAttribute('aria-label', t('map.useLocation'));
+      button.dataset.i18nAriaLabel = 'map.useLocation';
       button.innerHTML = `
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.15" d="M12 2.75V5.25M12 18.75v2.5M21.25 12h-2.5M5.25 12h-2.5"/>
@@ -570,7 +572,7 @@ function updateListingMarkers(mapInstance = refs.map, { mobile = false } = {}) {
 
     if (!mobile) {
       marker.bindTooltip(
-        `<div class="text-[11px] font-semibold text-gray-800">${esc(item.title || 'Rental')}</div><div class="text-[10px] text-gray-500">${esc(fmtPrice(item.price, item.price_text))}</div>`,
+        `<div class="text-[11px] font-semibold text-gray-800">${esc(item.title || t('saved.rental'))}</div><div class="text-[10px] text-gray-500">${esc(fmtPrice(item.price, item.price_text))}</div>`,
         { direction: 'top', offset: [0, -8], opacity: 0.96 },
       );
     }
@@ -784,12 +786,12 @@ function renderMobileMapCard(item) {
     ${img ? `<img class="w-full h-36 object-cover" src="${escA(img)}" alt="" loading="lazy">` : `<div class="w-full h-36 bg-gray-100 flex items-center justify-center text-3xl text-gray-300">&#x1f3e0;</div>`}
     <div class="p-3">
       <div class="text-sm font-bold text-gray-800">${esc(fmtPrice(item.price, item.price_text))}</div>
-      <div class="text-xs text-gray-500 line-clamp-1 mt-0.5">${esc(item.title || 'Rental')}</div>
+      <div class="text-xs text-gray-500 line-clamp-1 mt-0.5">${esc(item.title || t('saved.rental'))}</div>
       ${distanceLabel ? `<div class="mt-1 text-[11px] font-semibold text-brand-600">${esc(distanceLabel)}</div>` : ''}
       <div class="flex gap-2.5 mt-1.5 text-[11px] text-gray-400">
-        ${item.bedrooms ? `<span>${item.bedrooms} bed</span>` : ''}
-        ${item.bathrooms ? `<span>${item.bathrooms} bath</span>` : ''}
-        ${item.area_size ? `<span>${esc(item.area_size)}</span>` : ''}
+        ${item.bedrooms ? `<span>${esc(t('card.bed', { n: item.bedrooms }))}</span>` : ''}
+        ${item.bathrooms ? `<span>${esc(t('card.bath', { n: item.bathrooms }))}</span>` : ''}
+        ${item.area_size ? `<span>${esc(localizeAreaSize(item.area_size))}</span>` : ''}
       </div>
     </div>
   </div>`;
