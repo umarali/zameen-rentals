@@ -465,7 +465,7 @@ function updateHeader({
     const rankingLabel = mode === 'nearby'
       ? 'Nearby'
       : S.sort === 'newest'
-      ? 'Newest first'
+      ? 'Recently found'
       : S.sort === 'price_low'
       ? 'Lowest price'
       : S.sort === 'price_high'

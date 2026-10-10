@@ -12,6 +12,9 @@ logger = logging.getLogger("zameenrentals")
 _DISTANCE_SENTINEL = 999999999
 _FRESHNESS_SQL = "COALESCE(zameen_updated_at, zameen_posted_at, first_seen_at)"
 _STABLE_RECENCY_SQL = f"{_FRESHNESS_SQL} DESC, last_seen_at DESC, id DESC"
+# "Recently found": when our crawler first saw the listing. Zameen's own dates
+# can move forward for the same ad, so they never break ties here.
+_FOUND_ORDER_SQL = "first_seen_at DESC, id DESC"
 
 
 @contextmanager
@@ -319,7 +322,7 @@ def _nearby_sort_key(row, sort):
         return (price is None, -(price if price is not None else 0),
                 distance_km, -freshness_at, -last_seen_at, -listing_id)
     if sort == "newest":
-        return (-freshness_at, distance_km, -last_seen_at, -listing_id)
+        return (-_datetime_sort_value(row.get("first_seen_at")), distance_km, -listing_id)
     return (distance_km, -freshness_at, -last_seen_at, -listing_id)
 
 
@@ -846,10 +849,9 @@ def search_listings(*, city="lahore", area=None, area_names=None, property_type=
             order = f"{order}, distance_to_center ASC, {exact_location_order}"
         order = f"{order}, {_STABLE_RECENCY_SQL}"
     elif sort == "newest":
-        order = f"{_FRESHNESS_SQL} DESC"
+        order = _FOUND_ORDER_SQL
         if map_focus:
-            order = f"{order}, distance_to_center ASC, {exact_location_order}"
-        order = f"{order}, last_seen_at DESC, id DESC"
+            order = f"first_seen_at DESC, distance_to_center ASC, {exact_location_order}, id DESC"
     elif map_focus:
         order = f"distance_to_center ASC, {exact_location_order}, {_STABLE_RECENCY_SQL}"
     else:
@@ -1003,10 +1005,9 @@ def search_exact_listings_in_bounds(*, city="lahore", south, west, north, east,
             order = f"{order}, distance_to_center ASC"
         order = f"{order}, {_STABLE_RECENCY_SQL}"
     elif sort == "newest":
-        order = f"{_FRESHNESS_SQL} DESC"
+        order = _FOUND_ORDER_SQL
         if map_focus:
-            order = f"{order}, distance_to_center ASC"
-        order = f"{order}, last_seen_at DESC, id DESC"
+            order = "first_seen_at DESC, distance_to_center ASC, id DESC"
     elif map_focus:
         order = f"distance_to_center ASC, {_STABLE_RECENCY_SQL}"
     else:

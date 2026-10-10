@@ -1,7 +1,7 @@
 /** Detail drawer, photo gallery, contact bar. */
 
 import L from 'leaflet';
-import { $, $$, esc, escA, fmtPrice, fmtRelative, showToast } from './utils.js';
+import { $, $$, esc, escA, fmtPrice, fmtRelative, fmtShortDate, zameenAddedPhrase, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import {
   getAreaForListing, handleContactAction, extractZameenIdFromUrl,
@@ -158,13 +158,18 @@ export function openDrawer(item, selectAreaFull) {
       <span class="text-sm text-gray-500">/ month</span>
     </div>
     ${(() => {
-      const addedRel = item.posted_at ? fmtRelative(item.posted_at) : '';
-      const addedLine = addedRel ? `Added ${addedRel}` : (item.added || '');
+      const firstSeen = fmtShortDate(item.first_seen_at);
+      const zameenAdded = zameenAddedPhrase(item);
       const updatedRel = item.updated_at ? fmtRelative(item.updated_at) : '';
-      if (!addedLine && !updatedRel) return '';
-      return `<div class="mb-2 leading-tight">
-        ${addedLine ? `<div class="text-xs text-gray-500">${esc(addedLine)}</div>` : ''}
-        ${updatedRel ? `<div class="text-xs text-gray-500">Updated ${esc(updatedRel)}</div>` : ''}
+      const lines = [
+        firstSeen ? `First seen by ZameenRentals: ${firstSeen}` : '',
+        zameenAdded ? `Zameen says ${zameenAdded}` : '',
+        updatedRel ? `Zameen says updated ${updatedRel}` : '',
+      ].filter(Boolean);
+      if (!lines.length) return '';
+      return `<div id="drawerDates" class="mb-2 leading-tight space-y-0.5">
+        ${lines.map(l => `<div class="text-xs text-gray-500">${esc(l)}</div>`).join('')}
+        <div class="text-xs text-gray-400">Zameen's dates can move forward for the same ad, so it may be older. Availability has not been confirmed.</div>
       </div>`;
     })()}
     ${highlights.length ? `<div class="drawer-divider"></div><div class="grid grid-cols-2 gap-3 mb-1">${highlights.join('')}</div>` : ''}

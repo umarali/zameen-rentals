@@ -169,3 +169,32 @@ class TestTimestampComparisons:
         conn.execute("UPDATE listings SET last_seen_at = strftime('%Y-%m-%dT%H:%M:%f', 'now', '-7 days', '-1 minutes')")
         conn.commit()
         assert mark_stale_listings(days=7) == 1
+
+
+class TestRecentlyFoundSort:
+    def _seed(self, zid, added, first_seen):
+        upsert_listing(zameen_id=zid, url=f"https://www.zameen.com/Property/x-{zid}-1-1.html",
+                       city="karachi", area_name="Clifton",
+                       card_data={"title": f"Flat {zid}", "price": 50000, "added": added})
+        conn = _get_conn()
+        conn.execute("UPDATE listings SET first_seen_at = ? WHERE zameen_id = ?", (first_seen, zid))
+        conn.commit()
+
+    def test_newest_orders_by_when_we_first_saw_it_not_zameens_date(self):
+        from app.db_listings import search_listings
+        # Seen long ago, but Zameen now says "added 1 hour ago" (a moved date).
+        self._seed("2001", "Added: 1 hour ago", "2026-09-01 00:00:00")
+        # Genuinely new to us, though Zameen says 2 months.
+        self._seed("2002", "Added: 2 months ago", "2026-10-09 00:00:00")
+        ids = [r["zameen_id"] for r in search_listings(city="karachi", sort="newest")["results"]]
+        assert ids == ["2002", "2001"]
+
+    def test_nearby_newest_uses_first_seen_too(self):
+        from app.db_listings import search_nearby_listings
+        self._seed("2001", "Added: 1 hour ago", "2026-09-01 00:00:00")
+        self._seed("2002", "Added: 2 months ago", "2026-10-09 00:00:00")
+        conn = _get_conn()
+        conn.execute("UPDATE listings SET latitude = 24.82, longitude = 67.03, location_source = 'listing_exact'")
+        conn.commit()
+        result = search_nearby_listings(city="karachi", lat=24.82, lng=67.03, radius_km=5, sort="newest")
+        assert [r["zameen_id"] for r in result["results"]] == ["2002", "2001"]

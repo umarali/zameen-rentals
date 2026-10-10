@@ -6,7 +6,7 @@
  *  cards they haven't yet decided to save.
  */
 
-import { $, $$, esc, escA, fmtPrice, fmtRelative, parseServerTime, showToast } from './utils.js';
+import { $, $$, esc, escA, fmtPrice, fmtRelative, fmtShortDate, parseServerTime, showToast } from './utils.js';
 import { eyeIcon, callIcon, whatsappIcon, favFilledIcon, favHollowIcon, imageIcon } from './icons.js';
 
 const STORE_KEY = 'zr_compare_v1';
@@ -212,7 +212,7 @@ function deriveMetrics(item) {
   const price = Number(item.price);
   const beds = Number(item.bedrooms);
   const sizeMarla = parseAreaToMarla(item.area_size);
-  const iso = item.posted_at || item.first_seen_at || '';
+  const iso = item.first_seen_at || '';
   return {
     price,
     sizeMarla,
@@ -375,7 +375,7 @@ function renderTable() {
   }
   sections.push({ label: 'Location', rows: locRows });
   sections.push({ label: 'Freshness', rows: [
-    row('Posted', items.map((it, i) => Number.isFinite(posted[i]) ? (fmtRelative(metrics[i].postedIso) || '—') : '—'), winPosted, 'Newest'),
+    row('First seen by us', items.map((it, i) => Number.isFinite(posted[i]) ? (fmtShortDate(metrics[i].postedIso) || '—') : '—'), winPosted, 'Most recent'),
   ] });
   sections.push({ label: 'Contact', rows: [
     row('Phone / WhatsApp', items.map(it => (it.call_phone || it.whatsapp_phone) ? 'Available' : 'Not yet')),

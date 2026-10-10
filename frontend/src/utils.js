@@ -32,6 +32,24 @@ export function parseServerTime(value) {
   return Date.parse(s + 'Z');
 }
 
+/** '7 Oct' for a server timestamp ('7 Oct 2025' outside the current year), or ''. */
+export function fmtShortDate(iso) {
+  const t = parseServerTime(iso);
+  if (!Number.isFinite(t)) return '';
+  const d = new Date(t);
+  const opts = { day: 'numeric', month: 'short' };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString('en-GB', opts);
+}
+
+/** "added 3 hours ago" from Zameen's own date, or from its raw "Added: …" label. */
+export function zameenAddedPhrase(item) {
+  const rel = item.posted_at ? fmtRelative(item.posted_at) : '';
+  if (rel) return `added ${rel}`;
+  const raw = (item.added || '').replace(/^Added:\s*/i, '').trim();
+  return raw ? `added ${raw}` : '';
+}
+
 export function fmtRelative(iso) {
   if (!iso) return '';
   const t = parseServerTime(iso);
