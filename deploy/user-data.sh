@@ -68,8 +68,10 @@ RestartSec=10
 WantedBy=multi-user.target
 UNIT
 
+# zameenrental.com is the primary host (DNS on Cloudflare, DNS-only records).
+# www and the old zameenrentals.emerssive.com address redirect to it.
 cat > /etc/caddy/Caddyfile <<'CADDY'
-zameenrentals.emerssive.com {
+(app) {
 	encode zstd gzip
 	reverse_proxy 127.0.0.1:8000
 
@@ -79,6 +81,18 @@ zameenrentals.emerssive.com {
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
 	}
+}
+
+zameenrental.com {
+	import app
+}
+
+www.zameenrental.com {
+	redir https://zameenrental.com{uri} permanent
+}
+
+zameenrentals.emerssive.com {
+	redir https://zameenrental.com{uri} permanent
 }
 CADDY
 

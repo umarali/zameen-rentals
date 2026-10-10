@@ -14,7 +14,7 @@ and `deploy/backup/` takes daily backups.
 | --- | --- | --- |
 | Droplet | Basic, Regular SSD, 2 GB / 1 vCPU / 50 GB, Ubuntu 24.04 LTS | $12/month |
 | Backups | Spaces bucket, for daily off-server database copies | $5/month |
-| DNS | Already on DigitalOcean (`emerssive.com`) | free |
+| DNS | Cloudflare (`zameenrental.com`) | free |
 
 Region: open DigitalOcean's speed-test pages for Frankfurt (FRA1) and Bangalore
 (BLR1) from a connection in Pakistan and pick the faster one. Frankfurt is the
@@ -117,15 +117,20 @@ the old key pair from the AWS server.
 
 ## 6. Point the domain at the Droplet (you)
 
-In DigitalOcean → Networking → Domains → `emerssive.com`, change the A record for
-`zameenrentals` from `34.196.86.31` to the Droplet IP. Caddy requests the HTTPS
-certificate itself once DNS resolves to the Droplet.
+`zameenrental.com` is on Cloudflare. Point the apex A record at the Droplet IP;
+`www` is a CNAME to the apex. Keep both **DNS only** (grey cloud) so Caddy can
+answer the certificate challenge itself. The zone ID and API token live in the
+repo `.env` (`CLOUDFLARE_API_TOKEN`).
+
+The old `zameenrentals.emerssive.com` record (DNS on DigitalOcean, `emerssive.com`)
+also points at the Droplet; Caddy redirects it to `zameenrental.com`, so keep it
+for old links.
 
 ## 7. Check it works
 
 ```bash
-curl -s https://zameenrentals.emerssive.com/api/health
-curl -s 'https://zameenrentals.emerssive.com/api/search?city=karachi&area=DHA+Phase+6' | head -c 300
+curl -s https://zameenrental.com/api/health
+curl -s 'https://zameenrental.com/api/search?city=karachi&area=DHA+Phase+6' | head -c 300
 ssh root@<droplet-ip> 'journalctl -u zameenrentals-crawler -n 20 --no-pager'
 ssh root@<droplet-ip> 'systemctl list-timers zameenrentals-backup.timer --no-pager'
 ssh root@<droplet-ip> 'systemctl start zameenrentals-backup.service; journalctl -u zameenrentals-backup -n 5 --no-pager'
