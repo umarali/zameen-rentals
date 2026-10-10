@@ -1,0 +1,32 @@
+[
+  {
+    "name": "desktop",
+    "initialCards": 25,
+    "parser": "ai",
+    "filters": {
+      "area": "Clifton",
+      "property_type": "apartment",
+      "city_hint": "karachi",
+      "bedrooms": 2,
+      "price_max": 75000
+    },
+    "searchUrl": "https://zameenrentals.emerssive.com/api/search?city=karachi&area=Clifton&property_type=apartment&bedrooms=2&price_max=75000&page=1",
+    "searchTotal": 2,
+    "errors": []
+  },
+  {
+    "name": "mobile",
+    "initialCards": 25,
+    "parser": "ai",
+    "filters": {
+      "area": "Clifton",
+      "property_type": "apartment",
+      "city_hint": "karachi",
+      "bedrooms": 2,
+      "price_max": 75000
+    },
+    "searchUrl": "https://zameenrentals.emerssive.com/api/search?city=karachi&area=Clifton&property_type=apartment&bedrooms=2&price_max=75000&page=1",
+    "searchTotal": 2,
+    "errors": []
+  }
+]

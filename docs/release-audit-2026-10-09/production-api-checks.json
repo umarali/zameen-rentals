@@ -1,0 +1,91 @@
+[
+  {
+    "path": "parse-query",
+    "city": "karachi",
+    "status": 200,
+    "seconds": 4.531,
+    "response": {
+      "query": "2 bed flat in Clifton under 75k",
+      "filters": {
+        "area": "Clifton",
+        "property_type": "apartment",
+        "bedrooms": 2,
+        "price_max": 75000
+      },
+      "parser": "ai"
+    }
+  },
+  {
+    "path": "search",
+    "city": "karachi",
+    "status": 200,
+    "total": 8486,
+    "shown": 25,
+    "source": "local"
+  },
+  {
+    "path": "parse-query",
+    "city": "lahore",
+    "status": 200,
+    "seconds": 2.056,
+    "response": {
+      "query": "گلبرگ میں دو بیڈ کا فلیٹ پچاس ہزار تک",
+      "filters": {
+        "area": "Gulberg",
+        "property_type": "apartment",
+        "city_hint": "lahore",
+        "bedrooms": 2,
+        "price_max": 50000
+      },
+      "parser": "ai"
+    }
+  },
+  {
+    "path": "search",
+    "city": "lahore",
+    "status": 200,
+    "total": 13687,
+    "shown": 25,
+    "source": "local"
+  },
+  {
+    "path": "parse-query",
+    "city": "islamabad",
+    "status": 200,
+    "seconds": 1.788,
+    "response": {
+      "query": "F-8 mein do bed flat 70k tak",
+      "filters": {
+        "area": "F 8",
+        "property_type": "apartment",
+        "city_hint": "islamabad",
+        "bedrooms": 2,
+        "price_max": 70000
+      },
+      "parser": "ai"
+    }
+  },
+  {
+    "path": "search",
+    "city": "islamabad",
+    "status": 200,
+    "total": 12194,
+    "shown": 25,
+    "source": "local"
+  },
+  {
+    "path": "repeat-parse",
+    "status": 200,
+    "seconds": 0.172,
+    "response": {
+      "query": "2 bed flat in Clifton under 75k",
+      "filters": {
+        "area": "Clifton",
+        "property_type": "apartment",
+        "bedrooms": 2,
+        "price_max": 75000
+      },
+      "parser": "ai"
+    }
+  }
+]

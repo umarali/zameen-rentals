@@ -1,0 +1,43 @@
+{
+  "config": "haiku55-live-route",
+  "cases": 180,
+  "exact": 0.9888888888888889,
+  "fields": {
+    "area": 0.9882352941176471,
+    "areas": 1.0,
+    "bedrooms": 1.0,
+    "bedrooms_max": 1.0,
+    "furnished": 1.0,
+    "price_max": 1.0,
+    "price_min": 1.0,
+    "property_type": 1.0,
+    "size_marla_min": 1.0,
+    "sort": 1.0
+  },
+  "area": {
+    "correct": 161,
+    "false_flag": 7,
+    "flagged": 2,
+    "unflagged_approx": 0,
+    "silent_wrong": 0,
+    "missing": 0
+  },
+  "errors": 0,
+  "cost_total": 0.0222902,
+  "cost_per_query": 0.00012383444444444443,
+  "latency_p50": 1.322,
+  "latency_p95": 1.542,
+  "by_lang": {
+    "en": 0.9809523809523809,
+    "mixed": 1.0,
+    "roman": 1.0,
+    "ur": 1.0,
+    "urdu": 1.0
+  },
+  "returned_models": [
+    "claude-haiku-5-5"
+  ],
+  "parser_counts": {
+    "ai": 180
+  }
+}
