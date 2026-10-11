@@ -27,6 +27,7 @@ import { getStoredMapLayer } from './map-layers.js';
 import { initWelcome, showWelcome } from './welcome.js';
 import { initSiteMenu } from './site-menu.js';
 import { initVoiceSearch } from './voice.js';
+import { initAiFeatures } from './tailored.js';
 import {
   initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen,
   trackCitySwitch, trackFilterChange, trackMapMarkerClick, trackApiError, trackScrollDepth, trackFeedbackSubmitted,
@@ -1511,6 +1512,7 @@ async function init() {
   doSearch();
 
   initSiteMenu({ onHelp: showWelcome });
+  initAiFeatures({ openListing: (item) => openDrawerFull(item, null) });
   initWelcome({
     doSearch,
     doNlSearch,
