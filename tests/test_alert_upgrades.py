@@ -369,6 +369,31 @@ class TestRanking:
         items, ranked_by = up.rank_matches({}, [_cand("a", 1, "2026-10-11", 1)])
         assert ranked_by == "fallback" and items[0]["zameen_id"] == "a"
 
+    def test_slow_ranking_times_out_to_fallback(self, monkeypatch):
+        import threading
+        release = threading.Event()
+
+        def slow(*a, **k):
+            release.wait(5)
+            return [{"zameen_id": "a", "reason": "late", "trade_off": ""}]
+
+        monkeypatch.setitem(sys.modules, "app.ranking", types.SimpleNamespace(rank_listings=slow))
+        monkeypatch.setattr(up, "RANK_CALL_TIMEOUT_SECONDS", 0.05)
+        try:
+            items, ranked_by = up.rank_matches({}, [_cand("a", 1, "2026-10-11", 1)])
+        finally:
+            release.set()
+        assert ranked_by == "fallback" and items[0]["reason"] != "late"
+
+    def test_spent_run_budget_skips_ranking(self, monkeypatch):
+        import time
+        called = []
+        monkeypatch.setitem(sys.modules, "app.ranking",
+                            types.SimpleNamespace(rank_listings=lambda *a, **k: called.append(1) or []))
+        monkeypatch.setattr(up, "_rank_deadline", time.monotonic() - 1)
+        _, ranked_by = up.rank_matches({}, [_cand("a", 1, "2026-10-11", 1)])
+        assert ranked_by == "fallback" and called == []
+
 
 # ── Priority check ───────────────────────────────────────────────────────────
 

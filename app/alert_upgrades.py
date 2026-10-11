@@ -36,7 +36,10 @@ from __future__ import annotations
 import inspect
 import json
 import logging
+import os
 import random
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from datetime import datetime, timedelta, timezone
 
 from app import credits
@@ -445,14 +448,19 @@ def run_daily_jobs(*, now: datetime | None = None, dispatch: bool = True) -> dic
            ORDER BY u.alert_id LIMIT ?""",
         (SHORTLIST, day, MAX_SHORTLISTS_PER_RUN),
     ).fetchall()
-    for row in due_shortlists:
-        try:
-            result = _deliver_shortlist(row, day=day, now=now, dispatch=dispatch)
-        except Exception:
-            logger.exception("[Paid alerts] Shortlist failed for alert %d", row["alert_id"])
-            continue
-        summary[result["status_key"]] += 1
-        summary["pushed"] += result.get("pushed", 0)
+    global _rank_deadline
+    _rank_deadline = time.monotonic() + RANK_RUN_BUDGET_SECONDS
+    try:
+        for row in due_shortlists:
+            try:
+                result = _deliver_shortlist(row, day=day, now=now, dispatch=dispatch)
+            except Exception:
+                logger.exception("[Paid alerts] Shortlist failed for alert %d", row["alert_id"])
+                continue
+            summary[result["status_key"]] += 1
+            summary["pushed"] += result.get("pushed", 0)
+    finally:
+        _rank_deadline = None
     return summary
 
 
@@ -630,6 +638,16 @@ def fallback_rank(filters: dict, listings: list[dict], limit: int = SHORTLIST_SI
     ]
 
 
+# The crawler runs the daily jobs inline, so a slow Claude call must not hold
+# it up. Each ranking gets a hard wall-clock limit and each run a total budget;
+# past either, the shortlist uses the deterministic fallback. A timed-out call
+# finishes in the background thread and its result is discarded.
+RANK_CALL_TIMEOUT_SECONDS = float(os.environ.get("ZR_SHORTLIST_RANK_TIMEOUT", "20"))
+RANK_RUN_BUDGET_SECONDS = float(os.environ.get("ZR_SHORTLIST_RANK_BUDGET", "60"))
+_rank_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="shortlist-rank")
+_rank_deadline: float | None = None
+
+
 def rank_matches(filters: dict, listings: list[dict], *, limit: int = SHORTLIST_SIZE) -> tuple[list[dict], str]:
     """Rank with app.ranking when available; otherwise the deterministic fallback.
 
@@ -639,12 +657,21 @@ def rank_matches(filters: dict, listings: list[dict], *, limit: int = SHORTLIST_
         from app.ranking import rank_listings
     except Exception:
         return fallback_rank(filters, listings, limit), "fallback"
+    remaining = RANK_CALL_TIMEOUT_SECONDS
+    if _rank_deadline is not None:
+        remaining = min(remaining, _rank_deadline - time.monotonic())
+    if remaining <= 0:
+        return fallback_rank(filters, listings, limit), "fallback"
     try:
-        ranked = rank_listings(filters, listings, brief=None, limit=limit)
+        future = _rank_pool.submit(rank_listings, filters, listings, brief=None, limit=limit)
+        ranked = future.result(timeout=remaining)
         if inspect.isawaitable(ranked):
             # The contract is a plain function; don't block the crawler on a coroutine.
             getattr(ranked, "close", lambda: None)()
             raise TypeError("rank_listings returned an awaitable")
+    except FutureTimeout:
+        logger.warning("[Paid alerts] rank_listings took longer than %.0fs; using fallback ranking", remaining)
+        return fallback_rank(filters, listings, limit), "fallback"
     except Exception:
         logger.exception("[Paid alerts] rank_listings failed; using fallback ranking")
         return fallback_rank(filters, listings, limit), "fallback"
