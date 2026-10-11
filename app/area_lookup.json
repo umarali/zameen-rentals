@@ -1,0 +1,3324 @@
+{
+ "karachi": {
+  "urdu": {
+   "Chapal Uptown": "Gadap Town Chapal Uptown",
+   "احسن آباد": "Gadap Town Ahsanabad",
+   "ال الحمرا سوسائٹی": "Al Hamra Society",
+   "اللہ والا ٹاؤن": "Korangi Allahwala Town",
+   "الہلال سوسائٹی": "Al Hilal Society",
+   "امان گالف ویو": "Jinnah Avenue Aman Golf View",
+   "اولڈ کلفٹن": "Old Clifton",
+   "اَپر غزری": "Gizri Upper Gizri",
+   "آئی آئی چندڑیگر روڈ": "I.I. Chundrigar Road",
+   "ایس ایم سی ایچ ایس ۔ سندھی مسلم سوسائٹی": "Jamshed Town SMCHS Sindhi Muslim Society",
+   "ایم بی سی ایچ ایس ۔ مخدوم بلاول سوسائٹی": "Korangi MBCHS Makhdoom Bilawal Society",
+   "این ایچ ایس موڑی پور": "Northern Bypass NHS Mauripur",
+   "باتھ آئی لینڈ": "Bath Island",
+   "بحریہ اسپورٹس سٹی": "Bahria Town Bahria Sports City",
+   "بحریہ اپارٹمنٹ": "Bahria Town Bahria Apartments",
+   "بحریہ ٹاؤن - جناح ایونیو": "Bahria Town - Jinnah Avenue",
+   "بحریہ ٹاؤن - پریسنٹ 1": "Bahria Town - Precinct 1",
+   "بحریہ ٹاؤن - پریسنٹ 10": "Bahria Town - Precinct 10",
+   "بحریہ ٹاؤن - پریسنٹ 10-اے": "Bahria Town - Precinct 10 A",
+   "بحریہ ٹاؤن - پریسنٹ 10۔بی": "Bahria Town - Precinct 10 B",
+   "بحریہ ٹاؤن - پریسنٹ 11": "Bahria Town - Precinct 11",
+   "بحریہ ٹاؤن - پریسنٹ 12": "Bahria Town - Precinct 12",
+   "بحریہ ٹاؤن - پریسنٹ 16": "Bahria Town - Precinct 16",
+   "بحریہ ٹاؤن - پریسنٹ 17": "Bahria Town - Precinct 17",
+   "بحریہ ٹاؤن - پریسنٹ 19": "Bahria Town - Precinct 19",
+   "بحریہ ٹاؤن - پریسنٹ 2": "Bahria Town - Precinct 2",
+   "بحریہ ٹاؤن - پریسنٹ 27": "Bahria Town - Precinct 27",
+   "بحریہ ٹاؤن - پریسنٹ 31": "Bahria Town - Precinct 31",
+   "بحریہ ٹاؤن - پریسنٹ 4": "Bahria Town - Precinct 4",
+   "بحریہ ٹاؤن - پریسنٹ 6": "Bahria Town - Precinct 6",
+   "بحریہ ٹاؤن - پریسنٹ 7": "Bahria Town - Precinct 7",
+   "بحریہ ٹاؤن - پریسنٹ 8": "Bahria Town - Precinct 8",
+   "بحریہ ٹاؤن کراچی": "Bahria Town Karachi",
+   "بحریہ پیراڈائز": "Bahria Town Bahria Paradise",
+   "بحریہ ہائٹس": "Bahria Town Bahria Heights",
+   "بحریہ ہلز": "Bahria Town Bahria Hills",
+   "برج ال عمران اپارٹمنٹس": "Malir Link To Super Highway Burj Ul Imran Apartments",
+   "برج-ال-حرمین": "University Road Burj Ul Harmain",
+   "بفر زون": "North Buffer Zone",
+   "بِن قاسم ٹاؤن": "Bin Qasim Town",
+   "بھٹائی کالونی": "Korangi Bhittai Colony",
+   "بہادر آباد": "Bahadurabad",
+   "جامعہ ملیہ روڈ": "Malir Jamia Millia Road",
+   "جمال الدین افغانی روڈ": "Jamaluddin Afghani Road",
+   "جمشید روڈ": "Jamshed Road",
+   "جمشید ٹاؤن": "Jamshed Town",
+   "جناح ایونیو": "Jinnah Avenue",
+   "جوہر چورنگی روڈ": "Gulshan-e-Iqbal Town Jauhar Chowrangi Road",
+   "حرمین رائل ریذیڈنسی": "Gulshan-e-Iqbal Town Harmain Royal Residency",
+   "خالد بِن ولید روڈ": "Khalid Bin Walid Road",
+   "خیابان اتحاد روڈ": "Khayaban e Ittehad Road",
+   "داؤد سوسائٹی": "Gulshan-e-Iqbal Town Dawood Society",
+   "دارالامان سوسائٹی": "Darul Aman Society",
+   "دارالسلام سوسائٹی": "Korangi Darusslam Society",
+   "دانیال ریزیڈنسی": "Scheme 33 Daniyal Residency",
+   "دھوراجی کالونی": "Gulshan-e-Iqbal Town Dhoraji Colony",
+   "دہلی مرکنٹائل سوسائٹی": "Gulshan-e-Iqbal Town Delhi Mercantile Society",
+   "دی کورٹ ریجنسی": "Dalmia Cement Factory Road The Court Regency",
+   "رائل ٹاور": "Shahra-e-Usman Royal Tower",
+   "راشد منہاس روڈ": "Rashid Minhas Road",
+   "رفیع پریمیر ریذیڈنسی": "Scheme 33 Rafi Premier Residency",
+   "رومی ریزیڈنسی": "Malir Roomi Residency",
+   "زمزمہ": "Zamzama",
+   "زینت آباد": "Scheme 33 Zeenatabad",
+   "سعدی روڈ": "Saadi Road",
+   "سعدی ٹاؤن": "Scheme 33 Saadi Town",
+   "سعدی گارڈن": "Scheme 33 Saadi Garden",
+   "سفاری اینکلیو آپارٹمنٹس": "University Road Safari Enclave Apartments",
+   "سولجر بازار": "Jamshed Town Soldier Bazar",
+   "سومرا سوسائٹی": "Scheme 33 Soomra Society",
+   "سوِل لائنز": "Civil Lines",
+   "سویرا انکلیو": "Suparco Road Sawera Enclave",
+   "سُرجانی ٹاؤن": "Gadap Town Surjani Town",
+   "سُپارکو روڈ": "Suparco Road",
+   "سِی ویو اپارٹمنٹس": "Sea View Apartments",
+   "سٹی ٹاور اینڈ شاپنگ مال": "University Road City Tower And Shopping Mall",
+   "سکیم 33": "Scheme 33",
+   "سکیم 33 - سیکٹر 15-A": "Scheme 33 - Sector 15 A",
+   "سکیم 33 - سیکٹر 16-A": "Scheme 33 - Sector 16 A",
+   "سکیم 33 - سیکٹر 17-اے": "Scheme 33 - Sector 17 A",
+   "سکیم 33 - سیکٹر 18-اے": "Scheme 33 - Sector 18 A",
+   "سکیم 33 - سیکٹر 19-اے": "Scheme 33 - Sector 19 A",
+   "سکیم 33 - سیکٹر 20-اے": "Scheme 33 - Sector 20 A",
+   "سکیم 33 - سیکٹر 21-اے": "Scheme 33 - Sector 21 A",
+   "سکیم 33 - سیکٹر 24-اے": "Scheme 33 - Sector 24 A",
+   "سکیم 33 - سیکٹر 25-اے": "Scheme 33 - Sector 25 A",
+   "سکیم 33 - سیکٹر 31": "Scheme 33 - Sector 31",
+   "سکیم 33 - سیکٹر 32": "Scheme 33 - Sector 32",
+   "سکیم 33 - سیکٹر 34-اے": "Scheme 33 - Sector 34 A",
+   "سکیم 33 - سیکٹر 35-اے": "Scheme 33 - Sector 35 A",
+   "سکیم 33 - سیکٹر 50": "Scheme 33 - Sector 50",
+   "سکیم 33 - سیکٹر 51-اے": "Scheme 33 - Sector 51 A",
+   "سکیم 33 - سیکٹر 52-اے": "Scheme 33 - Sector 52 A",
+   "سکیم 33 - سیکٹر 53-اے": "Scheme 33 - Sector 53 A",
+   "سکیم 33 ۔ سیکٹر 36-اے": "Scheme 33 - Sector 36 A",
+   "سی پی برار سوسائٹی": "Gulshan-e-Iqbal Town CP Barar Society",
+   "سینٹرل انفارمیشن کوآپریٹیو ہاؤسنگ سوسائٹی": "Scheme 33 Central Information Cooperative Housing Society",
+   "شادمان": "North Nazimabad Shadman",
+   "شاہ فیصل ٹاؤن": "Shah Faisal Town",
+   "شاہراہِ عثمان": "Shahra-e-Usman",
+   "شاہراہِ فیصل": "Shahra-e-Faisal",
+   "شاہراہِ قائدین": "Shahra-e-Qaideen",
+   "شرف آباد": "Gulshan-e-Iqbal Town Sharfabad",
+   "شمسی سوسائٹی": "Shah Faisal Town Shamsi Society",
+   "شہید ملت ایکسپریس وے": "Shaheed-e-Millat Expressway",
+   "شہید ملت روڈ": "Shaheed Millat Road",
+   "صائمہ ایلیٹ ولاز": "Malir Saima Elite Villas",
+   "صائمہ جناح ایونیو": "Malir Saima Jinnah Avenue",
+   "صائمہ رائل ریزیڈینسی": "Rashid Minhas Road Saima Royal Residency",
+   "صائمہ لگژری ہومز": "Saima Luxury Homes",
+   "صائمہ مال اینڈ ریذیڈنسی": "Gulistan-e-Jauhar Saima Mall Residency",
+   "صائمہ وِلاز": "Motorway Saima Villas",
+   "صفورا گوٹھ": "Gulistan-e-Jauhar Safoora Goth",
+   "صنوبر ٹوِن ٹاور": "Saadi Road Sanober Twin Tower",
+   "طارق بِن زیاد ہاؤسنگ سوسائٹی": "Malir Tariq Bin Ziyad Housing Society",
+   "طارق روڈ": "Tariq Road",
+   "عالمگیر روڈ": "Gulshan-e-Iqbal Town Alamgir Road",
+   "عامر خسرو": "Amir Khusro",
+   "عامل کالونی": "Amil Colony",
+   "علی گڑھ سوسائٹی": "Scheme 33 Ali Garh Society",
+   "غِزری": "Gizri",
+   "فاران کوآپریٹو ہاؤسنگ سوسائٹی": "Gulshan-e-Iqbal Town Faran Cooperative Housing Society",
+   "فاطما گولف ریزیڈنسی": "Gulistan-e-Jauhar Fatima Golf Residency",
+   "فالکن کمپلیکس فیصل": "Falcon Complex Faisal",
+   "فالکن کمپلیکس نیوملیر": "Malir Falcon Complex New Malir",
+   "فریرے ٹاؤن": "Frere Town",
+   "فلکناز ڈاینیسٹی": "Falaknaz Dynasty",
+   "فلکناز ڈریمز": "Malir Falaknaz Dreams",
+   "فلکناز ہارمنی": "Falaknaz Harmony",
+   "فلکنازپریزیڈینسی": "Malir Falaknaz Presidency",
+   "فیصل کنٹونمنٹ": "Cantt Faisal Cantonment",
+   "فیڈرل بی ایریا": "Federal B. Area",
+   "فیڈرل بی ایریا ۔ بلاک 10": "Federal B Area Block 10",
+   "فیڈرل بی ایریا ۔ بلاک 11": "Federal B Area Block 11",
+   "فیڈرل بی ایریا ۔ بلاک 12": "Federal B Area Block 12",
+   "فیڈرل بی ایریا ۔ بلاک 13": "Federal B Area Block 13",
+   "فیڈرل بی ایریا ۔ بلاک 14": "Federal B Area Block 14",
+   "فیڈرل بی ایریا ۔ بلاک 15": "Federal B Area Block 15",
+   "فیڈرل بی ایریا ۔ بلاک 17": "Federal B Area Block 17",
+   "فیڈرل بی ایریا ۔ بلاک 19": "Federal B Area Block 19",
+   "فیڈرل بی ایریا ۔ بلاک 20": "Federal B Area Block 20",
+   "فیڈرل بی ایریا ۔ بلاک 21": "Federal B Area Block 21",
+   "فیڈرل بی ایریا ۔ بلاک 4": "Federal B Area Block 4",
+   "فیڈرل بی ایریا ۔ بلاک 6": "Federal B Area Block 6",
+   "فیڈرل بی ایریا ۔ بلاک 7": "Federal B Area Block 7",
+   "فیڈرل بی ایریا ۔ بلاک 8": "Federal B Area Block 8",
+   "فیڈرل گورنمنٹ ایمپلائز ہاؤسنگ فاؤنڈیشن": "Scheme 33 Federal Government Employees Housing Foundation",
+   "لکهانی فینٹیسا": "Scheme 33 Lakhani Fantasia",
+   "لکی وَن آپارٹمنٹ": "Rashid Minhas Road Lucky One Apartment",
+   "ماڈل کالونی": "Bin Qasim Town Model Colony",
+   "ماڈل کالونی - ملیر": "Malir Model Colony Malir",
+   "محمد علی سوسائٹی": "Gulshan-e-Iqbal Town Mohammad Ali Society",
+   "مسلم آباد سوسائٹی": "Muslimabad Society",
+   "ملیر": "Malir",
+   "ملیر لِنک ٹُو سُپر ہائی وے": "Malir Link To Super Highway",
+   "ملیر کنٹونمنٹ": "Cantt Malir Cantonment",
+   "میرٹھ سوسائٹی": "Scheme 33 Meerut Society",
+   "میٹروپولِز ریزیڈینسی": "Jinnah Avenue Metropolis Residency",
+   "نارتھ ناظم آباد": "North Nazimabad",
+   "نارتھ ناظم آباد ۔ بلاک آئی": "North Nazimabad Block I",
+   "نارتھ ناظم آباد ۔ بلاک ایس": "North Nazimabad - Block S",
+   "نارتھ ناظم آباد ۔ بلاک ایف": "North Nazimabad Block F",
+   "نارتھ ناظم آباد ۔ بلاک ایل": "North Nazimabad Block L",
+   "نارتھ ناظم آباد ۔ بلاک ایم": "North Nazimabad Block M",
+   "نارتھ ناظم آباد ۔ بلاک این": "North Nazimabad Block N",
+   "نارتھ ناظم آباد ۔ بلاک ایچ": "North Nazimabad Block H",
+   "نارتھ ناظم آباد ۔ بلاک اے": "North Nazimabad Block A",
+   "نارتھ ناظم آباد ۔ بلاک بی": "North Nazimabad Block B",
+   "نارتھ ناظم آباد ۔ بلاک جی": "North Nazimabad Block G",
+   "نارتھ ناظم آباد ۔ بلاک جے": "North Nazimabad Block J",
+   "نارتھ ناظم آباد ۔ بلاک سی": "North Nazimabad Block C",
+   "نارتھ ناظم آباد ۔ بلاک ٹی": "North Nazimabad - Block T",
+   "نارتھ ناظم آباد ۔ بلاک ڈی": "North Nazimabad Block D",
+   "نارتھ ناظم آباد ۔ بلاک کے": "North Nazimabad Block K",
+   "نارتھ کراچی": "North Karachi",
+   "نارتھ کراچی - سیکٹر 5-بی/3": "North - Sector 5 B3",
+   "نارتھ کراچی - سیکٹر 7-D1": "North - Sector 7 D1",
+   "نارتھ کراچی - سیکٹر 7-D3": "North - Sector 7 D3",
+   "نارتھ کراچی - سیکٹر 7ڈی-2": "North - Sector 7 D2",
+   "نارتھ کراچی ۔ سیکٹر 11اے": "North Sector 11A",
+   "نارتھ کراچی ۔ سیکٹر 11بی": "North Sector 11B",
+   "نارتھ کراچی ۔ سیکٹر 8": "North Sector 8",
+   "ناردرن بائی پاس": "Northern Bypass",
+   "ناظم آباد": "Nazimabad",
+   "ناظم آباد 3": "Nazimabad - 3",
+   "ناظم آباد 4": "Nazimabad - 4",
+   "نعمان ریزیڈینشیا": "Scheme 33 Noman Residencia",
+   "نیا ناظم آباد": "Naya Nazimabad",
+   "نیا ناظم آباد ۔ بلاک بی": "Naya Nazimabad - Block B",
+   "نیا ناظم آباد ۔ بلاک سی": "Naya Nazimabad - Block C",
+   "نیا ناظم آباد ۔ بلاک ڈی": "Naya Nazimabad - Block D",
+   "نیوی ہاؤسنگ سکیم زمزمہ": "Zamzama Navy Housing Scheme Zamzama",
+   "نیوی ہاؤسنگ سکیم کارساز": "Navy Housing Scheme Karsaz",
+   "نیوی ہاؤسنگ سکیم کارساز - فیز 1": "Navy Housing Scheme Karsaz - Phase 1",
+   "نیوی ہاؤسنگ سکیم کارساز - فیز 2": "Navy Housing Scheme Karsaz - Phase 2",
+   "نیوی ہاؤسنگ سکیم کارساز - فیز 3": "Navy Housing Scheme Karsaz - Phase 3",
+   "نیوی ہاؤسنگ سکیم کارساز روڈ": "Navy Housing Scheme Karsaz - Road",
+   "ٹریکن ٹاور": "Bath Island Tricon Tower",
+   "ٹیولِپ ٹاور": "Saadi Road Tulip Tower",
+   "ٹیپو سلطان روڈ": "Tipu Sultan Road",
+   "ٹیپو سلطان سوسائٹی": "Malir Tipu Sultan Society",
+   "پاک آئیڈل کوآپریٹو ہاؤسنگ سوسائٹی": "Pak Ideal Cooperative Housing Society",
+   "پنجاب کالونی": "Punjab Colony",
+   "پی آئی ڈی سی": "PIDC",
+   "پی ای سی ایچ ایس": "PECHS",
+   "پی اینڈ ٹی کالونی": "P T Colony",
+   "چپل سن سٹی": "Scheme 33 Chapal Sun City",
+   "چیپل اپ ٹاون": "Chapal Uptown",
+   "چیپل کورٹ یارڈ": "Chapal Courtyard",
+   "ڈالمیا سیمنٹ فیکٹری روڈ": "Dalmia Cement Factory Road",
+   "ڈاکٹر داؤد پوتا روڈ": "Dr Daud Pota Road",
+   "ڈی ایچ اے سٹی کراچی": "DHA City Karachi",
+   "ڈی ایچ اے فیز 1": "DHA Phase 1",
+   "ڈی ایچ اے فیز 2": "DHA Phase 2",
+   "ڈی ایچ اے فیز 2 ایکسٹینشن": "DHA Phase 2 Extension",
+   "ڈی ایچ اے فیز 4": "DHA Phase 4",
+   "ڈی ایچ اے فیز 5": "DHA Phase 5",
+   "ڈی ایچ اے فیز 6": "DHA Phase 6",
+   "ڈی ایچ اے فیز 7": "DHA Phase 7",
+   "ڈی ایچ اے فیز 7 ایکسٹینشن": "DHA Phase 7 Extension",
+   "ڈی ایچ اے فیز 8": "DHA Phase 8",
+   "ڈی ایچ اے ڈیفینس": "DHA Defence",
+   "ڈیفینس اسکائی لائن": "Shaheed-e-Millat Expressway Defence Skyline",
+   "ڈیفینس ویو سوسائٹی": "Defence View Society",
+   "ڈیفینس ویو فیز 1": "Defence View Society Defence View Phase 1",
+   "ڈیفینس ویو فیز 2": "Defence View Society Defence View Phase 2",
+   "ڈیفینس ویو فیز 3": "Defence View Society Defence View Phase 3",
+   "کاظم آباد": "Malir Kazimabad",
+   "کراچی": "Karachi",
+   "کراچی ایڈمنسٹریشن ایمپلائیز سوسائٹی": "Jamshed Town Administration Employees Society",
+   "کراچی موٹروے": "Motorway",
+   "کراچی کنٹونمنٹ": "Cantt Cantonment",
+   "کراچی یونیورسٹی ہاؤسنگ سوسائٹی": "Scheme 33 University Housing Society",
+   "کشمیر روڈ": "Kashmir Road",
+   "کلاچی کوآپریٹیو ہاؤسنگ سوسائٹی": "Callachi Cooperative Housing Society",
+   "کلفٹن": "Clifton",
+   "کلفٹن ۔ بلاک 1": "Clifton Block 1",
+   "کلفٹن ۔ بلاک 2": "Clifton Block 2",
+   "کلفٹن ۔ بلاک 3": "Clifton Block 3",
+   "کلفٹن ۔ بلاک 4": "Clifton Block 4",
+   "کلفٹن ۔ بلاک 5": "Clifton Block 5",
+   "کلفٹن ۔ بلاک 6": "Clifton Block 6",
+   "کلفٹن ۔ بلاک 7": "Clifton Block 7",
+   "کلفٹن ۔ بلاک 8": "Clifton Block 8",
+   "کلفٹن ۔ بلاک 9": "Clifton Block 9",
+   "کمانڈر ہائٹس": "Scheme 33 Commander Heights",
+   "کنگز پریذیڈنسی": "Gulistan-e-Jauhar Kings Presidency",
+   "کورنگی": "Korangi",
+   "کوسموپولیٹن سوسائٹی": "Cosmopolitan Society",
+   "کینٹ": "Cantt",
+   "کینٹ ویو لوجز": "Malir Link To Super Highway Cantt View Lodges",
+   "کے ای ایس سی ہاؤسنگ سوسائٹی": "Scheme 33 KESC Housing Society",
+   "کے این گوہر گرین سٹی": "KN Gohar Green City",
+   "کے ڈی اے اسکیم 1 ایکسٹینشن": "KDA Scheme 1 Extension",
+   "کے ڈی اے آفیسرز سوسائٹی": "Gulshan-e-Iqbal Town KDA Officers Society",
+   "کے ڈی اے سکیم 1": "KDA Scheme 1",
+   "گارڈن ایسٹ": "Jamshed Town Garden East",
+   "گارڈن سٹی": "Gadap Town Garden City",
+   "گارڈن ویسٹ": "Garden West",
+   "گداپ ٹاؤن": "Gadap Town",
+   "گرے نور ٹاور اینڈ شاپنگ مال": "Scheme 33 Grey Noor Tower Shopping Mall",
+   "گلزارِ ہجری": "Scheme 33 Gulzar e Hijri",
+   "گلستانِ جوہر": "Gulistan-e-Jauhar",
+   "گلستانِِ جوہر ۔ بلاک 1": "Gulistan-e-Jauhar Block 1",
+   "گلستانِِ جوہر ۔ بلاک 10": "Gulistan-e-Jauhar Block 10",
+   "گلستانِِ جوہر ۔ بلاک 11": "Gulistan-e-Jauhar Block 11",
+   "گلستانِِ جوہر ۔ بلاک 12": "Gulistan-e-Jauhar Block 12",
+   "گلستانِِ جوہر ۔ بلاک 13": "Gulistan-e-Jauhar - Block 13",
+   "گلستانِِ جوہر ۔ بلاک 14": "Gulistan-e-Jauhar Block 14",
+   "گلستانِِ جوہر ۔ بلاک 15": "Gulistan-e-Jauhar Block 15",
+   "گلستانِِ جوہر ۔ بلاک 16": "Gulistan-e-Jauhar Block 16",
+   "گلستانِِ جوہر ۔ بلاک 17": "Gulistan-e-Jauhar Block 17",
+   "گلستانِِ جوہر ۔ بلاک 18": "Gulistan-e-Jauhar Block 18",
+   "گلستانِِ جوہر ۔ بلاک 19": "Gulistan-e-Jauhar Block 19",
+   "گلستانِِ جوہر ۔ بلاک 2": "Gulistan-e-Jauhar Block 2",
+   "گلستانِِ جوہر ۔ بلاک 20": "Gulistan-e-Jauhar Block 20",
+   "گلستانِِ جوہر ۔ بلاک 3": "Gulistan-e-Jauhar Block 3",
+   "گلستانِِ جوہر ۔ بلاک 4": "Gulistan-e-Jauhar Block 4",
+   "گلستانِِ جوہر ۔ بلاک 5": "Gulistan-e-Jauhar Block 5",
+   "گلستانِِ جوہر ۔ بلاک 6": "Gulistan-e-Jauhar Block 6",
+   "گلستانِِ جوہر ۔ بلاک 7": "Gulistan-e-Jauhar Block 7",
+   "گلستانِِ جوہر ۔ بلاک 8": "Gulistan-e-Jauhar Block 8",
+   "گلستانِِ جوہر ۔ بلاک 9": "Gulistan-e-Jauhar Block 9",
+   "گلستانِِ جوہر ۔ بلاک اے 3": "Gulistan-e-Jauhar Block 3 A",
+   "گلشن عظیم": "Scheme 33 Gulshan-e-Azeem",
+   "گلشن-اے-کنیز فاطمہ - بلاک 1": "Gulshan-e-Kaneez Fatima - Block 1",
+   "گلشن-اے-کنیز فاطمہ - بلاک 2": "Gulshan-e-Kaneez Fatima - Block 2",
+   "گلشن-اے-کنیز فاطمہ - بلاک 4": "Gulshan-e-Kaneez Fatima - Block 4",
+   "گلشنِ اقبال": "Gulshan-e-Iqbal",
+   "گلشنِ اقبال - بلاک 1": "Gulshan-e-Iqbal Block 1",
+   "گلشنِ اقبال - بلاک 2": "Gulshan-e-Iqbal Block 2",
+   "گلشنِ اقبال - بلاک 4": "Gulshan-e-Iqbal Block 4",
+   "گلشنِ اقبال - بلاک 5": "Gulshan-e-Iqbal Block 5",
+   "گلشنِ اقبال - بلاک 7": "Gulshan-e-Iqbal Block 7",
+   "گلشنِ اقبال ٹاؤن": "Gulshan-e-Iqbal Town",
+   "گلشنِ جمال": "Gulshan-e-Iqbal Town Gulshan-e-Jamal",
+   "گلشنِ معمار": "Gadap Town Gulshan-e-Maymar",
+   "گلشنِ کنیز فاطمہ": "Scheme 33 Gulshan-e-Kaneez Fatima",
+   "گوالیار کوآپریٹو ہاؤسنگ سوسائٹی": "Scheme 33 Gwalior Cooperative Housing Society",
+   "ہل پارک": "Hill Park",
+   "ہنسا سوسائٹی": "Scheme 33 Hansa Society",
+   "یونیورسٹی روڈ": "University Road"
+  },
+  "ancestors": {
+   "Al Hamra Society": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Bahadurabad": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Bahria Town - Jinnah Avenue": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 1": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 10": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 10 A": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 10 B": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 11": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 12": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 16": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 17": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 19": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 2": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 27": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 31": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 4": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 6": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 7": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town - Precinct 8": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town Bahria Apartments": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town Bahria Heights": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town Bahria Hills": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town Bahria Paradise": [
+    "Bahria Town Karachi"
+   ],
+   "Bahria Town Bahria Sports City": [
+    "Bahria Town Karachi"
+   ],
+   "Bath Island Tricon Tower": [
+    "Bath Island"
+   ],
+   "Bin Qasim Town Model Colony": [
+    "Bin Qasim Town"
+   ],
+   "Callachi Cooperative Housing Society": [
+    "Gulshan-e-Iqbal",
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Cantt Cantonment": [
+    "Cantt"
+   ],
+   "Cantt Faisal Cantonment": [
+    "Cantt"
+   ],
+   "Cantt Malir Cantonment": [
+    "Cantt"
+   ],
+   "Clifton Block 1": [
+    "Clifton"
+   ],
+   "Clifton Block 2": [
+    "Clifton"
+   ],
+   "Clifton Block 3": [
+    "Clifton"
+   ],
+   "Clifton Block 4": [
+    "Clifton"
+   ],
+   "Clifton Block 5": [
+    "Clifton"
+   ],
+   "Clifton Block 6": [
+    "Clifton"
+   ],
+   "Clifton Block 7": [
+    "Clifton"
+   ],
+   "Clifton Block 8": [
+    "Clifton"
+   ],
+   "Clifton Block 9": [
+    "Clifton"
+   ],
+   "DHA Phase 1": [
+    "DHA Defence"
+   ],
+   "DHA Phase 2": [
+    "DHA Defence"
+   ],
+   "DHA Phase 2 Extension": [
+    "DHA Defence"
+   ],
+   "DHA Phase 4": [
+    "DHA Defence"
+   ],
+   "DHA Phase 5": [
+    "DHA Defence"
+   ],
+   "DHA Phase 6": [
+    "DHA Defence"
+   ],
+   "DHA Phase 7": [
+    "DHA Defence"
+   ],
+   "DHA Phase 7 Extension": [
+    "DHA Defence"
+   ],
+   "DHA Phase 8": [
+    "DHA Defence"
+   ],
+   "Dalmia Cement Factory Road The Court Regency": [
+    "Dalmia Cement Factory Road"
+   ],
+   "Defence View Society Defence View Phase 1": [
+    "Defence View Society"
+   ],
+   "Defence View Society Defence View Phase 2": [
+    "Defence View Society"
+   ],
+   "Defence View Society Defence View Phase 3": [
+    "Defence View Society"
+   ],
+   "Federal B Area Block 10": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 11": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 12": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 13": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 14": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 15": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 17": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 19": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 20": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 21": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 4": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 6": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 7": [
+    "Federal B. Area"
+   ],
+   "Federal B Area Block 8": [
+    "Federal B. Area"
+   ],
+   "Gadap Town Ahsanabad": [
+    "Gadap Town"
+   ],
+   "Gadap Town Chapal Uptown": [
+    "Gadap Town"
+   ],
+   "Gadap Town Garden City": [
+    "Gadap Town"
+   ],
+   "Gadap Town Gulshan-e-Maymar": [
+    "Gadap Town"
+   ],
+   "Gadap Town Surjani Town": [
+    "Gadap Town"
+   ],
+   "Gizri Upper Gizri": [
+    "Gizri"
+   ],
+   "Gulistan-e-Jauhar - Block 13": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 1": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 10": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 11": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 12": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 14": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 15": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 16": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 17": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 18": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 19": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 2": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 20": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 3": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 3 A": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 4": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 5": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 6": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 7": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 8": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Block 9": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Fatima Golf Residency": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Kings Presidency": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Safoora Goth": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulistan-e-Jauhar Saima Mall Residency": [
+    "Gulistan-e-Jauhar"
+   ],
+   "Gulshan-e-Iqbal": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Block 1": [
+    "Gulshan-e-Iqbal",
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Block 2": [
+    "Gulshan-e-Iqbal",
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Block 4": [
+    "Gulshan-e-Iqbal",
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Block 5": [
+    "Gulshan-e-Iqbal",
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Block 7": [
+    "Gulshan-e-Iqbal",
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town Alamgir Road": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town CP Barar Society": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town Dawood Society": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town Delhi Mercantile Society": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town Dhoraji Colony": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town Faran Cooperative Housing Society": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town Gulshan-e-Jamal": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town Harmain Royal Residency": [
+    "Gulshan-e-Iqbal",
+    "Gulshan-e-Iqbal Block 1",
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town Jauhar Chowrangi Road": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town KDA Officers Society": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town Mohammad Ali Society": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Iqbal Town Sharfabad": [
+    "Gulshan-e-Iqbal Town"
+   ],
+   "Gulshan-e-Kaneez Fatima - Block 1": [
+    "Scheme 33",
+    "Scheme 33 Gulshan-e-Kaneez Fatima"
+   ],
+   "Gulshan-e-Kaneez Fatima - Block 2": [
+    "Scheme 33",
+    "Scheme 33 Gulshan-e-Kaneez Fatima"
+   ],
+   "Gulshan-e-Kaneez Fatima - Block 4": [
+    "Scheme 33",
+    "Scheme 33 Gulshan-e-Kaneez Fatima"
+   ],
+   "Jamshed Town Administration Employees Society": [
+    "Jamshed Town"
+   ],
+   "Jamshed Town Garden East": [
+    "Jamshed Town"
+   ],
+   "Jamshed Town SMCHS Sindhi Muslim Society": [
+    "Jamshed Town"
+   ],
+   "Jamshed Town Soldier Bazar": [
+    "Jamshed Town"
+   ],
+   "Jinnah Avenue Aman Golf View": [
+    "Jinnah Avenue"
+   ],
+   "Jinnah Avenue Metropolis Residency": [
+    "Jinnah Avenue"
+   ],
+   "Korangi Allahwala Town": [
+    "Korangi"
+   ],
+   "Korangi Bhittai Colony": [
+    "Korangi"
+   ],
+   "Korangi Darusslam Society": [
+    "Korangi"
+   ],
+   "Korangi MBCHS Makhdoom Bilawal Society": [
+    "Korangi"
+   ],
+   "Malir Falaknaz Dreams": [
+    "Malir"
+   ],
+   "Malir Falaknaz Presidency": [
+    "Malir"
+   ],
+   "Malir Falcon Complex New Malir": [
+    "Malir"
+   ],
+   "Malir Jamia Millia Road": [
+    "Malir"
+   ],
+   "Malir Kazimabad": [
+    "Malir"
+   ],
+   "Malir Link To Super Highway Burj Ul Imran Apartments": [
+    "Malir Link To Super Highway"
+   ],
+   "Malir Link To Super Highway Cantt View Lodges": [
+    "Malir Link To Super Highway"
+   ],
+   "Malir Model Colony Malir": [
+    "Malir"
+   ],
+   "Malir Roomi Residency": [
+    "Jinnah Avenue"
+   ],
+   "Malir Saima Elite Villas": [
+    "Malir"
+   ],
+   "Malir Saima Jinnah Avenue": [
+    "University Road"
+   ],
+   "Malir Tariq Bin Ziyad Housing Society": [
+    "Malir"
+   ],
+   "Malir Tipu Sultan Society": [
+    "Malir"
+   ],
+   "Motorway Saima Villas": [
+    "Motorway"
+   ],
+   "Navy Housing Scheme Karsaz - Phase 1": [
+    "Navy Housing Scheme Karsaz"
+   ],
+   "Navy Housing Scheme Karsaz - Phase 2": [
+    "Navy Housing Scheme Karsaz"
+   ],
+   "Navy Housing Scheme Karsaz - Phase 3": [
+    "Navy Housing Scheme Karsaz"
+   ],
+   "Navy Housing Scheme Karsaz - Road": [
+    "Navy Housing Scheme Karsaz"
+   ],
+   "Naya Nazimabad - Block B": [
+    "Naya Nazimabad"
+   ],
+   "Naya Nazimabad - Block C": [
+    "Naya Nazimabad"
+   ],
+   "Naya Nazimabad - Block D": [
+    "Naya Nazimabad"
+   ],
+   "Nazimabad - 3": [
+    "Nazimabad"
+   ],
+   "Nazimabad - 4": [
+    "Nazimabad"
+   ],
+   "North - Sector 5 B3": [
+    "North Karachi"
+   ],
+   "North - Sector 7 D1": [
+    "North Karachi"
+   ],
+   "North - Sector 7 D2": [
+    "North Karachi"
+   ],
+   "North - Sector 7 D3": [
+    "North Karachi"
+   ],
+   "North Buffer Zone": [
+    "North Karachi"
+   ],
+   "North Nazimabad - Block S": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad - Block T": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block A": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block B": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block C": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block D": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block F": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block G": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block H": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block I": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block J": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block K": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block L": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block M": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Block N": [
+    "North Nazimabad"
+   ],
+   "North Nazimabad Shadman": [
+    "North Nazimabad"
+   ],
+   "North Sector 11A": [
+    "North Karachi"
+   ],
+   "North Sector 11B": [
+    "North Karachi"
+   ],
+   "North Sector 8": [
+    "North Karachi"
+   ],
+   "Northern Bypass NHS Mauripur": [
+    "Northern Bypass"
+   ],
+   "PECHS": [
+    "Jamshed Town"
+   ],
+   "Rashid Minhas Road Lucky One Apartment": [
+    "Rashid Minhas Road"
+   ],
+   "Rashid Minhas Road Saima Royal Residency": [
+    "Rashid Minhas Road"
+   ],
+   "Saadi Road Sanober Twin Tower": [
+    "Saadi Road"
+   ],
+   "Saadi Road Tulip Tower": [
+    "Saadi Road"
+   ],
+   "Scheme 33 - Sector 15 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 16 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 17 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 18 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 19 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 20 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 21 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 24 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 25 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 31": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 32": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 34 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 35 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 36 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 50": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 51 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 52 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 - Sector 53 A": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Ali Garh Society": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Central Information Cooperative Housing Society": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Chapal Sun City": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Commander Heights": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Daniyal Residency": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Federal Government Employees Housing Foundation": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Grey Noor Tower Shopping Mall": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Gulshan-e-Azeem": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Gulshan-e-Kaneez Fatima": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Gulzar e Hijri": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Gwalior Cooperative Housing Society": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Hansa Society": [
+    "Scheme 33"
+   ],
+   "Scheme 33 KESC Housing Society": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Lakhani Fantasia": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Meerut Society": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Noman Residencia": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Rafi Premier Residency": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Saadi Garden": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Saadi Town": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Soomra Society": [
+    "Scheme 33"
+   ],
+   "Scheme 33 University Housing Society": [
+    "Scheme 33"
+   ],
+   "Scheme 33 Zeenatabad": [
+    "Scheme 33"
+   ],
+   "Shah Faisal Town Shamsi Society": [
+    "Shah Faisal Town"
+   ],
+   "Shaheed-e-Millat Expressway Defence Skyline": [
+    "Shaheed-e-Millat Expressway"
+   ],
+   "Shahra-e-Usman Royal Tower": [
+    "Shahra-e-Usman"
+   ],
+   "Suparco Road Sawera Enclave": [
+    "Suparco Road"
+   ],
+   "University Road Burj Ul Harmain": [
+    "University Road"
+   ],
+   "University Road City Tower And Shopping Mall": [
+    "University Road"
+   ],
+   "University Road Safari Enclave Apartments": [
+    "University Road"
+   ],
+   "Zamzama Navy Housing Scheme Zamzama": [
+    "Zamzama"
+   ]
+  }
+ },
+ "lahore": {
+  "urdu": {
+   "آئکن ویلی فیز 1": "Raiwind Road Icon Valley Phase 1",
+   "آئکن ویلی فیز 2": "Raiwind Road Icon Valley Phase 2",
+   "ائیر لائن ہاؤسنگ سوسائٹی": "Airline Housing Society",
+   "ائیرپورٹ روڈ": "Airport Road",
+   "ابدالینزکوآپریٹو ہاؤسنگ سوسائٹی": "Abdalians Cooperative Housing Society",
+   "اتحاد ٹاؤن": "Raiwind Road Etihad Town",
+   "ازمیر ٹاؤن": "Izmir Town",
+   "اعظم گارڈنز": "Azam Gardens",
+   "اقبال ایوینیو": "Iqbal Avenue",
+   "اقبال پارک": "Iqbal Park",
+   "الاحمد گارڈن ہاوسنگ سکیم": "GT Road Al Ahmad Garden Housing Scheme",
+   "الحفیظ گارڈن": "GT Road Al Hafeez Gardens",
+   "الحفیظ گارڈن - فیز 2": "GT Road Al Hafeez Gardens Al Hafeez Garden   Phase 2",
+   "الحمد کالونی (اے آئی ٹی)": "Al Hamad Colony  AIT ",
+   "الحمرا ٹاؤن": "Al Hamra Town",
+   "الرحمان گارڈن": "Al Rehman Garden",
+   "الرحمان گارڈن فیز 2": "Al Rehman Garden Phase 2",
+   "الرحیم گارڈن - فیز 4": "GT Road Al Raheem Garden   Phase 4",
+   "الفلاح ٹاؤن": "Alfalah Town",
+   "الکبیر ٹاؤن": "Raiwind Road Al Kabir Town",
+   "امپیریل گارڈن ہومز": "Paragon City Imperial Garden Homes",
+   "انڈگو بوتیک اپارٹمنٹ": "Gulberg Indigo Boutique Apartments",
+   "او پی ایف ہاؤسنگ سکیم": "OPF Housing Scheme",
+   "او پی ایف ہاؤسنگ سکیم - بلاک اے": "OPF Housing Scheme OPF Housing Scheme   Block A",
+   "او پی ایف ہاؤسنگ سکیم - بلاک سی": "OPF Housing Scheme OPF Housing Scheme   Block C",
+   "اَپر مال": "Upper Mall",
+   "آئی ای پی انجنیئرز ٹاؤن ۔ سیکٹر اے": "IEP Engineers Town IEP Engineers Town   Sector A",
+   "آئی ای پی انجینئرز ٹاؤن": "IEP Engineers Town",
+   "آبپارہ کوآپریٹو ہاؤسنگ سوسائٹی": "Aabpara Coop Housing Society",
+   "آرکیٹیکٹس انجنیئرز ہاؤسنگ سوسائٹی": "Architects Engineers Housing Society",
+   "آرکیٹیکٹس انجنیئرز ۔ بلاک بی": "Architects Engineers Society Block B",
+   "آڈٹ اینڈ اکاؤنٹس ہاؤسنگ سوسائٹی": "Audit  amp  Accounts Co operative Society",
+   "اچھرہ": "Ichhra",
+   "ای ایم ای سوسائٹی": "EME Society",
+   "ای ایم ای سوسائٹی ۔ بلاک ای": "EME Society Block E",
+   "ای ایم ای سوسائٹی ۔ بلاک ایف": "EME Society Block F",
+   "ای ایم ای سوسائٹی ۔ بلاک ایچ": "EME Society Block H",
+   "ای ایم ای سوسائٹی ۔ بلاک اے": "EME Society Block A",
+   "ای ایم ای سوسائٹی ۔ بلاک بی": "EME Society Block B",
+   "ای ایم ای سوسائٹی ۔ بلاک جی": "EME Society Block G",
+   "ای ایم ای سوسائٹی ۔ بلاک جے": "EME Society Block J",
+   "ای ایم ای سوسائٹی ۔ بلاک سی": "EME Society Block C",
+   "ای ایم ای سوسائٹی ۔ بلاک ڈی": "EME Society Block D",
+   "ایبٹ روڈ": "Abbot Road",
+   "ایس اے گارڈنز": "GT Road SA Gardens",
+   "ایل ڈی اے ایوینیو": "LDA Avenue",
+   "ایل ڈی اے ایوینیو ۔ بلاک ایف": "LDA Avenue LDA Avenue   Block F",
+   "ایل ڈی اے ایوینیو ۔ بلاک ایم": "LDA Avenue LDA Avenue   Block M",
+   "ایل ڈی اے ایوینیو ۔ بلاک ایچ": "LDA Avenue LDA Avenue   Block H",
+   "ایل ڈی اے ایوینیو ۔ بلاک اے": "LDA Avenue LDA Avenue   Block A",
+   "ایل ڈی اے ایوینیو ۔ بلاک بی": "LDA Avenue LDA Avenue   Block B",
+   "ایل ڈی اے ایوینیو ۔ بلاک جی": "LDA Avenue LDA Avenue   Block G",
+   "ایل ڈی اے ایوینیو ۔ بلاک جے": "LDA Avenue LDA Avenue   Block J",
+   "ایل ڈی اے ایوینیو ۔ بلاک سی": "LDA Avenue LDA Avenue   Block C",
+   "ایل ڈی اے ایوینیو ۔ بلاک ڈی": "LDA Avenue LDA Avenue   Block D",
+   "ایلیٹ وِلاز": "Bedian Road Elite Villas",
+   "ایم ایم عالم روڈ": "Gulberg MM Alam Road",
+   "این ایف سی 1": "NFC 1",
+   "این ایف سی 1 - بلاک بی (ایس ڈبلیو)": "NFC 1 Block B  SW ",
+   "این ایف سی 1 - بلاک سی (این ای)": "NFC 1 Block C  NE ",
+   "این ایف سی 1 - بلاک ڈی (ایس ای)": "NFC 1 Block D  SE ",
+   "ایچ بی ایف سی ہاؤسنگ سوسائٹی": "HBFC Housing Society",
+   "ایڈن": "Eden",
+   "ایڈن آباد": "Eden Edenabad",
+   "ایڈن ایوینیو": "Eden Avenue",
+   "ایڈن بلیوارڈ": "Eden Eden Boulevard",
+   "ایڈن بولیوارڈ ہاؤسنگ سکیم": "College Road Eden Boulevard Housing Scheme",
+   "ایڈن ریزیڈینشیا": "Eden Eden Residencia",
+   "ایڈن سٹی": "Eden Eden City",
+   "ایڈن لین ولاز 2": "Eden Lane Villas 2",
+   "ایڈن کاٹیج 1": "Eden Eden Cottage 1",
+   "ایڈن کینال ولاز": "Eden Canal Villas",
+   "ایگریکس ٹاؤن": "Agrics Town",
+   "اے ڈبلیو ٹی آرمی ویلفیئر ٹرسٹ": "Raiwind Road AWT Army Welfare Trust",
+   "بحریہ آرچرڈ فیز 3": "Bahria Orchard Bahria Orchard Phase 3",
+   "بحریہ آرچرڈ فیز 4": "Bahria Orchard Bahria Orchard Phase 4",
+   "بحریہ آرچرڈ": "Bahria Orchard",
+   "بحریہ آرچرڈ فیز 1": "Bahria Orchard Bahria Orchard Phase 1",
+   "بحریہ آرچرڈ فیز 2": "Bahria Orchard Bahria Orchard Phase 2",
+   "بحریہ نشیمن": "Bahria Nasheman",
+   "بحریہ نشیمن ۔ آئرس": "Bahria Nasheman Iris",
+   "بحریہ نشیمن ۔ سن فلاور": "Bahria Nasheman Sunflower",
+   "بحریہ ٹاؤن": "Bahria Town",
+   "بحریہ ٹاؤن ۔ سیکٹر ایف": "Bahria Town Bahria Town   Sector F",
+   "بحریہ ٹاؤن اوورسیز انکلیو": "Bahria Town Bahria Town   Overseas Enclave",
+   "بحریہ ٹاؤن سیکٹر A": "Bahria Town Bahria Town   Sector A",
+   "بحریہ ٹاؤن سیکٹر B": "Bahria Town Bahria Town   Sector B",
+   "بحریہ ٹاؤن سیکٹر ای": "Bahria Town Bahria Town Sector E",
+   "بحریہ ٹاؤن سیکٹر سی": "Bahria Town Bahria Town   Sector C",
+   "بحریہ ٹاؤن سیکٹرڈی": "Bahria Town Bahria Town   Sector D",
+   "برکت مارکیٹ": "Garden Town Barkat Market",
+   "برکی روڈ": "Cantt Barki Road",
+   "بریج کالونی": "Cantt Bridge Colony",
+   "بسم اللہ ہاؤسنگ سکیم": "GT Road Bismillah Housing Scheme",
+   "بیدیاں": "Bedian Road Bedian",
+   "بیدیاں روڈ": "Bedian Road",
+   "بینکرز کوآپریٹو ہاؤسنگ سوسائٹی": "Bankers Co operative Housing Society",
+   "بینکرس ایوینیو کوآپریٹو ہاؤسنگ سوسائٹی": "Bankers Avenue Cooperative Housing Society",
+   "بینکرس ایوینیو ۔ بلاک ایچ": "Bankers Avenue Cooperative Housing Society Bankers Avenue   Block H",
+   "جوبلی ٹاؤن": "Jubilee Town",
+   "جوبلی ٹاؤن ۔ بلاک ای": "Jubilee Town Block E",
+   "جوبلی ٹاؤن ۔ بلاک ایف": "Jubilee Town Block F",
+   "جوبلی ٹاؤن ۔ بلاک اے": "Jubilee Town Block A",
+   "جوبلی ٹاؤن ۔ بلاک بی": "Jubilee Town Block B",
+   "جوبلی ٹاؤن ۔ بلاک سی": "Jubilee Town Block C",
+   "جوبلی ٹاؤن ۔ بلاک ڈی": "Jubilee Town Block D",
+   "جوڈیشل کالونی": "Judicial Colony",
+   "جوہر ٹاؤن": "Johar Town",
+   "جوہر ٹاؤن فیز 1": "Johar Town Phase 1",
+   "جوہر ٹاؤن فیز 2": "Johar Town Phase 2",
+   "جی ٹی روڈ": "GT Road",
+   "جیل روڈ": "Jail Road",
+   "خدا بخش کالونی": "Cantt Khuda Buksh Colony",
+   "خیابان امین - بلاک این": "Khayaban e Amin Khayaban e Amin   Block N",
+   "خیابان امین - بلاک پی": "Khayaban e Amin Khayaban e Amin   Block P",
+   "خیابانِ امین": "Khayaban e Amin",
+   "خیابانِ امین ۔ بلاک ایل": "Khayaban e Amin Khayaban e Amin   Block L",
+   "خیابانِ امین ۔ بلاک اے": "Khayaban e Amin Khayaban e Amin   Block A",
+   "خیابانِ امین ۔ بلاک جی": "Khayaban e Amin Khayaban e Amin   Block G",
+   "داؤد ریذیڈنسی ہاؤسنگ سکیم": "Defence Road Dawood Residency Housing Scheme",
+   "دی سپرنگ آپارٹمنٹس ہومز": "Main Canal Road The Spring Apartment Homes",
+   "رئیل کاٹیجز": "Real Cottages",
+   "رائیونڈ روڈ": "Raiwind Road",
+   "ریل ٹاؤن کینال سٹی": "Rail Town  Canal City ",
+   "سبزہ زار سکیم": "Sabzazar Scheme",
+   "سبزہ زار سکیم ۔ بلاک ای": "Sabzazar Scheme Block E",
+   "سبزہ زار سکیم ۔ بلاک این": "Sabzazar Scheme Block N",
+   "سبزہ زار سکیم ۔ بلاک جی": "Sabzazar Scheme Block G",
+   "سبزہ زار سکیم ۔ بلاک پی": "Sabzazar Scheme Block P",
+   "سبزہ زار سکیم ۔ بلاک کے": "Sabzazar Scheme Block K",
+   "سرفراز رفیقی روڈ": "Cantt Sarfaraz Rafiqui Road",
+   "سرور روڈ": "Cantt Sarwar Road",
+   "سرور کالونی": "Cantt Sarwar Colony",
+   "سمن آباد": "Samanabad",
+   "سوءے آصل": "Sue e Asal",
+   "سوئی گیس سوسائٹی فیز 1": "Sui Gas Society Phase 1",
+   "سوئی گیس سوسائٹی فیز 2": "Sui Northern Gas Housing Society Sui Gas Society Phase 2",
+   "سوئی گیس ہاؤسنگ سوسائٹی": "Sui Gas Housing Society",
+   "سٹرلنگ ریزیڈنسز": "Gulberg Sterling Residences",
+   "سپر ٹاون": "Super Town",
+   "سپرنگ میڈوز": "Bedian Road Spring Meadows",
+   "سکائی ویو ٹاؤن": "Raiwind Road Sky View Town",
+   "سینٹرل پارک ہاؤسنگ سکیم": "Central Park Housing Scheme",
+   "سینٹرل پارک ۔ بلاک ایف": "Central Park Block F",
+   "سینٹرل پارک ۔ بلاک اے": "Central Park Housing Scheme Central Park   Block A",
+   "سینٹرل پارک ۔ بلاک اے1": "Central Park Housing Scheme Central Park   Block A1",
+   "سینٹرل پارک ۔ بلاک بی": "Central Park Housing Scheme Central Park   Block B",
+   "سینٹرل پارک ۔ بلاک جی": "Central Park Housing Scheme Central Park   Block G",
+   "سینٹرل پارک ۔ بلاک سی": "Central Park Block C",
+   "سینٹرل پارک ۔ بلاک ڈی": "Central Park Block D",
+   "شاداب گارڈن": "Shadab Garden",
+   "شادمان": "Shadman",
+   "شامی روڈ": "Cantt Shami Road",
+   "شاہ جمال": "Shah Jamal",
+   "شنگھائی روڈ": "Shanghai Road",
+   "شیرانوالہ ہائٹس": "Main Canal Bank Road Sheranwala Heights",
+   "صدر": "Cantt Saddar",
+   "طارق گارڈنز": "Tariq Gardens",
+   "طفیل روڈ": "Cantt Tufail Road",
+   "ظفر علی روڈ": "Gulberg Zafar Ali Road",
+   "ظہور الہی روڈ": "Gulberg Zahoor Elahi Road",
+   "عزیز بھٹی روڈ": "Cantt Aziz Bhatti Road",
+   "عسکری": "Askari",
+   "عسکری 1": "Askari 1",
+   "عسکری 10": "Askari Askari 10",
+   "عسکری 11": "Askari Askari 11",
+   "عسکری 2": "Askari 2",
+   "عسکری 5": "Askari 5",
+   "عسکری 9": "Askari 9",
+   "علاؤالدین روڈ": "Cantt Alla ud Din Road",
+   "علامہ اقبال ٹاؤن": "Allama Iqbal Town",
+   "علامہ اقبال ٹاؤن ۔ جہانزیب بلاک": "Allama Iqbal Town Jahanzeb Block",
+   "علامہ اقبال ٹاؤن ۔ راوی بلاک": "Allama Iqbal Town Ravi Block",
+   "علامہ اقبال ٹاؤن ۔ رضا بلاک": "Allama Iqbal Town Raza Block",
+   "علامہ اقبال ٹاؤن ۔ سکندر بلاک": "Allama Iqbal Town Sikandar Block",
+   "علامہ اقبال ٹاؤن ۔ عمر بلاک": "Allama Iqbal Town Umar Block",
+   "علامہ اقبال ٹاؤن ۔ نرگس بلاک": "Allama Iqbal Town Nargis Block",
+   "علامہ اقبال ٹاؤن ۔ نشتر بلاک": "Allama Iqbal Town Nishtar Block",
+   "علامہ اقبال ٹاؤن ۔ نظام بلاک": "Allama Iqbal Town Nizam Block",
+   "علامہ اقبال ٹاؤن ۔ نیلم بلاک": "Allama Iqbal Town Neelam Block",
+   "علامہ اقبال ٹاؤن ۔ کامران بلاک": "Allama Iqbal Town Kamran Block",
+   "علامہ اقبال ٹاؤن ۔ کریم بلاک": "Allama Iqbal Town Karim Block",
+   "علامہ اقبال ٹاؤن ۔ گلشن بلاک": "Allama Iqbal Town Gulshan Block",
+   "علامہ اقبال ٹاؤن ۔ ہنزہ بلاک": "Allama Iqbal Town Hunza Block",
+   "علی رضا آباد": "Raiwind Road Ali Raza Abad",
+   "علی ٹاؤن": "Ali Town",
+   "علی پارک": "Cantt Ali Park",
+   "غالب مارکیٹ": "Gulberg Ghalib Market",
+   "فارمانئیٹس ہاؤسنگ سکیم": "Formanites Housing Scheme",
+   "فارمانئیٹس ہاؤسنگ سکیم ۔ بلاک این": "Formanites Housing Scheme Block N",
+   "فارمانئیٹس ہاؤسنگ سکیم ۔ بلاک جے": "Formanites Housing Scheme Block J",
+   "فضائیہ ہاؤسنگ سکیم": "Fazaia Housing Scheme",
+   "فضائیہ ہاؤسنگ سکیم فیز 1": "Fazaia Housing Scheme Fazaia Housing Scheme Phase 1",
+   "فضائیہ ہاؤسنگ سکیم فیزٹو": "Fazaia Housing Scheme Fazaia Housing Scheme Phase 2",
+   "فیروزپور روڈ": "Ferozepur Road",
+   "فیصل ٹاؤن": "Faisal Town",
+   "فیصل ٹاؤن ۔ بلاک اے": "Faisal Town Block A",
+   "فیصل ٹاؤن ۔ بلاک بی": "Faisal Town Block B",
+   "فیصل ٹاؤن ۔ بلاک سی": "Faisal Town Block C",
+   "فیصل ٹاؤن ۔ بلاک ڈی": "Faisal Town Block D",
+   "لارنس روڈ": "Lawrence Road",
+   "لاہور": "Lahore",
+   "لاہور میڈیکل ہاؤسنگ سوسائٹی": "Medical Housing Society",
+   "لینڈ بریز ہاؤسنگ سوسائٹی": "Land Breeze Housing Society",
+   "لیک سٹی": "Raiwind Road Lake City",
+   "لیک سٹی میڈوز": "State Life Housing Society",
+   "لیک سٹی میڈوز فیز 1": "State Life Housing Phase 1",
+   "مال روڈ": "Mall Road",
+   "ماڈل ٹاؤن": "Model Town",
+   "ماڈل ٹاؤن ایکسٹینشن": "Model Town Model Town Extension",
+   "ماڈل ٹاؤن لِنک روڈ": "Model Town Model Town Link Road",
+   "ماڈل ٹاؤن ۔ بلاک آر": "Model Town Model Town   Block R",
+   "ماڈل ٹاؤن ۔ بلاک ای": "Model Town Model Town   Block E",
+   "ماڈل ٹاؤن ۔ بلاک ایف": "Model Town Block F",
+   "ماڈل ٹاؤن ۔ بلاک ایم": "Model Town Block M",
+   "ماڈل ٹاؤن ۔ بلاک ایچ": "Model Town Model Town   Block H",
+   "ماڈل ٹاؤن ۔ بلاک جی": "Model Town Model Town   Block G",
+   "ماڈل ٹاؤن ۔ بلاک سی": "Model Town Model Town   Block C",
+   "ماڈل ٹاؤن ۔ بلاک ڈی": "Model Town Model Town   Block D",
+   "ماڈل ٹاؤن ۔ بلاک کیو": "Model Town Model Town   Block Q",
+   "ماڈل ٹاؤن ۔ بلاک کے": "Model Town Model Town   Block K",
+   "محافظ ٹاؤن": "Mohafiz Town",
+   "مسلم ٹاؤن": "Muslim Town",
+   "مصطفیٰ ٹاؤن": "Mustafa Town",
+   "ملٹری اکاؤنٹس سوسائٹی ۔ بلاک اے": "Military Accounts Society Block A",
+   "ملٹری اکاؤنٹس سوسائٹی ۔ بلاک بی": "Military Accounts Society Block B",
+   "ملٹری اکاؤنٹس ہاؤسنگ سوسائٹی": "Military Accounts Housing Society",
+   "مولانا شوکت علی روڈ": "Maulana Shaukat Ali Road",
+   "مون مارکیٹ": "Allama Iqbal Town Moon Market",
+   "مڈ وے کمرشل": "Bahria Town Midway Commercial",
+   "مین بلیوارڈ ڈی ایچ اے ڈیفینس": "DHA Defence Main Boulevard DHA Defence",
+   "مین بلیوارڈ گلبرگ": "Gulberg Main Boulevard Gulberg",
+   "مین مارکیٹ": "Gulberg Main Market",
+   "مین کینال بینک روڈ": "Main Canal Bank Road",
+   "نثار کالونی": "Cantt Nisar Colony",
+   "نشیمنِ اقبال": "Nasheman e Iqbal",
+   "نشیمنِ اقبال فیز 1": "Nasheman e Iqbal Nasheman e Iqbal Phase 1",
+   "نشیمنِ اقبال فیز 2": "Nasheman e Iqbal Phase 2",
+   "نواب ٹاؤن": "Nawab Town",
+   "نواب ٹاؤن - بلاک ڈی": "Nawab Town Nawab Town   Block D",
+   "نیسپاک سکیم فیز 1": "College Road Nespak Scheme Phase 1",
+   "نیسپاک سکیم فیز 3": "Defence Road Nespak Scheme Phase 3",
+   "نیسپاک ہاؤسنگ سکیم": "Main Canal Bank Road Nespak Housing Scheme",
+   "نیو سُپر ٹاؤن": "New Super Town",
+   "نیو لاهور سٹی": "New City",
+   "نیو مسلم ٹاؤن": "New Muslim Town",
+   "نیو گارڈن ٹاؤن": "New Garden Town",
+   "نیواقبال پارک کینٹ": "Cantt New Iqbal Park Cantt",
+   "هایدی پارک": "Gulberg Hyde Park",
+   "وائٹل ہومز ہاؤسنگ سکیم": "Vital Homes Housing Scheme",
+   "والٹن روڈ": "Walton Road",
+   "والٹن ریلوے آفیسرز کالونی": "Walton Railway Officers Colony",
+   "واپڈا ٹاؤن": "Wapda Town",
+   "واپڈا ٹاؤن فیز 1": "Wapda Town Wapda Town Phase 1",
+   "واپڈا ٹاؤن فیز 2": "Wapda Town Wapda Town Phase 2",
+   "ویلینشیاء ہاؤسنگ سوسائٹی": "Valencia Housing Society",
+   "ویلینشیاء ۔ بلاک ای": "Valencia Housing Society Valencia   Block E",
+   "ویلینشیاء ۔ بلاک ایچ": "Valencia Housing Society Valencia   Block H",
+   "ویلینشیاء ۔ بلاک اے1": "Valencia Housing Society Valencia   Block A1",
+   "ویلینشیاء ۔ بلاک اے3": "Valencia Housing Society Valencia   Block A3",
+   "ویلینشیاء ۔ بلاک جے1": "Valencia Housing Society Valencia   Block J1",
+   "ویلینشیاء ۔ بلاک پی1": "Valencia Housing Society Valencia   Block P1",
+   "وینس ہاؤسنگ سکیم": "Venus Housing Scheme",
+   "ٹاؤن شپ": "Town Ship",
+   "ٹاؤن شپ ۔ سیکٹر اے1": "Township Township   Sector A1",
+   "ٹاؤن شپ ۔ سیکٹر اے2": "Township Sector A2",
+   "ٹاؤن شپ ۔ سیکٹر بی2": "Township Sector B2",
+   "ٹاؤن شپ ۔ سیکٹر سی 1": "Township Township   Sector C1",
+   "ٹاؤن شپ ۔ سیکٹر سی 2": "Township Sector C2",
+   "ٹھوکر نیاز بیگ": "Thokar Niaz Baig",
+   "ٹیک سوسائٹی": "Tech Society",
+   "پارک ویو سٹی": "Park View City",
+   "پارک ویو سٹی - ٹولپ اوورسیز": "Park View City Park View City   Tulip Overseas",
+   "پارک ویو سٹی - ٹیولپ بلاک": "Park View City Park View City   Tulip Block",
+   "پارک ویو سٹی ۔ ایگزیکٹو بلاک": "Park View City Park View City   Executive Block",
+   "پارک ویو سٹی ۔ تولپ ایکسٹینشن بلاک": "Park View City Park View City   Tulip Extension Block",
+   "پارک ویو سٹی ۔ جیڈ بلاک": "Park View City Park View City   Jade Block",
+   "پارک ویو سٹی ۔ روز بلاک": "Park View City Park View City   Rose Block",
+   "پارک ویو سٹی ۔ ٹوپز بلاک": "Park View City Park View City   Topaz Block",
+   "پارک ویو سٹی ۔ پلاٹینم بلاک": "Park View City Park View City   Platinum Block",
+   "پارک ویو سٹی ۔ ڈائمنڈ بلاک": "Park View City Park View City   Diamond Block",
+   "پارک ویو سٹی ۔ کرسٹل بلاک": "Park View City Park View City   Crystal Block",
+   "پام ولاز": "Main Canal Bank Road Palm Villas",
+   "پاک عرب ہاؤسنگ سوسائٹی": "Pak Arab Housing Society",
+   "پاک عرب ہاؤسنگ سوسائٹی فیز 1": "Pak Arab Housing Society Pak Arab Housing Society Phase 1",
+   "پاک عرب ہاؤسنگ سوسائٹی فیز 2": "Pak Arab Housing Society Pak Arab Housing Society Phase 2",
+   "پراگون سٹی - آرچرڈ ١ بلاک": "Paragon City Paragon City   Orchard 1 Block",
+   "پنجاب سمال انڈسٹریز کالونی": "Punjab Small Industries Colony",
+   "پنجاب سمال انڈسٹریز کالونی - بلاک بی": "Punjab Small Industries Colony Punjab Small Industries Colony   Block B",
+   "پنجاب کوآپریٹو ہاؤسنگ سوسائٹی": "Punjab Co operative Housing Society",
+   "پنجاب کوآپریٹو ہاؤسنگ ۔ بلاک ای": "Punjab Coop Housing Society Punjab Coop Housing   Block E",
+   "پنجاب کوآپریٹو ہاؤسنگ ۔ بلاک بی": "Punjab Coop Housing Society Punjab Coop Housing   Block B",
+   "پنجاب کوآپریٹو ہاؤسنگ ۔ بلاک سی": "Punjab Coop Housing Society Punjab Coop Housing   Block C",
+   "پنجاب گورنمنٹ ایمپلائیز سوسائٹی": "Punjab Govt Employees Society",
+   "پنجاب یونیورسٹی ایمپلائیز سوسائٹی": "Punjab University Employees Society",
+   "پنجاب یونیورسٹی سوسائٹی فیز 2": "Punjab University Employees Society Punjab University Society Phase 2",
+   "پی آئی اے ہاؤسنگ سکیم": "PIA Housing Scheme",
+   "پی آئی اے ہاؤسنگ سکیم ۔ بلاک بی": "PIA Housing Scheme Block B",
+   "پی آئی اے ہاؤسنگ سکیم ۔ بلاک سی": "PIA Housing Scheme Block C",
+   "پی آئی اے ہاؤسنگ سکیم ۔ بلاک ڈی": "PIA Housing Scheme Block D",
+   "پی اینڈ ڈی ہاؤسنگ سوسائٹی": "P   D Housing Society",
+   "پی اے ایف آفیسرز کالونی": "Cantt PAF Officers Colony",
+   "پی اے ایف فالکن کمپلیکس": "Gulberg PAF Falcon Complex",
+   "پی جی ای سی ایچ ایس فیز 1": "Punjab Govt Employees Society PGECHS Phase 1",
+   "پی جی ای سی ایچ ایس فیز 2": "Punjab Govt Employees Society PGECHS Phase 2",
+   "پی سی ایس آئی آر سٹاف کالونی": "PCSIR Staff Colony",
+   "پی سی ایس آئی آر ہاؤسنگ سکیم": "PCSIR Housing Scheme",
+   "پیراگون سٹی": "Paragon City",
+   "پیراگون سٹی - امپیریل بلاک": "Paragon City Paragon City   Imperial Block",
+   "پیراگون سٹی ۔ آرچرڈ بلاک": "Paragon City Orchard Block",
+   "پیراگون سٹی ۔ وُوڈز بلاک": "Paragon City Woods Block",
+   "پیراگون سٹی ۔ گروو بلاک": "Paragon City Grove Block",
+   "چنار باغ": "Chinar Bagh",
+   "ڈریم گارڈنز": "Defence Road Dream Gardens",
+   "ڈی ایچ اے 11 رہبر": "DHA 11 Rahbar",
+   "ڈی ایچ اے 11 رہبر سیکٹر 1": "DHA 11 Rahbar DHA 11 Rahbar Phase 1",
+   "ڈی ایچ اے 11 رہبر سیکٹر 2": "DHA 11 Rahbar DHA 11 Rahbar Phase 2",
+   "ڈی ایچ اے 11 رہبر سیکٹر 2 ایکسٹینشن": "DHA 11 Rahbar DHA 11 Rahbar Phase 2 Extension",
+   "ڈی ایچ اے 11 رہبر سیکٹر 4": "DHA 11 Rahbar DHA 11 Rahbar Phase 4",
+   "ڈی ایچ اے 9 ٹاؤن": "Defence  DHA  DHA 9 Town",
+   "ڈی ایچ اے فیز 1": "Defence  DHA  Phase 1",
+   "ڈی ایچ اے فیز 2": "DHA Defence DHA Phase 2",
+   "ڈی ایچ اے فیز 3": "Defence (DHA) Phase 3",
+   "ڈی ایچ اے فیز 4": "Defence  DHA  Phase 4",
+   "ڈی ایچ اے فیز 5": "Defence (DHA) Phase 5",
+   "ڈی ایچ اے فیز 6": "Defence  DHA  Phase 6",
+   "ڈی ایچ اے فیز 7": "Defence  DHA  Phase 7",
+   "ڈی ایچ اے فیز 8": "DHA Defence DHA Phase 8",
+   "ڈی ایچ اے فیز9 پریزم": "DHA Defence DHA Phase 9 Prism",
+   "ڈی ایچ اے ڈیفینس": "DHA Defence",
+   "ڈیفنس ویو اپارٹمنٹس": "Shanghai Road Defence View Apartments",
+   "ڈیفینس رایا": "DHA Defence Defence Raya",
+   "ڈیفینس روڈ": "Defence Road",
+   "ڈیفینس چوک": "DHA Defence Defence Chowk",
+   "ڈیوائن گارڈنز": "Divine Gardens",
+   "ڈیوائن گارڈنز ۔ بلاک اے": "Divine Gardens Block A",
+   "کالج روڈ": "College Road",
+   "کلفٹن کالونی": "Clifton Colony",
+   "کینال بینک ہاؤسنگ سکیم": "Canal Bank Housing Scheme",
+   "کینال ویلی": "Main Canal Bank Road Canal Valley",
+   "کینال ویو": "Canal View",
+   "کینال گارڈن": "Canal Garden",
+   "کینال گارڈن - بلاک ایچ": "Canal Garden Canal Garden   Block H",
+   "کینال گارڈن - ٹپ سیکٹر": "Canal Garden Canal Garden   Tip Sector",
+   "کینال گارڈن ۔ بلاک ای": "Canal Garden Block E",
+   "کینال گارڈن ۔ بلاک بی": "Canal Garden Block B",
+   "کینال گارڈن ۔ بلاک ڈی": "Canal Garden Block D",
+   "کینٹ": "Cantt",
+   "کیولری ایکسٹینشن": "Cavalry Extension",
+   "کیولری گراؤنڈ": "Cavalry Ground",
+   "گارڈن ٹاؤن": "Garden Town",
+   "گارڈن ٹاؤن - ابو بھکر بلاک": "Garden Town Garden Town   Abu Bakar Block",
+   "گارڈن ٹاؤن - احمد بلاک": "Garden Town Garden Town   Ahmed Block",
+   "گارڈن ٹاؤن - اورنگزیب بلاک": "Garden Town Garden Town   Aurangzaib Block",
+   "گارڈن ٹاؤن - ایبک بلاک": "Garden Town Garden Town   Aibak Block",
+   "گارڈن ٹاؤن - بابر بلاک": "Garden Town Garden Town   Baber Block",
+   "گارڈن ٹاؤن - شیر شاہ بلاک": "Garden Town Garden Town   Sher Shah Block",
+   "گارڈن ٹاؤن - طارق بلاک": "Garden Town Garden Town   Tariq Block",
+   "گارڈن ٹاؤن - عثمان بلاک": "Garden Town Garden Town   Usman Block",
+   "گارڈن ٹاؤن - ٹیپو بلاک": "Garden Town Garden Town   Tipu Block",
+   "گارڈن ٹاؤن - گارڈن بلاک": "Garden Town Garden Town   Garden Block",
+   "گالف ویو ریذڈینشیاء": "Bahria Town Golf View Residencia",
+   "گرین ایوینیو ہاؤسنگ سوسائٹی": "Cantt Green Avenue Housing Society",
+   "گرین سٹی": "Green City",
+   "گلبرگ": "Gulberg",
+   "گلبرگ 2": "Gulberg 2",
+   "گلبرگ 3": "Gulberg 3",
+   "گلبرگ 4": "Gulberg 4",
+   "گلبرگ 5": "Gulberg 5",
+   "گلشنِ احباب": "Gulshan e Ahbab",
+   "گلشنِ راوی": "Gulshan e Ravi",
+   "گلشنِ لاہور": "Gulshan e Lahore",
+   "گلشنِِِ راوی ۔ بلاک ای": "Gulshan e Ravi Block E",
+   "گلشنِِِ راوی ۔ بلاک ایف": "Gulshan e Ravi Block F",
+   "گلشنِِِ راوی ۔ بلاک ایچ": "Gulshan e Ravi Block H",
+   "گلشنِِِ راوی ۔ بلاک اے": "Gulshan e Ravi Block A",
+   "گلشنِِِ راوی ۔ بلاک جی": "Gulshan e Ravi Block G",
+   "گلشنِِِ راوی ۔ بلاک سی": "Gulshan e Ravi Block C",
+   "گلشن۔اے۔حبیب": "Defence Road Gulshan e Habib",
+   "ہائی کورٹ سوسائٹی": "Highcourt Society",
+   "یو ای ٹی ہاؤسنگ سوسائٹی": "UET Housing Society",
+   "یونین لیونگ": "Main Canal Bank Road Union Livings",
+   "یونین گرین": "College Road Union Green"
+  },
+  "ancestors": {
+   "Al Rehman Garden Phase 2": [
+    "Al Rehman Garden"
+   ],
+   "Allama Iqbal Town Gulshan Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Hunza Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Jahanzeb Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Kamran Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Karim Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Moon Market": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Nargis Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Neelam Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Nishtar Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Nizam Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Ravi Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Raza Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Sikandar Block": [
+    "Allama Iqbal Town"
+   ],
+   "Allama Iqbal Town Umar Block": [
+    "Allama Iqbal Town"
+   ],
+   "Architects Engineers Society Block B": [
+    "Architects Engineers Housing Society"
+   ],
+   "Askari 1": [
+    "Askari"
+   ],
+   "Askari 2": [
+    "Askari"
+   ],
+   "Askari 5": [
+    "Askari"
+   ],
+   "Askari 9": [
+    "Askari"
+   ],
+   "Askari Askari 10": [
+    "Askari"
+   ],
+   "Askari Askari 11": [
+    "Askari"
+   ],
+   "Bahria Nasheman Iris": [
+    "Bahria Nasheman"
+   ],
+   "Bahria Nasheman Sunflower": [
+    "Bahria Nasheman"
+   ],
+   "Bahria Orchard Bahria Orchard Phase 1": [
+    "Bahria Orchard"
+   ],
+   "Bahria Orchard Bahria Orchard Phase 2": [
+    "Bahria Orchard"
+   ],
+   "Bahria Orchard Bahria Orchard Phase 3": [
+    "Bahria Orchard"
+   ],
+   "Bahria Orchard Bahria Orchard Phase 4": [
+    "Bahria Orchard"
+   ],
+   "Bahria Town Bahria Town   Overseas Enclave": [
+    "Bahria Town"
+   ],
+   "Bahria Town Bahria Town   Sector A": [
+    "Bahria Town"
+   ],
+   "Bahria Town Bahria Town   Sector B": [
+    "Bahria Town"
+   ],
+   "Bahria Town Bahria Town   Sector C": [
+    "Bahria Town"
+   ],
+   "Bahria Town Bahria Town   Sector D": [
+    "Bahria Town"
+   ],
+   "Bahria Town Bahria Town   Sector F": [
+    "Bahria Town"
+   ],
+   "Bahria Town Bahria Town Sector E": [
+    "Bahria Town"
+   ],
+   "Bahria Town Golf View Residencia": [
+    "Bahria Town"
+   ],
+   "Bahria Town Midway Commercial": [
+    "Bahria Town"
+   ],
+   "Bankers Avenue Cooperative Housing Society Bankers Avenue   Block H": [
+    "Bankers Avenue Cooperative Housing Society"
+   ],
+   "Bedian Road Bedian": [
+    "Bedian Road"
+   ],
+   "Bedian Road Elite Villas": [
+    "Bedian Road"
+   ],
+   "Bedian Road Spring Meadows": [
+    "Bedian Road"
+   ],
+   "Canal Garden Block B": [
+    "Canal Garden"
+   ],
+   "Canal Garden Block D": [
+    "Canal Garden"
+   ],
+   "Canal Garden Block E": [
+    "Canal Garden"
+   ],
+   "Canal Garden Canal Garden   Block H": [
+    "Canal Garden"
+   ],
+   "Canal Garden Canal Garden   Tip Sector": [
+    "Canal Garden"
+   ],
+   "Cantt Ali Park": [
+    "Cantt"
+   ],
+   "Cantt Alla ud Din Road": [
+    "Cantt"
+   ],
+   "Cantt Aziz Bhatti Road": [
+    "Cantt"
+   ],
+   "Cantt Barki Road": [
+    "Cantt"
+   ],
+   "Cantt Bridge Colony": [
+    "Cantt"
+   ],
+   "Cantt Green Avenue Housing Society": [
+    "Cantt"
+   ],
+   "Cantt Khuda Buksh Colony": [
+    "Cantt"
+   ],
+   "Cantt New Iqbal Park Cantt": [
+    "Cantt"
+   ],
+   "Cantt Nisar Colony": [
+    "Cantt"
+   ],
+   "Cantt PAF Officers Colony": [
+    "Cantt"
+   ],
+   "Cantt Saddar": [
+    "Cantt"
+   ],
+   "Cantt Sarfaraz Rafiqui Road": [
+    "Cantt"
+   ],
+   "Cantt Sarwar Colony": [
+    "Cantt"
+   ],
+   "Cantt Sarwar Road": [
+    "Cantt"
+   ],
+   "Cantt Shami Road": [
+    "Cantt"
+   ],
+   "Cantt Tufail Road": [
+    "Cantt"
+   ],
+   "Central Park Block C": [
+    "Central Park Housing Scheme"
+   ],
+   "Central Park Block D": [
+    "Central Park Housing Scheme"
+   ],
+   "Central Park Block F": [
+    "Central Park Housing Scheme"
+   ],
+   "Central Park Housing Scheme Central Park   Block A": [
+    "Central Park Housing Scheme"
+   ],
+   "Central Park Housing Scheme Central Park   Block A1": [
+    "Central Park Housing Scheme"
+   ],
+   "Central Park Housing Scheme Central Park   Block B": [
+    "Central Park Housing Scheme"
+   ],
+   "Central Park Housing Scheme Central Park   Block G": [
+    "Central Park Housing Scheme"
+   ],
+   "College Road Eden Boulevard Housing Scheme": [
+    "College Road"
+   ],
+   "College Road Nespak Scheme Phase 1": [
+    "College Road"
+   ],
+   "College Road Union Green": [
+    "College Road"
+   ],
+   "DHA 11 Rahbar DHA 11 Rahbar Phase 1": [
+    "DHA 11 Rahbar"
+   ],
+   "DHA 11 Rahbar DHA 11 Rahbar Phase 2": [
+    "DHA 11 Rahbar"
+   ],
+   "DHA 11 Rahbar DHA 11 Rahbar Phase 2 Extension": [
+    "DHA 11 Rahbar"
+   ],
+   "DHA 11 Rahbar DHA 11 Rahbar Phase 4": [
+    "DHA 11 Rahbar"
+   ],
+   "DHA Defence DHA Phase 2": [
+    "DHA Defence"
+   ],
+   "DHA Defence DHA Phase 8": [
+    "DHA Defence"
+   ],
+   "DHA Defence DHA Phase 9 Prism": [
+    "DHA Defence"
+   ],
+   "DHA Defence Defence Chowk": [
+    "DHA Defence"
+   ],
+   "DHA Defence Defence Raya": [
+    "DHA Defence"
+   ],
+   "DHA Defence Main Boulevard DHA Defence": [
+    "DHA Defence"
+   ],
+   "Defence  DHA  DHA 9 Town": [
+    "DHA Defence"
+   ],
+   "Defence  DHA  Phase 1": [
+    "DHA Defence"
+   ],
+   "Defence  DHA  Phase 4": [
+    "DHA Defence"
+   ],
+   "Defence  DHA  Phase 6": [
+    "DHA Defence"
+   ],
+   "Defence  DHA  Phase 7": [
+    "DHA Defence"
+   ],
+   "Defence (DHA) Phase 3": [
+    "DHA Defence"
+   ],
+   "Defence (DHA) Phase 5": [
+    "DHA Defence"
+   ],
+   "Defence Road Dawood Residency Housing Scheme": [
+    "Defence Road"
+   ],
+   "Defence Road Dream Gardens": [
+    "Defence Road"
+   ],
+   "Defence Road Gulshan e Habib": [
+    "Defence Road"
+   ],
+   "Defence Road Nespak Scheme Phase 3": [
+    "Defence Road"
+   ],
+   "Divine Gardens Block A": [
+    "Divine Gardens"
+   ],
+   "EME Society Block A": [
+    "EME Society"
+   ],
+   "EME Society Block B": [
+    "EME Society"
+   ],
+   "EME Society Block C": [
+    "EME Society"
+   ],
+   "EME Society Block D": [
+    "EME Society"
+   ],
+   "EME Society Block E": [
+    "EME Society"
+   ],
+   "EME Society Block F": [
+    "EME Society"
+   ],
+   "EME Society Block G": [
+    "EME Society"
+   ],
+   "EME Society Block H": [
+    "EME Society"
+   ],
+   "EME Society Block J": [
+    "EME Society"
+   ],
+   "Eden Avenue": [
+    "Eden"
+   ],
+   "Eden Canal Villas": [
+    "Eden"
+   ],
+   "Eden Eden Boulevard": [
+    "Eden"
+   ],
+   "Eden Eden City": [
+    "Eden"
+   ],
+   "Eden Eden Cottage 1": [
+    "Eden"
+   ],
+   "Eden Eden Residencia": [
+    "Eden"
+   ],
+   "Eden Edenabad": [
+    "Eden"
+   ],
+   "Eden Lane Villas 2": [
+    "Eden"
+   ],
+   "Faisal Town Block A": [
+    "Faisal Town"
+   ],
+   "Faisal Town Block B": [
+    "Faisal Town"
+   ],
+   "Faisal Town Block C": [
+    "Faisal Town"
+   ],
+   "Faisal Town Block D": [
+    "Faisal Town"
+   ],
+   "Fazaia Housing Scheme Fazaia Housing Scheme Phase 1": [
+    "Fazaia Housing Scheme"
+   ],
+   "Fazaia Housing Scheme Fazaia Housing Scheme Phase 2": [
+    "Fazaia Housing Scheme"
+   ],
+   "Formanites Housing Scheme Block J": [
+    "Formanites Housing Scheme"
+   ],
+   "Formanites Housing Scheme Block N": [
+    "Formanites Housing Scheme"
+   ],
+   "GT Road Al Ahmad Garden Housing Scheme": [
+    "GT Road"
+   ],
+   "GT Road Al Hafeez Gardens": [
+    "GT Road"
+   ],
+   "GT Road Al Hafeez Gardens Al Hafeez Garden   Phase 2": [
+    "Main Canal Bank Road"
+   ],
+   "GT Road Al Raheem Garden   Phase 4": [
+    "GT Road"
+   ],
+   "GT Road Bismillah Housing Scheme": [
+    "GT Road"
+   ],
+   "GT Road SA Gardens": [
+    "GT Road"
+   ],
+   "Garden Town Barkat Market": [
+    "Garden Town"
+   ],
+   "Garden Town Garden Town   Abu Bakar Block": [
+    "Garden Town"
+   ],
+   "Garden Town Garden Town   Ahmed Block": [
+    "Garden Town"
+   ],
+   "Garden Town Garden Town   Aibak Block": [
+    "Garden Town"
+   ],
+   "Garden Town Garden Town   Aurangzaib Block": [
+    "Garden Town"
+   ],
+   "Garden Town Garden Town   Baber Block": [
+    "Garden Town"
+   ],
+   "Garden Town Garden Town   Garden Block": [
+    "Garden Town"
+   ],
+   "Garden Town Garden Town   Sher Shah Block": [
+    "Garden Town"
+   ],
+   "Garden Town Garden Town   Tariq Block": [
+    "Garden Town"
+   ],
+   "Garden Town Garden Town   Tipu Block": [
+    "Garden Town"
+   ],
+   "Garden Town Garden Town   Usman Block": [
+    "Garden Town"
+   ],
+   "Gulberg 2": [
+    "Gulberg"
+   ],
+   "Gulberg 3": [
+    "Gulberg"
+   ],
+   "Gulberg 4": [
+    "Gulberg"
+   ],
+   "Gulberg 5": [
+    "Gulberg"
+   ],
+   "Gulberg Ghalib Market": [
+    "Gulberg"
+   ],
+   "Gulberg Hyde Park": [
+    "Gulberg"
+   ],
+   "Gulberg Indigo Boutique Apartments": [
+    "Gulberg"
+   ],
+   "Gulberg MM Alam Road": [
+    "Gulberg"
+   ],
+   "Gulberg Main Boulevard Gulberg": [
+    "Gulberg"
+   ],
+   "Gulberg Main Market": [
+    "Gulberg"
+   ],
+   "Gulberg PAF Falcon Complex": [
+    "Gulberg"
+   ],
+   "Gulberg Sterling Residences": [
+    "Gulberg"
+   ],
+   "Gulberg Zafar Ali Road": [
+    "Gulberg"
+   ],
+   "Gulberg Zahoor Elahi Road": [
+    "Gulberg"
+   ],
+   "Gulshan e Ravi Block A": [
+    "Gulshan e Ravi"
+   ],
+   "Gulshan e Ravi Block C": [
+    "Gulshan e Ravi"
+   ],
+   "Gulshan e Ravi Block E": [
+    "Gulshan e Ravi"
+   ],
+   "Gulshan e Ravi Block F": [
+    "Gulshan e Ravi"
+   ],
+   "Gulshan e Ravi Block G": [
+    "Gulshan e Ravi"
+   ],
+   "Gulshan e Ravi Block H": [
+    "Gulshan e Ravi"
+   ],
+   "IEP Engineers Town IEP Engineers Town   Sector A": [
+    "IEP Engineers Town"
+   ],
+   "Johar Town Phase 1": [
+    "Johar Town"
+   ],
+   "Johar Town Phase 2": [
+    "Johar Town"
+   ],
+   "Jubilee Town Block A": [
+    "Jubilee Town"
+   ],
+   "Jubilee Town Block B": [
+    "Jubilee Town"
+   ],
+   "Jubilee Town Block C": [
+    "Jubilee Town"
+   ],
+   "Jubilee Town Block D": [
+    "Jubilee Town"
+   ],
+   "Jubilee Town Block E": [
+    "Jubilee Town"
+   ],
+   "Jubilee Town Block F": [
+    "Jubilee Town"
+   ],
+   "Khayaban e Amin Khayaban e Amin   Block A": [
+    "Khayaban e Amin"
+   ],
+   "Khayaban e Amin Khayaban e Amin   Block G": [
+    "Khayaban e Amin"
+   ],
+   "Khayaban e Amin Khayaban e Amin   Block L": [
+    "Khayaban e Amin"
+   ],
+   "Khayaban e Amin Khayaban e Amin   Block N": [
+    "Khayaban e Amin"
+   ],
+   "Khayaban e Amin Khayaban e Amin   Block P": [
+    "Khayaban e Amin"
+   ],
+   "LDA Avenue LDA Avenue   Block A": [
+    "LDA Avenue"
+   ],
+   "LDA Avenue LDA Avenue   Block B": [
+    "LDA Avenue"
+   ],
+   "LDA Avenue LDA Avenue   Block C": [
+    "LDA Avenue"
+   ],
+   "LDA Avenue LDA Avenue   Block D": [
+    "LDA Avenue"
+   ],
+   "LDA Avenue LDA Avenue   Block F": [
+    "LDA Avenue"
+   ],
+   "LDA Avenue LDA Avenue   Block G": [
+    "LDA Avenue"
+   ],
+   "LDA Avenue LDA Avenue   Block H": [
+    "LDA Avenue"
+   ],
+   "LDA Avenue LDA Avenue   Block J": [
+    "LDA Avenue"
+   ],
+   "LDA Avenue LDA Avenue   Block M": [
+    "LDA Avenue"
+   ],
+   "Main Canal Bank Road Canal Valley": [
+    "Main Canal Bank Road"
+   ],
+   "Main Canal Bank Road Nespak Housing Scheme": [
+    "Main Canal Bank Road"
+   ],
+   "Main Canal Bank Road Palm Villas": [
+    "Main Canal Bank Road"
+   ],
+   "Main Canal Bank Road Sheranwala Heights": [
+    "Main Canal Bank Road"
+   ],
+   "Main Canal Bank Road Union Livings": [
+    "Main Canal Bank Road"
+   ],
+   "Main Canal Road The Spring Apartment Homes": [
+    "Main Canal Bank Road"
+   ],
+   "Military Accounts Society Block A": [
+    "Military Accounts Housing Society"
+   ],
+   "Military Accounts Society Block B": [
+    "Military Accounts Housing Society"
+   ],
+   "Model Town Block F": [
+    "Model Town"
+   ],
+   "Model Town Block M": [
+    "Model Town"
+   ],
+   "Model Town Model Town   Block C": [
+    "Model Town"
+   ],
+   "Model Town Model Town   Block D": [
+    "Model Town"
+   ],
+   "Model Town Model Town   Block E": [
+    "Model Town"
+   ],
+   "Model Town Model Town   Block G": [
+    "Model Town"
+   ],
+   "Model Town Model Town   Block H": [
+    "Model Town"
+   ],
+   "Model Town Model Town   Block K": [
+    "Model Town"
+   ],
+   "Model Town Model Town   Block Q": [
+    "Model Town"
+   ],
+   "Model Town Model Town   Block R": [
+    "Model Town"
+   ],
+   "Model Town Model Town Extension": [
+    "Model Town"
+   ],
+   "Model Town Model Town Link Road": [
+    "Model Town"
+   ],
+   "NFC 1 Block B  SW ": [
+    "NFC 1"
+   ],
+   "NFC 1 Block C  NE ": [
+    "NFC 1"
+   ],
+   "NFC 1 Block D  SE ": [
+    "NFC 1"
+   ],
+   "Nasheman e Iqbal Nasheman e Iqbal Phase 1": [
+    "Nasheman e Iqbal"
+   ],
+   "Nasheman e Iqbal Phase 2": [
+    "Nasheman e Iqbal"
+   ],
+   "Nawab Town Nawab Town   Block D": [
+    "Nawab Town"
+   ],
+   "OPF Housing Scheme OPF Housing Scheme   Block A": [
+    "OPF Housing Scheme"
+   ],
+   "OPF Housing Scheme OPF Housing Scheme   Block C": [
+    "OPF Housing Scheme"
+   ],
+   "PIA Housing Scheme Block B": [
+    "PIA Housing Scheme"
+   ],
+   "PIA Housing Scheme Block C": [
+    "PIA Housing Scheme"
+   ],
+   "PIA Housing Scheme Block D": [
+    "PIA Housing Scheme"
+   ],
+   "Pak Arab Housing Society Pak Arab Housing Society Phase 1": [
+    "Pak Arab Housing Society"
+   ],
+   "Pak Arab Housing Society Pak Arab Housing Society Phase 2": [
+    "Pak Arab Housing Society"
+   ],
+   "Paragon City Grove Block": [
+    "Paragon City"
+   ],
+   "Paragon City Imperial Garden Homes": [
+    "Paragon City"
+   ],
+   "Paragon City Orchard Block": [
+    "Paragon City"
+   ],
+   "Paragon City Paragon City   Imperial Block": [
+    "Paragon City"
+   ],
+   "Paragon City Paragon City   Orchard 1 Block": [
+    "Paragon City"
+   ],
+   "Paragon City Woods Block": [
+    "Paragon City"
+   ],
+   "Park View City Park View City   Crystal Block": [
+    "Park View City"
+   ],
+   "Park View City Park View City   Diamond Block": [
+    "Park View City"
+   ],
+   "Park View City Park View City   Executive Block": [
+    "Park View City"
+   ],
+   "Park View City Park View City   Jade Block": [
+    "Park View City"
+   ],
+   "Park View City Park View City   Platinum Block": [
+    "Park View City"
+   ],
+   "Park View City Park View City   Rose Block": [
+    "Park View City"
+   ],
+   "Park View City Park View City   Topaz Block": [
+    "Park View City"
+   ],
+   "Park View City Park View City   Tulip Block": [
+    "Park View City"
+   ],
+   "Park View City Park View City   Tulip Extension Block": [
+    "Park View City"
+   ],
+   "Park View City Park View City   Tulip Overseas": [
+    "Park View City"
+   ],
+   "Punjab Coop Housing Society Punjab Coop Housing   Block B": [
+    "Punjab Co operative Housing Society"
+   ],
+   "Punjab Coop Housing Society Punjab Coop Housing   Block C": [
+    "Punjab Co operative Housing Society"
+   ],
+   "Punjab Coop Housing Society Punjab Coop Housing   Block E": [
+    "Punjab Co operative Housing Society"
+   ],
+   "Punjab Govt Employees Society PGECHS Phase 1": [
+    "Punjab Govt Employees Society"
+   ],
+   "Punjab Govt Employees Society PGECHS Phase 2": [
+    "Punjab Govt Employees Society"
+   ],
+   "Punjab Small Industries Colony Punjab Small Industries Colony   Block B": [
+    "Punjab Small Industries Colony"
+   ],
+   "Punjab University Employees Society Punjab University Society Phase 2": [
+    "Punjab University Employees Society"
+   ],
+   "Raiwind Road AWT Army Welfare Trust": [
+    "Raiwind Road"
+   ],
+   "Raiwind Road Al Kabir Town": [
+    "Raiwind Road"
+   ],
+   "Raiwind Road Ali Raza Abad": [
+    "Raiwind Road"
+   ],
+   "Raiwind Road Etihad Town": [
+    "Raiwind Road"
+   ],
+   "Raiwind Road Icon Valley Phase 1": [
+    "Raiwind Road"
+   ],
+   "Raiwind Road Icon Valley Phase 2": [
+    "Raiwind Road"
+   ],
+   "Raiwind Road Lake City": [
+    "Raiwind Road"
+   ],
+   "Raiwind Road Sky View Town": [
+    "Raiwind Road"
+   ],
+   "Sabzazar Scheme Block E": [
+    "Sabzazar Scheme"
+   ],
+   "Sabzazar Scheme Block G": [
+    "Sabzazar Scheme"
+   ],
+   "Sabzazar Scheme Block K": [
+    "Sabzazar Scheme"
+   ],
+   "Sabzazar Scheme Block N": [
+    "Sabzazar Scheme"
+   ],
+   "Sabzazar Scheme Block P": [
+    "Sabzazar Scheme"
+   ],
+   "Shanghai Road Defence View Apartments": [
+    "Shanghai Road"
+   ],
+   "State Life Housing Phase 1": [
+    "State Life Housing Society"
+   ],
+   "Sui Gas Society Phase 1": [
+    "Sui Gas Housing Society"
+   ],
+   "Sui Northern Gas Housing Society Sui Gas Society Phase 2": [
+    "Sui Gas Housing Society"
+   ],
+   "Township Sector A2": [
+    "Town Ship"
+   ],
+   "Township Sector B2": [
+    "Town Ship"
+   ],
+   "Township Sector C2": [
+    "Town Ship"
+   ],
+   "Township Township   Sector A1": [
+    "Town Ship"
+   ],
+   "Township Township   Sector C1": [
+    "Town Ship"
+   ],
+   "Valencia Housing Society Valencia   Block A1": [
+    "Valencia Housing Society"
+   ],
+   "Valencia Housing Society Valencia   Block A3": [
+    "Valencia Housing Society"
+   ],
+   "Valencia Housing Society Valencia   Block E": [
+    "Valencia Housing Society"
+   ],
+   "Valencia Housing Society Valencia   Block H": [
+    "Valencia Housing Society"
+   ],
+   "Valencia Housing Society Valencia   Block J1": [
+    "Valencia Housing Society"
+   ],
+   "Valencia Housing Society Valencia   Block P1": [
+    "Valencia Housing Society"
+   ],
+   "Wapda Town Wapda Town Phase 1": [
+    "Wapda Town"
+   ],
+   "Wapda Town Wapda Town Phase 2": [
+    "Wapda Town"
+   ]
+  }
+ },
+ "islamabad": {
+  "urdu": {
+   "آئی 11/1": "I 11 I 111",
+   "آئی 11/2": "I 11 I 112",
+   "احد ریزیڈینسیز": "E 11 Ahad Residences",
+   "اسلام آباد ایکسپریس وے": "Expressway",
+   "اسلام آباد": "Islamabad",
+   "اقبال هائیٹز": "Bani Gala Iqbal Heights",
+   "آئی 10": "I 10",
+   "آئی 10/1": "I 10 I 10 1",
+   "آئی 10/2": "I 10 I 10 2",
+   "آئی 10/4": "I 10 I 10 4",
+   "آئی 11": "I 11",
+   "آئی 14": "I 14",
+   "آئی 14/1": "I 14 I 141",
+   "آئی 14/3": "I 14 I 143",
+   "آئی 14/4": "I 14 I 144",
+   "آئی 16": "I 16",
+   "آئی 8": "I  8",
+   "آئی 8/1": "I 8 I 8 1",
+   "آئی 8/2": "I 8 I 8 2",
+   "آئی 8/3": "I 8 I 8 3",
+   "آئی 8/4": "I 8 I 8 4",
+   "آئی 9": "I  9",
+   "آئی الیون": "I 11",
+   "آئی ایٹ": "I  8",
+   "آئی سکسٹین": "I 16",
+   "آئی فورٹین": "I 14",
+   "آئی نائن": "I  9",
+   "آئی ٹین": "I 10",
+   "آئی ۔ 10": "I 10",
+   "آئی ۔ 10 مرکز": "I 10 Markaz",
+   "آئی ۔ 10/1": "I 10 I 10 1",
+   "آئی ۔ 10/2": "I 10 I 10 2",
+   "آئی ۔ 10/4": "I 10 I 10 4",
+   "آئی ۔ 11": "I 11",
+   "آئی ۔ 14": "I 14",
+   "آئی ۔ 14/1": "I 14 I 141",
+   "آئی ۔ 14/3": "I 14 I 143",
+   "آئی ۔ 14/4": "I 14 I 144",
+   "آئی ۔ 16": "I 16",
+   "آئی ۔ 8": "I  8",
+   "آئی ۔ 8 مرکز": "I 8 Markaz",
+   "آئی ۔ 8/1": "I 8 I 8 1",
+   "آئی ۔ 8/2": "I 8 I 8 2",
+   "آئی ۔ 8/3": "I 8 I 8 3",
+   "آئی ۔ 8/4": "I 8 I 8 4",
+   "آئی ۔ 9": "I  9",
+   "آئی-10": "I 10",
+   "آئی-10/1": "I 10 I 10 1",
+   "آئی-10/2": "I 10 I 10 2",
+   "آئی-10/4": "I 10 I 10 4",
+   "آئی-11": "I 11",
+   "آئی-14": "I 14",
+   "آئی-14/1": "I 14 I 141",
+   "آئی-14/3": "I 14 I 143",
+   "آئی-14/4": "I 14 I 144",
+   "آئی-16": "I 16",
+   "آئی-8": "I  8",
+   "آئی-8/1": "I 8 I 8 1",
+   "آئی-8/2": "I 8 I 8 2",
+   "آئی-8/3": "I 8 I 8 3",
+   "آئی-8/4": "I 8 I 8 4",
+   "آئی-9": "I  9",
+   "آئی10": "I 10",
+   "آئی10/1": "I 10 I 10 1",
+   "آئی10/2": "I 10 I 10 2",
+   "آئی10/4": "I 10 I 10 4",
+   "آئی11": "I 11",
+   "آئی14": "I 14",
+   "آئی14/1": "I 14 I 141",
+   "آئی14/3": "I 14 I 143",
+   "آئی14/4": "I 14 I 144",
+   "آئی16": "I 16",
+   "آئی8": "I  8",
+   "آئی8/1": "I 8 I 8 1",
+   "آئی8/2": "I 8 I 8 2",
+   "آئی8/3": "I 8 I 8 3",
+   "آئی8/4": "I 8 I 8 4",
+   "آئی9": "I  9",
+   "آرچرڈ سکیم": "Orchard Scheme",
+   "اکسیس مال اینڈ اپارٹمنٹس": "Axis Mall   Apartments",
+   "ای 11": "E 11",
+   "ای 11/1": "E 11 E 11 1",
+   "ای 11/2": "E 11 E 11 2",
+   "ای 11/3": "E 11 E 11 3",
+   "ای 11/4": "E 11 E 11 4",
+   "ای 16": "E 16",
+   "ای 17": "E 17",
+   "ای 18": "E 18",
+   "ای 7": "E  7",
+   "ای الیون": "E 11",
+   "ای سکسٹین": "E 16",
+   "ای سیون": "E  7",
+   "ای سیونٹین": "E 17",
+   "ای ۔ 11": "E 11",
+   "ای ۔ 11/1": "E 11 E 11 1",
+   "ای ۔ 11/2": "E 11 E 11 2",
+   "ای ۔ 11/3": "E 11 E 11 3",
+   "ای ۔ 11/4": "E 11 E 11 4",
+   "ای ۔ 16": "E 16",
+   "ای ۔ 17": "E 17",
+   "ای ۔ 18": "E 18",
+   "ای ۔ 7": "E  7",
+   "ای-11": "E 11",
+   "ای-11/1": "E 11 E 11 1",
+   "ای-11/2": "E 11 E 11 2",
+   "ای-11/3": "E 11 E 11 3",
+   "ای-11/4": "E 11 E 11 4",
+   "ای-16": "E 16",
+   "ای-17": "E 17",
+   "ای-18": "E 18",
+   "ای-7": "E  7",
+   "ای11": "E 11",
+   "ای11/1": "E 11 E 11 1",
+   "ای11/2": "E 11 E 11 2",
+   "ای11/3": "E 11 E 11 3",
+   "ای11/4": "E 11 E 11 4",
+   "ای16": "E 16",
+   "ای17": "E 17",
+   "ای18": "E 18",
+   "ای7": "E  7",
+   "ایف 10": "F 10",
+   "ایف 10/1": "F 10 F 10 1",
+   "ایف 10/2": "F 10 F 10 2",
+   "ایف 10/3": "F 10 F 10 3",
+   "ایف 10/4": "F 10 F 10 4",
+   "ایف 11": "F 11",
+   "ایف 11/1": "F 11 F 11 1",
+   "ایف 11/2": "F 11 F 11 2",
+   "ایف 11/3": "F 11 F 11 3",
+   "ایف 11/4": "F 11 F 11 4",
+   "ایف 15": "F 15",
+   "ایف 15/1": "F 15 F 15 1",
+   "ایف 17": "F 17",
+   "ایف 17/2": "F 17 F 17 2",
+   "ایف 17/3": "F 17 F 17 3",
+   "ایف 6": "F 6",
+   "ایف 6/1": "F 6 F 6 1",
+   "ایف 6/2": "F 6 F 6 2",
+   "ایف 6/3": "F 6 F 6 3",
+   "ایف 6/4": "F 6 F 6 4",
+   "ایف 7": "F 7",
+   "ایف 7/1": "F 7 F 7 1",
+   "ایف 7/2": "F 7 F 7 2",
+   "ایف 7/3": "F 7 F 7 3",
+   "ایف 7/4": "F 7 F 7 4",
+   "ایف 8": "F 8",
+   "ایف 8/1": "F 8 F 8 1",
+   "ایف 8/2": "F 8 F 8 2",
+   "ایف 8/3": "F 8 F 8 3",
+   "ایف 8/4": "F 8 F 8 4",
+   "ایف الیون": "F 11",
+   "ایف ای سی ایچ ایس": "FECHS",
+   "ایف ایٹ": "F 8",
+   "ایف سکس": "F 6",
+   "ایف سیون": "F 7",
+   "ایف سیونٹین": "F 17",
+   "ایف ففٹین": "F 15",
+   "ایف ٹین": "F 10",
+   "ایف ۔ 10": "F 10",
+   "ایف ۔ 10 مرکز": "F 10 Markaz",
+   "ایف ۔ 10/1": "F 10 F 10 1",
+   "ایف ۔ 10/2": "F 10 F 10 2",
+   "ایف ۔ 10/3": "F 10 F 10 3",
+   "ایف ۔ 10/4": "F 10 F 10 4",
+   "ایف ۔ 11": "F 11",
+   "ایف ۔ 11 مرکز": "F 11 Markaz",
+   "ایف ۔ 11/1": "F 11 F 11 1",
+   "ایف ۔ 11/2": "F 11 F 11 2",
+   "ایف ۔ 11/3": "F 11 F 11 3",
+   "ایف ۔ 11/4": "F 11 F 11 4",
+   "ایف ۔ 15": "F 15",
+   "ایف ۔ 15/1": "F 15 F 15 1",
+   "ایف ۔ 17": "F 17",
+   "ایف ۔ 17/2": "F 17 F 17 2",
+   "ایف ۔ 17/3": "F 17 F 17 3",
+   "ایف ۔ 6": "F 6",
+   "ایف ۔ 6/1": "F 6 F 6 1",
+   "ایف ۔ 6/2": "F 6 F 6 2",
+   "ایف ۔ 6/3": "F 6 F 6 3",
+   "ایف ۔ 6/4": "F 6 F 6 4",
+   "ایف ۔ 7": "F 7",
+   "ایف ۔ 7/1": "F 7 F 7 1",
+   "ایف ۔ 7/2": "F 7 F 7 2",
+   "ایف ۔ 7/3": "F 7 F 7 3",
+   "ایف ۔ 7/4": "F 7 F 7 4",
+   "ایف ۔ 8": "F 8",
+   "ایف ۔ 8 مرکز": "F 8 Markaz",
+   "ایف ۔ 8/1": "F 8 F 8 1",
+   "ایف ۔ 8/2": "F 8 F 8 2",
+   "ایف ۔ 8/3": "F 8 F 8 3",
+   "ایف ۔ 8/4": "F 8 F 8 4",
+   "ایف-10": "F 10",
+   "ایف-10/1": "F 10 F 10 1",
+   "ایف-10/2": "F 10 F 10 2",
+   "ایف-10/3": "F 10 F 10 3",
+   "ایف-10/4": "F 10 F 10 4",
+   "ایف-11": "F 11",
+   "ایف-11/1": "F 11 F 11 1",
+   "ایف-11/2": "F 11 F 11 2",
+   "ایف-11/3": "F 11 F 11 3",
+   "ایف-11/4": "F 11 F 11 4",
+   "ایف-15": "F 15",
+   "ایف-15/1": "F 15 F 15 1",
+   "ایف-17": "F 17",
+   "ایف-17/2": "F 17 F 17 2",
+   "ایف-17/3": "F 17 F 17 3",
+   "ایف-6": "F 6",
+   "ایف-6/1": "F 6 F 6 1",
+   "ایف-6/2": "F 6 F 6 2",
+   "ایف-6/3": "F 6 F 6 3",
+   "ایف-6/4": "F 6 F 6 4",
+   "ایف-7": "F 7",
+   "ایف-7/1": "F 7 F 7 1",
+   "ایف-7/2": "F 7 F 7 2",
+   "ایف-7/3": "F 7 F 7 3",
+   "ایف-7/4": "F 7 F 7 4",
+   "ایف-8": "F 8",
+   "ایف-8/1": "F 8 F 8 1",
+   "ایف-8/2": "F 8 F 8 2",
+   "ایف-8/3": "F 8 F 8 3",
+   "ایف-8/4": "F 8 F 8 4",
+   "ایف10": "F 10",
+   "ایف10/1": "F 10 F 10 1",
+   "ایف10/2": "F 10 F 10 2",
+   "ایف10/3": "F 10 F 10 3",
+   "ایف10/4": "F 10 F 10 4",
+   "ایف11": "F 11",
+   "ایف11/1": "F 11 F 11 1",
+   "ایف11/2": "F 11 F 11 2",
+   "ایف11/3": "F 11 F 11 3",
+   "ایف11/4": "F 11 F 11 4",
+   "ایف15": "F 15",
+   "ایف15/1": "F 15 F 15 1",
+   "ایف17": "F 17",
+   "ایف17/2": "F 17 F 17 2",
+   "ایف17/3": "F 17 F 17 3",
+   "ایف6": "F 6",
+   "ایف6/1": "F 6 F 6 1",
+   "ایف6/2": "F 6 F 6 2",
+   "ایف6/3": "F 6 F 6 3",
+   "ایف6/4": "F 6 F 6 4",
+   "ایف7": "F 7",
+   "ایف7/1": "F 7 F 7 1",
+   "ایف7/2": "F 7 F 7 2",
+   "ایف7/3": "F 7 F 7 3",
+   "ایف7/4": "F 7 F 7 4",
+   "ایف8": "F 8",
+   "ایف8/1": "F 8 F 8 1",
+   "ایف8/2": "F 8 F 8 2",
+   "ایف8/3": "F 8 F 8 3",
+   "ایف8/4": "F 8 F 8 4",
+   "ایل سیلو": "GT Road El Cielo",
+   "ایم پی سی ایچ ایس ۔ ملٹی گارڈنز": "B 17 MPCHS   Multi Gardens",
+   "ایچ 13": "H 13",
+   "ایچ تھرٹین": "H 13",
+   "ایچ ۔ 13": "H 13",
+   "ایچ-13": "H 13",
+   "ایچ13": "H 13",
+   "ایگزیکٹو ہائٹس": "F 11 Executive Heights",
+   "بحریہ انکلیو": "Bahria Town Bahria Enclave",
+   "بحریہ ٹاؤن": "Bahria Town",
+   "بحریہ گارڈن سٹی": "Bahria Town Bahria Garden City",
+   "بلیو ایریا": "Blue Area",
+   "بنی گالہ": "Bani Gala",
+   "بہارہ کھوہ": "Bhara kahu",
+   "بی 17": "B 17",
+   "بی سیونٹین": "B 17",
+   "بی ۔ 17": "B 17",
+   "بی-17": "B 17",
+   "بی17": "B 17",
+   "تارامری": "Taramrri",
+   "ترلائی": "Tarlai",
+   "ترنول": "Tarnol",
+   "جناح گارڈنز": "FECHS Jinnah Gardens",
+   "جی 10": "G 10",
+   "جی 10/1": "G 10 G 10 1",
+   "جی 10/2": "G 10 G 10 2",
+   "جی 10/3": "G 10 G 10 3",
+   "جی 10/4": "G 10 G 10 4",
+   "جی 11": "G 11",
+   "جی 11/1": "G 11 G 11 1",
+   "جی 11/2": "G 11 G 11 2",
+   "جی 11/3": "G 11 G 11 3",
+   "جی 11/4": "G 11 G 11 4",
+   "جی 12": "G 12",
+   "جی 13": "G 13",
+   "جی 13/1": "G 13 G 13 1",
+   "جی 13/2": "G 13 G 13 2",
+   "جی 13/3": "G 13 G 13 3",
+   "جی 13/4": "G 13 G 13 4",
+   "جی 14": "G 14",
+   "جی 14/3": "G 14 G 14 3",
+   "جی 14/4": "G 14 G 14 4",
+   "جی 15": "G 15",
+   "جی 15/1": "G 15 G 15 1",
+   "جی 15/2": "G 15 G 15 2",
+   "جی 15/3": "G 15 G 15 3",
+   "جی 15/4": "G 15 G 15 4",
+   "جی 16": "G 16",
+   "جی 16/3": "G 16 G 163",
+   "جی 16/4": "G 16 G 16 4",
+   "جی 5": "G  5",
+   "جی 6": "G  6",
+   "جی 6/1": "G 6 G 6 1",
+   "جی 6/2": "G 6 G 6 2",
+   "جی 6/3": "G 6 G 6 3",
+   "جی 7": "G  7",
+   "جی 8": "G  8",
+   "جی 8/1": "G 8 G 8 1",
+   "جی 8/2": "G 8 G 8 2",
+   "جی 9": "G 9",
+   "جی 9/1": "G 9 G 9 1",
+   "جی 9/2": "G 9 G 9 2",
+   "جی 9/3": "G 9 G 9 3",
+   "جی 9/4": "G 9 G 9 4",
+   "جی الیون": "G 11",
+   "جی ایٹ": "G  8",
+   "جی تھرٹین": "G 13",
+   "جی سکس": "G  6",
+   "جی سکسٹین": "G 16",
+   "جی سیون": "G  7",
+   "جی فائیو": "G  5",
+   "جی ففٹین": "G 15",
+   "جی فورٹین": "G 14",
+   "جی نائن": "G 9",
+   "جی ٹویلو": "G 12",
+   "جی ٹی روڈ": "GT Road",
+   "جی ٹین": "G 10",
+   "جی ۔ 10": "G 10",
+   "جی ۔ 10 مرکز": "G 10 Markaz",
+   "جی ۔ 10/1": "G 10 G 10 1",
+   "جی ۔ 10/2": "G 10 G 10 2",
+   "جی ۔ 10/3": "G 10 G 10 3",
+   "جی ۔ 10/4": "G 10 G 10 4",
+   "جی ۔ 11": "G 11",
+   "جی ۔ 11 مرکز": "G 11 Markaz",
+   "جی ۔ 11/1": "G 11 G 11 1",
+   "جی ۔ 11/2": "G 11 G 11 2",
+   "جی ۔ 11/3": "G 11 G 11 3",
+   "جی ۔ 11/4": "G 11 G 11 4",
+   "جی ۔ 12": "G 12",
+   "جی ۔ 13": "G 13",
+   "جی ۔ 13 مرکز": "G 13 Markaz",
+   "جی ۔ 13/1": "G 13 G 13 1",
+   "جی ۔ 13/2": "G 13 G 13 2",
+   "جی ۔ 13/3": "G 13 G 13 3",
+   "جی ۔ 13/4": "G 13 G 13 4",
+   "جی ۔ 14": "G 14",
+   "جی ۔ 14/3": "G 14 G 14 3",
+   "جی ۔ 14/4": "G 14 G 14 4",
+   "جی ۔ 15": "G 15",
+   "جی ۔ 15 مرکز": "G 15 Markaz",
+   "جی ۔ 15/1": "G 15 G 15 1",
+   "جی ۔ 15/2": "G 15 G 15 2",
+   "جی ۔ 15/3": "G 15 G 15 3",
+   "جی ۔ 15/4": "G 15 G 15 4",
+   "جی ۔ 16": "G 16",
+   "جی ۔ 16/4": "G 16 G 16 4",
+   "جی ۔ 5": "G  5",
+   "جی ۔ 6": "G  6",
+   "جی ۔ 6/1": "G 6 G 6 1",
+   "جی ۔ 6/2": "G 6 G 6 2",
+   "جی ۔ 6/3": "G 6 G 6 3",
+   "جی ۔ 7": "G  7",
+   "جی ۔ 8": "G  8",
+   "جی ۔ 8/1": "G 8 G 8 1",
+   "جی ۔ 8/2": "G 8 G 8 2",
+   "جی ۔ 9": "G 9",
+   "جی ۔ 9/1": "G 9 G 9 1",
+   "جی ۔ 9/2": "G 9 G 9 2",
+   "جی ۔ 9/3": "G 9 G 9 3",
+   "جی ۔ 9/4": "G 9 G 9 4",
+   "جی-10": "G 10",
+   "جی-10/1": "G 10 G 10 1",
+   "جی-10/2": "G 10 G 10 2",
+   "جی-10/3": "G 10 G 10 3",
+   "جی-10/4": "G 10 G 10 4",
+   "جی-11": "G 11",
+   "جی-11/1": "G 11 G 11 1",
+   "جی-11/2": "G 11 G 11 2",
+   "جی-11/3": "G 11 G 11 3",
+   "جی-11/4": "G 11 G 11 4",
+   "جی-12": "G 12",
+   "جی-13": "G 13",
+   "جی-13/1": "G 13 G 13 1",
+   "جی-13/2": "G 13 G 13 2",
+   "جی-13/3": "G 13 G 13 3",
+   "جی-13/4": "G 13 G 13 4",
+   "جی-14": "G 14",
+   "جی-14/3": "G 14 G 14 3",
+   "جی-14/4": "G 14 G 14 4",
+   "جی-15": "G 15",
+   "جی-15/1": "G 15 G 15 1",
+   "جی-15/2": "G 15 G 15 2",
+   "جی-15/3": "G 15 G 15 3",
+   "جی-15/4": "G 15 G 15 4",
+   "جی-16": "G 16",
+   "جی-16/3": "G 16 G 163",
+   "جی-16/4": "G 16 G 16 4",
+   "جی-5": "G  5",
+   "جی-6": "G  6",
+   "جی-6/1": "G 6 G 6 1",
+   "جی-6/2": "G 6 G 6 2",
+   "جی-6/3": "G 6 G 6 3",
+   "جی-7": "G  7",
+   "جی-8": "G  8",
+   "جی-8/1": "G 8 G 8 1",
+   "جی-8/2": "G 8 G 8 2",
+   "جی-9": "G 9",
+   "جی-9/1": "G 9 G 9 1",
+   "جی-9/2": "G 9 G 9 2",
+   "جی-9/3": "G 9 G 9 3",
+   "جی-9/4": "G 9 G 9 4",
+   "جی10": "G 10",
+   "جی10/1": "G 10 G 10 1",
+   "جی10/2": "G 10 G 10 2",
+   "جی10/3": "G 10 G 10 3",
+   "جی10/4": "G 10 G 10 4",
+   "جی11": "G 11",
+   "جی11/1": "G 11 G 11 1",
+   "جی11/2": "G 11 G 11 2",
+   "جی11/3": "G 11 G 11 3",
+   "جی11/4": "G 11 G 11 4",
+   "جی12": "G 12",
+   "جی13": "G 13",
+   "جی13/1": "G 13 G 13 1",
+   "جی13/2": "G 13 G 13 2",
+   "جی13/3": "G 13 G 13 3",
+   "جی13/4": "G 13 G 13 4",
+   "جی14": "G 14",
+   "جی14/3": "G 14 G 14 3",
+   "جی14/4": "G 14 G 14 4",
+   "جی15": "G 15",
+   "جی15/1": "G 15 G 15 1",
+   "جی15/2": "G 15 G 15 2",
+   "جی15/3": "G 15 G 15 3",
+   "جی15/4": "G 15 G 15 4",
+   "جی16": "G 16",
+   "جی16/3": "G 16 G 163",
+   "جی16/4": "G 16 G 16 4",
+   "جی5": "G  5",
+   "جی6": "G  6",
+   "جی6/1": "G 6 G 6 1",
+   "جی6/2": "G 6 G 6 2",
+   "جی6/3": "G 6 G 6 3",
+   "جی7": "G  7",
+   "جی8": "G  8",
+   "جی8/1": "G 8 G 8 1",
+   "جی8/2": "G 8 G 8 2",
+   "جی9": "G 9",
+   "جی9/1": "G 9 G 9 1",
+   "جی9/2": "G 9 G 9 2",
+   "جی9/3": "G 9 G 9 3",
+   "جی9/4": "G 9 G 9 4",
+   "دی آٹریم": "Zaraj Housing Scheme The Atrium",
+   "دی سنٹورس": "F 8 The Centaurus",
+   "دی گیٹ مال اینڈ اپارٹمنتس": "Faisal Town   F 18 The Gate Mall   Apartments",
+   "رانیا ہائٹس": "Zaraj Housing Scheme Rania Heights",
+   "راول ٹاؤن": "Rawal Town",
+   "رِیور گارڈن": "River Garden",
+   "زراج ہاؤسنگ سکیم": "Zaraj Housing Scheme",
+   "زرکون هائیٹز": "G 15 Zarkon Heights",
+   "زیٹا ون مال": "GT Road Zeta 1 Mall",
+   "سلوراوکس اپارٹمنٹ": "F 10 Silver Oaks Apartments",
+   "سوان گارڈن": "Soan Garden",
+   "سوان گارڈن ۔ بلاک ای": "Soan Garden Block E",
+   "سوان گارڈن ۔ بلاک ایف": "Soan Garden Block F",
+   "سوان گارڈن ۔ بلاک ایچ": "Soan Garden Block H",
+   "سوان گارڈن ۔ بلاک اے": "Soan Garden Block A",
+   "سوان گارڈن ۔ بلاک بی": "Soan Garden Block B",
+   "سوان گارڈن ۔ بلاک جی": "Soan Garden Block G",
+   "سوان گارڈن ۔ بلاک سی": "Soan Garden Block C",
+   "سوان گارڈن ۔ بلاک ڈی": "Soan Garden Block D",
+   "سوہاں ویلی": "Sohan Valley",
+   "سکھ چین ریذیڈینس": "F 10 Sukh Chayn Residence",
+   "سی بی آر ٹاؤن": "CBR Town",
+   "سی بی آر ٹاؤن فیز 1": "CBR Town Phase 1",
+   "سیوائے ریزیڈینس": "F 11 Savoy Residence",
+   "شالیمار ٹاؤن": "Shalimar Town",
+   "شاہ اللہ دتہ": "Shah Allah Ditta",
+   "شہزاد ٹاؤن": "Shehzad Town",
+   "عمار کینیان ویوز - الما 1 بلاک": "Emaar Canyon Views Emaar Canyon Views   Alma 1 Block",
+   "عمار کینیان ویوز - میریڈیئن 2 بلاک": "Emaar Canyon Views Emaar Canyon Views   Meridian 2 Block",
+   "عمار کینیان ویوز - میریڈیئن بلاک": "Emaar Canyon Views Emaar Canyon Views   Meridian Block",
+   "عمارکینیان ویوز": "Emaar Canyon Views",
+   "غوری ٹاؤن": "Ghauri Town",
+   "غوری ٹاؤن فیز 1": "Ghauri Town Phase 1",
+   "غوری ٹاؤن فیز 3": "Ghauri Town Phase 3",
+   "غوری ٹاؤن فیز 4 اے": "Ghauri Town Ghauri Town Phase 4A",
+   "غوری ٹاؤن فیز 4 بی": "Ghauri Town Ghauri Town Phase 4B",
+   "غوری ٹاؤن فیز 5": "Ghauri Town Phase 5",
+   "غوری ٹاؤن فیز 5اے": "Ghauri Town Ghauri Town Phase 5A",
+   "غوری ٹاؤن فیز 5بی": "Ghauri Town Ghauri Town Phase 5B",
+   "غوری گارڈن": "Ghauri Town Ghauri Garden",
+   "فضائیا هاوسنگ سکیم": "Tarnol Fazaia Housing Scheme",
+   "فیصل مارگلہ سٹی": "B 17 Faisal Margalla City",
+   "فیصل ٹاؤن - ایف ۔ 18": "Faisal Town   F 18",
+   "فیصل ٹاؤن فیز 1": "Faisal Town   F 18 Faisal Town Phase 1",
+   "قراقرم انکلیو 2": "F 11 Karakoram Enclave 2",
+   "قراقرم انکلیو1": "Karakoram Enclave 1",
+   "قراقرم ڈپلومیٹک انکلیو": "Karakoram Diplomatic Enclave",
+   "لہتاراڑ روڈ": "Lehtarar Road",
+   "لیک ویو لینز": "Bani Gala Lake View Lanes",
+   "مارگلہ ویو ہاؤسنگ سوسائٹی": "D 17 Margalla View Housing Society",
+   "مارگلہ ٹاؤن": "Margalla Town",
+   "مارگلہ ٹاؤن فیز 1": "Margalla Town Margalla Town Phase 1",
+   "مارگلہ ٹاؤن فیز 2": "Margalla Town Margalla Town Phase 2",
+   "مال آف اسلام آباد": "Blue Area Mall of Islamabad",
+   "مدینه ٹاور": "E 11 Madina Tower",
+   "مروہ ٹاؤن": "Marwa Town",
+   "مرگلہ ہِلز-2": "E 11 Margalla Hills 2",
+   "ممتاز سٹی": "Mumtaz City",
+   "ممتاز سٹی - انڈس بلاک": "Mumtaz City Mumtaz City   Indus Block",
+   "ممتاز سٹی - جہلم بلاک": "Mumtaz City Mumtaz City   Jehlum Block",
+   "ممتاز سٹی - راوی بلاک": "Mumtaz City Mumtaz City   Ravi Block",
+   "ممتاز سٹی - چناب بلاک": "Mumtaz City Mumtaz City   Chanab Block",
+   "موہرا نور روڈ": "Mohra Nur Road",
+   "مکہ ٹاور": "E 11 Makkah Tower",
+   "مینارہ ریزیڈینس": "GT Road Minara Residence",
+   "ناول فارمز ہاؤسنگ سکیم": "Naval Farms Housing Scheme",
+   "نیشنل پولیس فاؤنڈیشن او ۔ 9": "National Police Foundation O 9",
+   "نیشنل پولیس فاؤنڈیشن او ۔ 9 - بلاک اے": "National Police Foundation O 9 National Police Foundation O 9   Block A",
+   "نیشنل پولیس فاؤنڈیشن او ۔ 9 - بلاک بی": "National Police Foundation O 9 National Police Foundation O 9   Block B",
+   "نیشنل پولیس فاؤنڈیشن او ۔ 9 - بلاک سی": "National Police Foundation O 9 National Police Foundation O 9   Block C",
+   "نیول اینکریج": "Naval Anchorage",
+   "نیول اینکریج - بلاک ای": "Naval Anchorage Naval Anchorage   Block E",
+   "نیول اینکریج - بلاک ایف": "Naval Anchorage Naval Anchorage   Block F",
+   "نیول اینکریج - بلاک اے": "Naval Anchorage Naval Anchorage   Block A",
+   "نیول اینکریج - بلاک جی": "Naval Anchorage Naval Anchorage   Block G",
+   "ون کونسٹی ٹِیو شن ایوینو": "Constitution Avenue One Constitution Avenue",
+   "ٹاپ سٹی 1": "Top City 1",
+   "ٹاپ سٹی 1 - بلاک اے": "Top City 1 Top City 1   Block A",
+   "ٹاپ سٹی 1 - بلاک بی": "Top City 1 Top City 1   Block B",
+   "ٹاپ سٹی 1 - بلاک سی": "Top City 1 Top City 1   Block C",
+   "ٹاپ سٹی 1 - بلاک ڈی": "Top City 1 Top City 1   Block D",
+   "ٹاپ سٹی 1 - بلاک کے": "Top City 1 Top City 1   Block K",
+   "ٹاپ سٹی 1 - کنور معیز بلاک": "Top City 1 Kanwar Moiz Block",
+   "پائن ولاز": "D 17 Pine Villas",
+   "پائن ہائٹس لگژری اپارٹمنٹس": "D 17 Pine Heights Luxury Apartments",
+   "پارک انکلیو": "Park Enclave",
+   "پارک ایونیو": "F 11 Park Avenue",
+   "پارک روڈ": "Park Road",
+   "پارک ویو سٹی": "Park View City",
+   "پاکستان ٹاؤن": "Pakistan Town",
+   "پاکستان ٹاؤن - فیز 1": "Pakistan Town Pakistan Town   Phase 1",
+   "پاکستان ٹاؤن ۔ فیز 2": "Pakistan Town Pakistan Town   Phase 2",
+   "پی ای سی ایچ ایس": "PECHS",
+   "پی ایچ اے ایف آفیسرز ریزڈینسیا": "Kuri Road PHAF Officers Residencia",
+   "پی ڈبلیو ڈی روڈ": "PWD Road",
+   "پی ڈبلیو ڈی ہاؤسنگ سوسائٹی ۔ بلاک اے": "PWD Housing Scheme PWD Housing Society   Block A",
+   "پی ڈبلیو ڈی ہاؤسنگ سوسائٹی ۔ بلاک بی": "PWD Housing Scheme PWD Housing Society   Block B",
+   "پی ڈبلیو ڈی ہاؤسنگ سوسائٹی ۔ بلاک سی": "PWD Housing Scheme PWD Housing Society   Block C",
+   "پی ڈبلیو ڈی ہاؤسنگ سوسائٹی ۔ بلاک ڈی": "PWD Housing Scheme PWD Housing Society   Block D",
+   "پی ڈبلیو ڈی ہاؤسنگ سکیم": "PWD Housing Scheme",
+   "چٹھہ بختاور": "Chatha Bakhtawar",
+   "چک شہزاد": "Chak Shahzad",
+   "چک شہزاد فارمز": "Chak Shahzad Chak Shahzad Farms",
+   "ڈپلومیٹک انکلیو": "Diplomatic Enclave",
+   "ڈی 12": "D 12",
+   "ڈی 12/1": "D 12 D 12 1",
+   "ڈی 12/2": "D 12 D 12 2",
+   "ڈی 12/3": "D 12 D 12 3",
+   "ڈی 12/4": "D 12 D 12 4",
+   "ڈی 17": "D 17",
+   "ڈی ایچ اے ویلی": "DHA Defence DHA Valley",
+   "ڈی ایچ اے ڈیفینس": "DHA Defence",
+   "ڈی ایچ اے ڈیفینس فیز 1": "DHA Defence Phase 1",
+   "ڈی ایچ اے ڈیفینس فیز 2": "DHA Defence Phase 2",
+   "ڈی ایچ اے ڈیفینس فیز 3": "DHA Defence DHA Defence Phase 3",
+   "ڈی ایچ اے ڈیفینس فیز 4": "DHA Defence DHA Defence Phase 4",
+   "ڈی ایچ اے ڈیفینس فیز 5": "DHA Defence DHA Defence Phase 5",
+   "ڈی سیونٹین": "D 17",
+   "ڈی ٹویلو": "D 12",
+   "ڈی ۔ 12": "D 12",
+   "ڈی ۔ 12 مرکز": "D 12 Markaz",
+   "ڈی ۔ 12/1": "D 12 D 12 1",
+   "ڈی ۔ 12/2": "D 12 D 12 2",
+   "ڈی ۔ 12/3": "D 12 D 12 3",
+   "ڈی ۔ 12/4": "D 12 D 12 4",
+   "ڈی ۔ 17": "D 17",
+   "ڈی-12": "D 12",
+   "ڈی-12/1": "D 12 D 12 1",
+   "ڈی-12/2": "D 12 D 12 2",
+   "ڈی-12/3": "D 12 D 12 3",
+   "ڈی-12/4": "D 12 D 12 4",
+   "ڈی-17": "D 17",
+   "ڈی12": "D 12",
+   "ڈی12/1": "D 12 D 12 1",
+   "ڈی12/2": "D 12 D 12 2",
+   "ڈی12/3": "D 12 D 12 3",
+   "ڈی12/4": "D 12 D 12 4",
+   "ڈی17": "D 17",
+   "کانسٹیٹیوشن ایوینیو": "Constitution Avenue",
+   "کشمیر ہائی وے": "Kashmir Highway",
+   "کورنگ ٹاؤن": "Korang Town",
+   "کوری روڈ": "Kuri Road",
+   "کینیون ویوز پرادوس": "Canyon Views Prados",
+   "کیپیٹل سکئیر": "B 17 Capital Square",
+   "گرین ایونیو": "Green Avenue",
+   "گلبرگ": "Gulberg",
+   "گلبرگ بزنس اسکوائر": "Gulberg Gulberg Business Square",
+   "گلبرگ ریزیڈنشیا": "Gulberg Gulberg Residencia",
+   "گلبرگ گرینز": "Gulberg Gulberg Greens",
+   "گلشنِِ صحت 1": "E 18 Gulshan e Sehat 1",
+   "گلشنِِِ صحت 2": "E 18 Gulshan e Sehat 2",
+   "گندهارا سٹی": "Gandhara City",
+   "یونیورسٹی ٹاؤن": "University Town"
+  },
+  "ancestors": {
+   "B 17 Capital Square": [
+    "B 17"
+   ],
+   "B 17 Faisal Margalla City": [
+    "B 17"
+   ],
+   "B 17 MPCHS   Multi Gardens": [
+    "B 17"
+   ],
+   "Bahria Town Bahria Enclave": [
+    "Bahria Town"
+   ],
+   "Bahria Town Bahria Garden City": [
+    "Bahria Town"
+   ],
+   "Bani Gala Iqbal Heights": [
+    "Bani Gala"
+   ],
+   "Bani Gala Lake View Lanes": [
+    "Bani Gala"
+   ],
+   "Blue Area Mall of Islamabad": [
+    "Blue Area"
+   ],
+   "CBR Town Phase 1": [
+    "CBR Town"
+   ],
+   "Chak Shahzad Chak Shahzad Farms": [
+    "Chak Shahzad"
+   ],
+   "Constitution Avenue One Constitution Avenue": [
+    "Constitution Avenue"
+   ],
+   "D 12 D 12 1": [
+    "D 12"
+   ],
+   "D 12 D 12 2": [
+    "D 12"
+   ],
+   "D 12 D 12 3": [
+    "D 12"
+   ],
+   "D 12 D 12 4": [
+    "D 12"
+   ],
+   "D 12 Markaz": [
+    "D 12"
+   ],
+   "D 17 Margalla View Housing Society": [
+    "D 17"
+   ],
+   "D 17 Pine Heights Luxury Apartments": [
+    "D 17"
+   ],
+   "D 17 Pine Villas": [
+    "D 17"
+   ],
+   "DHA Defence DHA Defence Phase 3": [
+    "DHA Defence"
+   ],
+   "DHA Defence DHA Defence Phase 4": [
+    "DHA Defence"
+   ],
+   "DHA Defence DHA Defence Phase 5": [
+    "DHA Defence"
+   ],
+   "DHA Defence DHA Valley": [
+    "DHA Defence"
+   ],
+   "DHA Defence Phase 1": [
+    "DHA Defence"
+   ],
+   "DHA Defence Phase 2": [
+    "DHA Defence"
+   ],
+   "E 11 Ahad Residences": [
+    "E 11"
+   ],
+   "E 11 E 11 1": [
+    "E 11"
+   ],
+   "E 11 E 11 2": [
+    "E 11"
+   ],
+   "E 11 E 11 3": [
+    "E 11"
+   ],
+   "E 11 E 11 4": [
+    "E 11"
+   ],
+   "E 11 Madina Tower": [
+    "E 11"
+   ],
+   "E 11 Makkah Tower": [
+    "E 11"
+   ],
+   "E 11 Margalla Hills 2": [
+    "E 11"
+   ],
+   "E 18 Gulshan e Sehat 1": [
+    "E 18"
+   ],
+   "E 18 Gulshan e Sehat 2": [
+    "E 18"
+   ],
+   "Emaar Canyon Views Emaar Canyon Views   Alma 1 Block": [
+    "Emaar Canyon Views"
+   ],
+   "Emaar Canyon Views Emaar Canyon Views   Meridian 2 Block": [
+    "Emaar Canyon Views"
+   ],
+   "Emaar Canyon Views Emaar Canyon Views   Meridian Block": [
+    "Emaar Canyon Views"
+   ],
+   "F 10 F 10 1": [
+    "F 10"
+   ],
+   "F 10 F 10 2": [
+    "F 10"
+   ],
+   "F 10 F 10 3": [
+    "F 10"
+   ],
+   "F 10 F 10 4": [
+    "F 10"
+   ],
+   "F 10 Markaz": [
+    "F 10"
+   ],
+   "F 10 Silver Oaks Apartments": [
+    "F 10"
+   ],
+   "F 10 Sukh Chayn Residence": [
+    "F 10"
+   ],
+   "F 11 Executive Heights": [
+    "F 11"
+   ],
+   "F 11 F 11 1": [
+    "F 11"
+   ],
+   "F 11 F 11 2": [
+    "F 11"
+   ],
+   "F 11 F 11 3": [
+    "F 11"
+   ],
+   "F 11 F 11 4": [
+    "F 11"
+   ],
+   "F 11 Karakoram Enclave 2": [
+    "F 11"
+   ],
+   "F 11 Markaz": [
+    "F 11"
+   ],
+   "F 11 Park Avenue": [
+    "F 11"
+   ],
+   "F 11 Savoy Residence": [
+    "F 11"
+   ],
+   "F 15 F 15 1": [
+    "F 15"
+   ],
+   "F 17 F 17 2": [
+    "F 17"
+   ],
+   "F 17 F 17 3": [
+    "F 17"
+   ],
+   "F 6 F 6 1": [
+    "F 6"
+   ],
+   "F 6 F 6 2": [
+    "F 6"
+   ],
+   "F 6 F 6 3": [
+    "F 6"
+   ],
+   "F 6 F 6 4": [
+    "F 6"
+   ],
+   "F 7 F 7 1": [
+    "F 7"
+   ],
+   "F 7 F 7 2": [
+    "F 7"
+   ],
+   "F 7 F 7 3": [
+    "F 7"
+   ],
+   "F 7 F 7 4": [
+    "F 7"
+   ],
+   "F 8 F 8 1": [
+    "F 8"
+   ],
+   "F 8 F 8 2": [
+    "F 8"
+   ],
+   "F 8 F 8 3": [
+    "F 8"
+   ],
+   "F 8 F 8 4": [
+    "F 8"
+   ],
+   "F 8 Markaz": [
+    "F 8"
+   ],
+   "F 8 The Centaurus": [
+    "F 8"
+   ],
+   "FECHS Jinnah Gardens": [
+    "FECHS"
+   ],
+   "Faisal Town   F 18 Faisal Town Phase 1": [
+    "Faisal Town   F 18"
+   ],
+   "Faisal Town   F 18 The Gate Mall   Apartments": [
+    "Faisal Town   F 18"
+   ],
+   "G 10 G 10 1": [
+    "G 10"
+   ],
+   "G 10 G 10 2": [
+    "G 10"
+   ],
+   "G 10 G 10 3": [
+    "G 10"
+   ],
+   "G 10 G 10 4": [
+    "G 10"
+   ],
+   "G 10 Markaz": [
+    "G 10"
+   ],
+   "G 11 G 11 1": [
+    "G 11"
+   ],
+   "G 11 G 11 2": [
+    "G 11"
+   ],
+   "G 11 G 11 3": [
+    "G 11"
+   ],
+   "G 11 G 11 4": [
+    "G 11"
+   ],
+   "G 11 Markaz": [
+    "G 11"
+   ],
+   "G 13 G 13 1": [
+    "G 13"
+   ],
+   "G 13 G 13 2": [
+    "G 13"
+   ],
+   "G 13 G 13 3": [
+    "G 13"
+   ],
+   "G 13 G 13 4": [
+    "G 13"
+   ],
+   "G 13 Markaz": [
+    "G 13"
+   ],
+   "G 14 G 14 3": [
+    "G 14"
+   ],
+   "G 14 G 14 4": [
+    "G 14"
+   ],
+   "G 15 G 15 1": [
+    "G 15"
+   ],
+   "G 15 G 15 2": [
+    "G 15"
+   ],
+   "G 15 G 15 3": [
+    "G 15"
+   ],
+   "G 15 G 15 4": [
+    "G 15"
+   ],
+   "G 15 Markaz": [
+    "G 15"
+   ],
+   "G 15 Zarkon Heights": [
+    "G 15"
+   ],
+   "G 16 G 16 4": [
+    "G 16"
+   ],
+   "G 16 G 163": [
+    "G 16"
+   ],
+   "G 6 G 6 1": [
+    "G  6"
+   ],
+   "G 6 G 6 2": [
+    "G  6"
+   ],
+   "G 6 G 6 3": [
+    "G  6"
+   ],
+   "G 8 G 8 1": [
+    "G  8"
+   ],
+   "G 8 G 8 2": [
+    "G  8"
+   ],
+   "G 9 G 9 1": [
+    "G 9"
+   ],
+   "G 9 G 9 2": [
+    "G 9"
+   ],
+   "G 9 G 9 3": [
+    "G 9"
+   ],
+   "G 9 G 9 4": [
+    "G 9"
+   ],
+   "GT Road El Cielo": [
+    "GT Road"
+   ],
+   "GT Road Minara Residence": [
+    "GT Road"
+   ],
+   "GT Road Zeta 1 Mall": [
+    "GT Road"
+   ],
+   "Ghauri Town Ghauri Garden": [
+    "Ghauri Town"
+   ],
+   "Ghauri Town Ghauri Town Phase 4A": [
+    "Ghauri Town"
+   ],
+   "Ghauri Town Ghauri Town Phase 4B": [
+    "Ghauri Town"
+   ],
+   "Ghauri Town Ghauri Town Phase 5A": [
+    "Ghauri Town"
+   ],
+   "Ghauri Town Ghauri Town Phase 5B": [
+    "Ghauri Town"
+   ],
+   "Ghauri Town Phase 1": [
+    "Ghauri Town"
+   ],
+   "Ghauri Town Phase 3": [
+    "Ghauri Town"
+   ],
+   "Ghauri Town Phase 5": [
+    "Ghauri Town"
+   ],
+   "Gulberg Gulberg Business Square": [
+    "Gulberg"
+   ],
+   "Gulberg Gulberg Greens": [
+    "Gulberg"
+   ],
+   "Gulberg Gulberg Residencia": [
+    "Gulberg"
+   ],
+   "I 10 I 10 1": [
+    "I 10"
+   ],
+   "I 10 I 10 2": [
+    "I 10"
+   ],
+   "I 10 I 10 4": [
+    "I 10"
+   ],
+   "I 10 Markaz": [
+    "I 10"
+   ],
+   "I 11 I 111": [
+    "I 11"
+   ],
+   "I 11 I 112": [
+    "I 11"
+   ],
+   "I 14 I 141": [
+    "I 14"
+   ],
+   "I 14 I 143": [
+    "I 14"
+   ],
+   "I 14 I 144": [
+    "I 14"
+   ],
+   "I 8 I 8 1": [
+    "I  8"
+   ],
+   "I 8 I 8 2": [
+    "I  8"
+   ],
+   "I 8 I 8 3": [
+    "I  8"
+   ],
+   "I 8 I 8 4": [
+    "I  8"
+   ],
+   "I 8 Markaz": [
+    "I  8"
+   ],
+   "Kuri Road PHAF Officers Residencia": [
+    "Kuri Road"
+   ],
+   "Margalla Town Margalla Town Phase 1": [
+    "Margalla Town"
+   ],
+   "Margalla Town Margalla Town Phase 2": [
+    "Margalla Town"
+   ],
+   "Mumtaz City Mumtaz City   Chanab Block": [
+    "Mumtaz City"
+   ],
+   "Mumtaz City Mumtaz City   Indus Block": [
+    "Mumtaz City"
+   ],
+   "Mumtaz City Mumtaz City   Jehlum Block": [
+    "Mumtaz City"
+   ],
+   "Mumtaz City Mumtaz City   Ravi Block": [
+    "Mumtaz City"
+   ],
+   "National Police Foundation O 9 National Police Foundation O 9   Block A": [
+    "National Police Foundation O 9"
+   ],
+   "National Police Foundation O 9 National Police Foundation O 9   Block B": [
+    "National Police Foundation O 9"
+   ],
+   "National Police Foundation O 9 National Police Foundation O 9   Block C": [
+    "National Police Foundation O 9"
+   ],
+   "Naval Anchorage Naval Anchorage   Block A": [
+    "Naval Anchorage"
+   ],
+   "Naval Anchorage Naval Anchorage   Block E": [
+    "Naval Anchorage"
+   ],
+   "Naval Anchorage Naval Anchorage   Block F": [
+    "Naval Anchorage"
+   ],
+   "Naval Anchorage Naval Anchorage   Block G": [
+    "Naval Anchorage"
+   ],
+   "PWD Housing Scheme PWD Housing Society   Block A": [
+    "PWD Housing Scheme"
+   ],
+   "PWD Housing Scheme PWD Housing Society   Block B": [
+    "PWD Housing Scheme"
+   ],
+   "PWD Housing Scheme PWD Housing Society   Block C": [
+    "PWD Housing Scheme"
+   ],
+   "PWD Housing Scheme PWD Housing Society   Block D": [
+    "PWD Housing Scheme"
+   ],
+   "Pakistan Town Pakistan Town   Phase 1": [
+    "Pakistan Town"
+   ],
+   "Pakistan Town Pakistan Town   Phase 2": [
+    "Pakistan Town"
+   ],
+   "Soan Garden Block A": [
+    "Soan Garden"
+   ],
+   "Soan Garden Block B": [
+    "Soan Garden"
+   ],
+   "Soan Garden Block C": [
+    "Soan Garden"
+   ],
+   "Soan Garden Block D": [
+    "Soan Garden"
+   ],
+   "Soan Garden Block E": [
+    "Soan Garden"
+   ],
+   "Soan Garden Block F": [
+    "Soan Garden"
+   ],
+   "Soan Garden Block G": [
+    "Soan Garden"
+   ],
+   "Soan Garden Block H": [
+    "Soan Garden"
+   ],
+   "Tarnol Fazaia Housing Scheme": [
+    "Tarnol"
+   ],
+   "Top City 1 Kanwar Moiz Block": [
+    "Top City 1"
+   ],
+   "Top City 1 Top City 1   Block A": [
+    "Top City 1"
+   ],
+   "Top City 1 Top City 1   Block B": [
+    "Top City 1"
+   ],
+   "Top City 1 Top City 1   Block C": [
+    "Top City 1"
+   ],
+   "Top City 1 Top City 1   Block D": [
+    "Top City 1"
+   ],
+   "Top City 1 Top City 1   Block K": [
+    "Top City 1"
+   ],
+   "Zaraj Housing Scheme Rania Heights": [
+    "Zaraj Housing Scheme"
+   ],
+   "Zaraj Housing Scheme The Atrium": [
+    "Zaraj Housing Scheme"
+   ]
+  }
+ }
+}

@@ -20,7 +20,7 @@ from app.data import (
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
 from app.parsing import parse_query_with_claude
-from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE, _UNIT_AFTER_NUMBER_RE, _area_spans, _normalize_number_words
+from app.parsing import parse_natural_query, suggest_areas, _strip_noise_tokens, _AREA_NOISE, _UNIT_AFTER_NUMBER_RE, _area_spans, _normalize_number_words, resolve_landmark
 from app.scraper import search_zameen, fetch_listing_contact, fetch_listing_detail, extract_zameen_id
 from app.db_listings import (
     decode_listing_json_field,
@@ -180,18 +180,24 @@ def _build_parse_query_response(q, city, result):
     effective_city = result.get("city_hint") or city
     areas = get_areas(effective_city)
     selected = result.get("areas") or [result.get("area")]
-    exact_mentions = {name for _, _, name in _area_spans(q.lower(), effective_city)}
+    # The parser's view of the text: Urdu spelling and spoken numbers normalised.
+    ql = _normalize_number_words(q).lower()
+    exact_mentions = {name for _, _, name in _area_spans(ql, effective_city)}
     exact_selection = all(name in exact_mentions for name in selected)
-    if result.get("area") and result["area"] in areas and not exact_selection:
-        ql = q.lower()
+    # "near liberty market" -> Gulberg on purpose: the landmark explains the words.
+    landmark_area = resolve_landmark(q, city=effective_city)
+    if (result.get("area") and result["area"] in areas and not exact_selection
+            and landmark_area not in selected):
         # rstrip('.') so "sq." tokenizes to "sq" (matches the noise set below).
-        query_tokens = {t.rstrip(".") for t in ql.replace("-", " ").split()} - {"in", "for", "rent", "rental", "ke", "ka", "ki", "mein", "me"}
+        # A list, not a set: area_query is shown to the user in their word order.
+        query_tokens = [t.rstrip(".") for t in ql.replace("-", " ").split()
+                        if t.rstrip(".") not in {"in", "for", "rent", "rental", "ke", "ka", "ki", "mein", "me"}]
         # Every area the query named counts as matched ("DHA or Clifton").
         area_tokens = {
             t for name in (result.get("areas") or [result["area"]])
             for t in name.lower().replace("-", " ").split()
         }
-        unmatched = query_tokens - area_tokens
+        unmatched = [t for t in dict.fromkeys(query_tokens) if t not in area_tokens]
         noise = {"house", "flat", "apartment", "portion", "upper", "lower", "room", "bed", "bedroom", "furnished", "full", "ghar", "makan", "bala", "nichla", "kamra",
                  # Size units and city names are consumed by other parsed fields —
                  # they must not count as an "unmatched" area or they wrongly flag
@@ -201,11 +207,10 @@ def _build_parse_query_response(q, city, result):
                  "marla", "marlas", "kanal", "kanals", "sqft", "sqyd", "yard", "yards", "yd", "yds", "ft",
                  "gaz", "gaj", "guz", "gajj", "sq", "square",
                  "lahore", "karachi", "islamabad", "isb", "khi", "lhr"}
-        unmatched -= noise
-        # Filter words the parser consumed elsewhere ("under", "or", "tak").
-        unmatched -= _AREA_NOISE
-        # Drop numbers and amounts, including "5.5" and "80k" (sizes/prices).
-        unmatched = {t for t in unmatched if not _AMOUNT_TOKEN_RE.fullmatch(t)}
+        # Filter words the parser consumed elsewhere ("under", "or", "tak"),
+        # then numbers and amounts, including "5.5" and "80k" (sizes/prices).
+        unmatched = [t for t in unmatched if t not in noise and t not in _AREA_NOISE
+                     and not _AMOUNT_TOKEN_RE.fullmatch(t)]
         if unmatched:
             result["area_approximate"] = True
             result["area_query"] = " ".join(unmatched)

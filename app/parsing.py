@@ -13,6 +13,7 @@ from app.data import (
     URDU_AREAS, ROMAN_URDU_AREAS,
     URDU_TYPES, ROMAN_URDU_TYPES,
     ROMAN_URDU_AREAS_BY_CITY, LANDMARKS,
+    URDU_AREAS_BY_CITY, AREA_ANCESTORS, normalize_urdu,
 )
 
 logger = logging.getLogger("zameenrentals")
@@ -66,6 +67,8 @@ _AREA_NOISE = frozenset({
     'marla', 'kanal', 'hazar', 'hazaar', 'lac', 'lakh', 'lacs', 'crore',
     'gaz', 'gaj', 'guz', 'gajj', 'yard', 'yards', 'sqyd', 'sq', 'square',
     'near', 'thousand', 'to', 'or', 'and', 'aur', 'ya', 'the', 'with', 'wala', 'wali',
+    'میں', 'کا', 'کی', 'کے', 'گھر', 'فلیٹ', 'کمرہ', 'کمرے', 'پورشن', 'تک', 'سے', 'والا',
+    'چاہیے', 'کرائے', 'پر', 'پاس', 'یا', 'اور', 'بیڈ', 'سستا', 'نیا',
 })
 
 
@@ -141,7 +144,8 @@ _NUMBER_WORDS = {
 _FRACTION_WORDS = {"dedh": 1.5, "derh": 1.5, "ڈیڑھ": 1.5, "dhai": 2.5, "adhai": 2.5, "ڈھائی": 2.5}
 # Modifiers before a number word: sade teen = 3.5, sawa do = 2.25.
 _NUMBER_MODIFIERS = {"sade": 0.5, "saade": 0.5, "ساڑھے": 0.5, "sawa": 0.25, "سوا": 0.25}
-_URDU_UNITS = {"ہزار": "hazar", "لاکھ": "lakh", "کروڑ": "crore"}
+_URDU_UNITS = {"ہزار": "hazar", "لاکھ": "lakh", "کروڑ": "crore",
+               "مرلہ": "marla", "مرلے": "marla", "کنال": "kanal"}
 _NUMBER_UNIT = (r"(?:bed(?:room)?s?|br|bhk|kamr\w*|rooms?|hazar|hazaar|thousand|k\b|"
                 r"lakh|lac|lacs|laakh|crore|cr\b|marla|kanal|بیڈ|کمر\w*|مرلہ|کنال)")
 _DIGIT_TABLE = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
@@ -152,8 +156,11 @@ def _format_number(value):
 
 
 def _normalize_number_words(text: str) -> str:
-    """Rewrite spoken numbers as digits when a unit follows ("do bed" -> "2 bed")."""
-    text = text.translate(_DIGIT_TABLE)
+    """Rewrite spoken numbers as digits when a unit follows ("do bed" -> "2 bed").
+
+    Also normalises Urdu spelling variants first, so every caller compares one form.
+    """
+    text = normalize_urdu(text).translate(_DIGIT_TABLE)
     for urdu, roman in _URDU_UNITS.items():
         text = text.replace(urdu, f" {roman} ")
     words = "|".join(re.escape(w) for w in sorted(_NUMBER_WORDS, key=len, reverse=True))
@@ -290,7 +297,7 @@ def parse_natural_query(query: str, city: str = "lahore") -> dict:
     # so "clifton block 5" beats the shorter alias "clifton".
     spans = _area_spans(q.lower(), city)
     if spans:
-        area, ambiguous, others = _choose_mention(q.lower(), spans)
+        area, ambiguous, others = _choose_mention(q.lower(), spans, city)
         result['area'] = area
         # "clifton dha flat": two areas, nothing says which; keep one but flag it.
         # ("X or Y" is handled below as a multi-area search instead.)
@@ -341,12 +348,27 @@ _LANDMARK_AFTER_RE = re.compile(
 _PROXIMITY_BEFORE_RE = re.compile(r"(?:near|nazdeek|paas|qareeb)\s*$")
 
 
-def _choose_mention(text, spans):
+def _drop_ancestors(spans, city):
+    """Drop mentions of an area that contains another mentioned area.
+
+    "north karachi buffer zone": North Buffer Zone is inside North Karachi,
+    so the specific area is meant, not a choice between two.
+    """
+    names = {name for _, _, name in spans}
+    ancestors = AREA_ANCESTORS.get(city, {})
+    covered = set().union(*(ancestors.get(n, set()) for n in names)) if names else set()
+    kept = [span for span in spans if span[2] not in covered]
+    return kept or spans
+
+
+def _choose_mention(text, spans, city=None):
     """Pick the area the user means among literal mentions.
 
     Returns (area, ambiguous, others): ``ambiguous`` is True when no mention
     clearly wins; ``others`` is the text of the mentions not chosen.
     """
+    if city:
+        spans = _drop_ancestors(spans, city)
     best = {}
     for start, end, name in spans:
         score = 0
@@ -403,10 +425,9 @@ def _area_spans(text, city):
             continue
         for m in re.finditer(r'\b' + re.escape(nl) + r'\b', text):
             spans.append((m.start(), m.end(), name))
-    if city == "karachi":
-        for ur_area, en_area in URDU_AREAS.items():
-            for m in re.finditer(re.escape(ur_area), text):
-                spans.append((m.start(), m.end(), en_area))
+    for ur_area, en_area in URDU_AREAS_BY_CITY.get(city, {}).items():
+        for m in re.finditer(r"(?<!\w)" + re.escape(ur_area) + r"(?!\w)", text):
+            spans.append((m.start(), m.end(), en_area))
     # "askari 5 marla": the 5 is a size, so the area is Askari, not Askari 5.
     spans = [
         (start, end, name) for start, end, name in spans
@@ -426,10 +447,11 @@ def match_area(query, city="lahore"):
     q = query.strip()
     if not q:
         return None
-    # 1. Exact Urdu match (Karachi only for now)
+    q = normalize_urdu(q)
+    # 1. Exact Urdu match (every city; names generated from Zameen + hand-written)
+    if q in URDU_AREAS_BY_CITY.get(city, {}):
+        return URDU_AREAS_BY_CITY[city][q]
     if city == "karachi":
-        for ur, en in URDU_AREAS.items():
-            if ur == q: return en
         # 2. Fuzzy Urdu match
         for ur, en in URDU_AREAS.items():
             if q in ur or ur in q: return en
@@ -688,7 +710,7 @@ def _reconcile_ai_area(query: str, result: dict, city: str) -> dict:
         result["areas"] = joined
         result["area"] = joined[0]
         return result
-    spans = _area_spans(text, city)
+    spans = _drop_ancestors(_area_spans(text, city), city)
     names = list(dict.fromkeys(name for _, _, name in spans))
     if not names:
         return result  # nothing named literally: the model's resolution stands
@@ -696,7 +718,7 @@ def _reconcile_ai_area(query: str, result: dict, city: str) -> dict:
     if len(names) == 1:
         result["area"] = names[0]
         return result
-    chosen, ambiguous, others = _choose_mention(text, spans)
+    chosen, ambiguous, others = _choose_mention(text, spans, city)
     if ai_area == chosen and not ambiguous:
         return result
     # Several mentions and the model disagrees (or nothing clearly wins):
