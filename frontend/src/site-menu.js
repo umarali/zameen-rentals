@@ -3,6 +3,8 @@ const PAGES = {
   about: { path: '/about', title: 'About ZameenRentals' },
   pricing: { path: '/pricing', title: 'Pricing' },
   faq: { path: '/faq', title: 'A few useful answers' },
+  privacy: { path: '/privacy', title: 'Privacy policy' },
+  terms: { path: '/terms', title: 'Terms of use' },
 };
 
 export function initSiteMenu({ onHelp }) {
