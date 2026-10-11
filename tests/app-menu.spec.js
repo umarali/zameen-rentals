@@ -35,7 +35,7 @@ test('information keeps the search intact and restores focus', async ({ page }, 
   await topic(page, 'Pricing');
   const dialog = page.getByRole('dialog', { name:'Pricing', exact:true });
   await expect(dialog).toContainText('Rs 0');
-  await expect(dialog).toContainText("Paid access and the trial aren't available yet");
+  await expect(dialog).toContainText('Pay once. Nothing renews.');
   expect(page.url()).toBe(url);
   await expect(dialog.locator('[data-info-close]')).toBeFocused();
   for (let i=0;i<5;i++) {
@@ -97,7 +97,7 @@ test('closing a pending request cannot replace the next topic', async ({ page })
   await expect(page.locator('#siteInfoDialog')).not.toContainText('Stale pricing response');
 });
 
-for (const path of ['/about','/pricing','/faq']) {
+for (const path of ['/about','/pricing','/faq','/privacy','/terms']) {
   test(`${path} works without JavaScript and links back to search`, async ({ browser, baseURL }, testInfo) => {
     const context = await browser.newContext({ javaScriptEnabled:false, viewport:testInfo.project.use.viewport });
     const page = await context.newPage();
