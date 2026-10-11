@@ -88,3 +88,10 @@ uvicorn main:app --reload --port 8000
 - No build tools — frontend is a single HTML file
 - Deployed on Heroku (Procfile)
 - SQLite database in `data/zameenrentals.db` for search history
+
+## Agent skills and review format
+
+- Anything presented to Umar for review must have HTML as the primary deliverable. Use the globally installed `html-review` skill; keep Markdown and data only as supporting sources unless he asks for another format.
+- Read `docs/agents/working-agreement.md` for this project's evidence, verification and skill-routing conventions.
+- Planning defaults to local files. See `docs/agents/issue-tracker.md`; domain conventions are in `docs/agents/domain.md`.
+- The selected Matt Pocock and Lauren Tan PStack skills are local Codex adaptations pinned in `docs/agents/skills-lock.json`. Use the relevant skill only; installation does not grant publication or deployment authority.

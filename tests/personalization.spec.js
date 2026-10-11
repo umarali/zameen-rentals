@@ -232,7 +232,7 @@ test.describe("Card actions", () => {
     const before = await favBtn.getAttribute("aria-pressed");
     await favBtn.click();
     // Toast confirmation.
-    await expect(page.locator("#toastStack")).toContainText(/Saved to favorites|Removed from favorites/);
+    await expect(page.locator("#toastStack")).toContainText(/Home saved|Removed from saved homes/);
     // After click, aria-pressed should have flipped.
     await expect(favBtn).not.toHaveAttribute("aria-pressed", before || "false");
   });

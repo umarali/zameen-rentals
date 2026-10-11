@@ -177,10 +177,10 @@ test.describe("Image Carousel", () => {
     await page.goto("/");
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
     const srcEl = page.locator("#dataSource");
-    // Can be "Instant", "Instant / Nearest first", "Instant / Nearby", "Live", "Local only"
+    // Shows ranking or attribution, without claiming that availability is live.
     const text = await srcEl.textContent();
     if (text && text.trim()) {
-      expect(text.trim()).toMatch(/^(Instant|Live|Local only)/);
+      expect(text.trim()).toMatch(/^(Newest first|Nearest first|Nearby|Lowest price|Highest price|Zameen.com|Source unavailable)/);
     }
   });
 });

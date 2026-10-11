@@ -20,17 +20,17 @@ function buildSteps() {
   const steps = [
     { element: '#nlInput', popover: {
       title: 'Search in plain words',
-      description: 'Type what you want — “2 bed flat DHA under 50k” or “DHA mein 2 bed flat 50k tak”. We pull out the area, type, beds and budget for you.',
+      description: 'Describe your rental in English or Roman Urdu. Try "2 bed flat DHA under 50k". Check the area, type, beds and budget we found.',
       side: 'bottom', align: 'start',
     } },
     { element: '#cityTabs', popover: {
       title: 'Pick your city',
-      description: 'Switch between Lahore, Karachi and Islamabad. Each city reloads its areas and re-centres the map.',
+      description: 'Choose Lahore, Karachi or Islamabad to see rentals in that city.',
       side: 'bottom', align: 'start',
     } },
     { element: '#filterBar', popover: {
       title: 'Refine with filters',
-      description: 'Narrow by area, type, beds and price — or tap Near Me to search around your location.',
+      description: 'Filter by area, type, beds and price. Use Near me to search around your location.',
       side: 'bottom', align: 'start',
     } },
   ];
@@ -39,13 +39,13 @@ function buildSteps() {
   const compareBtn = document.querySelector(COMPARE_SEL);
   if (compareBtn) steps.push({ element: compareBtn, popover: {
     title: 'Compare homes side by side',
-    description: 'Tap the compare icon on any listing to add it to your tray, then see up to four homes in one table — best value per marla, distance, freshness and more.',
+    description: 'Add up to four homes to compare rent, size, distance and listing dates side by side.',
     side: 'left', align: 'start',
   } });
 
   steps.push({ element: '#alertsBellBtn', popover: {
     title: 'Save homes & get alerts',
-    description: 'Open “My rentals” for your saved favourites, recently viewed listings, and alerts when new matches appear.',
+    description: 'Open My rentals for saved homes, recently viewed listings and new matches for your saved searches.',
     side: 'bottom', align: 'end',
   } });
 
@@ -53,7 +53,7 @@ function buildSteps() {
   const mapSel = isDesktop() ? '#mapPanel' : '#mapFab';
   if (document.querySelector(mapSel)) steps.push({ element: mapSel, popover: {
     title: 'Explore on the map',
-    description: 'Browse by neighbourhood — green dots are areas with listings, red pins are exact addresses.',
+    description: 'Green dots show areas with listings. Red pins show locations supplied with listings. Confirm the address before visiting.',
     side: isDesktop() ? 'left' : 'top', align: isDesktop() ? 'center' : 'end',
   } });
 

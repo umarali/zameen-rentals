@@ -123,7 +123,7 @@ test('Near Me outside the three cities explains instead of searching', async ({ 
   await page.goto('/?city=karachi');
   await expect(page.locator('.card-wrap').first()).toBeVisible();
   await page.locator('#nearbyChip').click();
-  await expect(page.getByText(/Near Me covers Karachi, Lahore and Islamabad/)).toBeVisible();
+  await expect(page.getByText(/Near me covers Karachi, Lahore and Islamabad/)).toBeVisible();
   await expect(page.locator('.city-tab[data-city="karachi"]')).toHaveClass(/active/);
   await expect(page.locator('#nearbyChip')).not.toHaveClass(/has-value/);
   expect(nearbyCalls).toBe(0);

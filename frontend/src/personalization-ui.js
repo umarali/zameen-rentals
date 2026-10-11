@@ -357,7 +357,7 @@ function renderAlertCard(alert, matches) {
           </li>
         `).join('')}
       </ul>`
-    : '<div class="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">No matches yet — we\'re watching.</div>';
+    : '<div class="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">No matches yet. We\'ll check for new listings.</div>';
   return `
     <li class="border border-gray-200 rounded-xl p-4 bg-white" data-alert-id="${alert.id}">
       <div class="flex items-start justify-between gap-3">
@@ -407,7 +407,7 @@ async function enablePushClick() {
   } else if (result.status === 'denied') {
     showToast('Push notifications denied.', { tone: 'error' });
   } else {
-    showToast('Could not enable push notifications.', { tone: 'error' });
+    showToast('Could not enable device notifications.', { tone: 'error' });
   }
   switchTab('alerts');
 }
@@ -415,10 +415,10 @@ async function enablePushClick() {
 async function testPushClick() {
   try {
     const result = await pers.sendTestPush();
-    if (result?.sent) showToast(`Test push sent to ${result.sent} device(s).`);
-    else showToast('No push subscriptions found.', { tone: 'error' });
+    if (result?.sent) showToast(`Test notification sent to ${result.sent} ${result.sent === 1 ? 'device' : 'devices'}.`);
+    else showToast('Device notifications are not set up in this browser.', { tone: 'error' });
   } catch (err) {
-    showToast(err.message || 'Test push failed', { tone: 'error' });
+    showToast(err.message || 'Test notification failed', { tone: 'error' });
   }
 }
 
@@ -437,7 +437,7 @@ async function disablePushClick() {
 async function renderFavoritesTab(body) {
   const items = await pers.listFavorites(100);
   if (!items.length) {
-    body.innerHTML = emptyState('No saved listings yet', 'Tap the heart on any listing to save it for later.');
+    body.innerHTML = emptyState('No saved homes yet', 'Tap the heart on any listing to save it for later.');
     return;
   }
   body.innerHTML = `
@@ -514,7 +514,7 @@ function wireListingItemListeners(body, { unhide = false } = {}) {
       try {
         if (action === 'remove-favorite') {
           await pers.removeFavorite(id);
-          showToast('Removed from favorites.');
+          showToast('Removed from saved homes.');
           switchTab('favorites');
         } else if (action === 'unhide') {
           await pers.removeHidden(id);

@@ -99,8 +99,8 @@ async function hydrateLocalListingTotals(cities = Object.keys(CITY_DEFAULTS)) {
   return refs.localListingTotals;
 }
 
-// Honest "data freshness + build" line in the footer. Uses newest_listing
-// (the freshest listing's source date) — NOT a "live" claim — plus the app
+// Listing-date and build line. newest_listing uses source dates with a
+// first-seen fallback. It does not confirm availability. Also shows the app
 // version from /api/health. Softens into a caveat when the data is stale.
 let _appVersion = '';
 let _appVersionFetched = false;
@@ -120,11 +120,12 @@ async function renderDataStatus() {
     const rel = fmtRelative(newestUtc);
     if (rel) {
       const ageDays = (Date.now() - Date.parse(newestUtc)) / 86400000;
-      parts.push(ageDays > 10 ? `Data last updated ${rel} — listings may have changed` : `Data updated ${rel}`);
+      parts.push(ageDays > 10 ? `Latest recorded date ${rel}. Listings may have changed.` : `Latest recorded date ${rel}`);
     }
   }
   if (_appVersion) parts.push('v' + _appVersion);
   el.textContent = parts.join(' · ');
+  el.title = 'Uses a source date when present, otherwise when first seen. This is not an availability check.';
 }
 
 function hasLocalViewportCoverage(city = S.city) {
@@ -154,13 +155,13 @@ function updateNearbyControls() {
 
   const sortDist = $('#sortDistance');
   if (refs.searchMode === 'nearby') {
-    nearbyChip.innerHTML = `Near Me<span class="chip-clear" data-nearby-clear="1">&times;</span>`;
+    nearbyChip.innerHTML = `Near me<span class="chip-clear" data-nearby-clear="1">&times;</span>`;
     nearbyChip.classList.add('has-value');
     radiusChip.classList.remove('hidden');
     radiusChip.innerHTML = `${refs.nearbyRadiusKm} km <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>`;
     if (sortDist) sortDist.hidden = false;
   } else {
-    nearbyChip.textContent = 'Near Me';
+    nearbyChip.textContent = 'Near me';
     nearbyChip.classList.remove('has-value');
     radiusChip.classList.add('hidden');
     if (sortDist) {
@@ -477,15 +478,15 @@ function updateHeader({
       : !S.sort
       ? 'Newest first'
       : '';
-    sourceEl.textContent = rankingLabel ? `Instant / ${rankingLabel}` : 'Instant';
+    sourceEl.textContent = rankingLabel || 'Zameen.com';
     sourceEl.className = 'text-xs text-brand-500 font-medium';
     sourceEl.classList.remove('hidden');
   } else if (source === 'live') {
-    sourceEl.textContent = 'Live';
+    sourceEl.textContent = 'Zameen.com';
     sourceEl.className = 'text-xs text-amber-500 font-medium';
     sourceEl.classList.remove('hidden');
   } else if (source === 'unavailable') {
-    sourceEl.textContent = 'No live results';
+    sourceEl.textContent = 'Source unavailable';
     sourceEl.className = 'text-xs text-gray-400 font-medium';
     sourceEl.classList.remove('hidden');
   } else {
@@ -1055,7 +1056,7 @@ function renderUnderstood({ approxQuery = '', approxArea = '' } = {}) {
   const chips = understoodChips();
   if (!chips.some(c => c.removable) && !approxQuery) { hideUnderstood(); return; }
   const approxHtml = approxQuery
-    ? `<span class="inline-flex items-center text-amber-600 ml-1">No exact match for “${esc(approxQuery)}” — showing ${esc(approxArea)}</span>`
+    ? `<span class="inline-flex items-center text-amber-600 ml-1">No exact match for &quot;${esc(approxQuery)}&quot;. Showing ${esc(approxArea)}</span>`
     : '';
   box.innerHTML = `<span class="font-semibold text-brand-700 mr-0.5">Understood:</span>${chips.map(understoodChipHtml).join('')}${approxHtml}`;
   box.classList.remove('hidden');
@@ -1259,14 +1260,14 @@ async function handleFavoriteToggle(btn) {
     if (wasFavorited) {
       await personalization.removeFavorite(zid);
       updateFavoriteButton(zid, false);
-      showToast('Removed from favorites');
+      showToast('Removed from saved homes');
     } else {
       await personalization.addFavorite(zid);
       updateFavoriteButton(zid, true);
-      showToast('Saved to favorites');
+      showToast('Home saved');
     }
   } catch (err) {
-    showToast(err?.message || 'Could not update favorite', { tone: 'error' });
+    showToast(err?.message || 'Could not update saved homes', { tone: 'error' });
   }
 }
 
@@ -1276,7 +1277,7 @@ async function handleHide(btn) {
   try {
     await personalization.addHidden(zid);
     removeHiddenResult(zid);
-    showToast('Hidden — it won\'t appear in your results', {
+    showToast('Hidden from your search results', {
       action: { label: 'View hidden', onClick: () => openPersonalizationPanel({ tab: 'hidden' }) },
     });
   } catch (err) {
@@ -1370,7 +1371,7 @@ function initNearbyControls() {
 
     const { city: nearestCity, km } = getNearestCityWithDistance(refs.userLocation);
     if (km > NEAR_ME_MAX_CITY_KM) {
-      showToast(`Near Me covers Karachi, Lahore and Islamabad. You're about ${Math.round(km)} km from ${CITY_DEFAULTS[nearestCity].name}.`,
+      showToast(`Near me covers Karachi, Lahore and Islamabad. You're about ${Math.round(km)} km from ${CITY_DEFAULTS[nearestCity].name}.`,
         { tone: 'warning' });
       return;
     }
@@ -1378,7 +1379,7 @@ function initNearbyControls() {
     refs.searchMode = 'nearby';
     clearTimeout(refs.mapTimer);
     refs.searchController?.abort();
-    // Near Me replaces the previous area, including an area in the same city.
+    // Near me replaces the previous area, including an area in the same city.
     // Keep the user's property, bedroom and budget preferences.
     S.area = '';
     $('#areaInput').value = '';
@@ -1480,7 +1481,7 @@ function initReportBtn() {
       if (!resp.ok) throw new Error();
       trackFeedbackSubmitted({ messageLength: text.length });
       closeFeedback();
-      showToast('Thanks for your feedback!');
+      showToast('Thanks for your feedback.');
     } catch {
       if (!navigator.onLine) {
         queueFeedback(text, context);
@@ -1577,15 +1578,15 @@ async function init() {
         if (wasFav) {
           await personalization.removeFavorite(zid);
           updateFavoriteButton(zid, false);
-          showToast('Removed from favorites');
+          showToast('Removed from saved homes');
         } else {
           await personalization.addFavorite(zid);
           updateFavoriteButton(zid, true);
-          showToast('Saved to favorites');
+          showToast('Home saved');
         }
         return !wasFav;
       } catch (err) {
-        showToast(err?.message || 'Could not update favorite', { tone: 'error' });
+        showToast(err?.message || 'Could not update saved homes', { tone: 'error' });
         return wasFav;
       }
     },
