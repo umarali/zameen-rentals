@@ -398,3 +398,35 @@ def test_whole_city_brief_is_not_an_area_filter(client, fake):
                     headers=H).json()
     assert "area" not in r["understood"]["filters"]
     assert len(r["results"]) == 3 and r["charged"] is True
+
+
+def _fake_sdk(monkeypatch, stop_reason="end_turn", text='{"ok": 1}'):
+    from types import SimpleNamespace as NS
+    usage = NS(input_tokens=1000, output_tokens=100, cache_read_input_tokens=0, cache_creation_input_tokens=0)
+    resp = NS(stop_reason=stop_reason, usage=usage, content=[NS(type="text", text=text)])
+    sent = []
+    client = NS(messages=NS(create=lambda **kw: sent.append(kw) or resp))
+    monkeypatch.setattr(ranking, "_get_client", lambda: client)
+    return sent
+
+
+def test_call_claude_json_records_usage_and_respects_the_daily_budget(monkeypatch):
+    sent = _fake_sdk(monkeypatch)
+    args = dict(feature="t", model="claude-sonnet-5-5", system="s", user="u", schema={"type": "object"},
+                max_tokens=10, effort="low")
+    assert ranking.call_claude_json(**args) == {"ok": 1}
+    assert sent[0]["output_config"] == {"format": {"type": "json_schema", "schema": {"type": "object"}},
+                                        "effort": "low"}
+    assert ranking.ai_spend_today() == pytest.approx(0.003)
+    monkeypatch.setattr(ranking, "AI_DAILY_BUDGET_USD", 0.003)
+    with pytest.raises(ranking.RankingError):
+        ranking.call_claude_json(**args)
+    assert len(sent) == 1
+
+
+@pytest.mark.parametrize("stop,text", [("refusal", "{}"), ("max_tokens", '{"ok"'), ("end_turn", "not json")])
+def test_call_claude_json_rejects_unusable_replies(monkeypatch, stop, text):
+    _fake_sdk(monkeypatch, stop_reason=stop, text=text)
+    with pytest.raises(ranking.RankingError):
+        ranking.call_claude_json(feature="t", model="claude-sonnet-5-5", system="s", user="u",
+                                 schema={}, max_tokens=10)

@@ -101,8 +101,15 @@ def _get_client():
 
 
 def _usage_db():
-    from app.database import _get_conn
-    conn = _get_conn()
+    """A short-lived connection of our own.
+
+    Paid work runs in a worker thread (asyncio.to_thread); the app's shared
+    connection is also used by the event loop thread, and a commit here could
+    land inside one of its transactions. A separate connection keeps them apart.
+    """
+    import sqlite3
+    from app import database
+    conn = sqlite3.connect(str(database._DB_PATH), timeout=5)
     conn.execute("""CREATE TABLE IF NOT EXISTS ai_usage_daily (
         day TEXT NOT NULL, feature TEXT NOT NULL, calls INTEGER NOT NULL DEFAULT 0,
         input_tokens INTEGER NOT NULL DEFAULT 0, output_tokens INTEGER NOT NULL DEFAULT 0,
@@ -115,24 +122,31 @@ def _utc_day():
 
 
 def ai_spend_today() -> float:
-    row = _usage_db().execute(
-        "SELECT COALESCE(SUM(cost_usd), 0) FROM ai_usage_daily WHERE day = ?", (_utc_day(),)
-    ).fetchone()
-    return float(row[0])
+    conn = _usage_db()
+    try:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(cost_usd), 0) FROM ai_usage_daily WHERE day = ?", (_utc_day(),)
+        ).fetchone()
+        return float(row[0])
+    finally:
+        conn.close()
 
 
 def _record_usage(feature, usage, cost):
-    conn = _usage_db()
     inp = (getattr(usage, "input_tokens", 0) or 0) + (getattr(usage, "cache_read_input_tokens", 0) or 0) \
         + (getattr(usage, "cache_creation_input_tokens", 0) or 0)
-    conn.execute("""INSERT INTO ai_usage_daily (day, feature, calls, input_tokens, output_tokens, cost_usd)
-                    VALUES (?, ?, 1, ?, ?, ?)
-                    ON CONFLICT(day, feature) DO UPDATE SET calls = calls + 1,
-                        input_tokens = input_tokens + excluded.input_tokens,
-                        output_tokens = output_tokens + excluded.output_tokens,
-                        cost_usd = cost_usd + excluded.cost_usd""",
-                 (_utc_day(), feature, inp, getattr(usage, "output_tokens", 0) or 0, cost or 0.0))
-    conn.commit()
+    conn = _usage_db()
+    try:
+        with conn:
+            conn.execute("""INSERT INTO ai_usage_daily (day, feature, calls, input_tokens, output_tokens, cost_usd)
+                            VALUES (?, ?, 1, ?, ?, ?)
+                            ON CONFLICT(day, feature) DO UPDATE SET calls = calls + 1,
+                                input_tokens = input_tokens + excluded.input_tokens,
+                                output_tokens = output_tokens + excluded.output_tokens,
+                                cost_usd = cost_usd + excluded.cost_usd""",
+                         (_utc_day(), feature, inp, getattr(usage, "output_tokens", 0) or 0, cost or 0.0))
+    finally:
+        conn.close()
 
 
 def call_cost(model, usage):
