@@ -59,6 +59,8 @@ from app.routes_credits import router as credits_router  # noqa: E402
 app.include_router(credits_router)
 from app.routes_ai import router as ai_router  # noqa: E402
 app.include_router(ai_router)
+from app.routes_alerts_paid import router as alerts_paid_router  # noqa: E402
+app.include_router(alerts_paid_router)
 
 # Serve static files (favicon, etc.) — mounted AFTER routes so / still serves index.html
 _static_dir = Path(__file__).resolve().parent.parent / "static"

@@ -136,6 +136,10 @@ def init_personalization_schema():
         conn.execute(
             "DELETE FROM alert_matches WHERE alert_id NOT IN (SELECT id FROM alerts)"
         )
+    # Paid alert upgrades (and the credit ledger they charge). Imported here so
+    # the crawler process, which only calls this function, has the tables too.
+    from app.alert_upgrades import init_alert_upgrades_schema
+    init_alert_upgrades_schema(conn)
 
 
 # ── Client identity ──────────────────────────────────────────────────────────
@@ -408,6 +412,9 @@ def delete_alert(client_id: str, alert_id: int) -> bool:
         "DELETE FROM alerts WHERE id = ? AND client_id = ?",
         (alert_id, client_id),
     )
+    if cur.rowcount > 0:
+        from app.alert_upgrades import delete_for_alert
+        delete_for_alert(conn, alert_id)
     conn.commit()
     return cur.rowcount > 0
 
