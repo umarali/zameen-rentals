@@ -1169,6 +1169,9 @@ function initCityTabs() {
     $('#customSize').classList.add('hidden'); $('#sizeMin').value = ''; $('#sizeMax').value = '';
     setToggle(false); $('#sortSelect').value = '';
     updateCityTabs(); updateChips(); updateNlExamples(); updateNearbyControls();
+    // Persist now: loadCityData awaits two fetches before the search saves state,
+    // so a quick reload would otherwise restore the previous city.
+    saveSearch();
     refs._lastTriggeredBy = 'city_change';
     loadCityData();
   }));
