@@ -71,6 +71,15 @@ async def understand_brief(brief: str, city: str) -> tuple[dict, str]:
     if hint in CITIES:
         city = hint
     filters = {k: parsed[k] for k in FILTER_KEYS if parsed.get(k) not in (None, "", [])}
+    # "Anywhere in Lahore" parses to the city's own entry in the area list,
+    # which no listing carries as its area. The whole city is no area filter.
+    city_name = CITIES[city]["name"]
+    if filters.get("area") == city_name:
+        filters.pop("area")
+    if filters.get("areas"):
+        filters["areas"] = [a for a in filters["areas"] if a != city_name]
+        if not filters["areas"]:
+            filters.pop("areas")
     if filters.get("property_type") and filters["property_type"].lower() not in PROPERTY_TYPES:
         filters.pop("property_type")
     return filters, city

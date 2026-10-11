@@ -380,3 +380,21 @@ def test_number_guard():
     allowed = report._numbers("Median rent: PKR 70,000; 12 homes; 15%")
     assert report._guard("PKR 70,000 for 12 homes, up 15%, 2 bed", allowed)
     assert not report._guard("PKR 71,000", allowed)
+
+
+def test_weekly_average_needs_four_weeks_of_index_history():
+    add_listing(4000, first_seen="2099-01-01T00:00:00")
+    crit = {"city": "lahore", "area": "Gulberg"}
+    young = report.stats_for(crit)
+    assert "first_seen_per_week_4wk" not in young
+    assert not any("per week" in f for f in report.facts_for(young))
+    add_listing(4001, first_seen="2020-01-01T00:00:00")
+    assert "first_seen_per_week_4wk" in report.stats_for(crit)
+
+
+def test_whole_city_brief_is_not_an_area_filter(client, fake):
+    seed(3, area="Model Town")
+    r = client.post("/api/ai/tailored", json={"brief": "flat anywhere in Lahore under 1.2 lakh", "city": "lahore"},
+                    headers=H).json()
+    assert "area" not in r["understood"]["filters"]
+    assert len(r["results"]) == 3 and r["charged"] is True

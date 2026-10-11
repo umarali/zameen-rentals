@@ -228,7 +228,12 @@ def stats_for(criteria: dict, *, favorites=(), now=None) -> dict:
     week = (now - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
     seen = [str(r["first_seen_at"]).replace("T", " ") for r in rows if r["first_seen_at"]]
     out["first_seen_last_7_days"] = sum(1 for s in seen if s >= week)
-    out["first_seen_per_week_4wk"] = round(sum(1 for s in seen if s >= cutoff) / 4, 1)
+    # A 4-week average only means something once the index has covered the
+    # city for 4 weeks; before that every listing looks new.
+    oldest = _get_conn().execute(
+        "SELECT MIN(first_seen_at) FROM listings WHERE city = ?", (city,)).fetchone()[0]
+    if oldest and str(oldest).replace("T", " ") < cutoff:
+        out["first_seen_per_week_4wk"] = round(sum(1 for s in seen if s >= cutoff) / 4, 1)
 
     # Budget what-ifs.
     if criteria.get("price_max"):
@@ -308,8 +313,9 @@ def facts_for(stats: dict) -> list[str]:
         f.append(f"Median rent per marla: {pkr(stats['rent_per_marla_median'])}")
     if "size_marla_median" in stats:
         f.append(f"Median size: {stats['size_marla_median']:g} marla")
-    f.append(f"New matching listings first seen by ZameenRentals: {stats['first_seen_last_7_days']} in the last 7 days, "
-             f"{stats['first_seen_per_week_4wk']:g} per week over the last 4 weeks")
+    f.append(f"New matching listings first seen by ZameenRentals in the last 7 days: {stats['first_seen_last_7_days']}")
+    if "first_seen_per_week_4wk" in stats:
+        f.append(f"Average new matching listings per week over the last 4 weeks: {stats['first_seen_per_week_4wk']:g}")
     for s in stats.get("budget_steps", []):
         f.append(f"With a budget {s['pct']}% higher ({pkr(s['budget'])}): {s['matching']} homes")
     if "budget_to_double" in stats:
