@@ -595,8 +595,16 @@ def handle_webhook(provider_name_: str, headers: dict, raw_body: bytes) -> dict 
     return apply_confirmation(provider, conf)
 
 
-def refresh_payment(payment: dict, provider: Provider | None = None) -> dict:
-    """For a pending payment: ask the provider (throttled), then expire if stale."""
+async def refresh_payment(payment: dict) -> dict:
+    """For a pending payment: ask the provider (throttled), then expire if stale.
+
+    Only the provider's network call runs in a worker thread. Every database
+    read and write stays on the caller's (event loop) thread, because the app
+    shares one SQLite connection and restore() relies on its transaction not
+    being interleaved with writes from another thread.
+    """
+    from fastapi.concurrency import run_in_threadpool
+
     if payment["status"] != "pending":
         return payment
     now = _now()
@@ -604,14 +612,14 @@ def refresh_payment(payment: dict, provider: Provider | None = None) -> dict:
     due = not last or now - datetime.strptime(last, "%Y-%m-%d %H:%M:%S") >= LOOKUP_MIN_INTERVAL
     if due and payment.get("provider_ref"):
         try:
-            provider = provider or get_provider(payment["provider"])
+            provider = get_provider(payment["provider"])
             conn = _get_conn()
             with conn:
                 conn.execute("UPDATE payments SET last_checked_at = ? WHERE id = ?", (_ts(now), payment["id"]))
-            conf = provider.lookup(payment)
+            conf = await run_in_threadpool(provider.lookup, dict(payment))
             if conf is not None:
                 conf.provider_ref = conf.provider_ref or payment["provider_ref"]
-                payment = apply_confirmation(provider, conf) or payment
+                payment = apply_confirmation(provider, conf) or get_payment(payment["id"])
         except PaymentsUnavailable:
             pass
         except Exception:

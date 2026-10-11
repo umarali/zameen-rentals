@@ -100,7 +100,8 @@ async def credits_checkout(request: Request):
 async def payments_webhook(request: Request, provider_name: str):
     raw = await request.body()
     try:
-        await run_in_threadpool(payments.handle_webhook, provider_name, dict(request.headers), raw)
+        # Verification is CPU-only; keep the database work on this thread.
+        payments.handle_webhook(provider_name, dict(request.headers), raw)
     except payments.PaymentsUnavailable:
         raise HTTPException(status_code=404, detail="Not found")
     except payments.InvalidSignature:
@@ -117,7 +118,7 @@ async def payment_status(request: Request, payment_id: str):
     payment = payments.get_payment(payment_id)
     if not payment or payment["client_id"] != client_id:
         raise HTTPException(status_code=404, detail="Payment not found")
-    payment = await run_in_threadpool(payments.refresh_payment, payment)
+    payment = await payments.refresh_payment(payment)
     result = {**payments.public_payment(payment), "balance": credits.balance(client_id)}
     if payment["status"] == "paid" and not payments.has_restore_code(client_id):
         # Shown once. Only its hash is stored.
