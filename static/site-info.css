@@ -1,0 +1,36 @@
+/* Shared information content, also imported by the app's optional dialog. */
+.site-info-body, .site-info-content { color:#374151; font-size:14px; line-height:1.65; }
+.site-info-body p, .site-info-content p { margin:0 0 18px; }
+.site-info-body h2, .site-info-content h2 { margin:0 0 12px; font-size:18px; line-height:1.4; font-weight:600; color:#111827; letter-spacing:-.025em; }
+.site-info-body .info-intro, .site-info-content .info-intro { color:#111827; font-size:21px; font-weight:500; line-height:1.45; letter-spacing:-.025em; }
+.source-list { margin:26px 0; }
+.source-list > div { display:flex; justify-content:space-between; gap:16px; padding:11px 0; border-bottom:1px solid #f0f2f4; }
+.source-list dt { color:#6b7280; }
+.source-list dd { margin:0; font-weight:500; text-align:right; color:#111827; }
+.site-info-body .info-note, .site-info-content .info-note { color:#6b7280; font-size:12px; line-height:1.7; margin-bottom:0; }
+.free-plan { padding:20px; border-radius:12px; background:#eef8f4; }
+.plan-heading { display:flex; justify-content:space-between; align-items:baseline; gap:16px; }
+.plan-heading .plan-price { font-size:26px; font-weight:600; color:#0c4735; letter-spacing:-.04em; }
+.site-info-body .plan-heading h2, .site-info-content .plan-heading h2 { font-size:20px; color:#0c4735; margin:0; }
+.free-plan p { color:#0f654a; }
+.plan-features { list-style:none; margin:0; padding:0; font-size:13px; }
+.plan-features li { padding:3px 0; }
+.plan-features li::before { content:'✓'; color:#127b5a; margin-right:10px; }
+.future-plan { padding-top:28px; }
+.site-info-body .info-label, .site-info-content .info-label { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#6b7280; margin-bottom:10px; }
+.future-features { list-style:none; padding:0; margin:18px 0; }
+.future-features li { margin:14px 0; }
+.future-features strong { display:block; color:#374151; font-weight:500; }
+.future-features span { font-size:13px; color:#6b7280; }
+.info-faq details { border-bottom:1px solid #e5e7eb; }
+.info-faq summary { padding:17px 0; cursor:pointer; font-weight:500; color:#111827; }
+.info-faq details:first-child summary { padding-top:4px; }
+.info-faq summary::marker { color:#127b5a; }
+.info-faq details p { font-size:13px; padding:0 0 2px 16px; }
+.site-info-body a, .site-info-content a { color:#0f654a; text-decoration:underline; text-underline-offset:3px; }
+.site-info-body :focus-visible, .site-info-content :focus-visible { outline:2px solid #127b5a; outline-offset:4px; }
+/* These rules only apply to the direct-link public pages. */
+body.info-site { margin:0; color:#111827; background:white; font:15px/1.65 'Inter',system-ui,-apple-system,sans-serif; }
+body.info-site * { box-sizing:border-box; } .info-site .shell { max-width:1000px; margin:auto; padding:0 24px; } .info-site .header { border-bottom:1px solid #e5e7eb; } .info-site .header .shell { display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:72px; } .info-site .brand { display:flex; align-items:center; gap:10px; font-size:19px; font-weight:700; letter-spacing:-.04em; color:#111827; text-decoration:none; } .info-site .brand em { color:#127b5a; font-style:normal; } .info-site .header nav, .info-site .footer nav { display:flex; flex-wrap:wrap; gap:20px; font-size:13px; } .info-site .header nav a, .info-site .footer a { color:#4b5563; text-decoration:none; } .info-site .header nav a[aria-current] { color:#0f654a; } .info-site .info-page { max-width:568px; padding-top:48px; padding-bottom:40px; } .info-site .info-page h1 { font-size:26px; line-height:1.3; letter-spacing:-.035em; margin:0 0 30px; } .info-site .return-search { display:inline-flex; gap:10px; align-items:center; color:#0f654a; text-decoration:none; font-size:13px; font-weight:600; margin-top:30px; } .info-site .footer { border-top:1px solid #e5e7eb; padding:28px 0; color:#6b7280; font-size:12px; } .info-site .footer p { margin:12px 0 0; } .info-site .skip { position:absolute; top:-100px; background:#fff; padding:10px; } .info-site .skip:focus { top:0; } .info-site .header a:focus-visible, .info-site .footer a:focus-visible, .info-site .return-search:focus-visible { outline:2px solid #127b5a; outline-offset:4px; }
+@media(max-width:600px) { .info-site .header .shell { flex-wrap:wrap; padding-block:16px; gap:12px; } .info-site .header nav { width:100%; } .info-site .info-page { padding-top:32px; } }
+@media print { .info-site .header nav, .info-site .footer nav, .info-site .skip, .info-site .return-search { display:none; } .info-site .info-page { max-width:none; padding-top:20px; }.info-faq details::details-content { display:block; }.free-plan { border:1px solid #ddd; } }

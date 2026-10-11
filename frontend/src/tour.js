@@ -1,9 +1,4 @@
-/** First-run guided tour (Driver.js, MIT).
- *
- *  Spotlights the core features once per visitor and is re-launchable from the
- *  help modal. Coordinates with welcome.js: it runs on first visit, and on
- *  finish/skip hands back to the lightweight intent strip via `onDone`.
- */
+/** On-demand guided tour, launched from Search tips. */
 
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
@@ -57,9 +52,9 @@ function buildSteps() {
     side: isDesktop() ? 'left' : 'top', align: isDesktop() ? 'center' : 'end',
   } });
 
-  steps.push({ element: '#welcomeBtn', popover: {
+  steps.push({ element: '#siteMenuBtn', popover: {
     title: 'Help is always here',
-    description: 'Tap the help button anytime to reopen tips, search examples and this tour.',
+    description: 'Open the menu and choose Search tips for examples and this tour.',
     side: 'bottom', align: 'start',
   } });
 

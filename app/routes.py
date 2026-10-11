@@ -1123,7 +1123,11 @@ async def push_test(request: Request):
     return {"sent": sent, "total": len(subs)}
 
 
+_PUBLIC_PAGES = {"about": "about.html", "pricing": "pricing.html", "faq": "faq.html"}
+
 _ROOT_STATIC_FILES = {
+    "robots.txt": "text/plain",
+    "sitemap.xml": "application/xml",
     "sw.js": "application/javascript",
     "offline.html": "text/html",
     "site.webmanifest": "application/manifest+json",
@@ -1148,6 +1152,11 @@ async def serve_root_static(filename: str):
     pages it controls — registering /sw.js at scope '/' requires the file
     itself to be at /sw.js, not /static/sw.js.
     """
+    if filename in _PUBLIC_PAGES:
+        page = _PROJECT_ROOT / "static" / _PUBLIC_PAGES[filename]
+        if not page.is_file():
+            raise HTTPException(status_code=404)
+        return FileResponse(page, media_type="text/html")
     if filename not in _ROOT_STATIC_FILES:
         raise HTTPException(status_code=404)
     path = _PROJECT_ROOT / "static" / filename

@@ -24,7 +24,8 @@ import {
 } from './map.js';
 import { openDrawer, initDrawerListeners } from './drawer.js';
 import { getStoredMapLayer } from './map-layers.js';
-import { initWelcome } from './welcome.js';
+import { initWelcome, showWelcome } from './welcome.js';
+import { initSiteMenu } from './site-menu.js';
 import { initVoiceSearch } from './voice.js';
 import {
   initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen,
@@ -1509,6 +1510,7 @@ async function init() {
   refs._lastTriggeredBy = 'page_load';
   doSearch();
 
+  initSiteMenu({ onHelp: showWelcome });
   initWelcome({
     doSearch,
     doNlSearch,
