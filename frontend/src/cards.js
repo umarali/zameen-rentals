@@ -119,7 +119,7 @@ export function renderCard(item, idx) {
       ${item.location ? `<div class="flex items-center gap-1 text-xs text-gray-500 mb-1 sm:mb-2">${pinIcon('w-3 h-3 shrink-0')}<span class="line-clamp-1">${esc(item.location)}</span></div>` : ''}
       ${distanceLabel ? `<div class="text-xs font-semibold text-brand-600 mb-1 sm:mb-2">${esc(distanceLabel)}</div>` : ''}
       ${badges.length ? `<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">${badges.join('')}</div>` : ''}
-      ${repostCount > 1 ? `<div class="mt-1"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full" title="The same listing was posted ${repostCount} times by agents — showing it once" aria-label="Listed ${repostCount} times">Listed ${repostCount}&times;</span></div>` : ''}
+      ${repostCount > 1 ? `<div class="mt-1"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full" title="${repostCount} similar listings shown as one result" aria-label="${repostCount} similar listings">${repostCount} similar listings</span></div>` : ''}
       ${(() => {
         const addedRel = item.posted_at ? fmtRelative(item.posted_at) : '';
         const addedLine = addedRel ? `Added ${addedRel}` : (item.added || '');
@@ -132,8 +132,8 @@ export function renderCard(item, idx) {
       })()}
       ${item.url ? `<div class="card-action-row pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 border-t border-gray-100">
         <div class="card-action-group">
-          <button data-action="favorite" ${zameenIdAttr} aria-pressed="${favorited ? 'true' : 'false'}" class="action-btn fav-btn w-8 h-8 rounded-full transition-colors ${favorited ? 'text-rose-500 bg-rose-50 hover:bg-rose-100' : 'text-gray-500 hover:text-rose-500 hover:bg-rose-50'}" title="${favorited ? 'Remove from favorites' : 'Save to favorites'}" aria-label="${favorited ? 'Remove from favorites' : 'Save to favorites'}">${favorited ? favIconFilled : favIconHollow}</button>
-          <button data-action="hide" ${zameenIdAttr} class="action-btn hide-btn w-8 h-8 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Hide this listing — it won't show up in your results" aria-label="Hide this listing">${hideIcon}</button>
+          <button data-action="favorite" ${zameenIdAttr} aria-pressed="${favorited ? 'true' : 'false'}" class="action-btn fav-btn w-8 h-8 rounded-full transition-colors ${favorited ? 'text-rose-500 bg-rose-50 hover:bg-rose-100' : 'text-gray-500 hover:text-rose-500 hover:bg-rose-50'}" title="${favorited ? 'Remove from saved homes' : 'Save home'}" aria-label="${favorited ? 'Remove from saved homes' : 'Save home'}">${favorited ? favIconFilled : favIconHollow}</button>
+          <button data-action="hide" ${zameenIdAttr} class="action-btn hide-btn w-8 h-8 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors" title="Hide this listing from your search results" aria-label="Hide this listing">${hideIcon}</button>
           <button data-action="compare" ${zameenIdAttr} aria-pressed="${compared ? 'true' : 'false'}" class="action-btn compare-btn w-8 h-8 rounded-full transition-colors ${compared ? 'text-brand-600 bg-brand-50 hover:bg-brand-100' : 'text-gray-500 hover:text-brand-600 hover:bg-brand-50'}" title="${compared ? 'Remove from compare' : 'Add to compare'}" aria-label="${compared ? 'Remove from compare' : 'Add to compare'}">${compareIcon}</button>
         </div>
         <div class="card-action-group">
@@ -164,7 +164,7 @@ export function updateFavoriteButton(zameenId, favorited) {
   const selector = `.fav-btn[data-zameen-id="${_cssEscape(zameenId)}"]`;
   document.querySelectorAll(selector).forEach(btn => {
     btn.setAttribute('aria-pressed', favorited ? 'true' : 'false');
-    btn.title = favorited ? 'Remove from favorites' : 'Save to favorites';
+    btn.title = favorited ? 'Remove from saved homes' : 'Save home';
     btn.setAttribute('aria-label', btn.title);
     btn.classList.toggle('text-rose-500', favorited);
     btn.classList.toggle('bg-rose-50', favorited);

@@ -130,11 +130,11 @@ export function openDrawer(item, selectAreaFull) {
   const compared = compareHas(zid);
   const drawerActionsHtml = zid ? `
     <div class="flex items-center gap-2 mt-3 -ml-1">
-      <button data-drawer-action="favorite" ${zidAttr} aria-pressed="${favorited ? 'true' : 'false'}" class="drawer-action-btn ${favorited ? 'text-rose-500 bg-rose-50 border-rose-100' : 'text-gray-500 hover:text-rose-500 border-gray-200'}" title="${favorited ? 'Remove from favorites' : 'Save to favorites'}">
+      <button data-drawer-action="favorite" ${zidAttr} aria-pressed="${favorited ? 'true' : 'false'}" class="drawer-action-btn ${favorited ? 'text-rose-500 bg-rose-50 border-rose-100' : 'text-gray-500 hover:text-rose-500 border-gray-200'}" title="${favorited ? 'Remove from saved homes' : 'Save home'}">
         <span class="drawer-action-icon">${favorited ? FAV_FILLED_SVG : FAV_HOLLOW_SVG}</span>
         <span class="text-xs font-semibold">${favorited ? 'Saved' : 'Save'}</span>
       </button>
-      <button data-drawer-action="hide" ${zidAttr} class="drawer-action-btn text-gray-500 hover:text-gray-800 border-gray-200" title="Hide this listing — it won't show up in your future search results">
+      <button data-drawer-action="hide" ${zidAttr} class="drawer-action-btn text-gray-500 hover:text-gray-800 border-gray-200" title="Hide this listing from future search results">
         <span class="drawer-action-icon">${HIDE_SVG}</span>
         <span class="text-xs font-semibold">Hide</span>
       </button>
@@ -322,10 +322,10 @@ async function handleDrawerAction(btn) {
       const currentlyFavorited = isFavorite(zid);
       if (currentlyFavorited) {
         await removeFavorite(zid);
-        showToast('Removed from favorites');
+        showToast('Removed from saved homes');
       } else {
         await addFavorite(zid);
-        showToast('Saved to favorites');
+        showToast('Home saved');
       }
       updateFavoriteButton(zid, !currentlyFavorited);
       // Also flip the in-drawer button.
@@ -339,12 +339,12 @@ async function handleDrawerAction(btn) {
       btn.classList.toggle('border-gray-200', currentlyFavorited);
       btn.querySelector('.drawer-action-icon').innerHTML = !currentlyFavorited ? FAV_FILLED_SVG : FAV_HOLLOW_SVG;
       if (label) label.textContent = !currentlyFavorited ? 'Saved' : 'Save';
-      btn.title = !currentlyFavorited ? 'Remove from favorites' : 'Save to favorites';
+      btn.title = !currentlyFavorited ? 'Remove from saved homes' : 'Save home';
     } else if (action === 'hide') {
       await addHidden(zid);
       if (refs._hideListing) refs._hideListing(zid);
       else hideCardElement(zid);
-      showToast('Hidden — it won\'t appear in your results', {
+      showToast('Hidden from your search results', {
         action: { label: 'View hidden', onClick: () => {
           import('./personalization-ui.js').then(mod => mod.openPanel({ tab: 'hidden' }));
         }},

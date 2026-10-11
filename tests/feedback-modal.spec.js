@@ -79,7 +79,7 @@ test.describe("Feedback Modal", () => {
     await expect(page.locator("#feedbackModal")).toHaveClass(/hidden/);
     // Toast should appear
     await expect(page.locator("#toastStack")).toContainText(
-      "Thanks for your feedback!"
+      "Thanks for your feedback."
     );
   });
 

@@ -299,6 +299,7 @@ function buildModalInner() {
     <div class="compare-modal-body">
       ${buildVerdict()}
       <div class="compare-table-scroll">${renderTable()}</div>
+      <p class="text-xs text-gray-500">Recorded dates may be source dates or when first seen. They do not confirm availability.</p>
     </div>
   `;
 }
@@ -313,7 +314,7 @@ function buildVerdict() {
   const where = item.location || item.title || 'This listing';
   return `<div class="compare-verdict">
     <span class="compare-verdict-star">★</span>
-    <span><strong>Best value:</strong> ${esc(trimWords(where, 6))} — ${esc(fmtRsCompact(best))}/marla</span>
+    <span><strong>Lowest rent per marla:</strong> ${esc(trimWords(where, 6))}, ${esc(fmtRsCompact(best))}/marla</span>
   </div>`;
 }
 
@@ -348,18 +349,16 @@ function renderTable() {
   const rsBed = metrics.map(m => m.rsPerBed);
   const prices = items.map(i => Number(i.price));
   const dists = items.map(i => Number(i.distance_km));
-  const posted = metrics.map(m => m.postedTs);
   const hasDist = dists.some(Number.isFinite);
 
   const winMarla = winnerIndex(rsMarla, 'min');
   const winBed = winnerIndex(rsBed, 'min');
   const winPrice = winnerIndex(prices, 'min');
   const winDist = winnerIndex(dists, 'min');
-  const winPosted = winnerIndex(posted, 'max');
 
   const sections = [];
   sections.push({ label: 'Value', rows: [
-    row('Rs / marla', items.map((it, i) => fmtRsCompact(rsMarla[i])), winMarla, 'Best value'),
+    row('Rs / marla', items.map((it, i) => fmtRsCompact(rsMarla[i])), winMarla, 'Lowest per marla'),
     row('Rs / bedroom', items.map((it, i) => fmtRsCompact(rsBed[i])), winBed, 'Per room'),
     row('Price', items.map(it => fmtPrice(it.price, it.price_text)), winPrice, 'Lowest'),
   ] });
@@ -374,8 +373,8 @@ function renderTable() {
     locRows.push(row('Distance', items.map(it => Number.isFinite(Number(it.distance_km)) ? `${Number(it.distance_km).toFixed(1)} km` : '—'), winDist, 'Closest'));
   }
   sections.push({ label: 'Location', rows: locRows });
-  sections.push({ label: 'Freshness', rows: [
-    row('Posted', items.map((it, i) => Number.isFinite(posted[i]) ? (fmtRelative(metrics[i].postedIso) || '—') : '—'), winPosted, 'Newest'),
+  sections.push({ label: 'Listing dates', rows: [
+    row('Recorded date', items.map((it, i) => Number.isFinite(metrics[i].postedTs) ? (fmtRelative(metrics[i].postedIso) || 'Unknown') : 'Unknown')),
   ] });
   sections.push({ label: 'Contact', rows: [
     row('Phone / WhatsApp', items.map(it => (it.call_phone || it.whatsapp_phone) ? 'Available' : 'Not yet')),
@@ -407,7 +406,7 @@ function headerCell(item) {
     <span class="compare-hloc">${esc(trimWords(item.location || item.title || '', 6))}</span>
     <span class="compare-hactions">
       <button class="compare-act" data-compare-open="${zid}" title="View details" aria-label="View details">${eyeIcon()}</button>
-      <button class="compare-act compare-act-fav${fav ? ' is-fav' : ''}" data-compare-fav="${zid}" title="${fav ? 'Saved' : 'Save'}" aria-label="${fav ? 'Remove from favorites' : 'Save to favorites'}" aria-pressed="${fav}">${fav ? favFilledIcon() : favHollowIcon()}</button>
+      <button class="compare-act compare-act-fav${fav ? ' is-fav' : ''}" data-compare-fav="${zid}" title="${fav ? 'Saved' : 'Save'}" aria-label="${fav ? 'Remove from saved homes' : 'Save home'}" aria-pressed="${fav}">${fav ? favFilledIcon() : favHollowIcon()}</button>
       <button class="compare-act" data-compare-call="${zid}" title="Call" aria-label="Call">${callIcon()}</button>
       <button class="compare-act compare-act-wa" data-compare-wa="${zid}" title="WhatsApp" aria-label="WhatsApp">${whatsappIcon()}</button>
     </span>
@@ -453,7 +452,7 @@ function wireModal() {
       btn.classList.toggle('is-fav', !!nowFav);
       btn.setAttribute('aria-pressed', String(!!nowFav));
       btn.title = nowFav ? 'Saved' : 'Save';
-      btn.setAttribute('aria-label', nowFav ? 'Remove from favorites' : 'Save to favorites');
+      btn.setAttribute('aria-label', nowFav ? 'Remove from saved homes' : 'Save home');
       btn.innerHTML = nowFav ? favFilledIcon() : favHollowIcon();
     });
   });

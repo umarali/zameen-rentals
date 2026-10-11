@@ -94,7 +94,7 @@ test.describe("Page Load & Layout", () => {
   });
 
   test("footer shows Zameen.com attribution", async ({ page }) => {
-    await expect(page.locator("text=Powered by Zameen.com data")).toBeVisible();
+    await expect(page.locator("text=Listings from Zameen.com")).toBeVisible();
   });
 });
 

@@ -89,7 +89,7 @@ function syncModalCity() {
   _overlay.querySelectorAll('[data-wcity]').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.wcity === S.city));
   const browse = _overlay.querySelector('#welcomeBrowse');
-  if (browse) browse.textContent = `Browse fresh ${cityName()} rentals`;
+  if (browse) browse.textContent = `Browse ${cityName()} rentals`;
   const row = _overlay.querySelector('#welcomeIntentRow');
   if (row) { row.innerHTML = intentChipsHtml(); wireIntentChips(row); }
 }
@@ -121,14 +121,14 @@ function buildDOM() {
         </div>
 
         <h2 id="welcomeTitle" class="font-brand text-xl sm:text-2xl font-extrabold text-gray-900 leading-tight">How to find your rental</h2>
-        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Search in plain English or Roman Urdu, pick a starter below, or just browse the freshest listings.</p>
+        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Search in English or Roman Urdu, try an example below, or browse rentals in your city.</p>
 
         <div class="mt-5">
           <div class="welcome-eyebrow">Searching in</div>
           <div class="flex items-center gap-2 mt-2" id="welcomeCityRow">${cityPills}</div>
         </div>
 
-        <button id="welcomeBrowse" class="welcome-primary mt-5">Browse fresh ${esc(cityName())} rentals</button>
+        <button id="welcomeBrowse" class="welcome-primary mt-5">Browse ${esc(cityName())} rentals</button>
 
         <div class="mt-5">
           <div class="welcome-eyebrow">Or try a search</div>

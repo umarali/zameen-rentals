@@ -181,7 +181,7 @@ test("desktop Karachi falls back to live city search when local viewport coverag
   await page.waitForSelector("#listingsGrid .card-wrap", { timeout: 30000 });
 
   await expect(page.locator("#listingsTitle")).toHaveText("Rentals in Karachi");
-  await expect(page.locator("#dataSource")).toHaveText("Live");
+  await expect(page.locator("#dataSource")).toHaveText("Zameen.com");
   await expect(page.locator("#listingsGrid")).toContainText("2 bed flat in Karachi");
   expect(mapSearchCalls).toBe(0);
 });
