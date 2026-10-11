@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 
 import anthropic
 import instructor
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.data import (
     KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas,
@@ -155,6 +155,10 @@ _NUMBER_MODIFIERS = {"sade": 0.5, "saade": 0.5, "ساڑھے": 0.5, "sawa": 0.25,
 _URDU_UNITS = {"ہزار": "hazar", "لاکھ": "lakh", "کروڑ": "crore"}
 _NUMBER_UNIT = (r"(?:bed(?:room)?s?|br|bhk|kamr\w*|rooms?|hazar|hazaar|thousand|k\b|"
                 r"lakh|lac|lacs|laakh|crore|cr\b|marla|kanal|بیڈ|کمر\w*|مرلہ|مرلے|کنال|گز)")
+# Area numbers written as Roman numerals ("Gulberg III", "Phase II"). Single
+# letters (i, v, x) are left alone: "i" is usually the English pronoun.
+_ROMAN_NUMERALS = {"ii": "2", "iii": "3", "iv": "4", "vi": "6", "vii": "7", "viii": "8", "ix": "9"}
+_ROMAN_NUMERAL_RE = re.compile(r"(?<=\w )(" + "|".join(sorted(_ROMAN_NUMERALS, key=len, reverse=True)) + r")\b", re.I)
 _DIGIT_TABLE = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
 
 
@@ -188,6 +192,7 @@ def _normalize_number_words(text: str) -> str:
     # Run twice so both ends of a range ("tees se pachas hazar") are rewritten.
     for _ in range(2):
         text = pattern.sub(repl, text)
+    text = _ROMAN_NUMERAL_RE.sub(lambda m: _ROMAN_NUMERALS[m.group(1).lower()], text)
     return re.sub(r"\s+", " ", text).strip()
 
 
@@ -605,6 +610,13 @@ class RentalFilters(BaseModel):
     sort: Optional[Literal["price_low", "price_high", "newest"]] = Field(None, description="Sort order")
     city_hint: Optional[Literal["karachi", "lahore", "islamabad"]] = Field(None, description="Only set if query explicitly names a city or an area unambiguously tied to one city. Omit if ambiguous.")
 
+    @field_validator("property_type", mode="before")
+    @classmethod
+    def _bare_portion_is_upper(cls, v):
+        # Haiku sometimes answers a bare "portion" with "portion"; with one
+        # attempt that failed the whole parse and fell back to regex.
+        return "upper_portion" if isinstance(v, str) and v.strip().lower() == "portion" else v
+
 
 # Static instructions, identical for every query so the prompt cache can hold
 # them. The city and the candidate areas go in a separate, uncached block.
@@ -621,6 +633,7 @@ area: Pick the closest match from CANDIDATE AREAS. If the user mentions a sub-bl
 property_type: house | apartment | upper_portion | lower_portion | room | penthouse | farm_house
   Roman Urdu: ghar/makan=house, flat/apartment=apartment, bala hissa/ooper portion/upar ka portion=upper_portion, nichla hissa/neechay portion=lower_portion, kamra=room
   Urdu: گھر=house, فلیٹ=apartment, بالا حصہ=upper_portion, نچلا حصہ=lower_portion, کمرہ=room
+  A bare "portion" with no upper/lower => upper_portion.
 
 bedrooms / bedrooms_max: "2 bed" => bedrooms=2. "2-3 bed" => bedrooms=2, bedrooms_max=3. "studio" => bedrooms=1.
 
@@ -741,7 +754,7 @@ PARSE_CANDIDATE_LIMIT = int(os.environ.get("ZR_PARSE_CANDIDATES", "30"))
 NL_DAILY_BUDGET_USD = float(os.environ.get("ZR_NL_DAILY_BUDGET_USD", "1.00"))
 NL_CACHE_TTL_SECONDS = float(os.environ.get("ZR_NL_CACHE_TTL_HOURS", "168")) * 3600
 # Bump when the prompt or post-processing changes, so cached parses refresh.
-PARSE_PROMPT_VERSION = "2026-10-09.1"
+PARSE_PROMPT_VERSION = "2026-10-11.1"
 
 # USD per million tokens: (input, 5-minute cache write, cache read, output).
 _MODEL_PRICES = {

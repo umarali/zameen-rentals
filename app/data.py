@@ -208,6 +208,13 @@ _ENGLISH_TO_URDU = {
     v: k for k, v in URDU_AREAS.items() if k not in PARENT_FALLBACK_ALIASES["karachi"]
 }
 
+# Most people write DHA as "ڈیفنس" (Defence): "ڈیفنس فیز 6" is "ڈی ایچ اے فیز 6".
+# Added after _ENGLISH_TO_URDU so area labels keep the ڈی ایچ اے spelling.
+for _ur, _en in list(URDU_AREAS.items()):
+    if _ur == "ڈی ایچ اے" or _ur.startswith("ڈی ایچ اے فیز"):
+        URDU_AREAS["ڈیفنس" + _ur[len("ڈی ایچ اے"):]] = _en
+PARENT_FALLBACK_ALIASES["karachi"].add("ڈیفنس فیز 3")
+
 # Search aliases are city-scoped: the same Urdu name can refer to different
 # neighborhoods, and a Karachi fallback must never leak into another city.
 URDU_AREAS_BY_CITY = {
@@ -216,14 +223,14 @@ URDU_AREAS_BY_CITY = {
         "گلبرگ": "Gulberg", "جوہر ٹاؤن": "Johar Town", "جوہر ٹاون": "Johar Town",
         "ماڈل ٹاؤن": "Model Town", "ماڈل ٹاون": "Model Town",
         "بحریہ ٹاؤن": "Bahria Town", "بحریہ ٹاون": "Bahria Town",
-        "ڈی ایچ اے": "DHA Defence", "عسکری": "Askari",
+        "ڈی ایچ اے": "DHA Defence", "ڈیفنس": "DHA Defence", "عسکری": "Askari",
         "فیصل ٹاؤن": "Faisal Town", "گارڈن ٹاؤن": "Garden Town",
         "علامہ اقبال ٹاؤن": "Allama Iqbal Town", "اقبال ٹاؤن": "Allama Iqbal Town",
         "واپڈا ٹاؤن": "Wapda Town", "سمن آباد": "Samanabad",
     },
     "islamabad": {
         "گلبرگ": "Gulberg", "بحریہ ٹاؤن": "Bahria Town", "بحریہ ٹاون": "Bahria Town",
-        "ڈی ایچ اے": "DHA Defence", "بنی گالا": "Bani Gala",
+        "ڈی ایچ اے": "DHA Defence", "ڈیفنس": "DHA Defence", "بنی گالا": "Bani Gala",
     },
 }
 for _name in CITY_AREAS["islamabad"]:

@@ -246,3 +246,26 @@ class TestNumberWords:
         r = parse_natural_query("flat saath parking", city="karachi")  # saath = "with"
         assert "price_max" not in r and "price_min" not in r and "bedrooms" not in r
         assert "bedrooms" not in parse_natural_query("do flat dikhao", city="karachi")
+
+
+class TestAreaSpellings2026_10_11:
+    """Misses from the 2026-10-11 key-rotation smoke test on production."""
+
+    @pytest.mark.parametrize("query,city,area", [
+        ("ڈیفنس فیز 6 میں 3 بیڈروم گھر کرائے پر", "karachi", "DHA Phase 6"),
+        ("ڈیفنس میں فلیٹ", "karachi", "DHA Defence"),
+        ("ڈیفنس میں فلیٹ", "lahore", "DHA Defence"),
+        ("furnished 1 bed apartment Gulberg III for bachelors", "lahore", "Gulberg 3"),
+        ("dha phase ii house", "karachi", "DHA Phase 2"),
+    ])
+    def test_area_spelling_reaches_the_specific_area(self, query, city, area):
+        assert parse_natural_query(query, city=city)["area"] == area
+
+    def test_english_pronoun_i_is_not_a_numeral(self):
+        result = parse_natural_query("i need a flat in clifton", city="karachi")
+        assert result["area"] == "Clifton"
+        assert "bedrooms" not in result
+
+    def test_defence_phase_3_falls_back_like_dha_phase_3(self):
+        assert (parse_natural_query("ڈیفنس فیز 3 میں گھر", city="karachi")["area"]
+                == parse_natural_query("ڈی ایچ اے فیز 3 میں گھر", city="karachi")["area"])
