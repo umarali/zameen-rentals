@@ -9,108 +9,45 @@
 <meta property="og:image" content="https://zameenrental.com/static/og-card.png?v=3"><meta property="og:locale" content="en_PK">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Privacy policy | ZameenRentals"><meta name="twitter:description" content="What ZameenRentals collects when you search rentals, save homes, set alerts or buy credits, who processes it and how long we keep it."><meta name="twitter:image" content="https://zameenrental.com/static/og-card.png?v=3">
 <link rel="icon" href="/static/favicon.svg?v=d9941a781ad5" type="image/svg+xml"><link rel="stylesheet" href="/static/site-info.css?v=legal1">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "@id": "https://zameenrental.com/privacy#page", "url": "https://zameenrental.com/privacy", "name": "Privacy policy", "description": "What ZameenRentals collects when you search rentals, save homes, set alerts or buy credits, who processes it and how long we keep it.", "isPartOf": {"@id": "https://zameenrental.com/#website"}, "inLanguage": "en-PK", "dateModified": "2026-10-11"}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "@id": "https://zameenrental.com/privacy#page", "url": "https://zameenrental.com/privacy", "name": "Privacy policy", "description": "What ZameenRentals collects when you search rentals, save homes, set alerts or buy credits, who processes it and how long we keep it.", "isPartOf": {"@id": "https://zameenrental.com/#website"}, "inLanguage": "en-PK", "dateModified": "2026-10-12"}</script>
 </head><body class="info-site">
 <!-- Each statement below is based on the code at the time of writing. If you change what the app collects, update this page. -->
 <a class="skip" href="#content">Skip to content</a>
 <header class="header"><div class="shell"><a class="brand" href="/" aria-label="ZameenRentals home"><img src="/static/logo.svg" alt="" width="38" height="38"><span>Zameen<em>Rentals</em></span></a><nav aria-label="Main navigation"><a href="/">Search rentals</a> <a href="/about">About</a> <a href="/pricing">Pricing</a> <a href="/faq">Help</a></nav></div></header>
 <main id="content" class="shell info-page"><h1>Privacy policy</h1><div class="site-info-body"><div class="legal-text">
-<p class="info-intro">You don't need to give us your name, phone number or email to search. This page lists what we do collect, why, and how long we keep it.</p>
-<p class="info-note legal-updated">Last updated 11 October 2026</p>
+<p class="info-intro">Search without an account. Here's what we collect and how you control it.</p>
+<p class="info-note legal-updated">Last updated 12 October 2026</p>
 
-<h2 id="who">Who runs ZameenRentals</h2>
-<!-- DECISION: operator's legal name and a contact email that you read. Replace both placeholders here and in terms.html. -->
-<p>ZameenRentals is run by [OPERATOR NAME], an individual sole proprietor in Pakistan. It isn't a registered company. Contact: [CONTACT EMAIL].</p>
+<h2 id="data">Your browser and saved activity</h2>
+<p>A random ID in your browser links you to saved homes and notes, hidden homes, recent views, alerts, notification subscriptions and credits on our server. We also record first and last visits. No name, phone number or email is needed to search.</p>
+<p>Browser storage remembers your preferences and keeps copies of saved activity, recent results and feedback waiting to send. Our app doesn't set cookies. PostHog analytics and session recording are off.</p>
+<!-- DECISION: update this policy before enabling PostHog; confirm region, tracking and recording settings. -->
 
-<h2 id="id">Your random ID</h2>
-<p>On your first visit, your browser creates a random ID and keeps it in local storage. The app sends it with requests for saved homes, alerts and credits, so our server knows which ones are yours. The ID isn't linked to your name.</p>
-<p>If you clear your browser data, your browser creates a new ID and you lose access to anything linked to the old one. A restore code can move your credits.</p>
+<h2 id="searches">Searches and extra features</h2>
+<p>We record search filters and result counts without your browser ID or IP address in the search-history record. Popular and recent searches are visible to other visitors.</p>
+<p>We send typed searches to Anthropic to turn them into filters. AI features also send your brief, relevant listing details, search criteria or figures calculated from your saved activity. We don't attach your browser ID. Avoid putting personal details in searches or briefs.</p>
+<p>Anthropic doesn't train on API data by default. Its <a href="https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data" target="_blank" rel="noopener">standard retention period</a> is up to 30 days, with exceptions for safety and legal requirements.</p>
+<p>Near me sends coordinates with your search and remembers them in your browser for 30 minutes. Request logs can contain those coordinates. Where voice search is available, our server transcribes the audio without storing it; the resulting text works like a typed search.</p>
 
-<h2 id="server">What we store on our server</h2>
-<ul>
-<li>Saved homes (up to 500) and any note you add to them.</li>
-<li>Homes you hide (up to 500) and the last 100 homes you opened.</li>
-<li>Search alerts (up to 25), their filters, and the new matches we find for them. We delete matches after 30 days.</li>
-<li>When you first and last visited, so we can show what's new since your last visit.</li>
-<li>Your credits: each free grant, purchase, spend, refund and restore, with the time.</li>
-<li>Payments: the payment ID from our payment provider, the pack, the amount, whether the payment went through, and the time.</li>
-<li>Notification subscriptions, if you turn notifications on.</li>
-</ul>
-<!-- DECISION: retention for inactive IDs. The code keeps saved homes, hidden homes, recent views, alerts and the clients row with no expiry. Consider deleting IDs not seen for 12 months (but keep payment records; see the next DECISION). -->
-<!-- DECISION: how long to keep credit and payment records. The credit ledger is append-only and never deleted. Ask a tax adviser how long a sole proprietor must keep sales records, and state the period here. -->
-<p>You can delete saved homes, hidden homes and alerts yourself in My rentals. Everything else stays until you ask us to delete it. We keep payment records for as long as tax law requires.</p>
+<h2 id="payments-feedback">Payments, feedback and notifications</h2>
+<p>We keep credit transactions and payment records, including the payment ID, pack, amount and status. Checkout handles payment details; we don't store your card details.</p>
+<!-- DECISION: name the chosen payment provider and link its privacy policy before accepting real payments. -->
+<p>Feedback includes your message, optional email and search context, such as search text, filters and map position. We store it and send a copy through Resend so we can respond. Notifications use a stored push subscription and your browser's push service.</p>
 
-<h2 id="searches">Searches</h2>
-<p>When you search with filters, we record the city, area, property type, bedrooms, price range, furnished choice, sort order and number of results. We don't record your ID or IP address with it. We use these records to show popular and recent searches to everyone.</p>
-<p>When you type a search in your own words, we send the text and the city to Claude, an AI model made by Anthropic, which turns it into filters. If Claude isn't available, our own parser does this on our server. We keep a one-way fingerprint of the text with the filters it produced and reuse it for 7 days, so the same search is faster next time.</p>
-<p>Anthropic says it deletes these requests within 30 days and doesn't use them to train its models by default. Please don't type personal details such as a phone number or CNIC into the search box.</p>
+<h2 id="retention">Storage and retention</h2>
+<p>Our hosting and daily database backups use DigitalOcean in Frankfurt, Germany. Services named here may process data outside Pakistan.</p>
+<p>Alert matches are kept for 30 days. Parsed searches are reused for seven days using a fingerprint of the text and its filters. Paid AI results are reused for 15 minutes; expired results are cleared when new results are saved.</p>
+<p>Saved activity, subscriptions, feedback, search history, credit and payment records have no automatic expiry. Server logs record IP addresses, request times and URLs, which can include search text and location. Logs have no fixed retention period.</p>
+<!-- DECISION: set and implement retention periods for inactive clients, feedback, financial records and logs. Verify the backup lifecycle before stating a deletion period. -->
 
-<h2 id="ai">Paid AI features</h2>
-<p>A tailored list sends what you describe and details of the candidate listings to Claude. A search report sends your saved search filters and figures we computed from our listings data. A daily shortlist sends the saved search filters and that day's matching listings. We don't send your ID, name or contact details with any of them. We keep a result on our server for up to 15 minutes so a retry doesn't charge you twice, and we count daily AI use per feature without linking it to you.</p>
+<h2 id="services">Other services</h2>
+<p>Photos from Zameen.com, maps from OpenStreetMap and Esri, and Google Fonts receive your IP address when your browser loads them. WhatsApp handles messages you choose to send to advertisers. We don't sell your data or share it for advertising.</p>
 
-<h2 id="location-voice">Near me and voice search</h2>
-<p>Near me asks your browser for your location. If you allow it, the app sends the coordinates with that search. We don't save them in our database, but they appear in our server logs. Your browser keeps them for 30 minutes so you aren't asked again straight away.</p>
-<p>Where voice search is offered, it records up to 15 seconds after you tap the microphone. Our own server turns the recording into text with an open-source speech model. We don't save the audio or send it to anyone else. The text then works like a typed search.</p>
-
-<h2 id="notifications">Notifications</h2>
-<p>If you turn on notifications, your browser gives us a push address and keys, and we save them with your browser's name and version. Your browser's push service, run by Google, Mozilla, Apple or Microsoft depending on your browser, delivers our messages. We delete the subscription when you turn notifications off or when the push service tells us it no longer works.</p>
-
-<h2 id="feedback">Feedback</h2>
-<p>Send feedback sends us your message, your email if you give one, and details of your current search: the search box text, filters, map position and number of results. We store it and email a copy to ourselves through Resend, an email service. We use your email only to reply to you.</p>
-<!-- DECISION: how long to keep feedback. The code keeps it with no expiry. -->
-
-<h2 id="payments">Payments</h2>
-<!-- DECISION: name the payment provider here once chosen, and link to its privacy policy. -->
-<p>When you buy credits, you pay on our payment provider's checkout. The provider handles your card or wallet details. We never see or store them. The provider tells us the payment ID, the amount and whether the payment went through.</p>
-
-<h2 id="analytics">Analytics</h2>
-<!-- DECISION: PostHog. The production build has no PostHog key today, so analytics is off. If you turn it on, rewrite this section to say it is on, name the PostHog region (US or EU), and decide whether to keep session recording (20% sample) and heatmaps (frontend/src/analytics.js). -->
-<p>The site contains code for PostHog analytics, but it is switched off. If we switch it on, we'll update this section first. It would record pages viewed, clicks, which filters you use and which listings you open or contact, and replays of some visits with typed and on-screen text hidden. It would set a cookie and local storage entries to recognise return visits.</p>
-
-<h2 id="logs">Server logs and abuse protection</h2>
-<!-- DECISION: log retention. The server logs through systemd's journal with no fixed period set. Choose a period (for example 30 days via MaxRetentionSec in journald.conf) and replace the placeholder. Ask a lawyer whether PECA 2016 section 32 (traffic data retention by "service providers") applies to this site. -->
-<p>Our server logs each request: the IP address, the time, the address requested and the result. The address can include your filters, the text of a typed search or Near me coordinates. We use logs to fix problems and stop abuse, and keep them for [LOG RETENTION PERIOD].</p>
-<p>To limit abuse, the server counts requests from each IP address in memory for a few minutes. These counts aren't saved.</p>
-
-<h2 id="device">Stored on your device</h2>
-<p>We don't set cookies. The app keeps these in your browser's storage:</p>
-<ul>
-<li>Your random ID.</li>
-<li>A copy of which homes you saved or hid, so the app shows them before the server answers.</li>
-<li>Your last city and filters, your compare list and your map style.</li>
-<li>Whether you've seen the welcome tips and tour, and whether you dismissed the install prompt.</li>
-<li>Feedback waiting to send while you're offline.</li>
-<li>Your Near me location, for 30 minutes.</li>
-<li>An offline copy of the app and of recent results, so it opens without a connection.</li>
-</ul>
-<p>You can clear all of this in your browser settings.</p>
-
-<h2 id="third-parties">Services your browser contacts</h2>
-<p>Some content loads straight from other services, which see your IP address as any website would: listing photos from Zameen.com, map tiles from OpenStreetMap, satellite images from Esri and fonts from Google Fonts. Calling or messaging an advertiser opens your phone or WhatsApp.</p>
-
-<h2 id="where">Where data is kept</h2>
-<!-- DECISION: confirm the backup bucket's lifecycle rule. deploy/backup/s3-lifecycle.json expires backups after 180 days; check the same rule is set on the DigitalOcean Spaces bucket. -->
-<p>Our server and daily database backups are with DigitalOcean in Frankfurt, Germany. We keep backups for 180 days. Anthropic, Resend and our payment provider process data on their own systems, some of them outside Pakistan.</p>
-
-<h2 id="sharing">Who we share data with</h2>
-<p>Only the services named on this page, for the jobs described. We don't sell your data or share it for advertising. We may disclose data if Pakistani law requires it.</p>
-
-<h2 id="advertisers">Advertisers</h2>
-<p>Listings show the advertiser's name and phone numbers as published on Zameen.com. If you're an advertiser and want your details removed from ZameenRentals, contact us.</p>
-
-<h2 id="children">Children</h2>
-<!-- DECISION: minimum age to buy credits (18 is the age of majority in Pakistan). Keep in sync with terms.html#credits. -->
-<p>ZameenRentals is for adults looking for a home to rent. It isn't meant for children, and you must be 18 or older to buy credits.</p>
-
-<h2 id="requests">Your choices and requests</h2>
-<!-- DECISION: response time for data requests (30 days is a placeholder). -->
-<p>You can delete saved homes, hidden homes and alerts in My rentals, turn off notifications, and clear your browser data at any time.</p>
-<p>To get a copy of the data linked to your ID, or to have it deleted, contact us at [CONTACT EMAIL]. We may ask for something that shows the data is yours, such as a restore code or payment ID. We'll reply within 30 days.</p>
-
-<h2 id="changes">Changes to this policy</h2>
-<p>If we change this policy, we'll update this page and the date at the top. For important changes, we'll also post a notice in the app before they take effect.</p>
-
-<p class="info-note">See also the <a href="/terms">terms of use</a> and <a href="/pricing">pricing</a>.</p>
+<h2 id="choices">Your choices and contact</h2>
+<p>Remove saved homes and alerts, unhide homes in My rentals, or turn off notifications. Clearing browser storage removes your local ID and preferences, but doesn't delete server records. Save your restore code first if you want to move purchased credits to another browser.</p>
+<p>For privacy questions or requests about your data or an advertiser's details, open <a href="/">Search rentals</a> and select Send feedback. Include an email for a reply. Don't send your restore code.</p>
+<!-- DECISION: add a dedicated contact email and operator details; establish an identity check and handling process for data requests. No response deadline or automatic deletion is promised. -->
+<p class="info-note">We'll update this page and its date when our practices change. See the <a href="/terms" target="_blank" rel="noopener" title="Opens in a new tab">terms of use</a>.</p>
 </div></div><a class="return-search" href="/">Back to search <span aria-hidden="true">↗</span></a></main>
-<footer class="footer"><div class="shell"><nav aria-label="Footer"><a href="/">Search rentals</a> <a href="/about">About</a> <a href="/pricing">Pricing</a> <a href="/faq">Help</a> <a href="/privacy" aria-current="page">Privacy</a> <a href="/terms">Terms</a></nav><p>Listings from Zameen.com. Confirm availability with the advertiser before visiting.</p><p>Independent product. Not affiliated with Zameen.com, Graana, OLX or Meta.</p></div></footer>
+<footer class="footer"><div class="shell"><nav aria-label="Footer"><a href="/">Search rentals</a> <a href="/about">About</a> <a href="/pricing">Pricing</a> <a href="/faq">Help</a> <a href="/privacy" target="_blank" rel="noopener" title="Opens in a new tab" aria-current="page">Privacy</a> <a href="/terms" target="_blank" rel="noopener" title="Opens in a new tab">Terms</a></nav><p>Listings from Zameen.com. Confirm availability with the advertiser before visiting.</p><p>ZameenRentals is independent of Zameen.com.</p></div></footer>
 </body></html>

@@ -44,7 +44,12 @@ test('public pages never render owner notes and link to privacy and terms', asyn
   for (const path of PUBLIC_PAGES) {
     await page.goto(path);
     const text = await page.locator('body').innerText();
-    expect(text, path).not.toMatch(/DECISION|CHECK:|under consideration|not available yet/i);
+    expect(text, path).not.toMatch(/DECISION|CHECK:|under consideration|not available yet|\[(?:OPERATOR NAME|CONTACT EMAIL|LOG RETENTION PERIOD)\]|registered company|Claude|AI model/i);
+    if (path === "/about") {
+      expect(text).toContain("rental aggregator");
+      expect(text).toContain("currently come from Zameen.com");
+      expect(text).not.toMatch(/Facebook|Graana|OLX/);
+    }
     const footer = page.locator('footer nav');
     await expect(footer.locator('a[href="/privacy"]'), path).toHaveCount(1);
     await expect(footer.locator('a[href="/terms"]'), path).toHaveCount(1);
@@ -67,19 +72,85 @@ test('sitemap lists the privacy and terms pages', async ({ request }) => {
   for (const path of PUBLIC_PAGES) expect(xml).toContain(`<loc>https://zameenrental.com${path}</loc>`);
 });
 
-test('privacy and terms open from the menu without losing the search', async ({ page }) => {
+test('legal menu links open new tabs and preserve the search', async ({ page, context }) => {
   await page.goto('/?city=lahore');
   await expect(page.locator('.card-wrap').first()).toBeVisible();
+  await page.locator('#nlInput').fill('two bedrooms under 60000');
   const url = page.url();
-  for (const [name, title, text] of [['Privacy', 'Privacy policy', 'Your random ID'], ['Terms', 'Terms of use', 'nothing renews']]) {
-    await page.getByRole('button', { name: 'Open menu', exact: true }).click();
-    await page.locator('#siteMenu').getByRole('link', { name, exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: title, exact: true });
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText(text);
-    await expect(dialog.locator('ul li').first()).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(dialog).toBeHidden();
+  for (const [name, path, title] of [['Privacy', '/privacy', 'Privacy policy'], ['Terms', '/terms', 'Terms of use']]) {
+    await page.locator('#siteMenuBtn').click();
+    const link = page.locator('#siteMenu').getByRole('link', { name, exact: true });
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', /\bnoopener\b/);
+    const opened = context.waitForEvent('page');
+    await link.click();
+    const tab = await opened;
+    await expect(tab).toHaveURL(new RegExp(`${path}$`));
+    await expect(tab.getByRole('heading', { name: title, exact: true })).toBeVisible();
+    expect(await tab.evaluate(() => window.opener === null)).toBe(true);
+    await expect(page.locator('#siteInfoDialog')).toBeHidden();
     expect(page.url()).toBe(url);
+    await expect(page.locator('#nlInput')).toHaveValue('two bedrooms under 60000');
+    await tab.close();
+    // Native new-tab navigation leaves the disclosure open in the original tab.
+    await page.locator('#nlInput').click();
   }
+});
+
+test('pricing menu link navigates to a full page', async ({ page }) => {
+  await page.goto('/?city=lahore');
+  await expect(page.locator('.card-wrap').first()).toBeVisible();
+  await page.locator('#siteMenuBtn').click();
+  await page.locator('#siteMenu').getByRole('link', { name: 'Pricing', exact: true }).click();
+  await expect(page).toHaveURL(/\/pricing$/);
+  await expect(page.getByRole('heading', { name: 'Pricing', exact: true })).toBeVisible();
+  await expect(page.locator('#siteInfoDialog')).toHaveCount(0);
+  await expect(page.locator('main')).toContainText('Pay once. Nothing renews.');
+  await page.locator('.return-search').click();
+  await expect(page.locator('#nlInput')).toBeVisible();
+});
+
+test('every legal link on public pages opens its destination in a new tab', async ({ page, context }) => {
+  for (const path of PUBLIC_PAGES) {
+    await page.goto(path);
+    // FAQ answers are collapsed by default; exercise their links too.
+    for (const detail of await page.locator('details').all()) await detail.locator('summary').click();
+    const links = page.locator('a[href^="/privacy"], a[href^="/terms"]');
+    for (const link of await links.all()) {
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', /\bnoopener\b/);
+      const href = await link.getAttribute('href');
+      const opened = context.waitForEvent('page');
+      await link.click();
+      const tab = await opened;
+      await tab.waitForURL(url => url.pathname + url.hash === href);
+      await expect(tab.locator('main h1')).toBeVisible();
+      if (href.includes('#')) await expect(tab.locator(href.slice(href.indexOf('#')))).toBeVisible();
+      expect(await tab.evaluate(() => window.opener === null)).toBe(true);
+      expect(new URL(page.url()).pathname).toBe(path);
+      await tab.close();
+    }
+  }
+});
+
+test('FAQ dialog links use new tabs for legal pages and full-page pricing', async ({ page, context }) => {
+  await page.goto('/?city=lahore');
+  await expect(page.locator('.card-wrap').first()).toBeVisible();
+  await page.locator('#siteMenuBtn').click();
+  await page.locator('#siteMenu').getByRole('link', { name: 'FAQs', exact: true }).click();
+  const dialog = page.locator('#siteInfoDialog');
+  for (const [question, href] of [['Can I get a refund?', '/terms#refunds'], ['What happens to my data?', '/privacy']]) {
+    await dialog.locator('summary').filter({ hasText: question }).click();
+    const opened = context.waitForEvent('page');
+    await dialog.locator(`a[href="${href}"]`).click();
+    const tab = await opened;
+    await tab.waitForURL(url => url.pathname + url.hash === href);
+    await expect(tab.locator('main h1')).toBeVisible();
+    await tab.close();
+    await expect(dialog).toBeVisible();
+  }
+  await dialog.locator('summary').filter({ hasText: 'What are credits?' }).click();
+  await dialog.getByRole('link', { name: 'pricing page' }).click();
+  await expect(page).toHaveURL(/\/pricing$/);
+  await expect(page.locator('#siteInfoDialog')).toHaveCount(0);
 });

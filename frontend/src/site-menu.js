@@ -1,10 +1,7 @@
 /** A small header disclosure; information opens only when a topic is chosen. */
 const PAGES = {
   about: { path: '/about', title: 'About ZameenRentals' },
-  pricing: { path: '/pricing', title: 'Pricing' },
   faq: { path: '/faq', title: 'A few useful answers' },
-  privacy: { path: '/privacy', title: 'Privacy policy' },
-  terms: { path: '/terms', title: 'Terms of use' },
 };
 
 export function initSiteMenu({ onHelp }) {
@@ -120,7 +117,7 @@ export function initSiteMenu({ onHelp }) {
   }
   menu.addEventListener('click', event => {
     const link = event.target.closest('a[data-site-info]');
-    if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!link || !PAGES[link.dataset.siteInfo] || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     showPage(link.dataset.siteInfo);
   });

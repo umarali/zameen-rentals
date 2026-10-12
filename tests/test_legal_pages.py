@@ -87,6 +87,7 @@ def test_owner_notes_stay_in_comments():
     for name in PAGES:
         text = " ".join(_parse(name).text)
         assert "DECISION" not in text and "CHECK:" not in text, name
+        assert not re.search(r"\[(OPERATOR NAME|CONTACT EMAIL|LOG RETENTION PERIOD)\]|registered company|Claude|AI model", text), name
         html = (PUBLIC / f"{name}.html").read_text()
         assert f'<link rel="canonical" href="https://zameenrental.com/{name}">' in html
         assert 'href="/privacy"' in html and 'href="/terms"' in html, name
