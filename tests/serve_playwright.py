@@ -12,6 +12,10 @@ def main():
     with tempfile.TemporaryDirectory(prefix="zameen-playwright-") as directory:
         os.environ["ZAMEENRENTALS_DB_DIR"] = directory
         os.environ["ZAMEENRENTALS_PLAYWRIGHT"] = "1"
+        # Credits checkout runs against the local test provider (no real money).
+        # It only starts when ZR_ENV names a non-production environment.
+        os.environ.setdefault("ZR_ENV", "test")
+        os.environ.setdefault("PAYMENTS_PROVIDER", "test")
         from app import app
         import app.routes as routes
 

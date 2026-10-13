@@ -12,6 +12,7 @@ import {
 } from './cards.js';
 import * as personalization from './personalization.js';
 import { initPersonalizationUI, openPanel as openPersonalizationPanel } from './personalization-ui.js';
+import { initCredits } from './credits.js';
 import { registerSW, initOfflineHandlers, queueFeedback } from './sw-register.js';
 import * as compare from './compare.js';
 import {
@@ -27,6 +28,7 @@ import { getStoredMapLayer } from './map-layers.js';
 import { initWelcome, showWelcome } from './welcome.js';
 import { initSiteMenu } from './site-menu.js';
 import { initVoiceSearch } from './voice.js';
+import { initAiFeatures } from './tailored.js';
 import {
   initAnalytics, trackSearchOutcome, trackNlSearch, trackListingOpen,
   trackCitySwitch, trackFilterChange, trackMapMarkerClick, trackApiError, trackScrollDepth, trackFeedbackSubmitted,
@@ -1420,6 +1422,7 @@ async function init() {
     refreshSearch: () => doSearch(1),
     openListingFromCard: (item) => openDrawerFull(item, null),
   });
+  initCredits();
   compare.init({
     isFavorite: (zid) => personalization.isFavorite(zid),
     onFavorite: async (zid) => {
@@ -1511,6 +1514,7 @@ async function init() {
   doSearch();
 
   initSiteMenu({ onHelp: showWelcome });
+  initAiFeatures({ openListing: (item) => openDrawerFull(item, null) });
   initWelcome({
     doSearch,
     doNlSearch,

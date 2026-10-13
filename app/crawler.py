@@ -25,6 +25,7 @@ from app.crawler_worker import (
     _build_browser_profile, crawler_rate_limiter, DEFAULT_ENRICHMENT_CONCURRENCY,
 )
 from app.personalization import init_personalization_schema, run_match_cycle
+from app import alert_upgrades
 
 logging.basicConfig(
     level=logging.INFO,
@@ -291,10 +292,46 @@ def flush_alert_notifications(context):
                 summary.get("failed", 0),
                 summary.get("no_subscription", 0),
             )
-        return summary
     except Exception:
         logger.exception("Alert dispatch failed during %s", context)
+        summary = {}
+    # Paid upgrades run only after free alerts are sent, and never block them.
+    run_paid_alert_jobs(context)
+    return summary
+
+
+def run_paid_alert_jobs(context):
+    """Daily charges and shortlists for paid alert upgrades. Never raises."""
+    try:
+        summary = alert_upgrades.run_daily_jobs()
+        if any(summary.values()):
+            logger.info("[Paid alerts:%s] %s", context, summary)
+        return summary
+    except Exception:
+        logger.exception("Paid alert jobs failed during %s", context)
         return {}
+
+
+async def check_paid_priority_searches(client, session_headers):
+    """Read each paid alert's own search, newest first, then send what it found.
+
+    Runs after the free city feeds and their alert flush, so free alerts are
+    never delayed by it. Never raises.
+    """
+    try:
+        summary = await alert_upgrades.check_priority_searches(client, session_headers)
+    except Exception:
+        logger.exception("Paid priority check failed")
+        return {}
+    if summary.get("searches"):
+        # "new" = listings the city-wide newest feed had not found: the paid gain.
+        logger.info(
+            "[Priority] %d searches, %d pages, %d new (missed by the city feed), %d updated",
+            summary["searches"], summary["pages"], summary["new"], summary["updated"],
+        )
+    if summary.get("new"):
+        flush_alert_notifications("priority")
+    return summary
 
 
 async def refresh_latest_city_feeds(client, session_headers, *, pages=LATEST_CITY_PAGES):
@@ -319,6 +356,7 @@ async def refresh_latest_city_feeds(client, session_headers, *, pages=LATEST_CIT
         "[Latest complete] %d pages, %d new, %d updated",
         total_pages, total_new, total_updated,
     )
+    await check_paid_priority_searches(client, session_headers)
     return {"pages": total_pages, "new": total_new, "updated": total_updated}
 
 

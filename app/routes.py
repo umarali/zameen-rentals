@@ -1124,7 +1124,13 @@ async def push_test(request: Request):
     return {"sent": sent, "total": len(subs)}
 
 
-_PUBLIC_PAGES = {"about": "about.html", "pricing": "pricing.html", "faq": "faq.html"}
+_PUBLIC_PAGES = {
+    "about": "about.html",
+    "pricing": "pricing.html",
+    "faq": "faq.html",
+    "privacy": "privacy.html",
+    "terms": "terms.html",
+}
 
 _ROOT_STATIC_FILES = {
     "robots.txt": "text/plain",

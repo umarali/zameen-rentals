@@ -9,6 +9,7 @@ import * as pers from './personalization.js';
 import { showToast } from './utils.js';
 import { S } from './state.js';
 import { bellIcon } from './icons.js';
+import { mountAlertUpgrades } from './alert-upgrades.js';
 
 let _panel = null;
 let _activeTab = 'alerts';
@@ -336,6 +337,8 @@ async function renderAlertsTab(body) {
       if (url) window.open(url, '_blank', 'noopener');
     });
   });
+  // Daily shortlists fill the per-alert slots.
+  mountAlertUpgrades(body).catch(err => console.warn('alert upgrades', err));
 }
 
 function renderAlertCard(alert, matches) {
@@ -375,6 +378,7 @@ function renderAlertCard(alert, matches) {
         </div>
       </div>
       ${matchesHtml}
+      <div data-alert-upgrades="${alert.id}"></div>
     </li>
   `;
 }

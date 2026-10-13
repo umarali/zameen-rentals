@@ -33,11 +33,13 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 from app.database import init_db, close_db  # noqa: E402
 from app.personalization import init_personalization_schema, ensure_vapid_keys  # noqa: E402
+from app.credits import init_credits_schema  # noqa: E402
 
 @app.on_event("startup")
 async def startup():
     init_db()
     init_personalization_schema()
+    init_credits_schema()
     try:
         ensure_vapid_keys()
     except Exception:
@@ -53,6 +55,12 @@ from app.routes import router  # noqa: E402
 app.include_router(router)
 from app.voice import router as voice_router  # noqa: E402
 app.include_router(voice_router)
+from app.routes_credits import router as credits_router  # noqa: E402
+app.include_router(credits_router)
+from app.routes_ai import router as ai_router  # noqa: E402
+app.include_router(ai_router)
+from app.routes_alerts_paid import router as alerts_paid_router  # noqa: E402
+app.include_router(alerts_paid_router)
 
 # Serve static files (favicon, etc.) — mounted AFTER routes so / still serves index.html
 _static_dir = Path(__file__).resolve().parent.parent / "static"

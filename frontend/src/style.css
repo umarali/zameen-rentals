@@ -987,3 +987,8 @@ main {
   #appHeader.header-has-clear .site-menu-anchor,
   html.app-standalone #appHeader .site-menu-anchor { order:2; }
 }
+
+/* ── legal track: privacy and terms links in the site menu ── */
+.site-menu-legal { display:flex; flex-direction:column; gap:2px; border-top:1px solid #f0f2f4; margin-top:5px; padding-top:5px; }
+.site-menu .site-menu-legal a { justify-content:space-between; width:100%; font-size:13px; color:#4b5563; }
+/* ── end legal track ── */

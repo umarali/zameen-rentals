@@ -32,10 +32,9 @@ test('information keeps the search intact and restores focus', async ({ page }, 
   await page.locator('#nlInput').fill('two bedrooms under 60000');
   const before = await page.locator('.card-wrap').first().innerText();
   const url = page.url();
-  await topic(page, 'Pricing');
-  const dialog = page.getByRole('dialog', { name:'Pricing', exact:true });
-  await expect(dialog).toContainText('Rs 0');
-  await expect(dialog).toContainText("Paid access and the trial aren't available yet");
+  await topic(page, 'About ZameenRentals');
+  const dialog = page.getByRole('dialog', { name:'About ZameenRentals', exact:true });
+  await expect(dialog).toContainText('rental aggregator');
   expect(page.url()).toBe(url);
   await expect(dialog.locator('[data-info-close]')).toBeFocused();
   for (let i=0;i<5;i++) {
@@ -51,7 +50,7 @@ test('information keeps the search intact and restores focus', async ({ page }, 
   await expect(page.locator('#nlInput')).toHaveValue('two bedrooms under 60000');
   await expect(page.locator('.card-wrap').first()).toHaveText(before, { useInnerText:true });
   await topic(page, 'About ZameenRentals');
-  await expect(page.locator('#siteInfoDialog')).toContainText('Only Zameen.com is connected today');
+  await expect(page.locator('#siteInfoDialog')).toContainText('Our listings currently come from Zameen.com');
   await page.getByRole('button', {name:'Back to search'}).click();
   await expect(page.locator('#nlInput')).toBeFocused();
   expect(page.url()).toBe(url);
@@ -74,9 +73,9 @@ test('FAQs disclose answers and help restores the visible menu trigger', async (
 
 test('failed information request offers its public URL', async ({ page }) => {
   await ready(page);
-  await page.route('**/pricing', route => route.fulfill({status:503, body:'Unavailable'}));
-  await topic(page, 'Pricing');
-  await expect(page.locator('#siteInfoDialog').getByRole('link', {name:'Open the page'})).toHaveAttribute('href','/pricing');
+  await page.route('**/faq', route => route.fulfill({status:503, body:'Unavailable'}));
+  await topic(page, 'FAQs');
+  await expect(page.locator('#siteInfoDialog').getByRole('link', {name:'Open the page'})).toHaveAttribute('href','/faq');
   await expect(page.locator('.site-info-content')).not.toHaveAttribute('aria-busy','true');
 });
 
@@ -84,20 +83,20 @@ test('closing a pending request cannot replace the next topic', async ({ page })
   await ready(page);
   let finish;
   const gate = new Promise(resolve => { finish = resolve; });
-  await page.route('**/pricing', async route => {
+  await page.route('**/faq', async route => {
     await gate;
-    await route.fulfill({status:200,body:'<div class="site-info-body">Stale pricing response</div>'}).catch(() => {});
+    await route.fulfill({status:200,body:'<div class="site-info-body">Stale FAQ response</div>'}).catch(() => {});
   });
-  await topic(page, 'Pricing');
+  await topic(page, 'FAQs');
   await expect(page.locator('.site-info-content')).toHaveAttribute('aria-busy','true');
   await page.keyboard.press('Escape');
   await topic(page, 'About ZameenRentals');
   finish();
-  await expect(page.locator('#siteInfoDialog')).toContainText('Only Zameen.com is connected today');
-  await expect(page.locator('#siteInfoDialog')).not.toContainText('Stale pricing response');
+  await expect(page.locator('#siteInfoDialog')).toContainText('Our listings currently come from Zameen.com');
+  await expect(page.locator('#siteInfoDialog')).not.toContainText('Stale FAQ response');
 });
 
-for (const path of ['/about','/pricing','/faq']) {
+for (const path of ['/about','/pricing','/faq','/privacy','/terms']) {
   test(`${path} works without JavaScript and links back to search`, async ({ browser, baseURL }, testInfo) => {
     const context = await browser.newContext({ javaScriptEnabled:false, viewport:testInfo.project.use.viewport });
     const page = await context.newPage();

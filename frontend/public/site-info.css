@@ -16,12 +16,23 @@
 .plan-features { list-style:none; margin:0; padding:0; font-size:13px; }
 .plan-features li { padding:3px 0; }
 .plan-features li::before { content:'✓'; color:#127b5a; margin-right:10px; }
-.future-plan { padding-top:28px; }
-.site-info-body .info-label, .site-info-content .info-label { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#6b7280; margin-bottom:10px; }
-.future-features { list-style:none; padding:0; margin:18px 0; }
-.future-features li { margin:14px 0; }
-.future-features strong { display:block; color:#374151; font-weight:500; }
-.future-features span { font-size:13px; color:#6b7280; }
+.credits-plan { padding-top:28px; }
+.site-info-body h3, .site-info-content h3 { margin:24px 0 10px; font-size:14px; font-weight:600; color:#111827; }
+.starter-credits { padding:10px 14px; border-radius:10px; background:#f6f7f9; }
+.pack-list, .cost-list { list-style:none; margin:0 0 18px; padding:0; }
+.pack-list li { display:flex; justify-content:space-between; gap:16px; padding:11px 0; border-bottom:1px solid #f0f2f4; }
+.pack-list .pack-credits { color:#111827; font-weight:500; }
+.pack-list .pack-price { color:#0c4735; font-weight:600; }
+.pay-once strong { color:#0c4735; }
+.cost-list li { padding:12px 0; border-bottom:1px solid #f0f2f4; }
+.cost-heading { display:flex; justify-content:space-between; align-items:baseline; gap:16px; }
+.cost-heading strong { color:#111827; font-weight:500; }
+.cost-heading .cost { flex:none; font-size:13px; font-weight:600; color:#0f654a; }
+.site-info-body .cost-list p, .site-info-content .cost-list p { margin:4px 0 0; font-size:13px; color:#6b7280; }
+.site-info-body .legal-updated, .site-info-content .legal-updated { margin-top:-6px; }
+.legal-text h2 { margin-top:30px; scroll-margin-top:16px; }
+.legal-text ul { margin:0 0 18px; padding-left:20px; list-style:disc; }
+.legal-text li { margin:6px 0; }
 .info-faq details { border-bottom:1px solid #e5e7eb; }
 .info-faq summary { padding:17px 0; cursor:pointer; font-weight:500; color:#111827; }
 .info-faq details:first-child summary { padding-top:4px; }
@@ -33,4 +44,25 @@
 body.info-site { margin:0; color:#111827; background:white; font:15px/1.65 'Inter',system-ui,-apple-system,sans-serif; }
 body.info-site * { box-sizing:border-box; } .info-site .shell { max-width:1000px; margin:auto; padding:0 24px; } .info-site .header { border-bottom:1px solid #e5e7eb; } .info-site .header .shell { display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:72px; } .info-site .brand { display:flex; align-items:center; gap:10px; font-size:19px; font-weight:700; letter-spacing:-.04em; color:#111827; text-decoration:none; } .info-site .brand em { color:#127b5a; font-style:normal; } .info-site .header nav, .info-site .footer nav { display:flex; flex-wrap:wrap; gap:20px; font-size:13px; } .info-site .header nav a, .info-site .footer a { color:#4b5563; text-decoration:none; } .info-site .header nav a[aria-current] { color:#0f654a; } .info-site .info-page { max-width:568px; padding-top:48px; padding-bottom:40px; } .info-site .info-page h1 { font-size:26px; line-height:1.3; letter-spacing:-.035em; margin:0 0 30px; } .info-site .return-search { display:inline-flex; gap:10px; align-items:center; color:#0f654a; text-decoration:none; font-size:13px; font-weight:600; margin-top:30px; } .info-site .footer { border-top:1px solid #e5e7eb; padding:28px 0; color:#6b7280; font-size:12px; } .info-site .footer p { margin:12px 0 0; } .info-site .skip { position:absolute; top:-100px; background:#fff; padding:10px; } .info-site .skip:focus { top:0; } .info-site .header a:focus-visible, .info-site .footer a:focus-visible, .info-site .return-search:focus-visible { outline:2px solid #127b5a; outline-offset:4px; }
 @media(max-width:600px) { .info-site .header .shell { flex-wrap:wrap; padding-block:16px; gap:12px; } .info-site .header nav { width:100%; } .info-site .info-page { padding-top:32px; } }
-@media print { .info-site .header nav, .info-site .footer nav, .info-site .skip, .info-site .return-search { display:none; } .info-site .info-page { max-width:none; padding-top:20px; }.info-faq details::details-content { display:block; }.free-plan { border:1px solid #ddd; } }
+@media print { .info-site .header nav, .info-site .footer nav, .info-site .skip, .info-site .return-search { display:none; } .info-site .info-page { max-width:none; padding-top:20px; }.info-faq details::details-content { display:block; }.free-plan { border:1px solid #ddd; } .info-site .legal-text h2 { break-after:avoid; } }
+
+/* Pricing and policies: consistent navigation and readable tables. */
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.info-site .policy-nav { background:#f5f8f6; border-bottom:1px solid #e1e8e3; }
+.info-site .policy-nav .shell { display:flex; flex-wrap:wrap; gap:4px 24px; padding-block:10px; }
+.info-site .policy-nav a { display:inline-flex; align-items:center; gap:4px; min-height:40px; color:#46584f; text-decoration:none; font-size:13px; border-bottom:2px solid transparent; }
+.info-site .policy-nav a[aria-current="page"] { color:#096343; font-weight:650; border-bottom-color:#127b5a; }
+.info-site .policy-nav a:focus-visible { outline:2px solid #127b5a; outline-offset:3px; }
+.info-site .info-page { max-width:720px; }
+.info-site .site-info-body { font-size:15px; line-height:1.75; }
+.page-contents { display:flex; flex-wrap:wrap; gap:8px 20px; border-block:1px solid #e5e7eb; padding:16px 0; margin:24px 0; font-size:13px; }
+.page-contents > span { width:100%; color:#6b7280; font-weight:600; }
+.pricing-table { width:100%; border-collapse:collapse; margin:20px 0; font-size:14px; }
+.pricing-table caption { text-align:left; color:#111827; font-weight:600; margin-bottom:12px; }
+.pricing-table th, .pricing-table td { padding:14px 12px; text-align:left; vertical-align:top; border-bottom:1px solid #e5e7eb; }
+.pricing-table thead { background:#f3f7f4; }
+.pricing-table th { font-weight:600; color:#233e30; }
+.pricing-table .cost { white-space:nowrap; color:#0f654a; font-weight:600; }
+.pricing-table small { font-weight:400; }
+@media(max-width:600px) { .info-site .shell { padding-inline:18px; } .info-site .policy-nav .shell { gap:2px 15px; } .info-site .policy-nav a { font-size:12px; } .pricing-table { font-size:13px; } .pricing-table th, .pricing-table td { padding:12px 7px; } }
+@media print { .info-site .policy-nav, .page-contents { display:none; } .pricing-table tr { break-inside:avoid; } }
