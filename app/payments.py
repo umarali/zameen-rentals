@@ -265,8 +265,8 @@ class SafepayProvider:
                                   ("SAFEPAY_WEBHOOK_SECRET", webhook_secret)) if not v]
         if missing:
             raise PaymentsUnavailable(f"Safepay is missing {', '.join(missing)}")
-        if env == "sandbox" and is_production():
-            raise PaymentsUnavailable("Safepay sandbox is refused when ZR_ENV=production")
+        if env == "sandbox" and not test_mode_allowed():
+            raise PaymentsUnavailable("Safepay sandbox needs an explicit non-production ZR_ENV")
         self.env = env
         self.api_key = api_key
         self._secret_key = secret_key
@@ -276,7 +276,7 @@ class SafepayProvider:
     @classmethod
     def from_env(cls) -> "SafepayProvider":
         return cls(
-            env=(os.getenv("SAFEPAY_ENV") or "sandbox").strip().lower(),
+            env=(os.getenv("SAFEPAY_ENV") or "").strip().lower(),
             api_key=(os.getenv("SAFEPAY_API_KEY") or "").strip(),
             secret_key=(os.getenv("SAFEPAY_SECRET_KEY") or "").strip(),
             webhook_secret=(os.getenv("SAFEPAY_WEBHOOK_SECRET") or "").strip(),

@@ -1,4 +1,4 @@
-/** Paid extras on a saved search: priority check and daily shortlist.
+/** Daily shortlists on a saved search, charged when new matches are delivered.
  *
  *  Mounted into each alert card in My rentals (`[data-alert-upgrades]`
  *  slots rendered by personalization-ui.js). Costs and balance come from
@@ -11,17 +11,12 @@ import { esc, escA, fmtPrice } from './utils.js';
 import { getClientId } from './personalization.js';
 import { paidFetch } from './credits-gate.js';
 
-const INSTANT = 'instant_alerts_day';
 const SHORTLIST = 'daily_shortlist_day';
 
 const COPY = {
-  [INSTANT]: {
-    title: 'Priority check',
-    body: 'Also checks this exact search on Zameen.com, newest first, each time we refresh the newest listings. Helps when many listings go up at once and some would wait for the next full sweep.',
-  },
   [SHORTLIST]: {
     title: 'Daily shortlist',
-    body: hour => `Once a day from ${fmtHour(hour)}, up to 5 of the best new matches from the last 24 hours, each with a short reason. Days with no new matches are free.`,
+    body: hour => `Once a day from ${fmtHour(hour)}, up to 5 new matches from the last 24 hours, each with a short reason. Days with no new matches are free.`,
   },
 };
 
@@ -81,10 +76,6 @@ function credits(n) {
   return `${n} credit${n === 1 ? '' : 's'}`;
 }
 
-function days(n) {
-  return `${n} day${n === 1 ? '' : 's'}`;
-}
-
 function fmtHour(h) {
   if (h === 0) return '12 am';
   if (h === 12) return '12 pm';
@@ -110,10 +101,10 @@ function renderSummary() {
     list.before(el);
   }
   if (!el) return;
-  const { balance, daily_cost: cost, days_covered: covered } = _state;
+  const { balance, daily_cost: cost } = _state;
   el.textContent = cost
-    ? `Paid extras use ${credits(cost)} a day. Your ${credits(balance)} cover ${days(covered)} after today.`
-    : `Paid extras are optional and charged per day while on. Your balance: ${credits(balance)}.`;
+    ? `Daily shortlists use up to ${credits(cost)} a day across your enabled searches. Your balance: ${credits(balance)}.`
+    : `Daily shortlists are optional. Your balance: ${credits(balance)}.`;
 }
 
 function renderSlot(slot) {
@@ -128,7 +119,7 @@ function renderSlot(slot) {
       ${info.paused ? '<p class="text-xs text-gray-500 mb-1">Resume this alert to use paid extras. Paused alerts aren\'t charged.</p>' : ''}
       ${notices.map(n => renderNotice(n)).join('')}
       <ul class="divide-y divide-gray-100">
-        ${[INSTANT, SHORTLIST].map(key => renderToggle(alertId, key, info)).join('')}
+        ${[SHORTLIST].map(key => renderToggle(alertId, key, info)).join('')}
       </ul>
       <p class="upg-msg text-xs text-rose-600 empty:hidden mt-1" role="status" aria-live="polite"></p>
       ${latest ? renderShortlistButton(alertId, latest) : ''}
@@ -152,14 +143,7 @@ function renderToggle(alertId, key, info) {
   const cost = u.cost_per_day ?? _state.costs?.[key] ?? 0;
   const on = !!u.enabled;
   const body = typeof COPY[key].body === 'function' ? COPY[key].body(_state.shortlist_hour ?? 9) : COPY[key].body;
-  const balance = _state.balance ?? 0;
-  let meta;
-  if (on) {
-    meta = `On · ${credits(cost)} a day${_state.days_covered != null ? ` · balance covers ${days(_state.days_covered)} after today` : ''}`;
-  } else {
-    const would = Math.floor(Math.max(balance - cost, 0) / (((_state.daily_cost || 0) + cost) || 1));
-    meta = `${credits(cost)} a day · switching on charges today · balance would then cover ${days(would)} after today`;
-  }
+  const meta = `${on ? 'On · ' : ''}${credits(cost)} per day with new matches, for this search. Stop at any time.`;
   const titleId = `upg-t-${alertId}-${key}`;
   const descId = `upg-d-${alertId}-${key}`;
   const disabled = info.paused && !on;

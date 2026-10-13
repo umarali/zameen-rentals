@@ -10,7 +10,7 @@ test('pricing page shows the packs, costs and starter credits from /api/credits'
   await page.goto('/pricing');
 
   // Every pack the API sells is on the page with the same credits and price, and nothing else is.
-  const packs = await page.locator('.pack-list li').evaluateAll(items => items.map(li => ({
+  const packs = await page.locator('.pack-list [data-pack]').evaluateAll(items => items.map(li => ({
     id: li.dataset.pack, credits: Number(li.dataset.credits), price_pkr: Number(li.dataset.pricePkr), text: li.textContent,
   })));
   expect(packs.map(p => p.id).sort()).toEqual(credits.packs.map(p => p.id).sort());
@@ -22,7 +22,7 @@ test('pricing page shows the packs, costs and starter credits from /api/credits'
   }
 
   // Each listed action costs what the API charges, in the visible text too.
-  const actions = await page.locator('.cost-list li').evaluateAll(items => items.map(li => ({
+  const actions = await page.locator('.cost-list [data-action]').evaluateAll(items => items.map(li => ({
     action: li.dataset.action, cost: Number(li.dataset.cost), text: li.querySelector('.cost').textContent,
   })));
   expect(actions.length).toBeGreaterThan(0);
@@ -37,7 +37,7 @@ test('pricing page shows the packs, costs and starter credits from /api/credits'
   await expect(starter).toHaveAttribute('data-starter-credits', String(credits.balance));
   await expect(starter).toContainText(`${credits.balance} free credits`);
   await expect(page.locator('main')).toContainText('Pay once. Nothing renews.');
-  await expect(page.locator('main')).toContainText('Paid actions pause until you add credits');
+  await expect(page.locator('main')).toContainText('Daily shortlists switch off when credits run out');
 });
 
 test('public pages never render owner notes and link to privacy and terms', async ({ page }) => {
@@ -77,7 +77,7 @@ test('legal menu links open new tabs and preserve the search', async ({ page, co
   await expect(page.locator('.card-wrap').first()).toBeVisible();
   await page.locator('#nlInput').fill('two bedrooms under 60000');
   const url = page.url();
-  for (const [name, path, title] of [['Privacy', '/privacy', 'Privacy policy'], ['Terms', '/terms', 'Terms of use']]) {
+  for (const [name, path, title] of [['Privacy policy, opens in a new tab', '/privacy', 'Privacy policy'], ['Terms and conditions, opens in a new tab', '/terms', 'Terms and conditions']]) {
     await page.locator('#siteMenuBtn').click();
     const link = page.locator('#siteMenu').getByRole('link', { name, exact: true });
     await expect(link).toHaveAttribute('target', '_blank');
@@ -92,7 +92,8 @@ test('legal menu links open new tabs and preserve the search', async ({ page, co
     expect(page.url()).toBe(url);
     await expect(page.locator('#nlInput')).toHaveValue('two bedrooms under 60000');
     await tab.close();
-    // Native new-tab navigation leaves the disclosure open in the original tab.
+    // The disclosure closes while the original search stays intact.
+    await expect(page.locator('#siteMenu')).toBeHidden();
     await page.locator('#nlInput').click();
   }
 });
@@ -153,4 +154,28 @@ test('FAQ dialog links use new tabs for legal pages and full-page pricing', asyn
   await dialog.getByRole('link', { name: 'pricing page' }).click();
   await expect(page).toHaveURL(/\/pricing$/);
   await expect(page.locator('#siteInfoDialog')).toHaveCount(0);
+});
+
+
+test('pricing and policy navigation is consistent and legal section links work', async ({ page }) => {
+  for (const path of PUBLIC_PAGES) {
+    await page.goto(path);
+    const nav = page.getByRole('navigation', { name: 'Pricing and policies' });
+    await expect(nav.locator('a')).toHaveCount(3);
+    for (const destination of ['/pricing', '/privacy', '/terms']) {
+      const link = nav.locator(`a[href="${destination}"]`);
+      await expect(link).toBeVisible();
+      if (path === destination) await expect(link).toHaveAttribute('aria-current', 'page');
+      if (destination !== '/pricing') await expect(link).toHaveAccessibleName(/opens in a new tab/);
+    }
+    if (path === '/privacy' || path === '/terms') {
+      for (const link of await page.getByRole('navigation', { name: 'On this page' }).locator('a').all()) {
+        const href = await link.getAttribute('href');
+        await link.click();
+        await expect(page.locator(href)).toBeVisible();
+        expect(new URL(page.url()).hash).toBe(href);
+      }
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
 });

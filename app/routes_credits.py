@@ -10,7 +10,7 @@ import logging
 import os
 from urllib.parse import parse_qs, urlencode
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -64,6 +64,7 @@ async def get_credits(request: Request):
         **credits.summary(client_id),
         "checkout_available": payments.checkout_available(),
         "has_restore_code": payments.has_restore_code(client_id),
+        "can_issue_restore_code": payments.has_restore_code(client_id) or payments.has_purchases(client_id),
     }
 
 
@@ -113,7 +114,8 @@ async def payments_webhook(request: Request, provider_name: str):
 
 @router.get("/api/payments/{payment_id}")
 @limiter.limit(_STATUS_LIMIT)
-async def payment_status(request: Request, payment_id: str):
+async def payment_status(request: Request, payment_id: str, response: Response):
+    response.headers["Cache-Control"] = "no-store"
     client_id = _require_client_id(request)
     payment = payments.get_payment(payment_id)
     if not payment or payment["client_id"] != client_id:
@@ -140,8 +142,9 @@ async def credits_restore(request: Request):
 
 @router.post("/api/credits/restore-code")
 @limiter.limit(_CODE_ROTATE_LIMIT)
-async def credits_new_restore_code(request: Request):
+async def credits_new_restore_code(request: Request, response: Response):
     """Replace this device's restore code. The old code stops working."""
+    response.headers["Cache-Control"] = "no-store"
     client_id = _require_client_id(request)
     if not (payments.has_restore_code(client_id) or payments.has_purchases(client_id)):
         raise HTTPException(status_code=404, detail="Restore codes come with your first purchase")

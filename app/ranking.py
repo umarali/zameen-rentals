@@ -96,7 +96,7 @@ def _get_client():
         if not api_key:
             raise RankingError("ANTHROPIC_API_KEY is not set")
         import anthropic
-        _client = anthropic.Anthropic(api_key=api_key, timeout=AI_TIMEOUT_SECONDS, max_retries=1)
+        _client = anthropic.Anthropic(api_key=api_key, timeout=AI_TIMEOUT_SECONDS, max_retries=0)
     return _client
 
 
@@ -167,6 +167,8 @@ def call_claude_json(*, feature: str, model: str, system: str, user: str, schema
     The system text is static per feature, so it carries a cache breakpoint.
     Raises RankingError on any failure; the caller refunds credits.
     """
+    if model not in _MODEL_PRICES:
+        raise RankingError("No configured price for the requested AI model")
     if ai_spend_today() >= AI_DAILY_BUDGET_USD:
         raise RankingError("AI daily budget spent", "The AI service is busy today. Try again tomorrow.")
     client = _get_client()

@@ -337,7 +337,7 @@ async function renderAlertsTab(body) {
       if (url) window.open(url, '_blank', 'noopener');
     });
   });
-  // Paid extras (priority check, daily shortlist) fill the per-alert slots.
+  // Daily shortlists fill the per-alert slots.
   mountAlertUpgrades(body).catch(err => console.warn('alert upgrades', err));
 }
 

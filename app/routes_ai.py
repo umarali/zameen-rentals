@@ -7,7 +7,7 @@ spend, do the paid work, and refund on any failure.
 Retries never double-charge:
 - The client may send an ``Idempotency-Key`` header. The spend ref is derived
   from it, so replaying the request reuses the same charge. After a refund the
-  next attempt gets a fresh ref, so a refunded attempt can't be replayed free.
+  next attempt gets a fresh ref. After the cache expires, new work also needs a new charge.
 - Results are cached for ``RESULT_TTL_SECONDS`` under the request (same
   client, same brief / same activity) and under the idempotency key. A cached
   hit is returned without charging again.
@@ -36,7 +36,7 @@ RESULT_TTL_SECONDS = float(os.environ.get("ZR_AI_RESULT_TTL_SECONDS", "900"))
 WORK_TIMEOUT_SECONDS = float(os.environ.get("ZR_AI_WORK_TIMEOUT_SECONDS", "60"))
 _IDEMPOTENCY_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 
-_locks: dict[str, asyncio.Lock] = {}
+_locks: dict[str, list] = {}  # [lock, users including queued waiters]
 
 
 # ── Result cache ─────────────────────────────────────────────────────────────
@@ -84,14 +84,14 @@ def _idempotency_key(request: Request, body: dict) -> str | None:
 
 
 def _spend_ref(client_id: str, action: str, idem: str | None) -> str:
-    """A ref that is stable across retries but never reuses a refunded spend."""
+    """Reuse cached responses only; every uncached run needs an unused spend ref."""
     if not idem:
         return credits.new_spend_ref(action)
     base = f"spend:{action}:{_key(client_id, idem)[:32]}"
     conn = _get_conn()
     for n in range(50):
         ref = base if n == 0 else f"{base}:{n}"
-        if not conn.execute("SELECT 1 FROM credit_ledger WHERE ref = ?", (f"refund:{ref}",)).fetchone():
+        if not conn.execute("SELECT 1 FROM credit_ledger WHERE ref = ?", (ref,)).fetchone():
             return ref
     return credits.new_spend_ref(action)
 
@@ -99,19 +99,25 @@ def _spend_ref(client_id: str, action: str, idem: str | None) -> str:
 async def _run_paid(*, client_id, action, request_key, idem, work, empty=lambda r: False):
     """Spend, run `work` (sync, in a thread), refund on failure. Returns the response body."""
     keys = [request_key] + ([_key(client_id, action, "idem", idem)] if idem else [])
-    lock = _locks.setdefault(keys[-1], asyncio.Lock())
+    entry = _locks.setdefault(keys[-1], [asyncio.Lock(), 0])
+    entry[1] += 1
     try:
-        async with lock:
+        async with entry[0]:
             cached = _cache_get(keys)
             if cached is not None:
                 return {**cached, "cached": True, "charged": False, "balance": credits.balance(client_id)}
             ref = _spend_ref(client_id, action, idem)
             try:
-                balance = credits.spend(client_id, action, ref=ref)
+                balance = credits.spend(client_id, action, ref=ref, allow_replay=False)
             except credits.InsufficientCredits as exc:
                 raise HTTPException(status_code=402, detail=exc.as_detail())
+            except credits.SpendReferenceConflict:
+                raise HTTPException(status_code=409, detail="This request is already running. Please retry.")
             try:
                 result = await asyncio.wait_for(asyncio.to_thread(work), WORK_TIMEOUT_SECONDS)
+            except asyncio.CancelledError:
+                credits.refund(ref)
+                raise
             except Exception as exc:
                 credits.refund(ref)
                 if isinstance(exc, ranking.RankingError):
@@ -127,11 +133,16 @@ async def _run_paid(*, client_id, action, request_key, idem, work, empty=lambda 
                 credits.refund(ref)
                 return {**result, "cached": False, "charged": False, "balance": credits.balance(client_id),
                         "cost": credits.COSTS[action]}
-            _cache_set(keys, client_id, action, result)
+            try:
+                _cache_set(keys, client_id, action, result)
+            except Exception:
+                credits.refund(ref)
+                raise HTTPException(status_code=503, detail="We couldn't save the result. Your credit was returned.")
             return {**result, "cached": False, "charged": True, "balance": balance,
                     "cost": credits.COSTS[action]}
     finally:
-        if not lock.locked():
+        entry[1] -= 1
+        if entry[1] == 0:
             _locks.pop(keys[-1], None)
 
 

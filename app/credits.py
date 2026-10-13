@@ -1,8 +1,7 @@
 """Credits: prepaid, one-time top-ups that pay for optional features.
 
 There is no subscription and nothing renews. A renter buys a pack once and
-spends credits on paid actions (tailored list, search report, daily shortlist,
-instant alerts, listing history). Search itself stays free.
+spends credits on Tailored lists, Search reports and Daily shortlists. Search itself stays free. Historical action keys stay in the ledger.
 
 Every change is a row in `credit_ledger`; the balance is the sum of `delta`
 for a client. Rows are never updated or deleted. Each row may carry a `ref`,
@@ -33,19 +32,24 @@ STARTER_CREDITS = 10
 # One-time packs. Prices are whole PKR. Changing these changes what the
 # pricing page and checkout offer; keep docs/credits-contract.md in sync.
 PACKS = {
-    "small": {"credits": 20, "price_pkr": 199},
-    "standard": {"credits": 60, "price_pkr": 499},
-    "large": {"credits": 130, "price_pkr": 999},
+    "standard": {"credits": 50, "price_pkr": 500},
 }
 
 # Cost in credits of each paid action.
 COSTS = {
-    "tailored_list": 5,
-    "search_report": 5,
-    "daily_shortlist_day": 2,
+    "tailored_list": 1,
+    "search_report": 1,
+    "daily_shortlist_day": 1,
     "instant_alerts_day": 1,
     "listing_history": 1,
 }
+
+OFFERED_ACTIONS = ("tailored_list", "search_report", "daily_shortlist_day")
+
+
+class SpendReferenceConflict(ValueError):
+    """A spend reference cannot be reused for this operation."""
+
 
 KINDS = ("starter", "purchase", "spend", "refund", "restore_in", "restore_out", "adjust")
 
@@ -130,7 +134,7 @@ def grant(client_id: str, credits: int, *, kind: str, ref: str, action: str | No
     return cur.rowcount == 1
 
 
-def spend(client_id: str, action: str, *, ref: str) -> int:
+def spend(client_id: str, action: str, *, ref: str, allow_replay: bool = True) -> int:
     """Charge COSTS[action]. Returns the new balance.
 
     Raises InsufficientCredits when the balance is too low. Replaying a ref
@@ -144,7 +148,10 @@ def spend(client_id: str, action: str, *, ref: str) -> int:
     conn = _get_conn()
     with conn:
         _ensure_starter(conn, client_id)
-        if conn.execute("SELECT 1 FROM credit_ledger WHERE ref = ?", (ref,)).fetchone():
+        existing = conn.execute("SELECT client_id, kind, action FROM credit_ledger WHERE ref = ?", (ref,)).fetchone()
+        if existing:
+            if not allow_replay or tuple(existing) != (client_id, "spend", action):
+                raise SpendReferenceConflict("Spend reference already used")
             return _balance(conn, client_id)
         cur = conn.execute(
             """INSERT INTO credit_ledger (client_id, delta, kind, action, ref)
@@ -188,7 +195,7 @@ def summary(client_id: str) -> dict:
     """What GET /api/credits returns."""
     return {
         "balance": balance(client_id),
-        "costs": COSTS,
+        "costs": {action: COSTS[action] for action in OFFERED_ACTIONS},
         "packs": [{"id": k, **v} for k, v in PACKS.items()],
         "history": history(client_id),
     }

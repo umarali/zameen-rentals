@@ -1,4 +1,4 @@
-"""Paid alert upgrades API: priority check and daily shortlist, charged per day."""
+"""Daily shortlist API. Historical priority upgrades can only be switched off."""
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from app import alert_upgrades as upgrades
@@ -20,7 +20,7 @@ async def alert_upgrades_state(request: Request):
 @router.post("/api/alerts/{alert_id}/upgrades/{upgrade}")
 @limiter.limit(_PERSONALIZATION_BURST)
 async def alert_upgrade_set(request: Request, alert_id: int, upgrade: str):
-    """Switch an upgrade on (charges today now) or off (stops future charges)."""
+    """Enable or stop an upgrade. Daily shortlists charge on delivery."""
     client_id = _require_client_id(request)
     if upgrade not in upgrades.UPGRADES:
         raise HTTPException(status_code=404, detail="Unknown upgrade")
@@ -30,6 +30,8 @@ async def alert_upgrade_set(request: Request, alert_id: int, upgrade: str):
         body = None
     if not isinstance(body, dict) or not isinstance(body.get("enabled"), bool):
         raise HTTPException(status_code=400, detail="Body must be {\"enabled\": true|false}")
+    if body["enabled"] and upgrade not in upgrades.offered_upgrades():
+        raise HTTPException(status_code=404, detail="This upgrade is not available")
     try:
         return upgrades.set_upgrade(client_id, alert_id, upgrade, body["enabled"])
     except credits.InsufficientCredits as exc:

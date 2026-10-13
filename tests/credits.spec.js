@@ -32,22 +32,22 @@ async function buyStandardPack(page) {
   await expect(dialog).toHaveAttribute("role", "dialog");
   await expect(dialog).toHaveAttribute("aria-modal", "true");
   await expect(dialog).toContainText("Pay once. Nothing renews.");
-  // Packs come from the API: three radios, standard picked by default.
-  await expect(dialog.locator('input[name="creditsPack"]')).toHaveCount(3);
+  // Packs come from the API: one radio for the single pack.
+  await expect(dialog.locator('input[name="creditsPack"]')).toHaveCount(1);
   await expect(dialog.locator('input[name="creditsPack"][value="standard"]')).toBeChecked();
   await expect(dialog.locator('input[name="creditsPack"][value="standard"]')).toBeFocused();
 
   await page.click("#creditsCheckoutBtn");
   await page.waitForURL(/\/pay\/test\/pay_/);
   await expect(page.getByText("Test mode: no real money")).toBeVisible();
-  await expect(page.getByText("PKR 499")).toBeVisible();
+  await expect(page.getByText("PKR 500")).toBeVisible();
   await page.getByRole("button", { name: "Pay" }).click();
 
   // Back in the app with the verified result.
   await page.waitForURL((url) => url.pathname === "/" && !url.search.includes("payment="));
   await expect(page.locator("#creditsSheetTitle")).toHaveText("Payment received");
-  await expect(page.locator("#creditsPaidText")).toContainText("60 credits added");
-  await expect(page.locator("#creditsPaidText")).toContainText("70 credits");
+  await expect(page.locator("#creditsPaidText")).toContainText("50 credits added");
+  await expect(page.locator("#creditsPaidText")).toContainText("60 credits");
   const code = (await page.locator("#creditsRestoreCode").textContent())?.trim() || "";
   expect(code).toMatch(/^[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
   await page.click("#creditsDone");
@@ -59,7 +59,7 @@ test.describe("Credits", () => {
   test("buy a pack with the test provider and see the balance update", async ({ page }) => {
     await buyStandardPack(page);
     await openMyRentals(page);
-    await expect(await balanceText(page)).toHaveText("70 credits");
+    await expect(await balanceText(page)).toHaveText("60 credits");
   });
 
   test("cancelling checkout adds nothing", async ({ page }) => {
@@ -101,9 +101,9 @@ test.describe("Credits", () => {
       await other.fill("#creditsRestoreInput", code.toLowerCase());
       await other.keyboard.press("Enter");
       await expect(other.locator("#creditsSheetTitle")).toHaveText("Credits restored");
-      await expect(other.locator(DIALOG)).toContainText("60 credits moved to this device");
+      await expect(other.locator(DIALOG)).toContainText("50 credits moved to this device");
       await other.click("#creditsDone");
-      await expect(await balanceText(other)).toHaveText("70 credits");
+      await expect(await balanceText(other)).toHaveText("60 credits");
     } finally {
       await second.close();
     }
@@ -144,4 +144,16 @@ test.describe("Credits", () => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(overflow).toBe(false);
   });
+});
+
+test('a buyer can replace a missed restore code from My rentals', async ({ page }) => {
+  const oldCode = await buyStandardPack(page);
+  await openMyRentals(page);
+  await page.click('#creditsRestoreBtn');
+  await page.getByRole('button', { name: 'Create a new restore code', exact: true }).click();
+  await expect(page.locator('#creditsSheetTitle')).toHaveText('Your restore code');
+  const newCode = (await page.locator('#creditsRestoreCode').textContent())?.trim();
+  expect(newCode).toMatch(/^[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
+  expect(newCode).not.toBe(oldCode);
+  await expect(page.locator('#creditsDialog')).toContainText('Your previous code no longer works');
 });

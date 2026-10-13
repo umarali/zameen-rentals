@@ -24,7 +24,7 @@ class _Items(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
-        if tag == "li" and any(k.startswith("data-") for k in attrs):
+        if tag in ("li", "tr") and any(k.startswith("data-") for k in attrs):
             self.items.append(attrs)
         if tag in ("script", "style", "head"):
             self._skip += 1

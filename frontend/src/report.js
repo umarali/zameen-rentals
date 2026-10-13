@@ -24,13 +24,15 @@ export async function fetchCredits() {
   } catch { return null; }
 }
 
+export const creditAmount = n => `${n} credit${n === 1 ? '' : 's'}`;
+
 export function costText(cost, balance) {
   if (cost == null) return 'Uses credits from your balance.';
-  return `Uses ${cost} credits.` + (balance != null ? ` You have ${balance}.` : '');
+  return `Uses ${creditAmount(cost)}.` + (balance != null ? ` You have ${balance}.` : '');
 }
 
 export function insufficientText(detail = {}) {
-  const need = detail.cost != null ? `${detail.cost} credits` : 'more credits';
+  const need = detail.cost != null ? creditAmount(detail.cost) : 'more credits';
   const have = detail.balance != null ? ` and have ${detail.balance}` : '';
   return `You need ${need}${have}. Add credits to continue.`;
 }
@@ -152,7 +154,7 @@ function renderSection(s) {
 
 function renderResult(data) {
   const r = data.report || {};
-  const charge = data.charged ? `Used ${data.cost} credits.` : (data.cached ? 'Made in the last few minutes, so no credits were used.' : '');
+  const charge = data.charged ? `Used ${creditAmount(data.cost)}.` : (data.cached ? 'Made in the last few minutes, so no credits were used.' : '');
   const when = data.generated_at ? new Date(data.generated_at).toLocaleString() : '';
   _modal.body.innerHTML = `
     <div data-report-result>

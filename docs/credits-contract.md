@@ -1,27 +1,26 @@
 # Credits and paid features: shared contract
 
-This is a local working agreement for the parallel tracks building paid features. Every track branches from `feat/credits-base` and must keep to this contract so the branches merge cleanly.
+The integrated contract for credits and paid features. Historical branch ownership is retained below for context.
 
 ## Product rules
 
 - Search, filters, maps, contacts, saved homes, comparisons and today's alerts stay free. A paid feature must add something; it must never make a free feature worse.
 - No subscription and no renewal. People buy a credit pack once and spend credits on paid actions.
-- New visitors get `STARTER_CREDITS` (10) free credits.
+- New visitors get `STARTER_CREDITS` (10) free credits. One credit buys one use of any offered paid feature. Credits do not expire.
+- Refund requests within seven days cover unused purchased credits at their actual purchase price, including partly used packs. Requests use Send feedback; real-provider cash-refund processing still needs verification before live sales.
 - Packs and costs live only in `app/credits.py` (`PACKS`, `COSTS`). Read them from there or from `GET /api/credits`. Never hard-code numbers in copy or UI.
 
 | Action key | Credits | Owner track |
 |---|---|---|
-| `tailored_list` | 5 | ai |
-| `search_report` | 5 | ai |
-| `daily_shortlist_day` | 2 per day | alerts |
-| `instant_alerts_day` | 1 per day | alerts |
+| `tailored_list` | 1 | ai |
+| `search_report` | 1 | ai |
+| `daily_shortlist_day` | 1 per delivered day per saved search | alerts |
+| `instant_alerts_day` | Not offered | retained for experiments and historical records |
 | `listing_history` | 1 per listing | later, not in this round |
 
 | Pack | Credits | PKR |
 |---|---|---|
-| small | 20 | 199 |
-| standard | 60 | 499 |
-| large | 130 | 999 |
+| standard | 50 | 500 |
 
 ## Backend interface (`app/credits.py`)
 
@@ -60,12 +59,3 @@ Shared files:
 
 - The ai track exports `app/ranking.py: rank_listings(criteria: dict, listings: list[dict], brief: str | None = None, limit: int = 10) -> list[dict]`. Each result has `zameen_id`, `reason` and `trade_off`, ordered best first.
 - The alerts track's daily shortlist calls it through a lazy import with a simple fallback (newest and best price fit first) when it's missing.
-
-## Working rules for every track
-
-- Work only in your own worktree and branch. Commit locally. **Never push, open a PR or deploy.**
-- Don't touch other worktrees, the shared checkout at `/Users/umarali/Workspace/MVPs/zameenrental`, or production. Never stop processes you didn't start.
-- Browsers run headless only. Don't run `npx playwright install`. Use Node 22: `PATH="$HOME/.nvm/versions/node/v22.13.0/bin:$PATH"`. Use your track's Playwright port: payments 8220, ai 8230, alerts 8240, legal 8250 (`PLAYWRIGHT_PORT=<port>`).
-- Python: `/Users/umarali/Workspace/MVPs/zameenrental-ci/.venv/bin/python -m pytest`.
-- Mock Claude in automated tests. A handful of live Claude calls for a manual check is fine.
-- Copy follows `docs/content-style.md`: sentence case, plain words, no promises without evidence.

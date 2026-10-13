@@ -29,7 +29,9 @@ DAY1_MORNING = utc(2026, 10, 12, 4, 0)
 
 
 @pytest.fixture(autouse=True)
-def _schema(fresh_db):
+def _schema(fresh_db, monkeypatch):
+    # The historical priority experiment remains tested, but is not publicly offered.
+    monkeypatch.setattr(up, "PRIORITY_AVAILABLE", True)
     pers.init_personalization_schema()
     yield
 
@@ -104,13 +106,13 @@ class TestSwitching:
         assert credits.balance(CLIENT) == credits.STARTER_CREDITS - credits.COSTS[up.INSTANT]
         assert [r["ref"] for r in _spends()] == [f"alertday:{aid}:instant_alerts_day:2026-10-12"]
 
-    def test_off_and_on_the_same_day_charges_once(self):
+    def test_shortlist_off_and_on_before_delivery_charges_nothing(self):
         aid = _alert()
         up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=DAY1_MORNING)
         up.set_upgrade(CLIENT, aid, up.SHORTLIST, False, now=DAY1_MORNING)
         up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=DAY1_MORNING + timedelta(hours=1))
-        assert len(_spends()) == 1
-        assert credits.balance(CLIENT) == credits.STARTER_CREDITS - credits.COSTS[up.SHORTLIST]
+        assert len(_spends()) == 0
+        assert credits.balance(CLIENT) == credits.STARTER_CREDITS
 
     def test_switching_off_stops_future_charges(self):
         aid = _alert()
@@ -122,11 +124,11 @@ class TestSwitching:
 
     def test_insufficient_credits_raises_and_leaves_it_off(self):
         aid = _alert()
-        _drain(CLIENT, 1)
+        _drain(CLIENT, 0)
         with pytest.raises(credits.InsufficientCredits):
             up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=DAY1_MORNING)
         assert up.upgrade_state(CLIENT, aid)["upgrades"][up.SHORTLIST]["enabled"] is False
-        assert credits.balance(CLIENT) == 1
+        assert credits.balance(CLIENT) == 0
 
     def test_paused_alert_cannot_be_upgraded(self):
         aid = _alert()
@@ -211,9 +213,9 @@ class TestDailyCharging:
         up.set_upgrade(CLIENT, a1, up.INSTANT, True, now=DAY1_MORNING)
         up.set_upgrade(CLIENT, a2, up.SHORTLIST, True, now=DAY1_MORNING)
         state = up.get_state(CLIENT, now=DAY1_MORNING)
-        assert state["daily_cost"] == 3
-        assert state["balance"] == 7
-        assert state["days_covered"] == 2
+        assert state["daily_cost"] == 2
+        assert state["balance"] == 9
+        assert state["days_covered"] == 4
 
 
 # ── Daily shortlist ──────────────────────────────────────────────────────────
@@ -232,9 +234,9 @@ class TestShortlist:
 
     def test_no_charge_on_days_without_matches(self, no_ranking):
         aid = _alert()
-        # Day 1: switched on (charged), no matches at the shortlist hour -> refunded.
+        # Day 1: enabling an empty search never reserves or consumes credits.
         up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=DAY1_MORNING - timedelta(hours=1))
-        assert credits.balance(CLIENT) == 8
+        assert credits.balance(CLIENT) == 10
         s = up.run_daily_jobs(now=DAY1_MORNING, dispatch=False)
         assert s["empty"] == 1
         assert credits.balance(CLIENT) == credits.STARTER_CREDITS
@@ -278,16 +280,16 @@ class TestShortlist:
         _listing()
         day2 = DAY1_MORNING
         _set_matched_at(aid, day2 - timedelta(hours=1))
-        _drain(CLIENT, 1)
+        _drain(CLIENT, 0)
         s = up.run_daily_jobs(now=day2, dispatch=False)
         assert s["switched_off"] == 1
-        assert credits.balance(CLIENT) == 1
+        assert credits.balance(CLIENT) == 0
         assert up.list_shortlists(CLIENT, aid) == []
         credits.grant(CLIENT, 20, kind="purchase", ref="payment:test-1")
         up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=day2)
         up.run_daily_jobs(now=day2 + timedelta(minutes=5), dispatch=False)
         assert len(up.list_shortlists(CLIENT, aid)) == 1
-        assert credits.balance(CLIENT) == 1 + 20 - credits.COSTS[up.SHORTLIST]
+        assert credits.balance(CLIENT) == 20 - credits.COSTS[up.SHORTLIST]
 
     def test_push_sent_when_subscribed(self, no_ranking, monkeypatch):
         aid = _alert()
@@ -592,7 +594,7 @@ class TestApi:
         aid = _alert()
         state = api.get("/api/alerts/upgrades", headers=H).json()
         assert state["balance"] == credits.STARTER_CREDITS
-        assert state["costs"] == {up.INSTANT: 1, up.SHORTLIST: 2}
+        assert state["costs"] == {up.INSTANT: 1, up.SHORTLIST: 1}
         assert state["days_covered"] is None
         assert state["alerts"][str(aid)][up.INSTANT]["enabled"] is False
 
@@ -600,19 +602,19 @@ class TestApi:
         assert r.status_code == 200
         body = r.json()
         assert body["upgrades"][up.SHORTLIST]["enabled"] is True
-        assert body["balance"] == 8 and body["daily_cost"] == 2 and body["days_covered"] == 4
+        assert body["balance"] == 10 and body["daily_cost"] == 1 and body["days_covered"] == 10
 
         r = api.post(f"/api/alerts/{aid}/upgrades/{up.SHORTLIST}", headers=H, json={"enabled": False})
         assert r.json()["upgrades"][up.SHORTLIST]["enabled"] is False
-        assert r.json()["balance"] == 8
+        assert r.json()["balance"] == 10
 
     def test_402_with_contract_detail(self, api):
         aid = _alert()
-        _drain(CLIENT, 1)
+        _drain(CLIENT, 0)
         r = api.post(f"/api/alerts/{aid}/upgrades/{up.SHORTLIST}", headers=H, json={"enabled": True})
         assert r.status_code == 402
         assert r.json()["detail"] == {
-            "code": "insufficient_credits", "action": up.SHORTLIST, "balance": 1, "cost": 2,
+            "code": "insufficient_credits", "action": up.SHORTLIST, "balance": 0, "cost": 1,
         }
 
     def test_errors(self, api):
@@ -637,3 +639,17 @@ class TestApi:
         state = api.get("/api/alerts/upgrades", headers=H).json()
         assert state["alerts"][str(aid)]["latest_shortlist"]["seen"] is True
         assert api.post("/api/alerts/upgrades/notices/seen", headers=H, json={}).json() == {"updated": 0}
+
+
+def test_shortlist_does_not_rebill_matches_in_overlapping_daily_windows(no_ranking):
+    aid = _alert()
+    first = DAY1_MORNING + timedelta(hours=2)
+    _listing()
+    _set_matched_at(aid, first - timedelta(minutes=30))
+    up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=first)
+    assert up.run_daily_jobs(now=first, dispatch=False)['shortlists'] == 1
+    before = credits.balance(CLIENT)
+    next_run = DAY1_MORNING + timedelta(days=1, minutes=5)
+    assert up.run_daily_jobs(now=next_run, dispatch=False)['empty'] == 1
+    assert credits.balance(CLIENT) == before
+    assert len(up.list_shortlists(CLIENT, aid)) == 1

@@ -44,7 +44,7 @@ function alertCard(page, alertId) {
 }
 
 test.describe("Paid alert extras", () => {
-  test("shows both extras with their daily cost, switched off by default", async ({ page, request }) => {
+  test("offers only the daily shortlist, switched off by default", async ({ page, request }) => {
     const clientId = await freshClient(page);
     const alertId = await api(request, clientId).createAlert("Gulberg flats", { city: "lahore", area: "Gulberg" });
     await openAlerts(page);
@@ -52,17 +52,16 @@ test.describe("Paid alert extras", () => {
     const card = alertCard(page, alertId);
     const priority = card.getByRole("switch", { name: "Priority check" });
     const shortlist = card.getByRole("switch", { name: "Daily shortlist" });
-    await expect(priority).toHaveAttribute("aria-checked", "false");
+    await expect(priority).toHaveCount(0);
     await expect(shortlist).toHaveAttribute("aria-checked", "false");
-    await expect(card).toContainText("1 credit a day");
-    await expect(card).toContainText("2 credits a day");
+    await expect(card).toContainText("1 credit per day with new matches, for this search");
     await expect(card).toContainText("Days with no new matches are free.");
     await expect(page.locator("#alertUpgradesSummary")).toContainText("Your balance: 10 credits");
     // Copy stays honest: no "instant" promise.
     await expect(card).not.toContainText(/instant/i);
   });
 
-  test("switching the shortlist on charges today and shows days covered; off stops it", async ({ page, request }) => {
+  test("enabling then stopping a shortlist does not spend credits before delivery", async ({ page, request }) => {
     const clientId = await freshClient(page);
     const client = api(request, clientId);
     const alertId = await client.createAlert("DHA houses", { city: "lahore", area: "DHA Defence" });
@@ -72,48 +71,45 @@ test.describe("Paid alert extras", () => {
     const shortlist = card.getByRole("switch", { name: "Daily shortlist" });
     await shortlist.click();
     await expect(shortlist).toHaveAttribute("aria-checked", "true");
-    await expect(card).toContainText("On · 2 credits a day · balance covers 4 days after today");
+    await expect(card).toContainText("On · 1 credit per day with new matches, for this search. Stop at any time.");
     await expect(page.locator("#alertUpgradesSummary")).toHaveText(
-      "Paid extras use 2 credits a day. Your 8 credits cover 4 days after today."
+      "Daily shortlists use up to 1 credit a day across your enabled searches. Your balance: 10 credits."
     );
-    expect((await client.state()).balance).toBe(8);
+    expect((await client.state()).balance).toBe(10);
 
     // Keyboard works too: Space on the focused switch turns it off.
     await shortlist.focus();
     await page.keyboard.press("Space");
     await expect(shortlist).toHaveAttribute("aria-checked", "false");
     const after = await client.state();
-    expect(after.balance).toBe(8); // switching off doesn't charge or refund today
+    expect(after.balance).toBe(10); // switching off doesn't charge or refund today
     expect(after.alerts[String(alertId)][SHORTLIST].enabled).toBe(false);
 
-    // Back on the same day: already paid, no second charge.
+    // Back on before delivery: still no charge, no second charge.
     await shortlist.click();
     await expect(shortlist).toHaveAttribute("aria-checked", "true");
-    expect((await client.state()).balance).toBe(8);
+    expect((await client.state()).balance).toBe(10);
   });
 
   test("not enough credits: inline message and the top-up event", async ({ page, request }) => {
     const clientId = await freshClient(page);
     const client = api(request, clientId);
-    // Spend the 10 starter credits on five other alerts' shortlists.
-    for (let i = 0; i < 5; i++) {
-      const id = await client.createAlert(`Spend ${i}`, { city: "lahore", bedrooms: i + 1 });
-      expect((await client.setUpgrade(id, SHORTLIST, true)).status()).toBe(200);
-    }
     const target = await client.createAlert("Target alert", { city: "karachi", area: "Clifton" });
-    expect((await client.state()).balance).toBe(0);
-
+    // Exercise the 402 UI without running paid AI calls or the daily worker.
+    await page.route(`**/api/alerts/${target}/upgrades/${SHORTLIST}`, route => route.fulfill({
+      status: 402, json: { detail: { code: 'insufficient_credits', action: SHORTLIST, balance: 0, cost: 1 } },
+    }));
     await page.evaluate(() => {
       window.__topups = [];
       window.addEventListener("zr:insufficient-credits", e => window.__topups.push(e.detail));
     });
     await openAlerts(page);
     const card = alertCard(page, target);
-    await card.getByRole("switch", { name: "Priority check" }).click();
-    await expect(card.locator(".upg-msg")).toHaveText("Not enough credits. Priority check needs 1 credit today; you have 0.");
-    await expect(card.getByRole("switch", { name: "Priority check" })).toHaveAttribute("aria-checked", "false");
+    await card.getByRole("switch", { name: "Daily shortlist" }).click();
+    await expect(card.locator(".upg-msg")).toHaveText("Not enough credits. Daily shortlist needs 1 credit today; you have 0.");
+    await expect(card.getByRole("switch", { name: "Daily shortlist" })).toHaveAttribute("aria-checked", "false");
     const topups = await page.evaluate(() => window.__topups);
-    expect(topups).toEqual([{ code: "insufficient_credits", action: INSTANT, balance: 0, cost: 1 }]);
+    expect(topups).toEqual([{ code: "insufficient_credits", action: SHORTLIST, balance: 0, cost: 1 }]);
   });
 
   test("shortlist view lists picks with reasons", async ({ page, request }) => {
@@ -182,7 +178,7 @@ test.describe("Paid alert extras", () => {
     });
     await openAlerts(page);
     const body = page.locator("#personalizationBody");
-    await expect(body.getByRole("switch", { name: "Priority check" })).toBeVisible();
+    await expect(body.getByRole("switch", { name: "Daily shortlist" })).toBeVisible();
     const overflow = await body.evaluate(el => el.scrollWidth - el.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     for (const sw of await body.getByRole("switch").all()) {

@@ -167,7 +167,7 @@ function setView(title, html, focusSelector) {
 // ── Top-up view ─────────────────────────────────────────────────────────────
 
 export async function openTopUp({ need = null, view = 'packs' } = {}) {
-  if (view === 'restore') { renderRestore(); return; }
+
   setView('Top up credits', '<p class="py-6 text-center text-sm text-gray-400" role="status">Loading…</p>');
   try {
     await loadSummary();
@@ -175,7 +175,8 @@ export async function openTopUp({ need = null, view = 'packs' } = {}) {
     setView('Top up credits', `<p class="py-6 text-center text-sm text-rose-600" role="alert">${esc(err.message || 'Could not load packs.')}</p>`);
     return;
   }
-  renderPacks(need);
+  if (view === 'restore') renderRestore();
+  else renderPacks(need);
 }
 
 function renderPacks(need) {
@@ -198,7 +199,7 @@ function renderPacks(need) {
     ${needNote}
     <p class="text-sm text-gray-600 mb-3">Balance: <strong id="creditsSheetBalance" class="text-gray-800">${esc(fmtCredits(summary.balance))}</strong></p>
     <fieldset>
-      <legend class="text-xs font-semibold text-gray-500 mb-2">Choose a pack</legend>
+      <legend class="text-xs font-semibold text-gray-500 mb-2">Buy credits</legend>
       <div class="flex flex-col gap-2">
         ${packs.map(p => `
           <label class="credits-pack flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-3 cursor-pointer hover:border-brand-400 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
@@ -209,7 +210,8 @@ function renderPacks(need) {
       </div>
     </fieldset>
     <p class="mt-3 text-sm font-semibold text-gray-700">Pay once. Nothing renews.</p>
-    <p class="mt-1 text-xs text-gray-500 leading-relaxed">Credits pay for optional extras. Search, maps, contacts and saved homes stay free.</p>
+    <p class="mt-1 text-xs text-gray-500 leading-relaxed">One credit pays for one Tailored list, one Search report, or one day of Daily shortlist for one saved search with new matches. Credits never expire.</p>
+    <p class="mt-2 text-xs"><a href="/pricing" class="text-brand-700 underline">Pricing and how credits work</a> · <a href="/terms#refunds" target="_blank" rel="noopener" aria-label="Refunds, opens in a new tab" class="text-brand-700 underline">Refunds ↗</a></p>
     <p id="creditsCheckoutError" class="mt-3 text-sm text-rose-600 ${unavailable ? '' : 'hidden'}" role="alert">${unavailable ? 'Payments are not open yet.' : ''}</p>
     <button type="button" id="creditsCheckoutBtn" class="mt-4 w-full py-3 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${unavailable ? 'disabled' : ''}>Continue to payment</button>
     <button type="button" id="creditsShowRestore" class="mt-3 w-full py-2 text-sm font-semibold text-gray-600 hover:text-brand-600">Have a restore code?</button>
@@ -249,10 +251,30 @@ function renderRestore() {
       <p id="creditsRestoreMsg" class="mt-2 text-sm min-h-[1.25rem]" aria-live="polite"></p>
       <button type="submit" id="creditsRestoreSubmit" class="mt-2 w-full py-3 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors disabled:opacity-50">Restore credits</button>
     </form>
+    ${summary?.can_issue_restore_code ? `<div class="mt-4 border-t border-gray-100 pt-4">
+      <p class="text-xs text-gray-600">Need a code for credits on this device? Creating a new code replaces the old one.</p>
+      <button type="button" id="creditsNewCode" class="mt-2 w-full py-2 text-sm font-semibold text-brand-700">Create a new restore code</button>
+      <p id="creditsNewCodeMsg" class="text-sm text-rose-600" role="status"></p>
+    </div>` : ''}
     <button type="button" id="creditsBackToPacks" class="mt-3 w-full py-2 text-sm font-semibold text-gray-600 hover:text-brand-600">Back to packs</button>
   `, '#creditsRestoreInput');
 
   body.querySelector('#creditsBackToPacks').addEventListener('click', () => openTopUp());
+  body.querySelector('#creditsNewCode')?.addEventListener('click', async e => {
+    e.currentTarget.disabled = true;
+    try {
+      const result = await api('/api/credits/restore-code', { method: 'POST' });
+      const view = setView('Your restore code', `
+        <p id="creditsRestoreCode" class="font-mono text-lg font-bold tracking-wider break-all select-all">${esc(result.restore_code)}</p>
+        <p class="mt-3 text-sm text-gray-600">Copy this code somewhere safe. We show it only once. Your previous code no longer works.</p>
+        <button id="creditsDone" type="button" class="mt-5 w-full py-3 text-sm font-semibold text-white bg-brand-600 rounded-xl">Done</button>
+      `, '#creditsDone');
+      view.querySelector('#creditsDone').addEventListener('click', closeSheet);
+    } catch (err) {
+      body.querySelector('#creditsNewCodeMsg').textContent = err.message;
+      body.querySelector('#creditsNewCode').disabled = false;
+    }
+  });
   body.querySelector('#creditsRestoreForm').addEventListener('submit', async e => {
     e.preventDefault();
     const input = body.querySelector('#creditsRestoreInput');

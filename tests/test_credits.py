@@ -49,3 +49,12 @@ def test_grant_is_idempotent_on_ref():
 def test_unknown_action_is_rejected():
     with pytest.raises(ValueError):
         credits.spend("client-aaaa", "free_lunch", ref="spend:x")
+
+
+def test_spend_reference_cannot_be_reused_by_another_owner_or_action():
+    credits.spend('client-aaaa', 'tailored_list', ref='spend:guard')
+    for owner, action in [('client-bbbb', 'tailored_list'), ('client-aaaa', 'search_report')]:
+        with pytest.raises(credits.SpendReferenceConflict):
+            credits.spend(owner, action, ref='spend:guard')
+    with pytest.raises(credits.SpendReferenceConflict):
+        credits.spend('client-aaaa', 'tailored_list', ref='spend:guard', allow_replay=False)

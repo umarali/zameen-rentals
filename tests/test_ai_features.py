@@ -430,3 +430,61 @@ def test_call_claude_json_rejects_unusable_replies(monkeypatch, stop, text):
     with pytest.raises(ranking.RankingError):
         ranking.call_claude_json(feature="t", model="claude-sonnet-5-5", system="s", user="u",
                                  schema={}, max_tokens=10)
+
+
+def test_expired_idempotent_success_requires_a_new_credit(client, fake, monkeypatch):
+    seed(5)
+    headers = {**H, 'Idempotency-Key': 'expired-success-0001'}
+    payload = {'brief': BRIEF, 'city': 'lahore'}
+    assert client.post('/api/ai/tailored', json=payload, headers=headers).status_code == 200
+    monkeypatch.setattr('app.routes_ai.RESULT_TTL_SECONDS', -1)
+    assert client.post('/api/ai/tailored', json=payload, headers=headers).status_code == 200
+    assert balance() == credits.STARTER_CREDITS - 2
+    while balance():
+        credits.spend(CLIENT, 'tailored_list', ref=credits.new_spend_ref('drain'))
+    assert client.post('/api/ai/tailored', json=payload, headers=headers).status_code == 402
+    assert len(fake.calls) == 2
+
+
+def test_unpriced_model_cannot_make_an_unmetered_call(monkeypatch):
+    monkeypatch.setattr(ranking, '_get_client', lambda: pytest.fail('must reject before provider call'))
+    with pytest.raises(ranking.RankingError, match='No configured price'):
+        ranking.call_claude_json(feature='test', model='unpriced-model', system='', user='', schema={}, max_tokens=10)
+
+
+def test_cache_write_failure_refunds_the_charge(client, fake, monkeypatch):
+    seed(5)
+    def fail(*args):
+        raise RuntimeError('write failed')
+    monkeypatch.setattr('app.routes_ai._cache_set', fail)
+    response = client.post('/api/ai/tailored', json={'brief': BRIEF, 'city': 'lahore'}, headers=H)
+    assert response.status_code == 503
+    assert balance() == credits.STARTER_CREDITS
+
+
+def test_cancelled_paid_work_returns_credit_and_releases_lock():
+    import asyncio
+    import threading
+    from app import routes_ai
+    started, finish = threading.Event(), threading.Event()
+    def work():
+        started.set()
+        finish.wait(5)
+        return {'ok': True}
+    async def run():
+        task = asyncio.create_task(routes_ai._run_paid(client_id=CLIENT, action='tailored_list',
+            request_key='cancelled-request', idem='cancelled-idem', work=work))
+        try:
+            for _ in range(1000):
+                if started.is_set():
+                    break
+                await asyncio.sleep(.001)
+            assert started.is_set()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert credits.balance(CLIENT) == credits.STARTER_CREDITS
+            assert not routes_ai._locks
+        finally:
+            finish.set()
+    asyncio.run(run())

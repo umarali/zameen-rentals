@@ -22,11 +22,10 @@ Charging
     One charge per alert, per upgrade, per Asia/Karachi calendar day, with
     the ledger ref ``alertday:{alert_id}:{upgrade}:{YYYY-MM-DD}``. The ledger's
     unique ref makes every charge idempotent, so repeated cycles never charge
-    twice. Switching an upgrade on charges the current day straight away.
-    Later days are charged by ``run_daily_jobs``, which the crawler calls after
-    each alert flush: the priority check at the first job of the day, the
-    shortlist when it is built (and only when there are matches; a first day
-    that turns out empty is refunded). When a charge fails for lack of
+    twice. Priority check is currently unavailable. Daily shortlists charge on delivery.
+    The crawler calls ``run_daily_jobs`` after each alert flush. Shortlists
+    charge only when there are new matches since the previous delivery window.
+    Legacy prepaid empty days are refunded. When a charge fails for lack of
     credits the upgrade is switched off and the renter gets an in-app notice.
     The balance can never go negative (``credits.spend`` checks atomically).
     Paused alerts are not charged and get neither upgrade until resumed.
@@ -50,6 +49,12 @@ logger = logging.getLogger("zameenrentals")
 INSTANT = "instant_alerts_day"
 SHORTLIST = "daily_shortlist_day"
 UPGRADES = (INSTANT, SHORTLIST)
+# Priority check is withheld until its benefit over free alerts is measured.
+PRIORITY_AVAILABLE = False
+
+
+def offered_upgrades():
+    return UPGRADES if PRIORITY_AVAILABLE else (SHORTLIST,)
 
 SHORTLIST_HOUR = 9              # Local (Asia/Karachi) hour the shortlist becomes due
 SHORTLIST_SIZE = 5
@@ -212,7 +217,7 @@ def daily_cost(client_id: str) -> int:
            WHERE u.client_id = ? AND u.enabled = 1 AND a.paused = 0""",
         (client_id,),
     ).fetchall()
-    return sum(credits.COSTS[r["upgrade"]] for r in rows)
+    return sum(credits.COSTS[r["upgrade"]] for r in rows if r["upgrade"] in offered_upgrades())
 
 
 def get_state(client_id: str, *, now: datetime | None = None) -> dict:
@@ -240,7 +245,7 @@ def get_state(client_id: str, *, now: datetime | None = None) -> dict:
     }
     per_alert = {}
     for a in alerts:
-        view = {u: _upgrade_view(a["id"], u, upgrades.get((a["id"], u)), day) for u in UPGRADES}
+        view = {u: _upgrade_view(a["id"], u, upgrades.get((a["id"], u)), day) for u in offered_upgrades()}
         sl = latest.get(a["id"])
         view["latest_shortlist"] = None if sl is None else {
             "day": sl["day"],
@@ -253,7 +258,7 @@ def get_state(client_id: str, *, now: datetime | None = None) -> dict:
     cost = daily_cost(client_id)
     return {
         "balance": balance,
-        "costs": {u: credits.COSTS[u] for u in UPGRADES},
+        "costs": {u: credits.COSTS[u] for u in offered_upgrades()},
         "shortlist_hour": SHORTLIST_HOUR,
         "shortlist_size": SHORTLIST_SIZE,
         "today": day,
@@ -338,14 +343,14 @@ def _save_upgrade(conn, alert_id, upgrade, client_id, *, enabled, reason=None, s
 
 def set_upgrade(client_id: str, alert_id: int, upgrade: str, enabled: bool,
                 *, now: datetime | None = None) -> dict:
-    """Switch an upgrade on (charging today) or off (no further charges).
+    """Enable daily shortlists, or turn an upgrade off. Shortlists charge on delivery.
 
     Raises LookupError for an unknown alert, ValueError for a bad upgrade or a
     paused alert, and credits.InsufficientCredits when today can't be paid.
-    Switching off does not refund today: the day was already provided.
+    Switching off stops future deliveries; an already delivered shortlist is not refunded.
     """
-    if upgrade not in UPGRADES:
-        raise ValueError("Unknown upgrade")
+    if upgrade not in UPGRADES or (enabled and upgrade not in offered_upgrades()):
+        raise ValueError("This upgrade is not available.")
     alert = _alert_row(client_id, alert_id)
     if alert is None:
         raise LookupError("Alert not found")
@@ -364,9 +369,13 @@ def set_upgrade(client_id: str, alert_id: int, upgrade: str, enabled: bool,
             "SELECT status FROM alert_shortlists WHERE alert_id = ? AND day = ?",
             (alert_id, day),
         ).fetchone()
-    # Today's shortlist already settled as empty (no matches, nothing charged):
-    # nothing more happens today, so switching back on costs nothing today.
-    if not (today_row and today_row["status"] == "empty"):
+    # Enabling a shortlist checks affordability but does not reserve credits.
+    if upgrade == SHORTLIST:
+        # Charge only when a shortlist is produced. Enabling then stopping an
+        # empty search must never consume credits.
+        if credits.balance(client_id) < credits.COSTS[SHORTLIST]:
+            raise credits.InsufficientCredits(SHORTLIST, credits.balance(client_id), credits.COSTS[SHORTLIST])
+    elif not (today_row and today_row["status"] == "empty"):
         credits.spend(client_id, upgrade, ref=day_ref(alert_id, upgrade, day))
     with conn:
         if today_row and today_row["status"] == "unpaid":
@@ -382,7 +391,7 @@ def upgrade_state(client_id: str, alert_id: int, *, now: datetime | None = None)
     cost = daily_cost(client_id)
     return {
         "alert_id": alert_id,
-        "upgrades": {u: _upgrade_view(alert_id, u, _upgrade_row(alert_id, u), day) for u in UPGRADES},
+        "upgrades": {u: _upgrade_view(alert_id, u, _upgrade_row(alert_id, u), day) for u in offered_upgrades()},
         "balance": balance,
         "daily_cost": cost,
         "days_covered": (balance // cost) if cost else None,
@@ -406,7 +415,7 @@ def _switch_off_for_balance(conn, row, day):
 
 
 def run_daily_jobs(*, now: datetime | None = None, dispatch: bool = True) -> dict:
-    """Charge today's priority checks and build due shortlists. Idempotent.
+    """Build due shortlists. Historical priority experiments run only when enabled. Idempotent.
 
     Cheap when there is nothing to do: one indexed query per upgrade.
     """
@@ -422,7 +431,7 @@ def run_daily_jobs(*, now: datetime | None = None, dispatch: bool = True) -> dic
              AND (u.settled_day IS NULL OR u.settled_day <> ?)
            ORDER BY u.alert_id""",
         (INSTANT, day),
-    ).fetchall()
+    ).fetchall() if PRIORITY_AVAILABLE else []
     for row in due_instant:
         try:
             credits.spend(row["client_id"], INSTANT, ref=day_ref(row["alert_id"], INSTANT, day))
@@ -474,6 +483,8 @@ def _recent_matches(alert_id: int, client_id: str, *, now: datetime | None) -> l
                   l.zameen_posted_at AS posted_at, l.zameen_updated_at AS updated_at
            FROM alert_matches m JOIN listings l ON l.id = m.listing_id
            WHERE m.alert_id = ? AND m.matched_at >= ? AND l.is_active = 1
+             AND m.matched_at > COALESCE((SELECT MAX(created_at) FROM alert_shortlists
+                 WHERE alert_id = m.alert_id AND status IN ('delivered', 'empty')), '')
              AND l.zameen_id NOT IN (SELECT zameen_id FROM hidden_listings WHERE client_id = ?)
            ORDER BY m.matched_at DESC, m.id DESC LIMIT ?""",
         (alert_id, cutoff, client_id, SHORTLIST_CANDIDATES),
@@ -482,6 +493,8 @@ def _recent_matches(alert_id: int, client_id: str, *, now: datetime | None) -> l
 
 
 def _deliver_shortlist(row, *, day: str, now: datetime | None, dispatch: bool) -> dict:
+    # Freeze the window before ranking, so arrivals during ranking belong to the next window.
+    now = _utc_now(now)
     conn = _get_conn()
     alert_id, client_id = row["alert_id"], row["client_id"]
     ref = day_ref(alert_id, SHORTLIST, day)
@@ -493,9 +506,9 @@ def _deliver_shortlist(row, *, day: str, now: datetime | None, dispatch: bool) -
             credits.refund(ref)
         with conn:
             conn.execute(
-                "INSERT OR IGNORE INTO alert_shortlists (alert_id, client_id, day, status) "
-                "VALUES (?, ?, ?, 'empty')",
-                (alert_id, client_id, day),
+                "INSERT OR IGNORE INTO alert_shortlists (alert_id, client_id, day, status, created_at) "
+                "VALUES (?, ?, ?, 'empty', ?)",
+                (alert_id, client_id, day, _sqlite_utc(_utc_now(now))),
             )
             conn.execute(
                 "UPDATE alert_upgrades SET settled_day = ? WHERE alert_id = ? AND upgrade = ?",
@@ -524,9 +537,9 @@ def _deliver_shortlist(row, *, day: str, now: datetime | None, dispatch: bool) -
     with conn:
         cur = conn.execute(
             """INSERT OR IGNORE INTO alert_shortlists
-                   (alert_id, client_id, day, status, match_count, ranked_by, items_json)
-               VALUES (?, ?, ?, 'delivered', ?, ?, ?)""",
-            (alert_id, client_id, day, len(candidates), ranked_by, json.dumps(picks)),
+                   (alert_id, client_id, day, status, match_count, ranked_by, items_json, created_at)
+               VALUES (?, ?, ?, 'delivered', ?, ?, ?, ?)""",
+            (alert_id, client_id, day, len(candidates), ranked_by, json.dumps(picks), _sqlite_utc(_utc_now(now))),
         )
         conn.execute(
             "UPDATE alert_upgrades SET settled_day = ? WHERE alert_id = ? AND upgrade = ?",
@@ -708,6 +721,9 @@ def priority_searches(*, now: datetime | None = None,
     Least recently checked first, so with more searches than ``limit`` every
     search still gets its turn.
     """
+    if not PRIORITY_AVAILABLE:
+        return []
+
     from app.parsing import build_url, match_area
     from app.data import CITY_AREAS, PROPERTY_TYPES
 

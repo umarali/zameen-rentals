@@ -58,34 +58,34 @@ def _signed_test_event(payment_id, outcome="paid", amount=None, currency="PKR", 
 
 
 def test_checkout_prices_come_from_server_packs(client):
-    out = _checkout(client, "small")
+    out = _checkout(client, "standard")
     payment = payments.get_payment(out["payment_id"])
-    assert payment["amount_pkr"] == credits.PACKS["small"]["price_pkr"]
-    assert payment["credits"] == credits.PACKS["small"]["credits"]
+    assert payment["amount_pkr"] == credits.PACKS["standard"]["price_pkr"]
+    assert payment["credits"] == credits.PACKS["standard"]["credits"]
     assert payment["status"] == "pending"
 
 
 def test_checkout_ignores_browser_amounts(client):
     resp = client.post("/api/credits/checkout", headers=H(),
-                       json={"pack_id": "large", "amount_pkr": 1, "credits": 99999})
+                       json={"pack_id": "standard", "amount_pkr": 1, "credits": 99999})
     payment = payments.get_payment(resp.json()["payment_id"])
-    assert (payment["amount_pkr"], payment["credits"]) == (999, 130)
+    assert (payment["amount_pkr"], payment["credits"]) == (500, 50)
 
 
 def test_checkout_rejects_unknown_pack_and_missing_identity(client):
     assert client.post("/api/credits/checkout", headers=H(), json={"pack_id": "huge"}).status_code == 400
-    assert client.post("/api/credits/checkout", json={"pack_id": "small"}).status_code == 400
+    assert client.post("/api/credits/checkout", json={"pack_id": "standard"}).status_code == 400
 
 
 def test_checkout_limits_open_payments_per_client(client):
     for _ in range(payments.MAX_OPEN_CHECKOUTS_PER_CLIENT):
         _checkout(client)
-    assert client.post("/api/credits/checkout", headers=H(), json={"pack_id": "small"}).status_code == 429
+    assert client.post("/api/credits/checkout", headers=H(), json={"pack_id": "standard"}).status_code == 429
 
 
 def test_checkout_is_off_without_a_provider(client, monkeypatch):
     monkeypatch.delenv("PAYMENTS_PROVIDER")
-    assert client.post("/api/credits/checkout", headers=H(), json={"pack_id": "small"}).status_code == 503
+    assert client.post("/api/credits/checkout", headers=H(), json={"pack_id": "standard"}).status_code == 503
     assert client.get("/api/credits", headers=H()).json()["checkout_available"] is False
 
 
@@ -100,9 +100,9 @@ def test_valid_webhook_grants_once_and_replays_change_nothing(client):
     # A second, distinct paid event for the same payment is also a no-op.
     body2, headers2 = _signed_test_event(pid, event_id="evt_2")
     assert client.post("/api/payments/webhook/test", content=body2, headers=headers2).status_code == 200
-    assert credits.balance(CLIENT) == credits.STARTER_CREDITS + 60
+    assert credits.balance(CLIENT) == credits.STARTER_CREDITS + 50
     status = client.get(f"/api/payments/{pid}", headers=H()).json()
-    assert status["status"] == "paid" and status["balance"] == credits.STARTER_CREDITS + 60
+    assert status["status"] == "paid" and status["balance"] == credits.STARTER_CREDITS + 50
 
 
 def test_bad_signature_is_rejected_and_grants_nothing(client):
@@ -118,7 +118,7 @@ def test_bad_signature_is_rejected_and_grants_nothing(client):
 
 
 def test_amount_mismatch_never_grants(client):
-    pid = _checkout(client, "large")["payment_id"]
+    pid = _checkout(client, "standard")["payment_id"]
     body, headers = _signed_test_event(pid, amount=100)
     assert client.post("/api/payments/webhook/test", content=body, headers=headers).status_code == 200
     body, headers = _signed_test_event(pid, currency="USD", event_id="evt_usd")
@@ -137,7 +137,7 @@ def test_failed_then_paid_is_honoured_but_paid_never_downgrades(client):
     body, headers = _signed_test_event(pid, outcome="failed", event_id="e3")
     client.post("/api/payments/webhook/test", content=body, headers=headers)
     assert payments.get_payment(pid)["status"] == "paid"
-    assert credits.balance(CLIENT) == credits.STARTER_CREDITS + 60
+    assert credits.balance(CLIENT) == credits.STARTER_CREDITS + 50
 
 
 def test_webhook_for_disabled_provider_is_404(client):
@@ -154,11 +154,11 @@ def test_test_checkout_page_pay_and_cancel_use_verified_path(client):
     assert resp.status_code == 303 and resp.headers["location"] == f"/pay/return?payment={paid}"
     assert payments.get_payment(paid)["status"] == "paid"
 
-    cancelled = _checkout(client, "small")["payment_id"]
+    cancelled = _checkout(client, "standard")["payment_id"]
     resp = client.post(f"/pay/test/{cancelled}", data={"action": "cancel"}, follow_redirects=False)
     assert "result=cancelled" in resp.headers["location"]
     assert payments.get_payment(cancelled)["status"] == "failed"
-    assert credits.balance(CLIENT) == credits.STARTER_CREDITS + 60
+    assert credits.balance(CLIENT) == credits.STARTER_CREDITS + 50
 
 
 def test_return_route_sends_renter_back_to_app(client):
@@ -196,7 +196,7 @@ def test_test_provider_refuses_outside_non_production_envs(client, monkeypatch, 
         monkeypatch.delenv("ZR_ENV")
     with pytest.raises(payments.PaymentsUnavailable):
         payments.get_provider()
-    assert client.post("/api/credits/checkout", headers=H(), json={"pack_id": "small"}).status_code == 503
+    assert client.post("/api/credits/checkout", headers=H(), json={"pack_id": "standard"}).status_code == 503
     assert client.get(f"/pay/test/{pid}").status_code == 404
     assert client.post(f"/pay/test/{pid}", data={"action": "pay"}).status_code == 404
     assert client.post("/api/payments/webhook/test", content=body, headers=headers).status_code == 404
@@ -240,16 +240,16 @@ def test_restore_code_shown_once_and_only_hash_stored(client):
 def test_restore_moves_purchased_credits_and_is_idempotent(client):
     code = _buy(client)["restore_code"]
     spend_ref = credits.new_spend_ref("search_report")
-    credits.spend(CLIENT, "search_report", ref=spend_ref)  # 70 -> 65
+    credits.spend(CLIENT, "search_report", ref=spend_ref)  # 60 -> 59
 
     resp = client.post("/api/credits/restore", headers=H(OTHER), json={"code": code.lower().replace("-", " ")})
     assert resp.status_code == 200
-    assert resp.json()["moved"] == 60
-    assert credits.balance(OTHER) == credits.STARTER_CREDITS + 60
-    assert credits.balance(CLIENT) == 5  # what's left of the starter credits stays
+    assert resp.json()["moved"] == 50
+    assert credits.balance(OTHER) == credits.STARTER_CREDITS + 50
+    assert credits.balance(CLIENT) == 9  # what's left of the starter credits stays
 
     replay = client.post("/api/credits/restore", headers=H(OTHER), json={"code": code}).json()
-    assert replay == {"moved": 0, "same_device": True, "balance": credits.STARTER_CREDITS + 60}
+    assert replay == {"moved": 0, "same_device": True, "balance": credits.STARTER_CREDITS + 50}
     kinds = [h["kind"] for h in credits.history(OTHER)]
     assert kinds.count("restore_in") == 1
     assert [h["kind"] for h in credits.history(CLIENT)].count("restore_out") == 1
@@ -259,10 +259,10 @@ def test_restore_code_follows_credits_and_cannot_pool_starter_credits(client):
     code = _buy(client)["restore_code"]
     client.post("/api/credits/restore", headers=H(OTHER), json={"code": code})
     client.post("/api/credits/restore", headers=H(THIRD), json={"code": code})
-    assert credits.balance(THIRD) == credits.STARTER_CREDITS + 60
+    assert credits.balance(THIRD) == credits.STARTER_CREDITS + 50
     assert credits.balance(OTHER) == credits.STARTER_CREDITS
-    assert client.post("/api/credits/restore", headers=H(CLIENT), json={"code": code}).json()["moved"] == 60
-    assert credits.balance(CLIENT) == credits.STARTER_CREDITS + 60
+    assert client.post("/api/credits/restore", headers=H(CLIENT), json={"code": code}).json()["moved"] == 50
+    assert credits.balance(CLIENT) == credits.STARTER_CREDITS + 50
 
 
 def test_restore_rejects_bad_codes(client):
@@ -284,7 +284,7 @@ def test_new_restore_code_replaces_the_old_one(client):
     new = client.post("/api/credits/restore-code", headers=H()).json()["restore_code"]
     assert new != old
     assert client.post("/api/credits/restore", headers=H(OTHER), json={"code": old}).status_code == 404
-    assert client.post("/api/credits/restore", headers=H(OTHER), json={"code": new}).json()["moved"] == 60
+    assert client.post("/api/credits/restore", headers=H(OTHER), json={"code": new}).json()["moved"] == 50
     assert client.post("/api/credits/restore-code", headers=H(THIRD)).status_code == 404
 
 
@@ -306,14 +306,14 @@ def test_paid_route_pattern_returns_402_detail_the_frontend_expects(client):
 
     app.include_router(router)
     try:
-        assert client.post("/api/_test_paid_action", headers=H()).status_code == 200
-        assert client.post("/api/_test_paid_action", headers=H()).status_code == 200
+        for _ in range(credits.STARTER_CREDITS):
+            assert client.post("/api/_test_paid_action", headers=H()).status_code == 200
         resp = client.post("/api/_test_paid_action", headers=H())
         assert resp.status_code == 402
         assert resp.json()["detail"] == {"code": "insufficient_credits", "action": "tailored_list",
                                          "balance": 0, "cost": credits.COSTS["tailored_list"]}
         # Topping up clears the 402.
-        _buy(client, "small")
+        _buy(client, "standard")
         assert client.post("/api/_test_paid_action", headers=H()).status_code == 200
     finally:
         app.router.routes[:] = [r for r in app.router.routes if getattr(r, "path", "") != "/api/_test_paid_action"]
@@ -332,7 +332,7 @@ SAFEPAY_SUCCEEDED = {
         "tracker": "track_06ee38cb-981d-4158-819f-7231f28314e4",
         "intent": "CYBERSOURCE", "state": "TRACKER_ENDED",
         "net": 48425, "fee": 1475, "customer_email": "hzee@gmail.com",
-        "amount": 49900, "currency": "PKR",
+        "amount": 50000, "currency": "PKR",
         "metadata": {"order_id": "pay_placeholder", "source": "shopify"},
         "charged_at": {"seconds": 1698754230, "nanos": 752997627},
     },
@@ -372,7 +372,7 @@ def test_safepay_checkout_follows_documented_flow(client, monkeypatch):
     setup = calls[0]
     assert setup[0] == "POST" and setup[1] == "https://sandbox.api.getsafepay.com/order/payments/v3/"
     assert setup[2]["X-SFPY-MERCHANT-SECRET"] == "merchant-secret"
-    assert setup[3]["amount"] == 49900 and setup[3]["currency"] == "PKR"
+    assert setup[3]["amount"] == 50000 and setup[3]["currency"] == "PKR"
     assert setup[3]["metadata"] == {"order_id": out["payment_id"]}
     assert calls[1][1] == "https://sandbox.api.getsafepay.com/client/passport/v1/token"
     url = out["checkout_url"]
@@ -398,7 +398,7 @@ def test_safepay_webhook_signature_verifies_and_grants(client, monkeypatch, enco
                        headers={"X-SFPY-SIGNATURE": _sfpy_sign(signed), "Content-Type": "application/json"})
     assert resp.status_code == 200
     assert payments.get_payment(pid)["status"] == "paid"
-    assert credits.balance(CLIENT) == credits.STARTER_CREDITS + 60
+    assert credits.balance(CLIENT) == credits.STARTER_CREDITS + 50
 
 
 def test_safepay_webhook_rejects_wrong_secret_and_tampering(client, monkeypatch):
@@ -410,7 +410,7 @@ def test_safepay_webhook_rejects_wrong_secret_and_tampering(client, monkeypatch)
     wrong = hmac.new(b"not-the-secret", raw, hashlib.sha512).hexdigest()
     assert client.post("/api/payments/webhook/safepay", content=raw,
                        headers={"X-SFPY-SIGNATURE": wrong}).status_code == 400
-    event["data"]["amount"] = 4990000
+    event["data"]["amount"] = 5000000
     tampered = json.dumps(event).encode()
     assert client.post("/api/payments/webhook/safepay", content=tampered,
                        headers={"X-SFPY-SIGNATURE": _sfpy_sign(raw)}).status_code == 400
@@ -434,7 +434,7 @@ def test_safepay_webhook_amount_mismatch_does_not_grant(client, monkeypatch):
 def test_safepay_status_lookup_confirms_on_return(client, monkeypatch, nested):
     tracker = "track_06ee38cb-981d-4158-819f-7231f28314e4"
     info = {"token": tracker, "state": "TRACKER_ENDED",
-            "purchase_totals": {"quote_amount": {"currency": "PKR", "amount": 49900}}}
+            "purchase_totals": {"quote_amount": {"currency": "PKR", "amount": 50000}}}
 
     def reporter(method, url, headers, body):
         assert method == "GET" and url.endswith(f"/reporter/api/v1/payments/{tracker}")
@@ -444,7 +444,7 @@ def test_safepay_status_lookup_confirms_on_return(client, monkeypatch, nested):
     _safepay(monkeypatch, reporter)
     pid = _checkout(client, "standard")["payment_id"]
     status = client.get(f"/api/payments/{pid}", headers=H()).json()
-    assert status["status"] == "paid" and status["balance"] == credits.STARTER_CREDITS + 60
+    assert status["status"] == "paid" and status["balance"] == credits.STARTER_CREDITS + 50
     assert status["restore_code"]
 
 
@@ -462,3 +462,26 @@ def test_get_credits_reports_checkout_and_restore_state(client):
     data = client.get("/api/credits", headers=H()).json()
     assert data["checkout_available"] is True and data["has_restore_code"] is False
     assert {p["id"] for p in data["packs"]} == set(credits.PACKS)
+
+
+@pytest.mark.parametrize('env', [None, '', 'production', 'prod'])
+def test_safepay_sandbox_requires_explicit_nonproduction_environment(monkeypatch, env):
+    if env is None:
+        monkeypatch.delenv('ZR_ENV', raising=False)
+    else:
+        monkeypatch.setenv('ZR_ENV', env)
+    with pytest.raises(payments.PaymentsUnavailable):
+        payments.SafepayProvider(env='sandbox', api_key='test', secret_key='test', webhook_secret='test')
+
+
+def test_payment_and_rotated_restore_code_responses_are_not_cached(client):
+    pid = _checkout(client)['payment_id']
+    body, headers = _signed_test_event(pid)
+    client.post('/api/payments/webhook/test', content=body, headers=headers)
+    status = client.get(f'/api/payments/{pid}', headers=H())
+    assert status.headers['cache-control'] == 'no-store'
+    original = status.json()['restore_code']
+    rotated = client.post('/api/credits/restore-code', headers=H())
+    assert rotated.headers['cache-control'] == 'no-store'
+    assert client.post('/api/credits/restore', headers=H(OTHER), json={'code': original}).status_code == 404
+    assert client.post('/api/credits/restore', headers=H(OTHER), json={'code': rotated.json()['restore_code']}).json()['moved'] == 50

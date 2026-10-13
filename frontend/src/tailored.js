@@ -6,7 +6,7 @@ import { esc, escA, TYPE_L } from './utils.js';
 import { S, CITY_DEFAULTS } from './state.js';
 import { paidFetch } from './credits-gate.js';
 import {
-  createModal, fetchCredits, costText, insufficientText, newIdempotencyKey, spinner, pkr, initReport,
+  createModal, fetchCredits, creditAmount, costText, insufficientText, newIdempotencyKey, spinner, pkr, initReport,
 } from './report.js';
 
 const MAX_CHARS = 600;
@@ -139,7 +139,7 @@ function resultItem(item, i) {
 
 function resultsView(data, brief) {
   _results = data.results || [];
-  const charge = data.charged ? `Used ${data.cost} credits.`
+  const charge = data.charged ? `Used ${creditAmount(data.cost)}.`
     : data.cached ? 'Made in the last few minutes, so no credits were used.'
     : 'No credits were used.';
   const relaxed = (data.relaxed || []).map(n => `<li>${esc(n)}</li>`).join('');

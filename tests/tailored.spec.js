@@ -28,8 +28,8 @@ const TAILORED_OK = {
   source: "Zameen.com",
   charged: true,
   cached: false,
-  cost: 5,
-  balance: 5,
+  cost: 1,
+  balance: 9,
 };
 
 async function gotoApp(page) {
@@ -56,7 +56,7 @@ test.describe("Tailored list", () => {
   test("shows the cost from the server before running", async ({ page }) => {
     await gotoApp(page);
     const dialog = await openTailored(page);
-    await expect(dialog.locator("[data-tl-cost]")).toHaveText(/Uses 5 credits\. You have \d+\./);
+    await expect(dialog.locator("[data-tl-cost]")).toHaveText(/Uses 1 credit\. You have \d+\./);
     await expect(page.locator("#tailoredBrief")).toBeFocused();
     const box = await dialog.boundingBox();
     const viewport = page.viewportSize();
@@ -88,7 +88,7 @@ test.describe("Tailored list", () => {
     await expect(dialog).toContainText("Also included 3 bedroom homes.");
     await expect(dialog).toContainText("not ground floor");
     await expect(dialog).toContainText("Listings from Zameen.com");
-    await expect(dialog).toContainText("Used 5 credits.");
+    await expect(dialog).toContainText("Used 1 credit.");
 
     await items.first().locator("[data-tl-open]").click();
     await expect(page.locator("#drawerOverlay")).toHaveClass(/overlay-open/);
@@ -102,14 +102,14 @@ test.describe("Tailored list", () => {
     });
     await page.route("**/api/ai/tailored", route => route.fulfill({
       status: 402,
-      json: { detail: { code: "insufficient_credits", action: "tailored_list", balance: 0, cost: 5 } },
+      json: { detail: { code: "insufficient_credits", action: "tailored_list", balance: 0, cost: 1 } },
     }));
     const dialog = await openTailored(page);
     await page.locator("#tailoredBrief").fill("3 bed house in DHA under 1.5 lakh");
     await dialog.locator("[data-tl-run]").click();
-    await expect(dialog.locator("[data-tl-error]")).toHaveText("You need 5 credits and have 0. Add credits to continue.");
+    await expect(dialog.locator("[data-tl-error]")).toHaveText("You need 1 credit and have 0. Add credits to continue.");
     expect(await page.evaluate(() => window.__topups)).toEqual([
-      { code: "insufficient_credits", action: "tailored_list", balance: 0, cost: 5 },
+      { code: "insufficient_credits", action: "tailored_list", balance: 0, cost: 1 },
     ]);
     await expect(dialog.locator("[data-tl-run]")).toBeEnabled();
   });
@@ -175,7 +175,7 @@ test.describe("Search report", () => {
   test("runs and shows the SQL figures with the write-up", async ({ page }) => {
     await gotoApp(page);
     await page.route("**/api/ai/report/eligibility", route => route.fulfill({
-      json: { eligible: true, reason: "", activity: { alerts: 1, favorites: 3, recent_views: 4, hidden: 0 }, cost: 5, balance: 10 },
+      json: { eligible: true, reason: "", activity: { alerts: 1, favorites: 3, recent_views: 4, hidden: 0 }, cost: 1, balance: 10 },
     }));
     await page.route("**/api/ai/report", route => route.fulfill({
       json: {
@@ -197,12 +197,12 @@ test.describe("Search report", () => {
         }],
         activity: { alerts: 1, favorites: 3, recent_views: 4, hidden: 0 },
         generated_at: "2026-10-11T10:00:00+00:00", source: "Zameen.com",
-        charged: true, cached: false, cost: 5, balance: 5,
+        charged: true, cached: false, cost: 1, balance: 9,
       },
     }));
     const dialog = await openReport(page);
     await expect(dialog).toContainText("1 alert, 3 saved homes, 4 opened homes");
-    await expect(dialog.locator("[data-report-cost]")).toHaveText(/Uses 5 credits\./);
+    await expect(dialog.locator("[data-report-cost]")).toHaveText(/Uses 1 credit\./);
     await dialog.locator("[data-report-run]").click();
     const result = dialog.locator("[data-report-result]");
     await expect(result).toContainText("Median rent is PKR 70,000");
@@ -211,6 +211,6 @@ test.describe("Search report", () => {
     await expect(result).toContainText("+10% (PKR 88,000): 18 homes");
     await expect(result).toContainText("Model Town (2.1 km): 9 homes");
     await expect(result).toContainText("sourced from Zameen.com");
-    await expect(result).toContainText("Used 5 credits.");
+    await expect(result).toContainText("Used 1 credit.");
   });
 });
