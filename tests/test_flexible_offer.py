@@ -23,7 +23,7 @@ def test_one_pack_and_equal_costs_share_one_balance(fresh_db):
 def test_priority_is_not_offered_and_legacy_enabled_rows_cannot_charge(fresh_db):
     with TestClient(app) as client:
         aid = pers.create_alert(CLIENT, label="Home", filters={"city": "lahore"})["id"]
-        before = credits.balance(CLIENT)
+        before = client.get("/api/credits", headers=HEADERS).json()["balance"]
         response = client.post(f"/api/alerts/{aid}/upgrades/{upgrades.INSTANT}",
                                headers=HEADERS, json={"enabled": True})
         assert response.status_code == 404
@@ -43,7 +43,7 @@ def test_priority_is_not_offered_and_legacy_enabled_rows_cannot_charge(fresh_db)
 def test_turning_empty_shortlist_on_then_off_never_charges(fresh_db):
     with TestClient(app) as client:
         aid = pers.create_alert(CLIENT, label="Home", filters={"city": "lahore"})["id"]
-        before = credits.balance(CLIENT)
+        before = client.get("/api/credits", headers=HEADERS).json()["balance"]
         path = f"/api/alerts/{aid}/upgrades/{upgrades.SHORTLIST}"
         for enabled in (True, False):
             assert client.post(path, headers=HEADERS, json={"enabled": enabled}).status_code == 200

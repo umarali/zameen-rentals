@@ -21,6 +21,7 @@ SAFEPAY_WEBHOOK_SECRET = "c44e1b93160e1ccd34ea9c40e79f5f11ea276105b563c53d9ca59e
 def schema(fresh_db, monkeypatch):
     credits.init_credits_schema()
     payments.init_payments_schema()
+    credits.register_starter_request(CLIENT, "192.0.2.1")
     limiter.reset()
     monkeypatch.setenv("PAYMENTS_PROVIDER", "test")
     monkeypatch.setenv("ZR_ENV", "test")
@@ -485,3 +486,20 @@ def test_payment_and_rotated_restore_code_responses_are_not_cached(client):
     assert rotated.headers['cache-control'] == 'no-store'
     assert client.post('/api/credits/restore', headers=H(OTHER), json={'code': original}).status_code == 404
     assert client.post('/api/credits/restore', headers=H(OTHER), json={'code': rotated.json()['restore_code']}).json()['moved'] == 50
+
+
+def test_paid_confirmation_rolls_back_grant_if_payment_update_fails(client):
+    payment = payments.create_payment(CLIENT, 'standard', payments.get_provider())
+    conn = payments._get_conn()
+    with conn:
+        conn.execute("CREATE TRIGGER fail_payment_update BEFORE UPDATE ON payments BEGIN SELECT RAISE(ABORT, 'disk simulation'); END")
+    conf = payments.Confirmation(outcome='paid', payment_id=payment['id'], amount_minor=50000, currency='PKR', event='atomic-test')
+    with pytest.raises(Exception, match='disk simulation'):
+        payments.apply_confirmation(payments.get_provider(), conf)
+    assert credits.balance(CLIENT) == 10
+    assert payments.get_payment(payment['id'])['status'] == 'pending'
+    with conn:
+        conn.execute('DROP TRIGGER fail_payment_update')
+    payments.apply_confirmation(payments.get_provider(), conf)
+    assert credits.balance(CLIENT) == 60
+    assert payments.get_payment(payment['id'])['status'] == 'paid'

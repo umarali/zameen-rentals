@@ -19,13 +19,16 @@ import logging
 import os
 import re
 import time
+import uuid
+import sqlite3
+from contextlib import closing
 
 from fastapi import APIRouter, HTTPException, Request
 
 from app import credits, ranking, report, tailored
 from app.cache import limiter
 from app.database import _get_conn
-from app.routes import _require_client_id, _PERSONALIZATION_STEADY
+from app.routes import _require_credit_client_id as _require_client_id, _PERSONALIZATION_STEADY
 
 logger = logging.getLogger("zameenrentals")
 router = APIRouter()
@@ -46,7 +49,39 @@ def _db():
     conn.execute("""CREATE TABLE IF NOT EXISTS ai_results (
         cache_key TEXT PRIMARY KEY, client_id TEXT NOT NULL, action TEXT NOT NULL,
         result_json TEXT NOT NULL, created_at REAL NOT NULL)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS ai_work_claims (
+        cache_key TEXT PRIMARY KEY, owner TEXT NOT NULL, expires_at REAL NOT NULL)""")
     return conn
+
+
+def _work_db():
+    from app import database
+    conn = sqlite3.connect(str(database._DB_PATH), timeout=5)
+    try:
+        conn.execute("""CREATE TABLE IF NOT EXISTS ai_work_claims (
+            cache_key TEXT PRIMARY KEY, owner TEXT NOT NULL, expires_at REAL NOT NULL)""")
+    except Exception:
+        conn.close()
+        raise
+    return conn
+
+
+def _claim_work(keys):
+    owner = uuid.uuid4().hex
+    with closing(_work_db()) as conn, conn:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("DELETE FROM ai_work_claims WHERE expires_at < ?", (time.time(),))
+        for key in keys:
+            if conn.execute("SELECT 1 FROM ai_work_claims WHERE cache_key=?", (key,)).fetchone():
+                raise HTTPException(status_code=409, detail="This request is already running. Please retry shortly.")
+            conn.execute("INSERT INTO ai_work_claims VALUES (?, ?, ?)",
+                         (key, owner, time.time() + WORK_TIMEOUT_SECONDS + 10))
+    return owner
+
+
+def _release_work(owner):
+    with closing(_work_db()) as conn, conn:
+        conn.execute("DELETE FROM ai_work_claims WHERE owner=?", (owner,))
 
 
 def _key(*parts) -> str:
@@ -101,8 +136,15 @@ async def _run_paid(*, client_id, action, request_key, idem, work, empty=lambda 
     keys = [request_key] + ([_key(client_id, action, "idem", idem)] if idem else [])
     entry = _locks.setdefault(keys[-1], [asyncio.Lock(), 0])
     entry[1] += 1
+    owner = None
     try:
         async with entry[0]:
+            cached = _cache_get(keys)
+            if cached is not None:
+                return {**cached, "cached": True, "charged": False, "balance": credits.balance(client_id)}
+            owner = _claim_work(keys)
+            # A different worker may have finished between the first cache read
+            # and this claim. Recheck while holding the shared claim.
             cached = _cache_get(keys)
             if cached is not None:
                 return {**cached, "cached": True, "charged": False, "balance": credits.balance(client_id)}
@@ -141,6 +183,8 @@ async def _run_paid(*, client_id, action, request_key, idem, work, empty=lambda 
             return {**result, "cached": False, "charged": True, "balance": balance,
                     "cost": credits.COSTS[action]}
     finally:
+        if owner is not None:
+            _release_work(owner)
         entry[1] -= 1
         if entry[1] == 0:
             _locks.pop(keys[-1], None)
@@ -174,6 +218,10 @@ async def tailored_list(request: Request):
     if cached is not None:
         return {**cached, "cached": True, "charged": False, "balance": credits.balance(client_id)}
 
+    available = credits.balance(client_id)
+    if available < credits.COSTS["tailored_list"]:
+        raise HTTPException(status_code=402, detail=credits.InsufficientCredits(
+            "tailored_list", available, credits.COSTS["tailored_list"]).as_detail())
     prepared = await tailored.prepare(brief, city, client_id)
     if not prepared.candidates:
         return {"results": [], "charged": False, "cached": False, "balance": credits.balance(client_id),

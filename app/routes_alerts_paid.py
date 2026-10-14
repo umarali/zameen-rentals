@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from app import alert_upgrades as upgrades
 from app import credits
 from app.cache import limiter
-from app.routes import _PERSONALIZATION_BURST, _PERSONALIZATION_STEADY, _require_client_id
+from app.routes import _PERSONALIZATION_BURST, _PERSONALIZATION_STEADY, _require_credit_client_id, _require_client_id
 
 router = APIRouter()
 
@@ -13,7 +13,7 @@ router = APIRouter()
 @limiter.limit(_PERSONALIZATION_STEADY)
 async def alert_upgrades_state(request: Request):
     """Balance, daily costs, per-alert upgrade state and unread notices."""
-    client_id = _require_client_id(request)
+    client_id = _require_credit_client_id(request)
     return upgrades.get_state(client_id)
 
 
@@ -32,6 +32,8 @@ async def alert_upgrade_set(request: Request, alert_id: int, upgrade: str):
         raise HTTPException(status_code=400, detail="Body must be {\"enabled\": true|false}")
     if body["enabled"] and upgrade not in upgrades.offered_upgrades():
         raise HTTPException(status_code=404, detail="This upgrade is not available")
+    if body["enabled"]:
+        _require_credit_client_id(request)
     try:
         return upgrades.set_upgrade(client_id, alert_id, upgrade, body["enabled"])
     except credits.InsufficientCredits as exc:

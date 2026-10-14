@@ -16,7 +16,10 @@ def main():
         # It only starts when ZR_ENV names a non-production environment.
         os.environ.setdefault("ZR_ENV", "test")
         os.environ.setdefault("PAYMENTS_PROVIDER", "test")
-        from app import app
+        from app import app, credits
+        # Hundreds of isolated browsers share localhost in this suite. The real
+        # network grant limit is covered by the API/SQLite tests.
+        credits.STARTER_WALLETS_PER_NETWORK_DAY = 10000
         import app.routes as routes
 
         # Nearby queries with fewer than one page of exact pins normally enrich

@@ -56,13 +56,16 @@ test('information keeps the search intact and restores focus', async ({ page }, 
   expect(page.url()).toBe(url);
 });
 
-test('FAQs disclose answers and help restores the visible menu trigger', async ({ page }) => {
+test('FAQs open separately and help restores the visible menu trigger', async ({ page, context }) => {
   await ready(page);
-  await topic(page, 'FAQs');
-  const dialog = page.locator('#siteInfoDialog');
-  await dialog.locator('summary').filter({hasText:'Are the homes still available?'}).click();
-  await expect(dialog.getByText(/We cannot confirm availability/)).toBeVisible();
-  await dialog.getByRole('button', {name:'Close information'}).click();
+  const opened = context.waitForEvent('page');
+  await topic(page, 'FAQs, opens in a new tab');
+  const faq = await opened;
+  await expect(faq).toHaveURL(/\/faq$/);
+  await faq.locator('summary').filter({hasText:'Are the homes still available?'}).click();
+  await expect(faq.getByText(/We cannot confirm availability/)).toBeVisible();
+  await faq.close();
+  await expect(page.locator('#siteInfoDialog')).toBeHidden();
   await page.locator('#siteMenuBtn').click();
   await page.getByRole('button', {name:'Search tips'}).click();
   await expect(page.locator('#welcomeOverlay .welcome-panel')).toBeVisible();
@@ -73,27 +76,29 @@ test('FAQs disclose answers and help restores the visible menu trigger', async (
 
 test('failed information request offers its public URL', async ({ page }) => {
   await ready(page);
-  await page.route('**/faq', route => route.fulfill({status:503, body:'Unavailable'}));
-  await topic(page, 'FAQs');
-  await expect(page.locator('#siteInfoDialog').getByRole('link', {name:'Open the page'})).toHaveAttribute('href','/faq');
+  await page.route('**/about', route => route.fulfill({status:503, body:'Unavailable'}));
+  await topic(page, 'About ZameenRentals');
+  await expect(page.locator('#siteInfoDialog').getByRole('link', {name:'Open the page'})).toHaveAttribute('href','/about');
   await expect(page.locator('.site-info-content')).not.toHaveAttribute('aria-busy','true');
 });
 
-test('closing a pending request cannot replace the next topic', async ({ page }) => {
+test('closing a pending About request cannot replace the reopened modal', async ({ page }) => {
   await ready(page);
   let finish;
   const gate = new Promise(resolve => { finish = resolve; });
-  await page.route('**/faq', async route => {
+  let requests = 0;
+  await page.route('**/about', async route => {
+    if (++requests > 1) return route.continue();
     await gate;
-    await route.fulfill({status:200,body:'<div class="site-info-body">Stale FAQ response</div>'}).catch(() => {});
+    await route.fulfill({status:200,body:'<div class="site-info-body">Stale About response</div>'}).catch(() => {});
   });
-  await topic(page, 'FAQs');
+  await topic(page, 'About ZameenRentals');
   await expect(page.locator('.site-info-content')).toHaveAttribute('aria-busy','true');
   await page.keyboard.press('Escape');
   await topic(page, 'About ZameenRentals');
   finish();
   await expect(page.locator('#siteInfoDialog')).toContainText('Our listings currently come from Zameen.com');
-  await expect(page.locator('#siteInfoDialog')).not.toContainText('Stale FAQ response');
+  await expect(page.locator('#siteInfoDialog')).not.toContainText('Stale About response');
 });
 
 for (const path of ['/about','/pricing','/faq','/privacy','/terms']) {
@@ -113,7 +118,11 @@ for (const path of ['/about','/pricing','/faq','/privacy','/terms']) {
 test('FAQ schema matches visible answers and unknown routes stay 404', async ({ page, request }) => {
   await page.goto('/faq');
   const schema = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent());
-  const answers = await page.locator('details').evaluateAll(ds => ds.map(d => ({name:d.querySelector('summary').textContent,text:d.querySelector('p').textContent})));
+  const answers = await page.locator('details').evaluateAll(ds => ds.map(d => {
+    const answer = d.querySelector('p').cloneNode(true);
+    answer.querySelectorAll('[aria-hidden="true"]').forEach(icon => icon.remove());
+    return {name:d.querySelector('summary').textContent,text:answer.textContent};
+  }));
   expect(schema.mainEntity.map(q => ({name:q.name,text:q.acceptedAnswer.text}))).toEqual(answers);
   for (const path of ['/not-a-page','/about.html','/pricing/unknown']) expect((await request.get(path)).status()).toBe(404);
   expect((await request.get('/robots.txt')).status()).toBe(200);

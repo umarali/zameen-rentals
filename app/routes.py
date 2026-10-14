@@ -840,6 +840,17 @@ def _require_client_id(request: Request) -> str:
     return client_id
 
 
+def _require_credit_client_id(request: Request) -> str:
+    client_id = _require_client_id(request)
+    from app import credits
+    try:
+        credits.register_starter_request(client_id, request.client.host if request.client else "unknown")
+    except Exception:
+        logger.exception("Could not check starter-credit eligibility")
+        raise HTTPException(status_code=503, detail="Credits are temporarily unavailable. Search still works.") from None
+    return client_id
+
+
 @router.post("/api/personalization/touch")
 @limiter.limit(_PERSONALIZATION_BURST)
 async def personalization_touch(request: Request):

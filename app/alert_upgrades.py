@@ -142,6 +142,14 @@ def init_alert_upgrades_schema(conn=None):
             CREATE INDEX IF NOT EXISTS idx_alert_shortlists_client
                 ON alert_shortlists(client_id, created_at DESC);
 
+            CREATE TABLE IF NOT EXISTS alert_shortlist_windows (
+                alert_id INTEGER NOT NULL,
+                day TEXT NOT NULL,
+                through_at TEXT NOT NULL,
+                through_id INTEGER NOT NULL,
+                PRIMARY KEY (alert_id, day)
+            );
+
             CREATE TABLE IF NOT EXISTS alert_upgrade_notices (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
                 client_id  TEXT NOT NULL,
@@ -156,13 +164,13 @@ def init_alert_upgrades_schema(conn=None):
             CREATE INDEX IF NOT EXISTS idx_alert_upgrade_notices_client
                 ON alert_upgrade_notices(client_id, seen_at);
         """)
-        for table in ("alert_upgrades", "alert_shortlists", "alert_upgrade_notices"):
+        for table in ("alert_upgrades", "alert_shortlists", "alert_upgrade_notices", "alert_shortlist_windows"):
             conn.execute(f"DELETE FROM {table} WHERE alert_id NOT IN (SELECT id FROM alerts)")
 
 
 def delete_for_alert(conn, alert_id: int):
     """Remove upgrade state for a deleted alert. Ledger rows stay (they are history)."""
-    for table in ("alert_upgrades", "alert_shortlists", "alert_upgrade_notices"):
+    for table in ("alert_upgrades", "alert_shortlists", "alert_upgrade_notices", "alert_shortlist_windows"):
         conn.execute(f"DELETE FROM {table} WHERE alert_id = ?", (alert_id,))
 
 
@@ -205,7 +213,10 @@ def _upgrade_view(alert_id: int, upgrade: str, row, day: str) -> dict:
     return {
         "enabled": bool(row and row["enabled"]),
         "cost_per_day": credits.COSTS[upgrade],
-        "paid_today": _ref_state(day_ref(alert_id, upgrade, day)) == "paid",
+        "paid_today": (bool(_get_conn().execute(
+            "SELECT 1 FROM alert_shortlists WHERE alert_id=? AND day=? AND status='delivered'",
+            (alert_id, day),
+        ).fetchone()) if upgrade == SHORTLIST else _ref_state(day_ref(alert_id, upgrade, day)) == "paid"),
         "disabled_reason": row["disabled_reason"] if row else None,
         "disabled_at": row["disabled_at"] if row else None,
     }
@@ -473,7 +484,7 @@ def run_daily_jobs(*, now: datetime | None = None, dispatch: bool = True) -> dic
     return summary
 
 
-def _recent_matches(alert_id: int, client_id: str, *, now: datetime | None) -> list[dict]:
+def _recent_matches(alert_id: int, client_id: str, *, now: datetime | None, through_id: int) -> list[dict]:
     cutoff = _sqlite_utc(_utc_now(now) - timedelta(hours=SHORTLIST_WINDOW_HOURS))
     rows = _get_conn().execute(
         """SELECT m.id AS match_id, m.matched_at,
@@ -483,13 +494,26 @@ def _recent_matches(alert_id: int, client_id: str, *, now: datetime | None) -> l
                   l.zameen_posted_at AS posted_at, l.zameen_updated_at AS updated_at
            FROM alert_matches m JOIN listings l ON l.id = m.listing_id
            WHERE m.alert_id = ? AND m.matched_at >= ? AND l.is_active = 1
-             AND m.matched_at > COALESCE((SELECT MAX(created_at) FROM alert_shortlists
-                 WHERE alert_id = m.alert_id AND status IN ('delivered', 'empty')), '')
+             AND m.matched_at <= ? AND m.id <= ?
+             AND NOT EXISTS (
+                 SELECT 1 FROM alert_shortlist_windows w WHERE w.alert_id = m.alert_id
+                 AND m.matched_at <= w.through_at AND m.id <= w.through_id)
+             AND m.matched_at >= COALESCE((SELECT MAX(created_at) FROM alert_shortlists s
+                 WHERE s.alert_id = m.alert_id AND s.status IN ('delivered', 'empty')
+                   AND NOT EXISTS (SELECT 1 FROM alert_shortlist_windows w
+                                   WHERE w.alert_id = s.alert_id AND w.day = s.day)), '')
              AND l.zameen_id NOT IN (SELECT zameen_id FROM hidden_listings WHERE client_id = ?)
            ORDER BY m.matched_at DESC, m.id DESC LIMIT ?""",
-        (alert_id, cutoff, client_id, SHORTLIST_CANDIDATES),
+        (alert_id, cutoff, _sqlite_utc(_utc_now(now)), through_id, client_id, SHORTLIST_CANDIDATES),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+def _save_shortlist_window(conn, alert_id, day, now, through_id):
+    conn.execute(
+        "INSERT OR IGNORE INTO alert_shortlist_windows VALUES (?, ?, ?, ?)",
+        (alert_id, day, _sqlite_utc(now), through_id),
+    )
 
 
 def _deliver_shortlist(row, *, day: str, now: datetime | None, dispatch: bool) -> dict:
@@ -498,10 +522,19 @@ def _deliver_shortlist(row, *, day: str, now: datetime | None, dispatch: bool) -
     conn = _get_conn()
     alert_id, client_id = row["alert_id"], row["client_id"]
     ref = day_ref(alert_id, SHORTLIST, day)
-    candidates = _recent_matches(alert_id, client_id, now=now)
+    through_id = conn.execute(
+        "SELECT COALESCE(MAX(id), 0) FROM alert_matches WHERE alert_id = ?", (alert_id,)
+    ).fetchone()[0]
+    candidates = _recent_matches(alert_id, client_id, now=now, through_id=through_id)
+
+    base_ref = ref
+    attempt = 0
+    while _ref_state(ref) == "refunded":
+        attempt += 1
+        ref = f"{base_ref}:retry{attempt}"
 
     if not candidates:
-        # No new matches: today is free. Return a charge made when it was switched on.
+        # No new matches: return any interrupted, unrefunded attempt's charge.
         if _ref_state(ref) == "paid":
             credits.refund(ref)
         with conn:
@@ -510,41 +543,46 @@ def _deliver_shortlist(row, *, day: str, now: datetime | None, dispatch: bool) -
                 "VALUES (?, ?, ?, 'empty', ?)",
                 (alert_id, client_id, day, _sqlite_utc(_utc_now(now))),
             )
+            _save_shortlist_window(conn, alert_id, day, now, through_id)
             conn.execute(
                 "UPDATE alert_upgrades SET settled_day = ? WHERE alert_id = ? AND upgrade = ?",
                 (day, alert_id, SHORTLIST),
             )
         return {"status_key": "empty"}
 
-    if _ref_state(ref) != "refunded":
-        try:
-            credits.spend(client_id, SHORTLIST, ref=ref)
-        except credits.InsufficientCredits:
-            _switch_off_for_balance(conn, row, day)
-            with conn:
-                conn.execute(
-                    "INSERT OR IGNORE INTO alert_shortlists (alert_id, client_id, day, status, match_count) "
-                    "VALUES (?, ?, ?, 'unpaid', ?)",
-                    (alert_id, client_id, day, len(candidates)),
-                )
-            return {"status_key": "switched_off"}
+    try:
+        credits.spend(client_id, SHORTLIST, ref=ref)
+    except credits.InsufficientCredits:
+        _switch_off_for_balance(conn, row, day)
+        with conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO alert_shortlists (alert_id, client_id, day, status, match_count) "
+                "VALUES (?, ?, ?, 'unpaid', ?)",
+                (alert_id, client_id, day, len(candidates)),
+            )
+        return {"status_key": "switched_off"}
 
     try:
-        filters = json.loads(row["filters_json"] or "{}")
-    except json.JSONDecodeError:
-        filters = {}
-    picks, ranked_by = rank_matches(filters, candidates, limit=SHORTLIST_SIZE)
-    with conn:
-        cur = conn.execute(
-            """INSERT OR IGNORE INTO alert_shortlists
-                   (alert_id, client_id, day, status, match_count, ranked_by, items_json, created_at)
-               VALUES (?, ?, ?, 'delivered', ?, ?, ?, ?)""",
-            (alert_id, client_id, day, len(candidates), ranked_by, json.dumps(picks), _sqlite_utc(_utc_now(now))),
-        )
-        conn.execute(
-            "UPDATE alert_upgrades SET settled_day = ? WHERE alert_id = ? AND upgrade = ?",
-            (day, alert_id, SHORTLIST),
-        )
+        try:
+            filters = json.loads(row["filters_json"] or "{}")
+        except json.JSONDecodeError:
+            filters = {}
+        picks, ranked_by = rank_matches(filters, candidates, limit=SHORTLIST_SIZE)
+        with conn:
+            cur = conn.execute(
+                """INSERT OR IGNORE INTO alert_shortlists
+                       (alert_id, client_id, day, status, match_count, ranked_by, items_json, created_at)
+                   VALUES (?, ?, ?, 'delivered', ?, ?, ?, ?)""",
+                (alert_id, client_id, day, len(candidates), ranked_by, json.dumps(picks), _sqlite_utc(_utc_now(now))),
+            )
+            _save_shortlist_window(conn, alert_id, day, now, through_id)
+            conn.execute(
+                "UPDATE alert_upgrades SET settled_day = ? WHERE alert_id = ? AND upgrade = ?",
+                (day, alert_id, SHORTLIST),
+            )
+    except Exception:
+        credits.refund(ref)
+        raise
     pushed = 0
     if dispatch and cur.rowcount == 1 and row["notify_push"]:
         pushed = _push_shortlist(row, day, picks, len(candidates))

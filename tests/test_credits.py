@@ -6,6 +6,8 @@ from app import credits
 @pytest.fixture(autouse=True)
 def schema(fresh_db):
     credits.init_credits_schema()
+    credits.register_starter_request("client-aaaa", "192.0.2.1")
+    credits.register_starter_request("client-bbbb", "192.0.2.1")
 
 
 def test_first_balance_grants_starter_credits_once():
@@ -58,3 +60,21 @@ def test_spend_reference_cannot_be_reused_by_another_owner_or_action():
             credits.spend(owner, action, ref='spend:guard')
     with pytest.raises(credits.SpendReferenceConflict):
         credits.spend('client-aaaa', 'tailored_list', ref='spend:guard', allow_replay=False)
+
+
+def test_new_wallets_cannot_claim_unlimited_starter_credits_from_one_network():
+    from fastapi.testclient import TestClient
+    from app import app, personalization as pers
+    from app.cache import limiter
+    pers.init_personalization_schema()
+    limiter.reset()
+    with TestClient(app) as client:
+        balances = [client.get('/api/credits', headers={'X-Client-Id': f'starter-network-{i:04}'}).json()['balance']
+                    for i in range(11)]
+        assert balances == [10] * 10 + [0]
+        # The denial must survive later balance checks and cannot alter free features.
+        assert credits.balance('starter-network-0010') == 0
+        response = client.post('/api/personalization/touch', headers={'X-Client-Id': 'starter-network-0010'})
+        assert response.status_code == 200
+        assert client.get('/api/credits', headers={'X-Client-Id': 'starter-network-0000'}).json()['balance'] == 10
+    limiter.reset()

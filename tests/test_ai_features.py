@@ -26,6 +26,7 @@ BRIEF = "2 bed flat in Gulberg under 80k, quiet street, parking, not ground floo
 def _setup(fresh_db, monkeypatch):
     pers.init_personalization_schema()
     credits.init_credits_schema()
+    credits.register_starter_request(CLIENT, "192.0.2.1")
     limiter.reset()
 
     async def regex_parse(query, city="lahore"):
@@ -488,3 +489,72 @@ def test_cancelled_paid_work_returns_credit_and_releases_lock():
         finally:
             finish.set()
     asyncio.run(run())
+
+
+def test_daily_budget_reserves_for_concurrent_provider_calls(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+    from types import SimpleNamespace as NS
+    entered, release = Event(), Event()
+    def create(**kwargs):
+        entered.set()
+        assert release.wait(3)
+        return NS(stop_reason='end_turn', usage=NS(input_tokens=1000, output_tokens=100),
+                  content=[NS(type='text', text='{"ok": 1}')])
+    monkeypatch.setattr(ranking, '_get_client', lambda: NS(messages=NS(create=create)))
+    monkeypatch.setattr(ranking, 'AI_DAILY_BUDGET_USD', 0.03)
+    args = dict(feature='t', model='claude-sonnet-5-5', system='s', user='u', schema={}, max_tokens=1000)
+    with ThreadPoolExecutor(2) as pool:
+        first = pool.submit(ranking.call_claude_json, **args)
+        assert entered.wait(3)
+        try:
+            with pytest.raises(ranking.RankingError, match='budget'):
+                ranking.call_claude_json(**args)
+        finally:
+            release.set()
+        assert first.result() == {'ok': 1}
+    assert ranking.ai_spend_today() == pytest.approx(.003)
+
+
+def test_provider_timeout_keeps_budget_reserved(monkeypatch):
+    from types import SimpleNamespace as NS
+    calls = []
+    def create(**kwargs):
+        calls.append(True)
+        raise TimeoutError('provider may have billed this request')
+    monkeypatch.setattr(ranking, '_get_client', lambda: NS(messages=NS(create=create)))
+    monkeypatch.setattr(ranking, 'AI_DAILY_BUDGET_USD', .03)
+    args = dict(feature='t', model='claude-sonnet-5-5', system='s', user='u', schema={}, max_tokens=1000)
+    for _ in range(2):
+        with pytest.raises(ranking.RankingError):
+            ranking.call_claude_json(**args)
+    assert len(calls) == 1
+
+
+def test_simultaneous_same_brief_with_different_retry_keys_is_charged_once(monkeypatch):
+    import asyncio
+    import httpx
+    import threading
+    from types import SimpleNamespace as NS
+    seed(2)
+    entered, release = threading.Event(), threading.Event()
+    def create(**kwargs):
+        entered.set()
+        assert release.wait(5)
+        return NS(stop_reason='end_turn', usage=NS(input_tokens=1000, output_tokens=100),
+                  content=[NS(type='text', text=json.dumps({'ranked': [{'key': 'L01', 'reason': 'Fits.', 'trade_off': 'Unknown.'}], 'preferences': []}))])
+    monkeypatch.setattr(ranking, '_get_client', lambda: NS(messages=NS(create=create)))
+    async def scenario():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as c:
+            first = asyncio.create_task(c.post('/api/ai/tailored', headers={**H, 'Idempotency-Key':'concurrent-key-01'}, json={'brief':BRIEF}))
+            assert await asyncio.to_thread(entered.wait, 3)
+            try:
+                second = await c.post('/api/ai/tailored', headers={**H, 'Idempotency-Key':'concurrent-key-02'}, json={'brief':BRIEF})
+                assert second.status_code == 409
+            finally:
+                release.set()
+            assert (await first).status_code == 200
+            retry = await c.post('/api/ai/tailored', headers={**H, 'Idempotency-Key':'concurrent-key-02'}, json={'brief':BRIEF})
+            assert retry.status_code == 200 and retry.json()['charged'] is False
+    asyncio.run(scenario())
+    assert balance() == 9

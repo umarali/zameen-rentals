@@ -37,7 +37,8 @@ test('pricing page shows the packs, costs and starter credits from /api/credits'
   await expect(starter).toHaveAttribute('data-starter-credits', String(credits.balance));
   await expect(starter).toContainText(`${credits.balance} free credits`);
   await expect(page.locator('main')).toContainText('Pay once. Nothing renews.');
-  await expect(page.locator('main')).toContainText('Daily shortlists switch off when credits run out');
+  await expect(page.locator('main')).toContainText('Credit features stop when your balance runs out');
+  await expect(page.locator('main')).toContainText('Top-ups are not open yet, so you cannot add more credits for now');
 });
 
 test('public pages never render owner notes and link to privacy and terms', async ({ page }) => {
@@ -98,17 +99,22 @@ test('legal menu links open new tabs and preserve the search', async ({ page, co
   }
 });
 
-test('pricing menu link navigates to a full page', async ({ page }) => {
+test('pricing menu link opens a full page separately', async ({ page, context }) => {
   await page.goto('/?city=lahore');
   await expect(page.locator('.card-wrap').first()).toBeVisible();
+  const original = page.url();
   await page.locator('#siteMenuBtn').click();
-  await page.locator('#siteMenu').getByRole('link', { name: 'Pricing', exact: true }).click();
-  await expect(page).toHaveURL(/\/pricing$/);
-  await expect(page.getByRole('heading', { name: 'Pricing', exact: true })).toBeVisible();
-  await expect(page.locator('#siteInfoDialog')).toHaveCount(0);
-  await expect(page.locator('main')).toContainText('Pay once. Nothing renews.');
-  await page.locator('.return-search').click();
-  await expect(page.locator('#nlInput')).toBeVisible();
+  const opened = context.waitForEvent('page');
+  await page.locator('#siteMenu a[href="/pricing"]').click();
+  const pricing = await opened;
+  await expect(pricing).toHaveURL(/\/pricing$/);
+  await expect(pricing.getByRole('heading', { name: 'Pricing', exact: true })).toBeVisible();
+  await expect(page.locator('#siteInfoDialog')).toBeHidden();
+  expect(page.url()).toBe(original);
+  await expect(pricing.locator('main')).toContainText('Pay once. Nothing renews.');
+  await pricing.locator('.return-search').click();
+  await expect(pricing.locator('#nlInput')).toBeVisible();
+  await pricing.close();
 });
 
 test('every legal link on public pages opens its destination in a new tab', async ({ page, context }) => {
@@ -134,28 +140,19 @@ test('every legal link on public pages opens its destination in a new tab', asyn
   }
 });
 
-test('FAQ dialog links use new tabs for legal pages and full-page pricing', async ({ page, context }) => {
-  await page.goto('/?city=lahore');
-  await expect(page.locator('.card-wrap').first()).toBeVisible();
-  await page.locator('#siteMenuBtn').click();
-  await page.locator('#siteMenu').getByRole('link', { name: 'FAQs', exact: true }).click();
-  const dialog = page.locator('#siteInfoDialog');
-  for (const [question, href] of [['Can I get a refund?', '/terms#refunds'], ['What happens to my data?', '/privacy']]) {
-    await dialog.locator('summary').filter({ hasText: question }).click();
+test('FAQ content links open legal pages and pricing separately', async ({ page, context }) => {
+  await page.goto('/faq');
+  for (const [question, href] of [['Can I get a refund?', '/terms#refunds'], ['What happens to my data?', '/privacy'], ['What are credits?', '/pricing']]) {
+    await page.locator('summary').filter({ hasText: question }).click();
     const opened = context.waitForEvent('page');
-    await dialog.locator(`a[href="${href}"]`).click();
+    await page.locator(`main a[href="${href}"]`).click();
     const tab = await opened;
     await tab.waitForURL(url => url.pathname + url.hash === href);
     await expect(tab.locator('main h1')).toBeVisible();
     await tab.close();
-    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(/\/faq$/);
   }
-  await dialog.locator('summary').filter({ hasText: 'What are credits?' }).click();
-  await dialog.getByRole('link', { name: 'pricing page' }).click();
-  await expect(page).toHaveURL(/\/pricing$/);
-  await expect(page.locator('#siteInfoDialog')).toHaveCount(0);
 });
-
 
 test('pricing and policy navigation is consistent and legal section links work', async ({ page }) => {
   for (const path of PUBLIC_PAGES) {
@@ -166,7 +163,7 @@ test('pricing and policy navigation is consistent and legal section links work',
       const link = nav.locator(`a[href="${destination}"]`);
       await expect(link).toBeVisible();
       if (path === destination) await expect(link).toHaveAttribute('aria-current', 'page');
-      if (destination !== '/pricing') await expect(link).toHaveAccessibleName(/opens in a new tab/);
+      await expect(link).toHaveAccessibleName(/opens in a new tab/);
     }
     if (path === '/privacy' || path === '/terms') {
       for (const link of await page.getByRole('navigation', { name: 'On this page' }).locator('a').all()) {

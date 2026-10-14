@@ -21,6 +21,13 @@ Usage pattern for a paid action (spend first, refund if the work fails):
         raise
 """
 import logging
+import hashlib
+import hmac
+import ipaddress
+import secrets
+import sqlite3
+from contextlib import closing
+from datetime import datetime, timezone
 import uuid
 
 from app.database import _get_conn
@@ -28,6 +35,7 @@ from app.database import _get_conn
 logger = logging.getLogger("zameenrentals")
 
 STARTER_CREDITS = 10
+STARTER_WALLETS_PER_NETWORK_DAY = 10
 
 # One-time packs. Prices are whole PKR. Changing these changes what the
 # pricing page and checkout offer; keep docs/credits-contract.md in sync.
@@ -76,6 +84,16 @@ def init_credits_schema(conn=None):
     conn = conn or _get_conn()
     with conn:
         conn.executescript(f"""
+            CREATE TABLE IF NOT EXISTS credit_starter_salts (
+                day TEXT PRIMARY KEY, salt TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS credit_starter_claims (
+                client_id TEXT PRIMARY KEY, day TEXT NOT NULL,
+                network_hash TEXT, granted INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_starter_claim_day ON credit_starter_claims(day) WHERE network_hash IS NOT NULL;
+            CREATE INDEX IF NOT EXISTS idx_starter_network_day
+                ON credit_starter_claims(network_hash, day, granted);
             CREATE TABLE IF NOT EXISTS credit_ledger (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
                 client_id  TEXT NOT NULL,
@@ -96,7 +114,57 @@ def new_spend_ref(action: str) -> str:
     return f"spend:{action}:{uuid.uuid4().hex}"
 
 
+def register_starter_request(client_id: str, address: str):
+    """Limit repeated anonymous claims; free features and existing wallets stay usable.
+
+    A denied wallet can retry on another UTC day. Store a daily keyed network
+    fingerprint, never the address; erase fingerprints older than two days.
+    """
+    from app import database
+    with closing(sqlite3.connect(str(database._DB_PATH), timeout=5)) as conn:
+        conn.row_factory = sqlite3.Row
+        _register_starter_request(conn, client_id, address)
+
+
+def _register_starter_request(conn, client_id: str, address: str):
+    if conn.execute("SELECT 1 FROM credit_ledger WHERE ref=?", (f"starter:{client_id}",)).fetchone():
+        return
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    claim = conn.execute("SELECT day, granted FROM credit_starter_claims WHERE client_id=?", (client_id,)).fetchone()
+    if claim and claim['day'] == day and not claim['granted']:
+        return
+    try:
+        ip = ipaddress.ip_address(address)
+        address = str(ipaddress.ip_network(f"{ip}/{64 if ip.version == 6 else 32}", strict=False))
+    except ValueError:
+        # TestClient and absent connection hosts use a shared opaque bucket.
+        address = "unknown"
+    with conn:
+        conn.execute("BEGIN IMMEDIATE")
+        if conn.execute("SELECT 1 FROM credit_ledger WHERE ref=?", (f"starter:{client_id}",)).fetchone():
+            return
+        claim = conn.execute("SELECT day, granted FROM credit_starter_claims WHERE client_id=?", (client_id,)).fetchone()
+        if claim and claim['day'] == day and not claim['granted']:
+            return
+        new_day = conn.execute("INSERT OR IGNORE INTO credit_starter_salts VALUES (?, ?)", (day, secrets.token_hex(32))).rowcount == 1
+        salt = conn.execute("SELECT salt FROM credit_starter_salts WHERE day=?", (day,)).fetchone()[0]
+        network = hmac.new(bytes.fromhex(salt), f"{day}:{address}".encode(), hashlib.sha256).hexdigest()
+        count = conn.execute("SELECT COUNT(*) FROM credit_starter_claims WHERE network_hash=? AND day=? AND granted=1",
+                             (network, day)).fetchone()[0]
+        granted = count < STARTER_WALLETS_PER_NETWORK_DAY
+        conn.execute("INSERT INTO credit_starter_claims VALUES (?, ?, ?, ?) ON CONFLICT(client_id) DO UPDATE SET day=excluded.day, network_hash=excluded.network_hash, granted=excluded.granted",
+                     (client_id, day, network, int(granted)))
+        if new_day:
+            conn.execute("UPDATE credit_starter_claims SET network_hash=NULL WHERE network_hash IS NOT NULL AND day < date(?, '-2 days')", (day,))
+            conn.execute("DELETE FROM credit_starter_salts WHERE day < date(?, '-2 days')", (day,))
+        if granted:
+            _ensure_starter(conn, client_id)
+
+
 def _ensure_starter(conn, client_id: str):
+    claim = conn.execute("SELECT granted FROM credit_starter_claims WHERE client_id=?", (client_id,)).fetchone()
+    if claim is None or not claim[0]:
+        return
     conn.execute(
         "INSERT OR IGNORE INTO credit_ledger (client_id, delta, kind, ref) VALUES (?, ?, 'starter', ?)",
         (client_id, STARTER_CREDITS, f"starter:{client_id}"),
@@ -111,7 +179,7 @@ def _balance(conn, client_id: str) -> int:
 
 
 def balance(client_id: str) -> int:
-    """Current balance. The first call for a client grants the starter credits."""
+    """Current balance. Starter credits require an accepted request claim."""
     conn = _get_conn()
     with conn:
         _ensure_starter(conn, client_id)
@@ -198,4 +266,7 @@ def summary(client_id: str) -> dict:
         "costs": {action: COSTS[action] for action in OFFERED_ACTIONS},
         "packs": [{"id": k, **v} for k, v in PACKS.items()],
         "history": history(client_id),
+        "starter_pending": _get_conn().execute(
+            "SELECT 1 FROM credit_starter_claims WHERE client_id=? AND granted=0", (client_id,)
+        ).fetchone() is not None,
     }

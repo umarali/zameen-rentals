@@ -197,6 +197,7 @@ function renderPacks(need) {
 
   const body = setView('Top up credits', `
     ${needNote}
+    ${summary.starter_pending ? '<p id="creditsStarterNote" class="mb-3 text-sm text-gray-600">Free-credit claims from this network have reached today’s limit. Try again after 5 am Pakistan time. Search and the free features still work.</p>' : ''}
     <p class="text-sm text-gray-600 mb-3">Balance: <strong id="creditsSheetBalance" class="text-gray-800">${esc(fmtCredits(summary.balance))}</strong></p>
     <fieldset>
       <legend class="text-xs font-semibold text-gray-500 mb-2">Buy credits</legend>
@@ -211,7 +212,7 @@ function renderPacks(need) {
     </fieldset>
     <p class="mt-3 text-sm font-semibold text-gray-700">Pay once. Nothing renews.</p>
     <p class="mt-1 text-xs text-gray-500 leading-relaxed">One credit pays for one Tailored list, one Search report, or one day of Daily shortlist for one saved search with new matches. Credits never expire.</p>
-    <p class="mt-2 text-xs"><a href="/pricing" class="text-brand-700 underline">Pricing and how credits work</a> · <a href="/terms#refunds" target="_blank" rel="noopener" aria-label="Refunds, opens in a new tab" class="text-brand-700 underline">Refunds ↗</a></p>
+    <p class="mt-2 text-xs"><a href="/pricing" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Pricing and how credits work, opens in a new tab" class="text-brand-700 underline">Pricing and how credits work <span aria-hidden="true">↗</span></a> · <a href="/terms#refunds" target="_blank" rel="noopener" aria-label="Refunds, opens in a new tab" class="text-brand-700 underline">Refunds <span aria-hidden="true">↗</span></a></p>
     <p id="creditsCheckoutError" class="mt-3 text-sm text-rose-600 ${unavailable ? '' : 'hidden'}" role="alert">${unavailable ? 'Payments are not open yet.' : ''}</p>
     <button type="button" id="creditsCheckoutBtn" class="mt-4 w-full py-3 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${unavailable ? 'disabled' : ''}>Continue to payment</button>
     <button type="button" id="creditsShowRestore" class="mt-3 w-full py-2 text-sm font-semibold text-gray-600 hover:text-brand-600">Have a restore code?</button>
