@@ -171,16 +171,10 @@ test.describe("Image Carousel", () => {
     }
   });
 
-  // ── New: data source indicator ──
-
-  test("data source badge is shown after search", async ({ page }) => {
+  test("local results keep source attribution without the Instant badge", async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
-    const srcEl = page.locator("#dataSource");
-    // Can be "Instant", "Instant / Nearest first", "Instant / Nearby", "Live", "Local only"
-    const text = await srcEl.textContent();
-    if (text && text.trim()) {
-      expect(text.trim()).toMatch(/^(Instant|Live|Local only)/);
-    }
+    await expect(page.locator("#dataSource")).toBeHidden();
+    await expect(page.getByText("Powered by Zameen.com data", { exact: true })).toBeAttached();
   });
 });

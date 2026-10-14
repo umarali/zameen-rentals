@@ -323,18 +323,16 @@ test.describe("More Filters", () => {
     await expect(page.locator("#moreChip")).not.toHaveClass(/has-value/);
   });
 
-  test("sort select has all options", async ({ page }) => {
-    await page.locator("#moreChip").click();
+  test("sort select offers price and recency choices in the results header", async ({ page }) => {
     const select = page.locator("#sortSelect");
     await expect(select).toBeVisible();
     const options = select.locator("option");
-    expect(await options.count()).toBe(5); // Default, Distance, Price Low, Price High, Newest
+    await expect(options).toContainText([/Nearest|Recently updated/, "Lowest price", "Highest price"]);
   });
 
-  test("sort select updates chip", async ({ page }) => {
-    await page.locator("#moreChip").click();
+  test("sort select is independent of the More chip", async ({ page }) => {
     await page.locator("#sortSelect").selectOption("price_low");
-    await expect(page.locator("#moreChip")).toHaveClass(/has-value/);
+    await expect(page.locator("#moreChip")).not.toHaveClass(/has-value/);
   });
 
   test("preset chips apply combined filters", async ({ page }) => {

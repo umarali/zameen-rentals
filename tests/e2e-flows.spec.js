@@ -137,9 +137,8 @@ test.describe("End-to-End User Flows", () => {
 
     await page.locator("#moreChip").click();
     await page.locator('#furnishingRow [data-furnishing="furnished"]').click();
-    await page.locator("#sortSelect").selectOption("price_low");
-    // Sort select already calls closeDD(); press Escape as a safety net
     await page.keyboard.press("Escape");
+    await page.locator("#sortSelect").selectOption("price_low");
 
     await expect(page.locator("#moreChip")).toHaveClass(/has-value/);
     await page.waitForSelector(".card-wrap", { timeout: 30000 });
