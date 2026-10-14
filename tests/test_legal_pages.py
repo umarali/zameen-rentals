@@ -77,7 +77,10 @@ def test_faq_starter_credits_and_schema_match():
     assert f"New visitors get {credits.STARTER_CREDITS} free credits" in html
     schema = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', html, re.S).group(1))
     visible = re.findall(r"<details><summary>(.*?)</summary><p>(.*?)</p></details>", html, re.S)
-    strip = lambda s: re.sub(r"<[^>]+>", "", s)
+    def strip(s):
+        # Decorative new-tab icons are not part of the answer represented in JSON-LD.
+        s = re.sub(r'<span aria-hidden="true">.*?</span>', "", s, flags=re.S)
+        return re.sub(r"<[^>]+>", "", s)
     assert [(q["name"], q["acceptedAnswer"]["text"]) for q in schema["mainEntity"]] == [
         (strip(q), strip(a)) for q, a in visible
     ]

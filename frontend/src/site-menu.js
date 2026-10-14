@@ -1,7 +1,6 @@
 /** A small header disclosure; information opens only when a topic is chosen. */
 const PAGES = {
   about: { path: '/about', title: 'About ZameenRentals' },
-  faq: { path: '/faq', title: 'A few useful answers' },
 };
 
 export function initSiteMenu({ onHelp }) {
@@ -16,7 +15,7 @@ export function initSiteMenu({ onHelp }) {
   dialog.innerHTML = `
     <div class="site-info-heading"><h2 id="siteInfoTitle"></h2><button type="button" data-info-close aria-label="Close information" autofocus>&times;</button></div>
     <div class="site-info-content"></div>
-    <div class="site-info-footer"><button type="button" data-info-search>Back to search <span aria-hidden="true">↗</span></button></div>`;
+    <div class="site-info-footer"><button type="button" data-info-search><span aria-hidden="true">←</span> Back to search</button></div>`;
   document.body.append(dialog);
   const content = dialog.querySelector('.site-info-content');
   let pending;
