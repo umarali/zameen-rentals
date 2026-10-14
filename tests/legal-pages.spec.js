@@ -37,7 +37,8 @@ test('pricing page shows the packs, costs and starter credits from /api/credits'
   await expect(starter).toHaveAttribute('data-starter-credits', String(credits.balance));
   await expect(starter).toContainText(`${credits.balance} free credits`);
   await expect(page.locator('main')).toContainText('Pay once. Nothing renews.');
-  await expect(page.locator('main')).toContainText('Daily shortlists switch off when credits run out');
+  await expect(page.locator('main')).toContainText('Credit features stop when your balance runs out');
+  await expect(page.locator('main')).toContainText('Top-ups are not open yet, so you cannot add more credits for now');
 });
 
 test('public pages never render owner notes and link to privacy and terms', async ({ page }) => {

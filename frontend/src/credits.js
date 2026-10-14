@@ -197,6 +197,7 @@ function renderPacks(need) {
 
   const body = setView('Top up credits', `
     ${needNote}
+    ${summary.starter_pending ? '<p id="creditsStarterNote" class="mb-3 text-sm text-gray-600">Free-credit claims from this network have reached today’s limit. Try again after 5 am Pakistan time. Search and the free features still work.</p>' : ''}
     <p class="text-sm text-gray-600 mb-3">Balance: <strong id="creditsSheetBalance" class="text-gray-800">${esc(fmtCredits(summary.balance))}</strong></p>
     <fieldset>
       <legend class="text-xs font-semibold text-gray-500 mb-2">Buy credits</legend>

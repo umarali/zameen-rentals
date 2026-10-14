@@ -39,7 +39,7 @@ Group=zrentals
 WorkingDirectory=/opt/zameenrentals
 EnvironmentFile=-/opt/zameenrentals/.env
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/zameenrentals/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+ExecStart=/opt/zameenrentals/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1
 Restart=always
 RestartSec=5
 

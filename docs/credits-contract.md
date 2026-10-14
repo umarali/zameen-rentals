@@ -6,7 +6,7 @@ The integrated contract for credits and paid features. Historical branch ownersh
 
 - Search, filters, maps, contacts, saved homes, comparisons and today's alerts stay free. A paid feature must add something; it must never make a free feature worse.
 - No subscription and no renewal. People buy a credit pack once and spend credits on paid actions.
-- New visitors get `STARTER_CREDITS` (10) free credits. One credit buys one use of any offered paid feature. Credits do not expire.
+- Eligible new visitors get `STARTER_CREDITS` (10) free credits, subject to repeated-claim limits per network. One credit buys one use of any offered paid feature. Credits do not expire.
 - Refund requests within seven days cover unused purchased credits at their actual purchase price, including partly used packs. Requests use Send feedback; real-provider cash-refund processing still needs verification before live sales.
 - Packs and costs live only in `app/credits.py` (`PACKS`, `COSTS`). Read them from there or from `GET /api/credits`. Never hard-code numbers in copy or UI.
 
@@ -24,7 +24,7 @@ The integrated contract for credits and paid features. Historical branch ownersh
 
 ## Backend interface (`app/credits.py`)
 
-- `balance(client_id) -> int`. The first call grants starter credits.
+- `balance(client_id) -> int`. Starter credits require an accepted network claim; existing starter balances are preserved.
 - `spend(client_id, action, ref=...) -> int`. Raises `InsufficientCredits`. Idempotent on `ref`.
 - `refund(spend_ref) -> bool`. Call it when the paid work fails after the spend.
 - `grant(client_id, credits, kind="purchase"|"restore_in"|"adjust", ref=...) -> bool`. Idempotent on `ref`. Only the payments track grants.
@@ -39,21 +39,11 @@ The integrated contract for credits and paid features. Historical branch ownersh
   - On success it fires `zr:credits-changed`.
 - The payments track owns `frontend/src/credits.js` (balance display, top-up sheet, restore). Other tracks don't edit it.
 
-## File ownership (to avoid merge conflicts)
+## Maintenance
 
-| Track | Branch | Owns |
-|---|---|---|
-| payments | `feat/credits-payments` | `app/payments.py`, `app/routes_credits.py`, `frontend/src/credits.js`, credits section in the My rentals panel, test checkout page |
-| ai | `feat/ai-credits-features` | `app/ranking.py`, `app/tailored.py`, `app/report.py`, `app/routes_ai.py`, `frontend/src/tailored.js`, `frontend/src/report.js` |
-| alerts | `feat/paid-alerts` | alert sections of `app/personalization.py`, `app/notify.py`, `app/alert_upgrades.py`, `app/routes_alerts_paid.py`, alert UI in `frontend/src/personalization-ui.js` |
-| legal | `feat/legal-pages` | `frontend/public/{pricing,faq,privacy,terms}.html`, `site-info.css`, `sitemap.xml`, the `_PUBLIC_PAGES` map in `app/routes.py`, menu/footer links in `frontend/index.html` and `frontend/src/site-menu.js` |
+The feature branches have been integrated. Credits, payments, AI and alert code now ship together; the old branch ownership split is historical. Edit source under `app/` and `frontend/`, and rebuild `static/` without committing generated assets.
 
-Shared files:
-- `app/__init__.py`: add one `include_router` line for your router module.
-- `frontend/src/main.js`: add at most one import and one init call.
-- `frontend/src/style.css`: append only, inside a block commented with your track name.
-- `frontend/index.html`: avoid edits; build DOM from your JS module. The legal track may edit the menu and footer.
-- Don't commit `static/`. It is build output; the integrator rebuilds it.
+See [Credit operations](credits-operations.md) for starter-claim limits, AI budget reservations, reconciliation and the remaining prerequisites for cash sales.
 
 ## Cross-track hook
 

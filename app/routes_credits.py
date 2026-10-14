@@ -16,7 +16,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app import credits, payments
 from app.cache import limiter
-from app.routes import _require_client_id, _PERSONALIZATION_STEADY, _PLAYWRIGHT_SERVER
+from app.routes import _require_credit_client_id as _require_client_id, _PERSONALIZATION_STEADY, _PLAYWRIGHT_SERVER
 
 logger = logging.getLogger("zameenrentals")
 

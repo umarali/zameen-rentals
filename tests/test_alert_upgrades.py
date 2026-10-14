@@ -33,6 +33,8 @@ def _schema(fresh_db, monkeypatch):
     # The historical priority experiment remains tested, but is not publicly offered.
     monkeypatch.setattr(up, "PRIORITY_AVAILABLE", True)
     pers.init_personalization_schema()
+    credits.register_starter_request(CLIENT, "192.0.2.1")
+    credits.register_starter_request(OTHER, "192.0.2.1")
     yield
 
 
@@ -467,6 +469,8 @@ async def _no_sleep(_):
 def _free_alert_scenario(monkeypatch, *, with_paid: bool):
     """Same listings and alerts; optionally a paid client alongside. Returns
     what the free client sees: matches, push payloads, match-cycle summary."""
+    credits.register_starter_request(CLIENT, "192.0.2.1")
+    credits.register_starter_request(OTHER, "192.0.2.1")
     pushes = []
     monkeypatch.setattr(pers, "send_push",
                         lambda sub, payload, **kw: pushes.append(payload) or True)
@@ -653,3 +657,110 @@ def test_shortlist_does_not_rebill_matches_in_overlapping_daily_windows(no_ranki
     assert up.run_daily_jobs(now=next_run, dispatch=False)['empty'] == 1
     assert credits.balance(CLIENT) == before
     assert len(up.list_shortlists(CLIENT, aid)) == 1
+
+
+def test_shortlist_defers_future_matches_until_the_next_window(no_ranking):
+    aid = _alert()
+    first = DAY1_MORNING + timedelta(hours=2)
+    _listing()
+    _set_matched_at(aid, first + timedelta(minutes=1))
+    up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=first)
+    assert up.run_daily_jobs(now=first, dispatch=False)['empty'] == 1
+    assert credits.balance(CLIENT) == 10
+    assert up.run_daily_jobs(now=DAY1_MORNING + timedelta(days=1), dispatch=False)['shortlists'] == 1
+    assert credits.balance(CLIENT) == 9
+
+
+def test_shortlist_keeps_new_arrivals_in_the_same_second(no_ranking):
+    aid = _alert()
+    first = DAY1_MORNING + timedelta(hours=2)
+    old = _listing()
+    _set_matched_at(aid, first)
+    up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=first)
+    up.run_daily_jobs(now=first, dispatch=False)
+    new = _listing()
+    conn = _get_conn()
+    with conn:
+        conn.execute('UPDATE alert_matches SET matched_at=? WHERE listing_id=?',
+                     (up._sqlite_utc(first), new['id']))
+    assert up.run_daily_jobs(now=DAY1_MORNING + timedelta(days=1), dispatch=False)['shortlists'] == 1
+    rows = up.list_shortlists(CLIENT, aid)
+    assert rows[0]['items'][0]['zameen_id'] == new['zameen_id']
+    assert rows[1]['items'][0]['zameen_id'] == old['zameen_id']
+    assert credits.balance(CLIENT) == 8
+
+
+def test_failed_shortlist_storage_returns_credit_and_retry_charges_once(no_ranking):
+    aid = _alert()
+    _listing()
+    _set_matched_at(aid, DAY1_MORNING - timedelta(hours=1))
+    up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=DAY1_MORNING)
+    conn = _get_conn()
+    with conn:
+        conn.execute("CREATE TRIGGER fail_shortlist BEFORE INSERT ON alert_shortlists WHEN NEW.status='delivered' BEGIN SELECT RAISE(ABORT, 'storage failed'); END")
+    assert up.run_daily_jobs(now=DAY1_MORNING, dispatch=False)['shortlists'] == 0
+    assert credits.balance(CLIENT) == 10
+    with conn:
+        conn.execute('DROP TRIGGER fail_shortlist')
+    assert up.run_daily_jobs(now=DAY1_MORNING, dispatch=False)['shortlists'] == 1
+    assert credits.balance(CLIENT) == 9
+    assert up.upgrade_state(CLIENT, aid, now=DAY1_MORNING)['upgrades'][up.SHORTLIST]['paid_today'] is True
+    up.run_daily_jobs(now=DAY1_MORNING, dispatch=False)
+    assert credits.balance(CLIENT) == 9
+
+
+def test_shortlist_resumes_an_interrupted_retry_without_another_charge(no_ranking):
+    aid = _alert()
+    _listing()
+    _set_matched_at(aid, DAY1_MORNING - timedelta(hours=1))
+    up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=DAY1_MORNING)
+    ref = up.day_ref(aid, up.SHORTLIST, up.karachi_day(DAY1_MORNING))
+    credits.spend(CLIENT, up.SHORTLIST, ref=ref)
+    credits.refund(ref)
+    credits.spend(CLIENT, up.SHORTLIST, ref=ref+':retry1')
+    assert up.run_daily_jobs(now=DAY1_MORNING, dispatch=False)['shortlists'] == 1
+    assert credits.balance(CLIENT) == 9
+
+
+def test_empty_shortlist_returns_interrupted_retry_charge(no_ranking):
+    aid=_alert()
+    up.set_upgrade(CLIENT, aid, up.SHORTLIST, True, now=DAY1_MORNING)
+    ref=up.day_ref(aid,up.SHORTLIST,up.karachi_day(DAY1_MORNING))
+    credits.spend(CLIENT,up.SHORTLIST,ref=ref)
+    credits.refund(ref)
+    credits.spend(CLIENT,up.SHORTLIST,ref=ref+':retry1')
+    assert up.run_daily_jobs(now=DAY1_MORNING,dispatch=False)['empty']==1
+    assert credits.balance(CLIENT)==10
+
+
+def test_shortlist_keeps_late_committed_earlier_timestamp(no_ranking):
+    aid=_alert()
+    first=DAY1_MORNING+timedelta(hours=2)
+    _listing()
+    _set_matched_at(aid,first-timedelta(minutes=2))
+    up.set_upgrade(CLIENT,aid,up.SHORTLIST,True,now=first)
+    up.run_daily_jobs(now=first,dispatch=False)
+    new=_listing()
+    conn=_get_conn()
+    with conn:
+        conn.execute('UPDATE alert_matches SET matched_at=? WHERE listing_id=?',
+                     (up._sqlite_utc(first-timedelta(minutes=1)),new['id']))
+    assert up.run_daily_jobs(now=DAY1_MORNING+timedelta(days=1),dispatch=False)['shortlists']==1
+    assert up.list_shortlists(CLIENT,aid)[0]['items'][0]['zameen_id']==new['zameen_id']
+
+
+def test_credit_registration_failure_does_not_block_stopping_or_viewing(api,no_ranking,monkeypatch):
+    aid=_alert()
+    _listing()
+    _set_matched_at(aid,DAY1_MORNING-timedelta(hours=1))
+    up.set_upgrade(CLIENT,aid,up.SHORTLIST,True,now=DAY1_MORNING)
+    up.run_daily_jobs(now=DAY1_MORNING,dispatch=False)
+    def fail(*args):raise RuntimeError('starter registration unavailable')
+    monkeypatch.setattr(credits,'register_starter_request',fail)
+    h={'X-Client-Id':CLIENT}
+    response=api.post(f'/api/alerts/{aid}/upgrades/{up.SHORTLIST}',headers=h,json={'enabled':False})
+    assert response.status_code==200
+    assert response.json()['upgrades'][up.SHORTLIST]['enabled'] is False
+    response=api.get(f'/api/alerts/{aid}/shortlists',headers=h)
+    assert response.status_code==200 and len(response.json()['shortlists'])==1
+    assert api.post('/api/alerts/upgrades/notices/seen',headers=h,json={}).status_code==200

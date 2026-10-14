@@ -22,7 +22,7 @@
 
 <h2 id="data">Your browser and saved activity</h2>
 <p>A random ID in your browser links you to saved homes and notes, hidden homes, recent views, alerts, notification subscriptions and credits on our server. We also record first and last visits. No name, phone number or email is needed to search.</p>
-<p>Your browser remembers preferences and keeps local copies of saved activity, recent results and feedback waiting to send. Our app doesn't set cookies. PostHog analytics and session recording are off.</p>
+<p>Your browser remembers preferences and keeps local copies of saved activity, recent results and feedback waiting to send. Our app doesn't set cookies. To limit repeated free-credit claims, we store a keyed fingerprint of your IP address and the date. For IPv6, we group addresses from the same network. Fingerprints and their daily keys older than two days are cleared on the first new claim of each day. Claim outcomes stay with credit records. PostHog analytics and session recording are off.</p>
 
 
 <h2 id="searches">Searches and extra features</h2>
@@ -37,7 +37,7 @@
 <p>Feedback includes your message, optional email and search context, such as search text, filters and map position. We store it and send a copy through Resend so we can respond. Notifications use a stored push subscription and your browser's push service.</p>
 
 <h2 id="retention">Storage and retention</h2>
-<p>Our hosting and daily database backups use DigitalOcean in Frankfurt, Germany. Services named here may process data outside Pakistan.</p>
+<p>We host the service on DigitalOcean in Frankfurt, Germany. We retain a recovery copy of the database on the hosting server. Automatic backups are currently unavailable. Services named here may process data outside Pakistan.</p>
 <p>Alert matches are kept for 30 days. Parsed searches are reused for seven days using a fingerprint of the text and its filters. Paid AI results are reused for 15 minutes; expired results are cleared when new results are saved.</p>
 <p>Saved activity, subscriptions, feedback, search history, credit and payment records have no automatic expiry. Server logs record IP addresses, request times and URLs, which can include search text and location. Logs have no fixed retention period.</p>
 

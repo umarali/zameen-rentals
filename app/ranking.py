@@ -39,6 +39,7 @@ import logging
 import os
 import re
 import time
+import uuid
 from datetime import datetime, timezone
 
 logger = logging.getLogger("zameenrentals")
@@ -63,10 +64,12 @@ CRITERIA_KEYS = (
     "price_min", "price_max", "size_marla_min", "size_marla_max", "furnished",
 )
 
-# USD per million tokens: (input, 5-minute cache write, cache read, output).
+# Standard global USD prices checked 2026-10-14:
+# https://platform.claude.com/docs/en/about-claude/pricing
+# (input, 5-minute cache write, cache read, output).
 _MODEL_PRICES = {
     "claude-haiku-5-5": (0.10, 0.125, 0.01, 0.50),
-    "claude-sonnet-5-5": (2.00, 2.50, 0.20, 10.00),
+    "claude-sonnet-5-5": (2.00, 2.50, 0.10, 10.00),
     "claude-opus-5-5": (4.00, 5.00, 0.20, 20.00),
 }
 
@@ -114,6 +117,9 @@ def _usage_db():
         day TEXT NOT NULL, feature TEXT NOT NULL, calls INTEGER NOT NULL DEFAULT 0,
         input_tokens INTEGER NOT NULL DEFAULT 0, output_tokens INTEGER NOT NULL DEFAULT 0,
         cost_usd REAL NOT NULL DEFAULT 0, PRIMARY KEY (day, feature))""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS ai_budget_reservations (
+        id TEXT PRIMARY KEY, day TEXT NOT NULL, feature TEXT NOT NULL,
+        cost_usd REAL NOT NULL)""")
     return conn
 
 
@@ -132,7 +138,7 @@ def ai_spend_today() -> float:
         conn.close()
 
 
-def _record_usage(feature, usage, cost):
+def _record_usage(feature, usage, cost, *, reservation, day):
     inp = (getattr(usage, "input_tokens", 0) or 0) + (getattr(usage, "cache_read_input_tokens", 0) or 0) \
         + (getattr(usage, "cache_creation_input_tokens", 0) or 0)
     conn = _usage_db()
@@ -144,7 +150,42 @@ def _record_usage(feature, usage, cost):
                                 input_tokens = input_tokens + excluded.input_tokens,
                                 output_tokens = output_tokens + excluded.output_tokens,
                                 cost_usd = cost_usd + excluded.cost_usd""",
-                         (_utc_day(), feature, inp, getattr(usage, "output_tokens", 0) or 0, cost or 0.0))
+                         (day, feature, inp, getattr(usage, "output_tokens", 0) or 0, cost or 0.0))
+            conn.execute("DELETE FROM ai_budget_reservations WHERE id = ?", (reservation,))
+    finally:
+        conn.close()
+
+
+def _reserve_budget(feature, model, system, user, schema, max_tokens):
+    # A conservative text-token allowance, including schema/protocol overhead.
+    # This is an application estimate, not an invoice or provider spending limit.
+    input_allowance = len((system + user + json.dumps(schema)).encode("utf-8")) + 4096
+    if input_allowance > 100_000 or not 0 < max_tokens <= 16_000:
+        raise RankingError("AI request exceeds the priced request limits")
+    prices = _MODEL_PRICES[model]
+    amount = (input_allowance * max(prices[:3]) + max_tokens * prices[3]) / 1_000_000
+    day, reservation = _utc_day(), uuid.uuid4().hex
+    conn = _usage_db()
+    try:
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            spent = conn.execute("SELECT COALESCE(SUM(cost_usd), 0) FROM ai_usage_daily WHERE day=?", (day,)).fetchone()[0]
+            reserved = conn.execute("SELECT COALESCE(SUM(cost_usd), 0) FROM ai_budget_reservations WHERE day=?", (day,)).fetchone()[0]
+            if spent + reserved + amount > AI_DAILY_BUDGET_USD:
+                raise RankingError("AI daily budget spent or reserved", "The AI service is busy today. Try again tomorrow.")
+            conn.execute("INSERT INTO ai_budget_reservations VALUES (?, ?, ?, ?)",
+                         (reservation, day, feature, amount))
+            conn.execute("DELETE FROM ai_budget_reservations WHERE day < ?", (day,))
+    finally:
+        conn.close()
+    return reservation, day
+
+
+def _release_reservation(reservation):
+    conn = _usage_db()
+    try:
+        with conn:
+            conn.execute("DELETE FROM ai_budget_reservations WHERE id=?", (reservation,))
     finally:
         conn.close()
 
@@ -153,6 +194,9 @@ def call_cost(model, usage):
     prices = _MODEL_PRICES.get(model)
     if not prices or usage is None:
         return None
+    if model == "claude-haiku-5-5" and sum((getattr(usage, k, 0) or 0) for k in
+            ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")) > 100_000:
+        prices = (0.50, 0.625, 0.05, 2.50)
     pin, pwrite, pread, pout = prices
     return ((getattr(usage, "input_tokens", 0) or 0) * pin
             + (getattr(usage, "cache_creation_input_tokens", 0) or 0) * pwrite
@@ -169,9 +213,13 @@ def call_claude_json(*, feature: str, model: str, system: str, user: str, schema
     """
     if model not in _MODEL_PRICES:
         raise RankingError("No configured price for the requested AI model")
-    if ai_spend_today() >= AI_DAILY_BUDGET_USD:
-        raise RankingError("AI daily budget spent", "The AI service is busy today. Try again tomorrow.")
     client = _get_client()
+    try:
+        reservation, day = _reserve_budget(feature, model, system, user, schema, max_tokens)
+    except RankingError:
+        raise
+    except Exception:
+        raise RankingError("Could not reserve the AI budget") from None
     output_config = {"format": {"type": "json_schema", "schema": schema}}
     if effort:
         output_config["effort"] = effort
@@ -185,14 +233,25 @@ def call_claude_json(*, feature: str, model: str, system: str, user: str, schema
             output_config=output_config,
         )
     except Exception as exc:  # SDK errors can echo the prompt; log the type only
+        from anthropic import APIStatusError
+        rejected = isinstance(exc, TypeError) or (
+            isinstance(exc, APIStatusError) and (400 <= exc.status_code < 500 or exc.status_code == 529))
+        if rejected:
+            try:
+                _release_reservation(reservation)
+            except Exception:
+                logger.exception("Could not release rejected AI reservation")
         logger.warning("AI %s call failed: %s", feature, type(exc).__name__)
         raise RankingError(f"Claude call failed: {type(exc).__name__}") from None
     usage = getattr(resp, "usage", None)
     cost = call_cost(model, usage)
     try:
-        _record_usage(feature, usage, cost)
+        if usage is None or cost is None:
+            raise RankingError("Provider did not return usage")
+        _record_usage(feature, usage, cost, reservation=reservation, day=day)
     except Exception:
-        logger.exception("Could not record AI usage")
+        # Keep the reservation when the provider's bill cannot be reconciled.
+        logger.exception("Could not record AI usage; budget reservation retained")
     last_call.clear()
     last_call.update(
         feature=feature, model=model, cost_usd=cost, latency_s=round(time.monotonic() - started, 2),

@@ -557,9 +557,13 @@ def apply_confirmation(provider: Provider, conf: Confirmation) -> dict | None:
             logger.error("payment amount mismatch id=%s provider=%s expected=%s got=%s %s event=%s",
                          pid, provider.name, expected, conf.amount_minor, conf.currency, conf.event)
             return payment
-        granted = credits.grant(payment["client_id"], payment["credits"], kind="purchase", ref=f"payment:{pid}")
         conn = _get_conn()
         with conn:
+            credits._ensure_starter(conn, payment["client_id"])
+            granted = conn.execute(
+                "INSERT OR IGNORE INTO credit_ledger (client_id, delta, kind, ref) VALUES (?, ?, 'purchase', ?)",
+                (payment["client_id"], payment["credits"], f"payment:{pid}"),
+            ).rowcount == 1
             conn.execute(
                 """UPDATE payments SET status = 'paid', paid_at = COALESCE(paid_at, datetime('now')),
                        provider_ref = COALESCE(provider_ref, ?), updated_at = datetime('now')
