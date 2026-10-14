@@ -182,7 +182,7 @@ export function updateChips() {
 
   setChipVal($('#sizeChip'), sizeChipLabel(S.sizeMarlaMin, S.sizeMarlaMax), 'Size');
 
-  const mc = (S.furnishing ? 1 : 0) + (S.sort ? 1 : 0);
+  const mc = S.furnishing ? 1 : 0;
   setChipVal($('#moreChip'), mc ? 'More (' + mc + ')' : '', 'More');
 
   $('#clearAllBtn').classList.toggle('hidden', !hasActiveFilters);
@@ -317,7 +317,7 @@ export function clearFilter(f, { resetMapView, doSearch } = {}) {
   if (f === 'price') { S.priceMin = ''; S.priceMax = ''; $$('#priceGrid .chip').forEach(c => c.classList.remove('active')); $('#customPrice').classList.add('hidden'); $('#priceMin').value = ''; $('#priceMax').value = ''; }
   if (f === 'size') { S.sizeMarlaMin = ''; S.sizeMarlaMax = ''; $$('#sizeGrid .chip').forEach(c => c.classList.remove('active')); $('#customSize').classList.add('hidden'); $('#sizeMin').value = ''; $('#sizeMax').value = ''; }
   if (f === 'furnishing') setFurnishing('');
-  if (f === 'more') { S.sort = ''; setFurnishing(''); $('#sortSelect').value = ''; }
+  if (f === 'more') { setFurnishing(''); }
   clearNlInput();
   updateChips(); doSearch?.();
 }
@@ -507,7 +507,7 @@ export function initFilterListeners({ doSearch, selectAreaFull, clearFilterFull,
   $$('#customSize input').forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') { clearNlInput(); closeDD(); doSearch(); } }));
   $('#sizeApply').addEventListener('click', () => { S.sizeMarlaMin = unitToMarla($('#sizeMin').value, currentSizeUnit()); S.sizeMarlaMax = unitToMarla($('#sizeMax').value, currentSizeUnit()); clearNlInput(); updateChips(); closeDD(); doSearch(); });
 
-  // Furnishing. The panel stays open so sort can be set too.
+  // Furnishing. Keep the panel open while the selected option updates.
   $('#furnishingRow').addEventListener('click', e => {
     const c = e.target.closest('.chip'); if (!c) return;
     const prev = S.furnishing;

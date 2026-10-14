@@ -155,21 +155,16 @@ function updateNearbyControls() {
   const radiusChip = $('#radiusChip');
   if (!nearbyChip || !radiusChip) return;
 
-  const sortDist = $('#sortDistance');
   if (refs.searchMode === 'nearby') {
     nearbyChip.innerHTML = `Near Me<span class="chip-clear" data-nearby-clear="1">&times;</span>`;
     nearbyChip.classList.add('has-value');
     radiusChip.classList.remove('hidden');
     radiusChip.innerHTML = `${refs.nearbyRadiusKm} km <svg class="w-3 h-3 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>`;
-    if (sortDist) sortDist.hidden = false;
   } else {
     nearbyChip.textContent = 'Near Me';
     nearbyChip.classList.remove('has-value');
     radiusChip.classList.add('hidden');
-    if (sortDist) {
-      sortDist.hidden = true;
-      if ($('#sortSelect').value === 'distance') { $('#sortSelect').value = ''; S.sort = ''; }
-    }
+    if (S.sort === 'distance') { S.sort = ''; $('#sortSelect').value = ''; }
   }
 
   nearbyChip.classList.toggle('chip-disabled', !isNearbySupportedCity() && refs.searchMode !== 'nearby');
@@ -243,7 +238,7 @@ function selectAreaFull(name, fromMap, { search = true } = {}) {
 }
 
 function clearFilterFull(f) {
-  const prevValues = { area: S.area, type: S.type, beds: S.beds, price: S.priceMin || S.priceMax ? `${S.priceMin}-${S.priceMax}` : '', size: S.sizeMarlaMin || S.sizeMarlaMax ? `${S.sizeMarlaMin}-${S.sizeMarlaMax}` : '', furnishing: S.furnishing, more: S.furnishing || S.sort || '' };
+  const prevValues = { area: S.area, type: S.type, beds: S.beds, price: S.priceMin || S.priceMax ? `${S.priceMin}-${S.priceMax}` : '', size: S.sizeMarlaMin || S.sizeMarlaMax ? `${S.sizeMarlaMin}-${S.sizeMarlaMax}` : '', furnishing: S.furnishing, more: S.furnishing || '' };
   if (prevValues[f]) trackFilterChange({ filter: f, value: '', previousValue: prevValues[f], mode: refs.searchMode, city: S.city });
   if (f === 'area') {
     refs.searchMode = refs.searchMode === 'nearby' ? 'nearby' : getBrowseMode();
@@ -466,23 +461,16 @@ function updateHeader({
     metaEl.textContent = total ? `Across current filters` : `No rentals match your filters in ${cityName}`;
   }
 
+  // Name the existing default order without changing map or search behavior.
+  const defaultOrder = source === 'live'
+    ? "Zameen's order"
+    : mode === 'nearby' || (mode === 'viewport' && ranking === 'map_focus')
+    ? 'Nearest'
+    : 'Recently updated';
+  renderSortOptions(defaultOrder, mode);
   if (source === 'local') {
-    const rankingLabel = mode === 'nearby'
-      ? 'Nearby'
-      : S.sort === 'newest'
-      ? 'Newest first'
-      : S.sort === 'price_low'
-      ? 'Lowest price'
-      : S.sort === 'price_high'
-      ? 'Highest price'
-      : mode === 'viewport' && ranking === 'map_focus'
-      ? 'Nearest first'
-      : !S.sort
-      ? 'Newest first'
-      : '';
-    sourceEl.textContent = rankingLabel ? `Instant / ${rankingLabel}` : 'Instant';
-    sourceEl.className = 'text-xs text-brand-500 font-medium';
-    sourceEl.classList.remove('hidden');
+    sourceEl.textContent = '';
+    sourceEl.classList.add('hidden');
   } else if (source === 'live') {
     sourceEl.textContent = 'Live';
     sourceEl.className = 'text-xs text-amber-500 font-medium';
@@ -494,6 +482,26 @@ function updateHeader({
   } else {
     sourceEl.classList.add('hidden');
   }
+}
+
+// Keep equivalent defaults and explicit sorts as one choice. Preserve the
+// selected value so saved searches, URL state and outgoing requests still agree.
+function renderSortOptions(defaultOrder, mode) {
+  const choices = [
+    ['', defaultOrder],
+    ...(mode === 'nearby' ? [['distance', 'Nearest']] : []),
+    ['price_low', 'Lowest price'], ['price_high', 'Highest price'],
+    ['newest', 'Recently updated'],
+  ];
+  const selectedLabel = choices.find(([value]) => value === S.sort)?.[1];
+  const seen = new Set();
+  const options = choices.filter(([value, label]) => {
+    if ((label === selectedLabel && value !== S.sort) || seen.has(label)) return false;
+    seen.add(label);
+    return true;
+  });
+  $('#sortSelect').replaceChildren(...options.map(([value, label]) =>
+    new Option(label, value, false, value === S.sort)));
 }
 
 function getViewportCoverageMessage({ total = 0, visibleAreas = 0, coveredAreas = 0 } = {}) {
@@ -963,6 +971,7 @@ async function doNlSearch() {
       S.city = f.city_hint;
       S.area = ''; S.type = ''; S.beds = ''; S.bedsMax = ''; S.priceMin = ''; S.priceMax = ''; S.furnishing = ''; S.sort = '';
       S.sizeMarlaMin = ''; S.sizeMarlaMax = ''; S.sizeUnit = '';
+      $('#sortSelect').value = '';
       setFurnishing('');
       refs.searchMode = getBrowseMode();
       resetViewportSearchMeta({ clearVisibleAreas: true });

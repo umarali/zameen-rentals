@@ -992,3 +992,17 @@ main {
 .site-menu-legal { display:flex; flex-direction:column; gap:2px; border-top:1px solid #f0f2f4; margin-top:5px; padding-top:5px; }
 .site-menu .site-menu-legal a { justify-content:space-between; width:100%; font-size:13px; color:#4b5563; }
 /* ── end legal track ── */
+
+/* Compact results-header sorting, adapted from 3d18e25. */
+.results-sort { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--color-gray-500); }
+.results-sort select {
+  appearance: none; -webkit-appearance: none;
+  border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--color-gray-700);
+  min-height: 32px; padding: 2px 16px 2px 2px; border-radius: 6px;
+  field-sizing: content;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath d='M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0 center; background-size: 14px;
+}
+.results-sort select:hover { color: var(--color-gray-900); }
+.results-sort select:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
