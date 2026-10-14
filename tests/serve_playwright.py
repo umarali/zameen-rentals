@@ -76,6 +76,14 @@ def main():
                                 "longitude": lng + (i % 4 - 2) * 0.0007,
                             } if i % 3 == 0 else None,
                         )
+        # Stored HTML and conflicting fields exercise the real listing API.
+        upsert_listing(
+            zameen_id="99000001", url="https://www.zameen.com/Property/test-99000001-1-1.html",
+            city="karachi", detail_data={
+                "description": "<p>Apartment on the <b>third floor</b>.</p><ul><li>No lift available.</li><li>Water only at night.</li><li>Separate entrance &amp; parking.</li></ul><script>window.descriptionInjected = true</script>",
+                "details": {"Floor": "2"},
+            },
+        )
         close_db()
         # uvicorn re-raises SIGTERM/SIGINT after shutting down. Turn that into
         # SystemExit so the TemporaryDirectory above is removed, not leaked.

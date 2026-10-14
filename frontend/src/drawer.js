@@ -1,5 +1,7 @@
 /** Detail drawer, photo gallery, contact bar. */
 
+import { floorDetails, descriptionHighlights } from './listing-insights.js';
+import { initGalleryZoom } from './gallery-zoom.js';
 import L from 'leaflet';
 import { $, $$, esc, escA, fmtPrice, fmtRelative, showToast } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
@@ -168,6 +170,7 @@ export function openDrawer(item, selectAreaFull) {
       </div>`;
     })()}
     ${highlights.length ? `<div class="drawer-divider"></div><div class="grid grid-cols-2 gap-3 mb-1">${highlights.join('')}</div>` : ''}
+    <div id="drawerFloor">${floorDetails(item)}</div>
     <div id="drawerEnriched">
       <div class="drawer-divider"></div>
       <div class="space-y-3">
@@ -222,7 +225,9 @@ async function fetchDrawerDetail(item, existingImgs) {
   const requestId = ++drawerDetailRequestId;
   drawerDetailController = controller;
   try {
-    const resp = await fetch(`/api/listing-detail?url=${encodeURIComponent(listingUrl)}`, { signal: controller.signal });
+    const detailParams = new URLSearchParams({ url: listingUrl });
+    if (item.property_type) detailParams.set('property_type', item.property_type);
+    const resp = await fetch(`/api/listing-detail?${detailParams}`, { signal: controller.signal });
     if (!resp.ok) throw new Error('detail-fetch-failed');
     const d = await resp.json();
     if (controller.signal.aborted || requestId !== drawerDetailRequestId) return;
@@ -253,7 +258,8 @@ async function fetchDrawerDetail(item, existingImgs) {
       setTimeout(() => renderDrawerMiniMap(mapTarget), 60);
     }
 
-    let html = '';
+    document.getElementById('drawerFloor').innerHTML = floorDetails(resolvedItem);
+    let html = descriptionHighlights(resolvedItem);
     if (d.description) {
       const short = d.description.length > 200;
       html += `<div class="drawer-divider"></div>
@@ -402,16 +408,31 @@ export function closeDrawer(fromPopState) {
 
 // ===== GALLERY =====
 
+let resetGalleryZoom = () => {};
+let galleryReturnFocus = null;
+
 function openGallery(idx) {
+  galleryReturnFocus = document.activeElement;
   refs.galleryIdx = idx;
   $('#galleryModal').classList.remove('hidden');
   updateGalleryImg();
+  $('#galleryClose').focus();
   document.body.style.overflow = 'hidden';
 }
 
-function closeGallery() { $('#galleryModal').classList.add('hidden'); }
+function closeGallery() {
+  if ($('#galleryModal').classList.contains('hidden')) return;
+  resetGalleryZoom();
+  $('#galleryModal').classList.add('hidden');
+  if ($('#drawer').classList.contains('drawer-open')) {
+    const target = galleryReturnFocus?.isConnected && $('#drawer').contains(galleryReturnFocus)
+      ? galleryReturnFocus : $('#drawerClose');
+    target.focus();
+  }
+}
 
 function updateGalleryImg() {
+  resetGalleryZoom();
   const img = $('#galleryImg').querySelector('img');
   img.src = refs.drawerImages[refs.galleryIdx] || '';
   $('#galleryCounter').textContent = `${refs.galleryIdx + 1} / ${refs.drawerImages.length}`;
@@ -461,21 +482,21 @@ export function initDrawerListeners(selectAreaFull) {
   // Gallery keyboard
   document.addEventListener('keydown', e => {
     if ($('#galleryModal').classList.contains('hidden')) return;
+    if (e.key === 'Tab') {
+      const buttons = [...$('#galleryModal').querySelectorAll('button:not(:disabled)')];
+      const first = buttons[0], last = buttons[buttons.length - 1];
+      if (!buttons.includes(document.activeElement)) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+      else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
     if (e.key === 'ArrowLeft') { refs.galleryIdx = Math.max(0, refs.galleryIdx - 1); updateGalleryImg(); }
     if (e.key === 'ArrowRight') { refs.galleryIdx = Math.min(refs.drawerImages.length - 1, refs.galleryIdx + 1); updateGalleryImg(); }
   });
 
-  // Gallery touch swipe
-  let touchStartX = 0;
-  const gm = $('#galleryModal');
-  gm.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-  gm.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    if (Math.abs(dx) > 50) {
-      if (dx < 0) { refs.galleryIdx = Math.min(refs.drawerImages.length - 1, refs.galleryIdx + 1); updateGalleryImg(); }
-      else { refs.galleryIdx = Math.max(0, refs.galleryIdx - 1); updateGalleryImg(); }
-    }
-  }, { passive: true });
+  resetGalleryZoom = initGalleryZoom(direction => {
+    refs.galleryIdx = Math.max(0, Math.min(refs.drawerImages.length - 1, refs.galleryIdx + direction));
+    updateGalleryImg();
+  });
 
   // Escape closes everything
   document.addEventListener('keydown', e => {

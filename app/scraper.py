@@ -6,11 +6,14 @@ from bs4 import BeautifulSoup
 from fastapi import HTTPException
 
 from app.data import USER_AGENTS, PROPERTY_TYPES
+from app.description_insights import readable_description
 from app.cache import cache_key, cache_get, cache_set, rate_limiter
 from app.db_listings import split_zameen_age_text
 from app.parsing import build_url, parse_price
 
 logger = logging.getLogger("zameenrentals")
+# Retain long descriptions while bounding individual listing payloads.
+_MAX_DESCRIPTION_CHARS = 20000
 
 
 def extract_zameen_id(url: str) -> str | None:
@@ -416,7 +419,7 @@ def detail_from_state(html):
     out = {}
     desc = data.get("description")
     if isinstance(desc, str) and desc.strip():
-        out["description"] = desc.strip()[:2000]
+        out["description"] = desc.strip()[:_MAX_DESCRIPTION_CHARS]
     amenities = []
     for group in data.get("amenities") or []:
         for item in (group or {}).get("amenities") or []:
@@ -722,7 +725,7 @@ async def fetch_listing_detail(listing_url):
             if desc_el and len(desc_el.get_text(strip=True)) > 30:
                 break
     if desc_el:
-        result["description"] = desc_el.get_text("\n", strip=True)[:2000]
+        result["description"] = readable_description(str(desc_el))[:_MAX_DESCRIPTION_CHARS]
 
     # --- All images (detail page has more than search results) ---
     images = []
@@ -781,7 +784,7 @@ async def fetch_listing_detail(listing_url):
             data = json.loads(script.string or "")
             if isinstance(data, dict):
                 if not result["description"] and data.get("description"):
-                    result["description"] = str(data["description"])[:2000]
+                    result["description"] = str(data["description"])[:_MAX_DESCRIPTION_CHARS]
                 if data.get("image"):
                     imgs = data["image"] if isinstance(data["image"], list) else [data["image"]]
                     for img_url in imgs:

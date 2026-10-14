@@ -1,5 +1,6 @@
 /** Listing card rendering, carousels, contact actions. */
 
+import { floorSummary } from './listing-insights.js';
 import { $, $$, esc, escA, TYPE_L, fmtPrice, fmtRelative } from './utils.js';
 import { S, refs, CITY_DEFAULTS } from './state.js';
 import { trackContactIntent } from './analytics.js';
@@ -119,6 +120,7 @@ export function renderCard(item, idx) {
       ${item.location ? `<div class="flex items-center gap-1 text-xs text-gray-500 mb-1 sm:mb-2">${pinIcon('w-3 h-3 shrink-0')}<span class="line-clamp-1">${esc(item.location)}</span></div>` : ''}
       ${distanceLabel ? `<div class="text-xs font-semibold text-brand-600 mb-1 sm:mb-2">${esc(distanceLabel)}</div>` : ''}
       ${badges.length ? `<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">${badges.join('')}</div>` : ''}
+      ${item.floor ? `<div class="mt-2 text-xs text-gray-600" data-floor-summary>${esc(floorSummary(item))}</div>` : ''}
       ${repostCount > 1 ? `<div class="mt-1"><span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full" title="The same listing was posted ${repostCount} times by agents — showing it once" aria-label="Listed ${repostCount} times">Listed ${repostCount}&times;</span></div>` : ''}
       ${(() => {
         const addedRel = item.posted_at ? fmtRelative(item.posted_at) : '';

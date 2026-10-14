@@ -326,13 +326,18 @@
 </div>
 
 <!-- ===== GALLERY ===== -->
-<div id="galleryModal" class="fixed inset-0 z-[300] bg-black hidden">
+<div id="galleryModal" role="dialog" aria-modal="true" aria-label="Photo gallery" class="fixed inset-0 z-[300] bg-black hidden">
   <div class="absolute top-4 right-4 z-10 flex items-center gap-3" style="top:calc(16px + env(safe-area-inset-top, 0px))">
     <span id="galleryCounter" class="text-white/80 text-sm font-medium"></span>
     <button id="galleryClose" type="button" aria-label="Close gallery" class="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl active:bg-white/30 transition-colors">&times;</button>
   </div>
   <button id="galleryPrev" type="button" aria-label="Previous photo" class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 active:bg-white/30 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg></button>
   <button id="galleryNext" type="button" aria-label="Next photo" class="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10 active:bg-white/30 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg></button>
+  <div class="gallery-zoom-controls" aria-label="Photo zoom controls">
+    <button id="galleryZoomOut" type="button" aria-label="Zoom out">−</button>
+    <button id="galleryZoomReset" type="button" aria-label="Reset photo zoom">100%</button>
+    <button id="galleryZoomIn" type="button" aria-label="Zoom in">+</button>
+  </div>
   <div id="galleryImg" class="w-full h-full flex items-center justify-center p-6 md:p-12"><img class="max-w-full max-h-full object-contain select-none" src="" alt="" draggable="false"></div>
 </div>
 

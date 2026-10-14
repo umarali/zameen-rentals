@@ -18,6 +18,7 @@ from app.data import (
     PARENT_FALLBACK_ALIASES, ROMAN_URDU_AREAS_BY_CITY, URDU_AREAS,
 )
 from app.listing_tags import attach_tags
+from app.description_insights import with_listing_insights
 from app.notify import notify_feedback
 from app.cache import limiter
 from app.database import log_search, get_popular_searches, get_recent_searches, save_feedback
@@ -492,6 +493,7 @@ async def search(request: Request, city: str = Query("lahore"), area: Optional[s
         # Fallback to live scraping if local DB has no results for this query
         try:
             result = await search_zameen(area=area, property_type=property_type, bedrooms=bedrooms, bedrooms_max=bedrooms_max, price_min=price_min, price_max=price_max, furnished=furnished, page=page, sort=sort, city=city)
+            result["results"] = [with_listing_insights(item, compact=True) for item in result.get("results", [])]
             result["source"] = "live"
             log_search(city=city, area=area, property_type=property_type, bedrooms=bedrooms,
                        price_min=price_min, price_max=price_max, furnished=furnished,
@@ -658,7 +660,8 @@ async def nearby_search(
 
 @router.get("/api/listing-detail")
 @limiter.limit(_LISTING_DETAIL_RATE_LIMIT)
-async def listing_detail(request: Request, url: str = Query(...)):
+async def listing_detail(request: Request, url: str = Query(...),
+                         property_type: Optional[str] = Query(None, max_length=80)):
     """Fetch enriched detail — from local DB if available, else live scrape."""
     if not url.startswith("https://www.zameen.com/"):
         raise HTTPException(status_code=400, detail="Invalid Zameen.com URL")
@@ -713,9 +716,9 @@ async def listing_detail(request: Request, url: str = Query(...)):
                     "source": "local",
                 }
                 if local_detail["has_exact_geography"]:
-                    return local_detail
+                    return with_listing_insights(local_detail, listing.get("title"), property_type=listing.get("property_type") or property_type)
         if _PLAYWRIGHT_SERVER:
-            return local_detail or {}
+            return with_listing_insights(local_detail, (listing or {}).get("title"), property_type=(listing or {}).get("property_type") or property_type) if local_detail else {}
         # Fallback to live scrape
         detail = await fetch_listing_detail(url)
         if detail and zid and listing:
@@ -726,7 +729,8 @@ async def listing_detail(request: Request, url: str = Query(...)):
                 detail_data=detail,
             )
             detail["source"] = "live"
-        return detail or local_detail or {}
+        selected = detail or local_detail
+        return with_listing_insights(selected, (listing or {}).get("title"), property_type=(listing or {}).get("property_type") or property_type) if selected else {}
     except Exception:
         logger.exception("Detail fetch error")
         return {}
