@@ -83,6 +83,70 @@ def _sentences(text):
     return re.split(r'(?<![Nn][Oo]\.)(?<=[.!?۔])\s+|\n+', text)
 
 
+def _collapse_repetition(text):
+    """Hide only adjacent, identical lines or sentences, never repeated facts
+    across intervening context. Repeated bullet rows may enumerate rooms, so
+    keep them. Keep spelling, numbers and punctuation exact.
+    """
+    def substantial(part):
+        return len(part) >= 8 and len(re.findall(r'[^\W\d_]+', part)) >= 2
+
+    lines = re.split(r'(\n+)', text)
+    output = []
+    previous_line = None
+    pending_separator = ''
+    for index in range(0, len(lines), 2):
+        line = lines[index]
+        separator = lines[index - 1] if index else ''
+        separator = max(separator, pending_separator, key=len)
+        if line == previous_line and substantial(line) and not re.match(r'(?:[•*+\-–—]|\d+[.)])', line):
+            pending_separator = separator
+            continue
+        pending_separator = ''
+        previous_line = line
+        pieces = re.split(r'((?<![Nn][Oo]\.)(?<=[.!?۔])\s+)', line)
+        kept = []
+        previous_sentence = None
+        for offset in range(0, len(pieces), 2):
+            sentence = pieces[offset]
+            key = sentence.removeprefix('• ')
+            if key == previous_sentence and substantial(key):
+                continue
+            previous_sentence = key
+            kept.append((pieces[offset - 1] if offset else '') + sentence)
+        output.append(separator + ''.join(kept))
+    return ''.join(output)
+
+
+def _description_conflicts(text):
+    """Quote explicit opposing availability statements, without deciding truth.
+
+    Full matches intentionally exclude questions, conditions and qualifiers.
+    This is a small English-language check, not general fact verification.
+    """
+    subjects = {'lift': 'Lift', 'elevator': 'Lift', 'parking': 'Parking',
+                'water': 'Water', 'gas': 'Gas', 'electricity': 'Electricity'}
+    subject = '|'.join(subjects)
+    positive = re.compile(rf'({subject}) (?:is )?available\.?', re.I)
+    negative = re.compile(rf'(?:no ({subject})(?: available)?|({subject}) (?:is )?(?:not available|unavailable))\.?', re.I)
+    claims = {}
+    for sentence in _sentences(text):
+        quote = sentence.strip(' •')
+        match = positive.fullmatch(quote)
+        polarity = True
+        if not match:
+            match = negative.fullmatch(quote)
+            polarity = False
+        if not match:
+            continue
+        topic = subjects[next(group for group in match.groups() if group).lower()]
+        entries = claims.setdefault(topic, [])
+        if (polarity, quote) not in entries:
+            entries.append((polarity, quote))
+    return [{'topic': topic, 'statements': [quote for _, quote in entries]}
+            for topic, entries in claims.items() if len({polarity for polarity, _ in entries}) > 1]
+
+
 def _floor_mentions(text, source):
     mentions = []
     for sentence in _sentences(text):
@@ -131,8 +195,16 @@ def with_listing_insights(data, title=None, *, property_type=None, compact=False
     """Return a presentation copy; an absent floor is never guessed."""
     out = dict(data)
     description = readable_description(data.get('description'))
+    # Compact results also feed ranking. Keep their existing source-text contract.
+    display_description = description if compact else _collapse_repetition(description)
+    out.pop('description_original', None)
+    out.pop('description_conflicts', None)
     if 'description' in data:
-        out['description'] = description
+        out['description'] = display_description
+    if not compact:
+        if display_description != description:
+            out['description_original'] = description
+        out['description_conflicts'] = _description_conflicts(description)
     mentions = []
     details = data.get('details') or {}
     if isinstance(details, dict):
@@ -174,14 +246,15 @@ def with_listing_insights(data, title=None, *, property_type=None, compact=False
         out.pop('floor_mentions', None)
         out.pop('description_highlights', None)
         if description:
-            out['description'] = description[:2000]
+            out['description'] = display_description[:2000]
         return out
     # Quote the complete sentence/line, retaining negation and qualifications.
     # No positive feature is inferred from merely finding a keyword.
     highlights = []
+    conflict_quotes = {quote for conflict in out['description_conflicts'] for quote in conflict['statements']}
     for sentence in _sentences(description):
         sentence = sentence.strip(' •')
-        if not sentence or len(sentence) > 500:
+        if not sentence or len(sentence) > 500 or sentence in conflict_quotes:
             continue  # Long unpunctuated text stays in the full description.
         topics = [name for name, pattern in _TOPICS if pattern.search(sentence)]
         if topics and not any(h['text'] == sentence for h in highlights):

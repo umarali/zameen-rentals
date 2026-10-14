@@ -25,3 +25,21 @@ export function descriptionHighlights(item) {
     <ul class="space-y-3">${notes.map(note => `<li><div class="text-xs font-semibold text-gray-600">${esc(note.topic)}</div><p class="text-sm text-gray-700 leading-relaxed mt-1">${esc(note.text)}</p></li>`).join('')}</ul>
   </section>`;
 }
+
+export function descriptionConflicts(item) {
+  const conflicts = item.description_conflicts || [];
+  if (!conflicts.length) return '';
+  return `<section class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3" aria-label="Check with the advertiser">
+    <h3 class="text-sm font-semibold text-gray-800">Check with the advertiser</h3>
+    <p class="text-xs text-gray-600 mt-1">The description includes opposing statements. Ask which applies to the property you would rent.</p>
+    <ul class="mt-3 space-y-3">${conflicts.map(conflict => `<li><div class="text-xs font-semibold text-gray-700">${esc(conflict.topic)}</div><ul class="mt-1 space-y-1 text-sm text-gray-700">${conflict.statements.map(text => `<li>${esc(text)}</li>`).join('')}</ul></li>`).join('')}</ul>
+  </section>`;
+}
+
+export function originalDescription(item) {
+  if (!item.description_original) return '';
+  return `<details class="mt-3 text-sm text-gray-600" data-original-description>
+    <summary class="cursor-pointer underline underline-offset-4">Repeated text hidden. View full description</summary>
+    <div class="mt-2 leading-relaxed">${esc(item.description_original).replace(/\n/g, '<br>')}</div>
+  </details>`;
+}

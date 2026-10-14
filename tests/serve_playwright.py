@@ -80,7 +80,7 @@ def main():
         upsert_listing(
             zameen_id="99000001", url="https://www.zameen.com/Property/test-99000001-1-1.html",
             city="karachi", detail_data={
-                "description": "<p>Apartment on the <b>third floor</b>.</p><ul><li>No lift available.</li><li>Water only at night.</li><li>Separate entrance &amp; parking.</li></ul><script>window.descriptionInjected = true</script>",
+                "description": "<p>Apartment on the <b>third floor</b>.</p><ul><li>Lift available.</li><li>No lift available. No lift available.</li><li>Water only at night.</li><li>Separate entrance &amp; parking.</li></ul><script>window.descriptionInjected = true</script>",
                 "details": {"Floor": "2"},
             },
         )

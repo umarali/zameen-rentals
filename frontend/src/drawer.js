@@ -1,6 +1,6 @@
 /** Detail drawer, photo gallery, contact bar. */
 
-import { floorDetails, descriptionHighlights } from './listing-insights.js';
+import { floorDetails, descriptionHighlights, descriptionConflicts, originalDescription } from './listing-insights.js';
 import { initGalleryZoom } from './gallery-zoom.js';
 import L from 'leaflet';
 import { $, $$, esc, escA, fmtPrice, fmtRelative, showToast } from './utils.js';
@@ -259,7 +259,7 @@ async function fetchDrawerDetail(item, existingImgs) {
     }
 
     document.getElementById('drawerFloor').innerHTML = floorDetails(resolvedItem);
-    let html = descriptionHighlights(resolvedItem);
+    let html = descriptionConflicts(resolvedItem) + descriptionHighlights(resolvedItem);
     if (d.description) {
       const short = d.description.length > 200;
       html += `<div class="drawer-divider"></div>
@@ -267,6 +267,7 @@ async function fetchDrawerDetail(item, existingImgs) {
         <div id="drawerDesc" class="text-sm text-gray-600 leading-relaxed ${short ? 'line-clamp-4' : ''}">${esc(d.description).replace(/\n/g, '<br>')}</div>
         ${short ? `<button id="descToggle" class="text-sm font-semibold text-gray-900 underline underline-offset-4 mt-2 hover:text-brand-600 transition-colors">Show more</button>` : ''}`;
     }
+    html += originalDescription(d);
     if (d.agent_name) {
       html += `<div class="drawer-divider"></div>
         <div class="flex items-center gap-3">
