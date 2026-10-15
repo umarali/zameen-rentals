@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from app.database import _get_conn
 from app.data import PROPERTY_TYPES, canonical_area_name, location_id_for_area
 from app.listing_tags import attach_tags, tag_filter_clauses
+from app.description_insights import with_listing_insights
 
 logger = logging.getLogger("zameenrentals")
 _DISTANCE_SENTINEL = 999999999
@@ -1148,7 +1149,14 @@ def _row_to_listing(row):
     # search_listings). Only emitted when it's an actual repost (>1).
     if "_repost_count" in row.keys() and row["_repost_count"] and row["_repost_count"] > 1:
         d["repost_count"] = row["_repost_count"]
-    return d
+    details = decode_listing_json_field(
+        row["details_json"] if "details_json" in row.keys() else None,
+        field_name="details_json", zameen_id=zameen_id,
+        default={}, expected_type=dict,
+    )
+    enriched = with_listing_insights({**d, "details": details}, compact=True)
+    enriched.pop("details", None)
+    return enriched
 
 
 def get_listing_by_zameen_id(zameen_id):

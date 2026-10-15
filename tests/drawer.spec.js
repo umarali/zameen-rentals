@@ -105,11 +105,12 @@ test.describe("Detail Drawer", () => {
   });
 
   test("clicking overlay closes drawer", async ({ page }) => {
+    test.skip(page.viewportSize().width < 768, "Mobile drawer fills the viewport; close button and Escape are tested separately.");
     await page.locator(".card-wrap").first().click();
     await expect(page.locator("#drawer")).toHaveClass(/drawer-open/, {
       timeout: 3000,
     });
-    await page.locator("#drawerOverlay").click({ force: true });
+    await page.locator("#drawerOverlay").click({ position: { x: 20, y: 20 } });
     await expect(page.locator("#drawer")).not.toHaveClass(/drawer-open/);
   });
 

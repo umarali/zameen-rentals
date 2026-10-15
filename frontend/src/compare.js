@@ -6,6 +6,7 @@
  *  cards they haven't yet decided to save.
  */
 
+import { floorSummary } from './listing-insights.js';
 import { $, $$, esc, escA, fmtPrice, fmtRelative, showToast } from './utils.js';
 import { eyeIcon, callIcon, whatsappIcon, favFilledIcon, favHollowIcon, imageIcon } from './icons.js';
 
@@ -108,6 +109,7 @@ function snapshotListing(item, zid) {
     title: item.title || '',
     price: item.price || null,
     price_text: item.price_text || '',
+    floor: item.floor || null,
     bedrooms: item.bedrooms || null,
     bathrooms: item.bathrooms || null,
     area_size: item.area_size || '',
@@ -365,6 +367,7 @@ function renderTable() {
   ] });
   sections.push({ label: 'Space', rows: [
     row('Bedrooms', items.map(it => it.bedrooms || '—')),
+    row('Floor', items.map(it => floorSummary(it) || 'Unknown')),
     row('Bathrooms', items.map(it => it.bathrooms || '—')),
     row('Size', items.map((it, i) => sizeLabel(it.area_size, metrics[i].sizeMarla))),
     row('Type', items.map(it => it.property_type || '—')),

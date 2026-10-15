@@ -1006,3 +1006,12 @@ main {
 }
 .results-sort select:hover { color: var(--color-gray-900); }
 .results-sort select:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+
+/* Keep image gestures inside the viewer without disabling page zoom elsewhere. */
+#galleryModal { touch-action: none; overscroll-behavior: contain; }
+#galleryImg { overflow: hidden; touch-action: none; }
+#galleryImg img { transform-origin: center; will-change: transform; }
+.gallery-zoom-controls { position: absolute; z-index: 20; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 4px; border-radius: 30px; background: #222; color: white; }
+.gallery-zoom-controls button { min-width: 44px; min-height: 44px; padding: 8px; border-radius: 24px; font-size: 16px; }
+.gallery-zoom-controls button:disabled { opacity: .4; }
+.gallery-zoom-controls button:focus-visible { outline: 2px solid white; }
