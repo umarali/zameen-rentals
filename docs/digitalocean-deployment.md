@@ -70,7 +70,9 @@ Change `fra1` in both places if you chose another region.
 
 ## 4. Deploy the code
 
-From the repo on your Mac:
+Merges to `main` deploy automatically through GitHub Actions; see
+[ci-deploy.md](ci-deploy.md) for its one-time setup and for rollbacks. To deploy
+by hand, from a clean `main` checkout on your Mac:
 
 ```bash
 ZR_DEPLOY_HOST=root@<droplet-ip> ZR_DEPLOY_KEY=~/.ssh/<your key> bash deploy/deploy.sh
