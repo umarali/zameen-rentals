@@ -1,6 +1,7 @@
 """API route handlers."""
 import asyncio
 import hmac
+import json
 import logging
 import os
 import re
@@ -11,12 +12,13 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
 from app.data import (
     KARACHI_AREAS, PROPERTY_TYPES, CITIES, CITY_AREAS, get_areas, _ENGLISH_TO_URDU,
     PARENT_FALLBACK_ALIASES, ROMAN_URDU_AREAS_BY_CITY, URDU_AREAS,
 )
+from app import botidentity
 from app.listing_tags import attach_tags
 from app.description_insights import with_listing_insights
 from app.notify import notify_feedback
@@ -1145,6 +1147,7 @@ _PUBLIC_PAGES = {
     "faq": "faq.html",
     "privacy": "privacy.html",
     "terms": "terms.html",
+    "bot": "bot.html",
 }
 
 _ROOT_STATIC_FILES = {
@@ -1166,6 +1169,16 @@ _ROOT_STATIC_FILES = {
 }
 
 
+@router.get(botidentity.DIRECTORY_PATH)
+async def bot_key_directory(request: Request):
+    """Web Bot Auth public key directory (404 until a signing key is configured)."""
+    built = botidentity.build_directory(request.headers.get("host") or "zameenrental.com")
+    if built is None:
+        raise HTTPException(status_code=404)
+    body, headers = built
+    return Response(content=json.dumps(body), media_type=botidentity.DIRECTORY_CONTENT_TYPE, headers=headers)
+
+
 @router.get("/{filename}")
 async def serve_root_static(filename: str):
     """Serve PWA assets (service worker, manifest, favicons) from root path.
@@ -1176,6 +1189,9 @@ async def serve_root_static(filename: str):
     """
     if filename in _PUBLIC_PAGES:
         page = _PROJECT_ROOT / "static" / _PUBLIC_PAGES[filename]
+        if not page.is_file():
+            # Not built yet: fall back to the Vite source copy.
+            page = _PROJECT_ROOT / "frontend" / "public" / _PUBLIC_PAGES[filename]
         if not page.is_file():
             raise HTTPException(status_code=404)
         return FileResponse(page, media_type="text/html")

@@ -3,70 +3,44 @@ import pytest
 import app.crawler as crawler_mod
 from app.crawler import claim_next_area, init_crawl_state, update_area_priorities
 from app.crawler_worker import (
-    _build_browser_profile, _api_headers, _get_empty_types, _update_type_state,
+    _build_crawler_profile, _api_headers, _get_empty_types, _update_type_state,
     _type_slugs_worth_crawling,
     crawl_city_latest_cards, crawl_detail_batch, infer_area_from_location,
     refresh_phones_batch,
 )
 from app.database import _get_conn, log_search
 from app.db_listings import upsert_listing, get_listing_by_zameen_id
-from app.data import USER_AGENTS, CRAWL_PROPERTY_TYPES
+from app.botidentity import BOT_USER_AGENT
+from app.data import CRAWL_PROPERTY_TYPES
 
 
-class TestBuildBrowserProfile:
-    def test_returns_ua_and_headers(self):
-        ua, headers = _build_browser_profile()
-        assert isinstance(ua, str)
-        assert isinstance(headers, dict)
-        assert "User-Agent" in headers
+class TestCrawlerProfile:
+    def test_returns_fixed_ua_and_headers(self):
+        ua, headers = _build_crawler_profile()
+        assert ua == BOT_USER_AGENT
         assert headers["User-Agent"] == ua
 
     def test_has_required_headers(self):
-        ua, headers = _build_browser_profile()
-        assert "Accept" in headers
-        assert "Accept-Language" in headers
-        assert "Accept-Encoding" in headers
-        assert "Connection" in headers
+        _, headers = _build_crawler_profile()
+        for name in ("Accept", "Accept-Language", "Accept-Encoding"):
+            assert name in headers
 
-    def test_chrome_has_sec_ch_ua(self):
-        # Keep generating until we get a Chrome UA
-        for _ in range(50):
-            ua, headers = _build_browser_profile()
-            if "Chrome/" in ua and "Edg/" not in ua:
-                assert "sec-ch-ua" in headers
-                assert "sec-ch-ua-mobile" in headers
-                assert "sec-ch-ua-platform" in headers
-                return
-        pytest.skip("Didn't get a Chrome UA in 50 tries")
-
-    def test_randomness(self):
-        profiles = set()
-        for _ in range(20):
-            ua, _ = _build_browser_profile()
-            profiles.add(ua)
-        assert len(profiles) > 1  # Should get at least 2 different UAs
+    def test_no_browser_impersonation_headers(self):
+        _, headers = _build_crawler_profile()
+        assert not [h for h in headers if h.lower().startswith(("sec-", "dnt", "upgrade-"))]
 
 
 class TestApiHeaders:
     def test_has_required_fields(self):
-        headers = _api_headers(
-            "Mozilla/5.0 Chrome/145.0.0.0 Safari/537.36",
-            "https://www.zameen.com/Property/test-123-1-1.html"
-        )
+        headers = _api_headers("ignored", "https://www.zameen.com/Property/test-123-1-1.html")
         assert headers["Accept"] == "application/json"
-        assert headers["Content-Type"] == "application/json"
-        assert headers["X-Requested-With"] == "XMLHttpRequest"
+        assert headers["User-Agent"] == BOT_USER_AGENT
         assert "test-123" in headers["Referer"]
 
-    def test_chrome_sec_headers(self):
-        headers = _api_headers(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-            "https://www.zameen.com/"
-        )
-        assert "sec-ch-ua" in headers
-        assert '"145"' in headers["sec-ch-ua"]
-        assert headers["sec-fetch-dest"] == "empty"
-        assert headers["sec-fetch-mode"] == "cors"
+    def test_no_client_hints_even_for_chrome_ua_argument(self):
+        headers = _api_headers("Mozilla/5.0 Chrome/145.0.0.0 Safari/537.36", "https://www.zameen.com/")
+        assert headers["User-Agent"] == BOT_USER_AGENT
+        assert not [h for h in headers if h.lower().startswith("sec-")]
 
 
 class TestCrawlPropertyTypes:
@@ -81,30 +55,6 @@ class TestCrawlPropertyTypes:
     def test_slugs_unique(self):
         slugs = [s for s, _ in CRAWL_PROPERTY_TYPES]
         assert len(slugs) == len(set(slugs))
-
-
-class TestUserAgents:
-    def test_minimum_count(self):
-        assert len(USER_AGENTS) >= 20
-
-    def test_has_chrome(self):
-        assert any("Chrome/" in ua for ua in USER_AGENTS)
-
-    def test_has_firefox(self):
-        assert any("Firefox/" in ua for ua in USER_AGENTS)
-
-    def test_has_safari(self):
-        assert any("Safari/" in ua and "Chrome/" not in ua for ua in USER_AGENTS)
-
-    def test_has_edge(self):
-        assert any("Edg/" in ua for ua in USER_AGENTS)
-
-    def test_has_mobile(self):
-        assert any("Mobile" in ua for ua in USER_AGENTS)
-
-    def test_current_versions(self):
-        # At least some UAs should have Chrome 143+
-        assert any("Chrome/14" in ua for ua in USER_AGENTS)
 
 
 class TestEmptyTypesTracking:
@@ -485,7 +435,7 @@ class TestBackfillResilience:
         monkeypatch.setattr(crawler_mod, "init_personalization_schema", lambda: None)
         monkeypatch.setattr(crawler_mod, "init_crawl_state", lambda: None)
         monkeypatch.setattr(crawler_mod, "get_crawl_stats", lambda: stats)
-        monkeypatch.setattr(crawler_mod, "_build_browser_profile", lambda: ("ua", {}))
+        monkeypatch.setattr(crawler_mod, "_build_crawler_profile", lambda: ("ua", {}))
         monkeypatch.setattr(crawler_mod, "check_robots_txt", fake_check_robots_txt)
         monkeypatch.setattr(crawler_mod, "crawl_detail_batch", fake_detail_batch)
         monkeypatch.setattr(crawler_mod, "refresh_phones_batch", fake_phone_batch)

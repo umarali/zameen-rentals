@@ -5,25 +5,26 @@ Architecture:
 - Cycle-based: full card crawl → detail backfill → phone refresh → rest
 - robots.txt compliant
 - Adaptive rate limiting (backs off on 429s, recovers when clear)
-- Session rotation (new browser profile each cycle)
+- Declared identity: fixed ZameenRentalBot User-Agent, Web Bot Auth signed when keyed
 - Smart area prioritization (popular areas first, failing areas deprioritized)
 - Optional resumable backfill mode for draining current listings
 - Graceful shutdown on SIGTERM/SIGINT
 
 Run: python -m app.crawler
 """
-import argparse, asyncio, logging, os, random, signal, sys, time
+import argparse, asyncio, logging, os, random, re, signal, sys, time
 from datetime import datetime
 
 import httpx
 
 from app.database import _get_conn, init_db
+from app.botidentity import BOT_USER_AGENT, BOT_MAX_REQUESTS_PER_SECOND, sign_request_headers
 from app.data import CITIES, CITY_AREAS
 from app.db_listings import mark_stale_listings, get_crawl_stats, city_priority_sql
 from app.crawler_worker import (
     CrawlBlocked,
     crawl_area_cards, crawl_city_latest_cards, crawl_detail_batch, refresh_phones_batch,
-    _build_browser_profile, crawler_rate_limiter, DEFAULT_ENRICHMENT_CONCURRENCY,
+    _build_crawler_profile, crawler_rate_limiter, DEFAULT_ENRICHMENT_CONCURRENCY,
 )
 from app.personalization import init_personalization_schema, run_match_cycle
 from app import alert_upgrades
@@ -66,72 +67,127 @@ signal.signal(signal.SIGTERM, _handle_signal)
 
 
 # ── robots.txt compliance ──
+# Fail closed: if robots.txt can't be fetched (error, timeout, non-200) we do
+# NOT crawl. Callers treat a None return as "disallowed". A Crawl-delay is
+# honoured in full; the rate is only ever lowered by it, never raised past the
+# published 1 request/second cap.
 
-_robots_cache = {}
+ROBOTS_URL = "https://www.zameen.com/robots.txt"
+ROBOTS_TTL_SECONDS = 3600
+# Representative paths the crawler actually requests.
+ROBOTS_CHECK_PATHS = (
+    "/Rentals/Karachi-2-1.html?sort=date_desc",
+    "/Property/example-listing-1-1-1.html",
+    "/api/showNumbers?listingExternalID=1&isProject=false",
+)
+
+_robots_cache = {}      # "zameen.com" -> (fetched_monotonic, text)
 _robots_rate_cap = None
 
-async def check_robots_txt(client, ua):
-    """Fetch and cache robots.txt, check if we're allowed to crawl."""
+
+def _robots_group(text, token):
+    """Return (rules, crawl_delay) for our product token, else for '*'.
+
+    rules is a list of (is_allow, pattern). Per RFC 9309 the most specific
+    matching group wins; groups for other bots are ignored.
+    """
+    groups = []     # (agents, rules, delay)
+    agents, rules, delay, in_rules = [], [], None, False
+    for raw in text.splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if ":" not in line:
+            continue
+        field, value = (x.strip() for x in line.split(":", 1))
+        field = field.lower()
+        if field == "user-agent":
+            if in_rules:
+                groups.append((agents, rules, delay))
+                agents, rules, delay, in_rules = [], [], None, False
+            agents.append(value.lower())
+        elif field in ("allow", "disallow"):
+            in_rules = True
+            if value or field == "allow":
+                rules.append((field == "allow", value))
+        elif field == "crawl-delay":
+            in_rules = True
+            try:
+                delay = float(value)
+            except ValueError:
+                pass
+    if agents:
+        groups.append((agents, rules, delay))
+    for wanted in (token.lower(), "*"):
+        matched = [g for g in groups if wanted in g[0]]
+        if matched:
+            return ([r for g in matched for r in g[1]],
+                    next((g[2] for g in matched if g[2] is not None), None))
+    return [], None
+
+
+def _robots_pattern_match(pattern, path):
+    """RFC 9309 matching: '*' wildcard, trailing '$' anchor, prefix otherwise."""
+    anchored = pattern.endswith("$")
+    body = pattern[:-1] if anchored else pattern
+    regex = ".*".join(re.escape(part) for part in body.split("*"))
+    return re.match(regex + ("$" if anchored else ""), path) is not None
+
+
+def _robots_allows(rules, path):
+    best_len, allowed = -1, True
+    for is_allow, pattern in rules:
+        if _robots_pattern_match(pattern, path):
+            n = len(pattern)
+            if n > best_len or (n == best_len and is_allow):
+                best_len, allowed = n, is_allow
+    return allowed
+
+
+def _apply_robots(text):
+    """Parse robots text; set the rate cap; return text, or None if disallowed."""
     global _robots_rate_cap
-    if "zameen.com" in _robots_cache:
-        if _robots_rate_cap:
-            crawler_rate_limiter.set_target_rate(
-                min(crawler_rate_limiter.target_rate, _robots_rate_cap)
-            )
-        return _robots_cache["zameen.com"]
+    token = BOT_USER_AGENT.split("/", 1)[0]
+    rules, crawl_delay = _robots_group(text, token)
+
+    if crawl_delay and crawl_delay > 0:
+        _robots_rate_cap = min(BOT_MAX_REQUESTS_PER_SECOND, 1.0 / crawl_delay)
+        crawler_rate_limiter.set_target_rate(
+            min(crawler_rate_limiter.target_rate, _robots_rate_cap)
+        )
+        logger.info("robots.txt Crawl-delay: %.0fs (rate: %.3f/sec)",
+                    crawl_delay, crawler_rate_limiter.rate)
+    else:
+        _robots_rate_cap = None
+
+    for path in ROBOTS_CHECK_PATHS:
+        if not _robots_allows(rules, path):
+            logger.warning("robots.txt disallows %s for %s — not crawling", path, token)
+            return None
+    logger.info("robots.txt allows the paths this crawler requests")
+    return text
+
+
+async def check_robots_txt(client, ua=BOT_USER_AGENT):
+    """Fetch (and cache for an hour) robots.txt. Returns its text if crawling is
+    allowed, or None if disallowed OR robots.txt could not be fetched."""
+    cached = _robots_cache.get("zameen.com")
+    if cached and time.monotonic() - cached[0] < ROBOTS_TTL_SECONDS:
+        return _apply_robots(cached[1])
 
     try:
         resp = await client.get(
-            "https://www.zameen.com/robots.txt",
-            headers={"User-Agent": ua},
+            ROBOTS_URL,
+            headers=sign_request_headers(ROBOTS_URL),
             timeout=10,
+            follow_redirects=True,
         )
-        if resp.status_code == 200:
-            text = resp.text
-            _robots_cache["zameen.com"] = text
-
-            # Parse only the User-agent: * section
-            in_all_agents = False
-            disallowed = []
-            crawl_delay = None
-            for line in text.split("\n"):
-                line = line.strip()
-                if line.lower().startswith("user-agent: *"):
-                    in_all_agents = True
-                elif line.lower().startswith("user-agent:"):
-                    in_all_agents = False
-                elif in_all_agents:
-                    if line.lower().startswith("crawl-delay:"):
-                        try:
-                            crawl_delay = float(line.split(":", 1)[1].strip())
-                        except ValueError:
-                            pass
-                    elif line.lower().startswith("disallow:"):
-                        path = line.split(":", 1)[1].strip()
-                        if path:
-                            disallowed.append(path)
-
-            # Respect crawl-delay but cap at a reasonable maximum
-            if crawl_delay and crawl_delay > 0:
-                effective_delay = min(crawl_delay, 5.0)  # Cap at 5 seconds max
-                _robots_rate_cap = 1.0 / effective_delay
-                crawler_rate_limiter.set_target_rate(
-                    min(crawler_rate_limiter.target_rate, _robots_rate_cap)
-                )
-                logger.info("robots.txt Crawl-delay: %.0fs (using %.1fs, rate: %.2f/sec)",
-                            crawl_delay, effective_delay, crawler_rate_limiter.rate)
-            else:
-                _robots_rate_cap = None
-
-            for path in disallowed:
-                if path in ("/Rentals/", "/Property/", "/"):
-                    logger.warning("robots.txt disallows %s — respecting directive", path)
-                    return None
-            logger.info("robots.txt allows crawling /Rentals/ and /Property/")
-            return text
     except Exception as e:
-        logger.warning("Could not fetch robots.txt: %s", e)
-    return "allow"
+        logger.error("Could not fetch robots.txt (%s) — not crawling", e)
+        return None
+    if resp.status_code != 200:
+        logger.error("robots.txt returned HTTP %s — not crawling", resp.status_code)
+        return None
+    _robots_cache["zameen.com"] = (time.monotonic(), resp.text)
+    return _apply_robots(resp.text)
 
 
 # ── Crawl state management ──
@@ -390,7 +446,7 @@ async def run_backfill_worker(*, detail_batch=DETAIL_BATCH_SIZE, phone_batch=PHO
         cycle_count += 1
         cycle_start = time.monotonic()
 
-        session_ua, _ = _build_browser_profile()
+        session_ua, _ = _build_crawler_profile()
         logger.info("=== Backfill cycle %d | UA: %s... ===", cycle_count, session_ua[:60])
 
         async with httpx.AsyncClient() as client:
@@ -503,8 +559,8 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
         cycle_count += 1
         cycle_start = time.monotonic()
 
-        # New browser profile for each cycle (rotate identity)
-        session_ua, session_headers = _build_browser_profile()
+        # Same declared identity every cycle
+        session_ua, session_headers = _build_crawler_profile()
         logger.info("=== Cycle %d | UA: %s... ===", cycle_count, session_ua[:60])
 
         # Check robots.txt at start of each cycle

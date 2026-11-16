@@ -12,6 +12,7 @@ app/
   scraper.py             → HTTP fetching, HTML parsing, search orchestration
   parsing.py             → NLP query parsing (regex + Claude Haiku via Instructor), URL building
   data.py                → Multi-city area definitions, property types, Roman Urdu/Urdu translations
+  botidentity.py         → Declared crawler identity: fixed ZameenRentalBot UA, Web Bot Auth signing (ZR_BOT_SIGNING_KEY), key directory
   cache.py               → In-memory cache with 5min TTL, rate limiter (2 req/sec)
   database.py            → SQLite: listing cache, search history, popular/recent searches
   areas.json             → 366 Karachi areas with slugs, IDs, coordinates

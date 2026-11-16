@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en-PK"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZameenRentalBot | ZameenRentals</title>
+<meta name="description" content="How the ZameenRentalBot crawler identifies itself, how fast it runs, where it connects from and how to opt out.">
+<link rel="canonical" href="https://zameenrental.com/bot">
+<meta property="og:type" content="website"><meta property="og:site_name" content="ZameenRentals">
+<meta property="og:title" content="ZameenRentalBot | ZameenRentals"><meta property="og:description" content="How the ZameenRentalBot crawler identifies itself, how fast it runs, where it connects from and how to opt out."><meta property="og:url" content="https://zameenrental.com/bot">
+<meta property="og:image" content="https://zameenrental.com/static/og-card.png?v=3"><meta property="og:locale" content="en_PK">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="ZameenRentalBot | ZameenRentals"><meta name="twitter:description" content="How the ZameenRentalBot crawler identifies itself, how fast it runs, where it connects from and how to opt out."><meta name="twitter:image" content="https://zameenrental.com/static/og-card.png?v=3">
+<link rel="icon" href="/static/favicon.svg?v=d9941a781ad5" type="image/svg+xml"><link rel="stylesheet" href="/static/site-info.css?v=credits2">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebPage", "@id": "https://zameenrental.com/bot#page", "url": "https://zameenrental.com/bot", "name": "ZameenRentalBot", "description": "How the ZameenRentalBot crawler identifies itself, how fast it runs, where it connects from and how to opt out.", "isPartOf": {"@id": "https://zameenrental.com/#website"}, "inLanguage": "en-PK"}</script>
+</head><body class="info-site">
+<!-- Each statement below is based on the code at the time of writing. If you change what the app collects, update this page. -->
+<a class="skip" href="#content">Skip to content</a>
+<header class="header"><div class="shell"><a class="brand" href="/" aria-label="ZameenRentals home"><img src="/static/logo.svg" alt="" width="38" height="38"><span>Zameen<em>Rentals</em></span></a><nav aria-label="Main navigation"><a href="/">Search rentals</a> <a href="/about">About</a> <a href="/faq" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Help, opens in a new tab">Help<span aria-hidden="true"> ↗</span></a></nav></div></header>
+<nav class="policy-nav" aria-label="Pricing and policies"><div class="shell"><a href="/pricing" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Pricing, opens in a new tab">Pricing<span aria-hidden="true"> ↗</span></a><a href="/terms" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Terms and conditions, opens in a new tab">Terms and conditions<span aria-hidden="true"> ↗</span></a><a href="/privacy" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Privacy policy, opens in a new tab">Privacy policy<span aria-hidden="true"> ↗</span></a></div></nav>
+<main id="content" class="shell info-page"><h1>ZameenRentalBot</h1><div class="site-info-body"><div class="legal-text">
+<p class="info-intro">ZameenRentalBot is the crawler behind ZameenRentals. It reads public rental listing pages on Zameen.com to power a rental search that links each home back to its original Zameen.com listing.</p>
+
+<h2 id="what">What it does</h2>
+<p>It fetches public rental search pages and public listing pages, and the contact request the listing page itself offers. It does not log in, fill in forms, bypass access controls or solve challenges. It follows <a href="https://www.zameen.com/robots.txt" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Zameen.com robots.txt, opens in a new tab">Zameen.com's robots.txt<span aria-hidden="true"> ↗</span></a>. If robots.txt can't be fetched, it doesn't crawl.</p>
+
+<h2 id="identity">How to recognise it</h2>
+<ul>
+<li data-bot="user-agent"><strong>User-Agent:</strong> <code>ZameenRentalBot/1.0 (+https://zameenrental.com/bot)</code></li>
+<li data-bot="ip"><strong>Source IP address:</strong> <code>165.22.91.77</code></li>
+<li data-bot="rate"><strong>Rate limit:</strong> at most 1 request per second. It slows down further on errors, and if robots.txt asks for a longer Crawl-delay it waits that long.</li>
+<li data-bot="signature"><strong>Signatures:</strong> requests are signed with <a href="https://developers.cloudflare.com/bots/reference/bot-verification/web-bot-auth/" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Web Bot Auth, opens in a new tab">Web Bot Auth<span aria-hidden="true"> ↗</span></a> (HTTP Message Signatures, Ed25519). The public keys are at <a href="/.well-known/http-message-signatures-directory"><code>https://zameenrental.com/.well-known/http-message-signatures-directory</code></a>.</li>
+</ul>
+
+<h2 id="contact">Contact and opt-out</h2>
+<p data-bot="contact">To report a problem, ask a question, or ask us to stop crawling all or part of Zameen.com, email <a href="mailto:feedback@zameenrental.com">feedback@zameenrental.com</a>. We'll stop promptly and reply.</p>
+
+<p class="info-note">ZameenRentals is independent of Zameen.com. See the <a href="/privacy" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="privacy policy, opens in a new tab">privacy policy<span aria-hidden="true"> ↗</span></a> for how we handle visitors' data.</p>
+</div></div><a class="return-search" href="/"><span aria-hidden="true">←</span> Back to search</a></main>
+<footer class="footer"><div class="shell"><nav aria-label="Footer"><a href="/">Search rentals</a> <a href="/about">About</a> <a href="/pricing" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Pricing, opens in a new tab">Pricing<span aria-hidden="true"> ↗</span></a> <a href="/faq" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Help, opens in a new tab">Help<span aria-hidden="true"> ↗</span></a> <a href="/privacy" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Privacy, opens in a new tab">Privacy<span aria-hidden="true"> ↗</span></a> <a href="/terms" target="_blank" rel="noopener" title="Opens in a new tab" aria-label="Terms, opens in a new tab">Terms<span aria-hidden="true"> ↗</span></a></nav><p>Listings from Zameen.com. Confirm availability with the advertiser before visiting.</p><p>ZameenRentals is independent of Zameen.com.</p></div></footer>
+</body></html>
