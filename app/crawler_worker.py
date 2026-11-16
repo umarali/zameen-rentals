@@ -7,7 +7,8 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.cache import RateLimiter
-from app.data import USER_AGENTS, PROPERTY_TYPES, CITIES, CITY_AREAS, CRAWL_PROPERTY_TYPES
+from app.botidentity import BOT_USER_AGENT, sign_request_headers
+from app.data import PROPERTY_TYPES, CITIES, CITY_AREAS, CRAWL_PROPERTY_TYPES
 from app.database import _get_conn
 from app.db_listings import (
     upsert_listing, get_listings_needing_detail, city_priority_sql,
@@ -21,89 +22,71 @@ from app.scraper import (
 logger = logging.getLogger("zameenrentals")
 
 # Crawler rate limiter: adaptive, starts conservative
-crawler_rate_limiter = RateLimiter(rate=1.0, burst=2)
+# Published cap is 1 request/second (see /bot): burst of 1 keeps it true per-second.
+crawler_rate_limiter = RateLimiter(rate=1.0, burst=1)
 CARD_TYPE_DELAY = (0.5, 2.0)
 CARD_PAGE_DELAY = (0.5, 1.5)
 DEFAULT_ENRICHMENT_CONCURRENCY = 8
 
-# ── Browser profile simulation ──
+# ── Declared crawler identity ──
+# One fixed, honest User-Agent that links to /bot. No rotating browser
+# profiles, no client hints, no pretending to be a visitor.
 
-def _build_browser_profile():
-    """Generate a realistic browser identity for a crawl session.
-    Returns (user_agent, headers_dict) that stay consistent within a session."""
-    ua = random.choice(USER_AGENTS)
-    is_chrome = "Chrome/" in ua and "Edg/" not in ua
-    is_firefox = "Firefox/" in ua
-    is_safari = "Safari/" in ua and "Chrome/" not in ua
-    is_edge = "Edg/" in ua
-
+def _build_crawler_profile():
+    """Return (user_agent, headers_dict): the same declared identity every time."""
     headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": random.choice([
-            "en-US,en;q=0.9",
-            "en-GB,en;q=0.9,en-US;q=0.8",
-            "en-US,en;q=0.9,ur;q=0.8",
-        ]),
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "User-Agent": ua,
-        "DNT": "1",
-        "Upgrade-Insecure-Requests": "1",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en",
+        "Accept-Encoding": "gzip, deflate",
+        "User-Agent": BOT_USER_AGENT,
     }
-
-    if is_chrome or is_edge:
-        # Extract Chrome version for sec-ch-ua
-        m = re.search(r"Chrome/(\d+)", ua)
-        cv = m.group(1) if m else "145"
-        brand = "Google Chrome" if is_chrome else "Microsoft Edge"
-        headers["sec-ch-ua"] = f'"Not:A-Brand";v="99", "{brand}";v="{cv}", "Chromium";v="{cv}"'
-        headers["sec-ch-ua-mobile"] = "?1" if "Mobile" in ua else "?0"
-        headers["sec-ch-ua-platform"] = (
-            '"Android"' if "Android" in ua else
-            '"macOS"' if "Mac" in ua else
-            '"Windows"' if "Windows" in ua else
-            '"Linux"'
-        )
-        headers["sec-fetch-dest"] = "document"
-        headers["sec-fetch-mode"] = "navigate"
-        headers["sec-fetch-site"] = "none"
-        headers["sec-fetch-user"] = "?1"
-
-    return ua, headers
+    return BOT_USER_AGENT, headers
 
 
 def _api_headers(ua, referer_url):
-    """Headers for Zameen.com internal API calls (showNumbers, etc.)."""
-    headers = {
-        "User-Agent": ua,
+    """Headers for Zameen.com internal API calls (showNumbers, etc.).
+
+    `ua` is accepted for call-site compatibility but ignored: the crawler
+    only ever sends BOT_USER_AGENT.
+    """
+    return {
+        "User-Agent": BOT_USER_AGENT,
         "Accept": "application/json",
-        "Content-Type": "application/json",
         "Accept-Language": "en",
-        "DNT": "1",
         "Referer": referer_url,
-        "X-Requested-With": "XMLHttpRequest",
     }
-    if "Chrome/" in ua:
-        m = re.search(r"Chrome/(\d+)", ua)
-        cv = m.group(1) if m else "145"
-        headers["sec-ch-ua"] = f'"Not:A-Brand";v="99", "Google Chrome";v="{cv}", "Chromium";v="{cv}"'
-        headers["sec-ch-ua-mobile"] = "?0"
-        headers["sec-ch-ua-platform"] = '"macOS"' if "Mac" in ua else '"Windows"'
-        headers["sec-fetch-dest"] = "empty"
-        headers["sec-fetch-mode"] = "cors"
-        headers["sec-fetch-site"] = "same-origin"
-    return headers
 
 
 # ── Fetch with retry + adaptive backoff ──
+
+class CrawlBlocked(Exception):
+    """Zameen served its bot challenge page instead of the requested page."""
+
+
+def _is_block_response(resp):
+    """True for a Cloudflare bot-challenge response (403/503 'Security check')."""
+    if resp.status_code not in (403, 503):
+        return False
+    if resp.headers.get("cf-mitigated", "").lower() == "challenge":
+        return True
+    if "cloudflare" not in resp.headers.get("server", "").lower():
+        return False
+    head = resp.text[:20000].lower()
+    return "security check" in head or "challenge" in head
+
 
 async def _fetch(url, client, headers, timeout=20):
     """Fetch a URL with retry, adaptive rate limiting, and proper backoff."""
     for attempt in range(3):
         try:
             await crawler_rate_limiter.acquire()
-            resp = await client.get(url, headers=headers, timeout=timeout, follow_redirects=True)
+            # Sign after the rate-limit wait: signatures are short-lived.
+            resp = await client.get(url, headers=sign_request_headers(url, headers),
+                                    timeout=timeout, follow_redirects=True)
 
+            if _is_block_response(resp):
+                # Retrying a challenge only adds load. Stop and let the cycle back off.
+                raise CrawlBlocked(f"HTTP {resp.status_code} bot challenge on {url}")
             if resp.status_code == 200:
                 crawler_rate_limiter.record_success()
                 return resp.text
@@ -126,6 +109,8 @@ async def _fetch(url, client, headers, timeout=20):
             else:
                 logger.warning("HTTP %d for %s", resp.status_code, url)
                 await asyncio.sleep(1 + random.uniform(0, 2))
+        except CrawlBlocked:
+            raise
         except httpx.TimeoutException:
             logger.warning("Timeout on %s (attempt %d)", url, attempt + 1)
             await asyncio.sleep(2 ** attempt)
@@ -574,7 +559,7 @@ async def crawl_detail_batch(limit=10, client=None, session_ua=None,
     if own_client:
         client = httpx.AsyncClient()
 
-    ua = session_ua or random.choice(USER_AGENTS)
+    ua = BOT_USER_AGENT
     updated = 0
     semaphore = asyncio.Semaphore(max(1, int(concurrency or 1)))
 
@@ -587,10 +572,6 @@ async def crawl_detail_batch(limit=10, client=None, session_ua=None,
                 # 1. Fetch detail page HTML (for description, features, amenities, images)
                 detail_headers = _api_headers(ua, "https://www.zameen.com/")
                 detail_headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-                detail_headers["sec-fetch-dest"] = "document"
-                detail_headers["sec-fetch-mode"] = "navigate"
-                detail_headers.pop("X-Requested-With", None)
-                detail_headers.pop("Content-Type", None)
 
                 html = await _fetch(url, client, detail_headers)
                 detail_data = {}
@@ -669,7 +650,7 @@ async def refresh_phones_batch(limit=20, client=None, session_ua=None,
     if own_client:
         client = httpx.AsyncClient()
 
-    ua = session_ua or random.choice(USER_AGENTS)
+    ua = BOT_USER_AGENT
     updated = 0
     now = datetime.utcnow().isoformat()
     semaphore = asyncio.Semaphore(max(1, int(concurrency or 1)))

@@ -5,7 +5,8 @@ import httpx
 from bs4 import BeautifulSoup
 from fastapi import HTTPException
 
-from app.data import USER_AGENTS, PROPERTY_TYPES
+from app.botidentity import BOT_USER_AGENT, sign_request_headers
+from app.data import PROPERTY_TYPES
 from app.description_insights import readable_description
 from app.cache import cache_key, cache_get, cache_set, rate_limiter
 from app.db_listings import split_zameen_age_text
@@ -49,29 +50,14 @@ def sanitize_location(text):
 
 
 def _contact_api_headers(user_agent, referer_url):
-    headers = {
-        "User-Agent": user_agent,
+    """Headers for the showNumbers call. `user_agent` is ignored: we only ever
+    send the declared BOT_USER_AGENT."""
+    return {
+        "User-Agent": BOT_USER_AGENT,
         "Accept": "application/json",
-        "Content-Type": "application/json",
         "Accept-Language": "en",
-        "DNT": "1",
         "Referer": referer_url,
-        "X-Requested-With": "XMLHttpRequest",
     }
-    if "Chrome/" in user_agent:
-        m = re.search(r"Chrome/(\d+)", user_agent)
-        version = m.group(1) if m else "145"
-        headers["sec-ch-ua"] = f'"Not:A-Brand";v="99", "Google Chrome";v="{version}", "Chromium";v="{version}"'
-        headers["sec-ch-ua-mobile"] = "?1" if "Mobile" in user_agent else "?0"
-        headers["sec-ch-ua-platform"] = (
-            '"Android"' if "Android" in user_agent else
-            '"macOS"' if "Mac" in user_agent else
-            '"Windows"'
-        )
-        headers["sec-fetch-dest"] = "empty"
-        headers["sec-fetch-mode"] = "cors"
-        headers["sec-fetch-site"] = "same-origin"
-    return headers
 
 
 def _normalize_phone(raw):
@@ -233,7 +219,7 @@ async def fetch_listing_contact(listing_url, client=None, user_agent=None, reque
     if own_client:
         client = httpx.AsyncClient()
 
-    ua = user_agent or random.choice(USER_AGENTS)
+    ua = BOT_USER_AGENT
     api_url = f"https://www.zameen.com/api/showNumbers?listingExternalID={zid}&isProject=false"
     headers = _contact_api_headers(ua, listing_url)
     limiter = request_limiter or rate_limiter
@@ -242,7 +228,7 @@ async def fetch_listing_contact(listing_url, client=None, user_agent=None, reque
         for attempt in range(3):
             try:
                 await limiter.acquire()
-                resp = await client.get(api_url, headers=headers, timeout=15)
+                resp = await client.get(api_url, headers=sign_request_headers(api_url, headers), timeout=15)
                 if resp.status_code == 200:
                     if hasattr(limiter, "record_success"):
                         limiter.record_success()
@@ -279,7 +265,7 @@ async def fetch_page(url, client):
     for attempt in range(3):
         try:
             await rate_limiter.acquire()
-            headers = {"User-Agent": random.choice(USER_AGENTS), "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.9", "Accept-Encoding": "gzip, deflate, br", "Connection": "keep-alive"}
+            headers = sign_request_headers(url, {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en", "Accept-Encoding": "gzip, deflate"})
             resp = await client.get(url, headers=headers, timeout=15, follow_redirects=True)
             if resp.status_code == 200:
                 rate_limiter.record_success()

@@ -68,4 +68,5 @@ class RateLimiter:
         self.rate = self.target_rate
         self.consecutive_429s = 0
 
-rate_limiter = RateLimiter()
+# Outbound Zameen.com fetches are published as at most 1 request/second (/bot).
+rate_limiter = RateLimiter(rate=1.0, burst=1)
