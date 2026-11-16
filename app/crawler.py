@@ -21,6 +21,7 @@ from app.database import _get_conn, init_db
 from app.data import CITIES, CITY_AREAS
 from app.db_listings import mark_stale_listings, get_crawl_stats, city_priority_sql
 from app.crawler_worker import (
+    CrawlBlocked,
     crawl_area_cards, crawl_city_latest_cards, crawl_detail_batch, refresh_phones_batch,
     _build_browser_profile, crawler_rate_limiter, DEFAULT_ENRICHMENT_CONCURRENCY,
 )
@@ -46,6 +47,7 @@ DETAIL_BATCH_SIZE = 15           # Detail pages per iteration
 PHONE_BATCH_SIZE = 25            # Phone API calls per iteration
 INTER_AREA_DELAY = (0.5, 1.5)   # Random delay between areas (seconds) — tighter for faster cycles
 CYCLE_REST_MINUTES = 5           # Rest between full cycles (was 15)
+BLOCKED_BACKOFF_MINUTES = 60     # Wait after Zameen serves its bot challenge
 MAX_CONSECUTIVE_ERRORS = 5       # Pause crawling after this many errors in a row
 CARD_SPEED_MULTIPLIER = 1.0
 LATEST_CITY_PAGES = 3            # Newest-first pages per city in the fast refresh lane
@@ -349,6 +351,8 @@ async def refresh_latest_city_feeds(client, session_headers, *, pages=LATEST_CIT
                 "[Latest:%s] %d pages, %d new, %d updated, %d unchanged",
                 city, fetched, new, updated, unchanged,
             )
+        except CrawlBlocked:
+            raise
         except Exception:
             logger.exception("Latest-feed refresh failed for %s", city)
     flush_alert_notifications("latest")
@@ -517,168 +521,198 @@ async def run_crawler(*, cards_only=False, single_cycle=False, card_speed=CARD_S
 
         iteration = 0
 
-        async with httpx.AsyncClient() as client:
-            # ── Phase A: Card crawl (all stale areas) ──
-            await refresh_latest_city_feeds(client, session_headers)
-            latest_refreshed_at = time.monotonic()
-            logger.info("[Phase A] Card crawling...")
-            phase_a_new, phase_a_updated = 0, 0
-            attempted_areas = set()
+        blocked = None
+        try:
+            async with httpx.AsyncClient() as client:
+                # ── Phase A: Card crawl (all stale areas) ──
+                await refresh_latest_city_feeds(client, session_headers)
+                latest_refreshed_at = time.monotonic()
+                logger.info("[Phase A] Card crawling...")
+                phase_a_new, phase_a_updated = 0, 0
+                attempted_areas = set()
 
-            while not _shutdown:
-                # A full pass can exceed the refresh interval. Process each
-                # area once so details, contact refresh and cleanup get a turn.
-                area = claim_next_area(
-                    max_age_hours=area_refresh_hours,
-                    exclude_ids=attempted_areas,
-                )
-                if not area:
-                    break
-                attempted_areas.add(area["id"])
-
-                city = area["city"]
-                area_name = area["area_name"]
-                iteration += 1
-                conn = _get_conn()
-
-                try:
-                    area_info = CITY_AREAS.get(city, {}).get(area_name)
-                    lat = area_info[2] if area_info else None
-                    lng = area_info[3] if area_info else None
-
-                    new, updated, unchanged, pages = await crawl_area_cards(
-                        city, area_name, area["area_slug"], area["area_id"],
-                        lat, lng, client, session_headers,
-                        type_delay=type_delay, page_delay=page_delay
+                while not _shutdown:
+                    # A full pass can exceed the refresh interval. Process each
+                    # area once so details, contact refresh and cleanup get a turn.
+                    area = claim_next_area(
+                        max_age_hours=area_refresh_hours,
+                        exclude_ids=attempted_areas,
                     )
+                    if not area:
+                        break
+                    attempted_areas.add(area["id"])
 
-                    phase_a_new += new
-                    phase_a_updated += updated
-                    consecutive_errors = 0
+                    city = area["city"]
+                    area_name = area["area_name"]
+                    iteration += 1
+                    conn = _get_conn()
 
-                    conn.execute("""
-                        UPDATE crawl_state SET
-                            crawl_status = 'completed', last_crawl_at = datetime('now'),
-                            crawl_claimed_at = NULL,
-                            pages_crawled = ?, listings_found = ?,
-                            new_listings = ?, updated_listings = ?, error_message = NULL
-                        WHERE id = ?
-                    """, (pages, new + updated + unchanged, new, updated, area["id"]))
-                    conn.commit()
-                    flush_alert_notifications("area")
+                    try:
+                        area_info = CITY_AREAS.get(city, {}).get(area_name)
+                        lat = area_info[2] if area_info else None
+                        lng = area_info[3] if area_info else None
 
-                    if iteration % 25 == 0:
-                        logger.info("  [%d areas] %d new, %d updated so far", iteration, phase_a_new, phase_a_updated)
+                        new, updated, unchanged, pages = await crawl_area_cards(
+                            city, area_name, area["area_slug"], area["area_id"],
+                            lat, lng, client, session_headers,
+                            type_delay=type_delay, page_delay=page_delay
+                        )
 
-                except Exception as e:
-                    consecutive_errors += 1
-                    logger.exception("Error crawling %s/%s", city, area_name)
-                    conn.execute(
-                        """
-                        UPDATE crawl_state
-                        SET crawl_status = 'error', crawl_claimed_at = NULL, error_message = ?
-                        WHERE id = ?
-                        """,
-                        (str(e)[:500], area["id"])
-                    )
-                    conn.commit()
-
-                    if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                        logger.error("Too many consecutive errors (%d) — pausing 5 minutes", consecutive_errors)
-                        await asyncio.sleep(300)
+                        phase_a_new += new
+                        phase_a_updated += updated
                         consecutive_errors = 0
 
+                        conn.execute("""
+                            UPDATE crawl_state SET
+                                crawl_status = 'completed', last_crawl_at = datetime('now'),
+                                crawl_claimed_at = NULL,
+                                pages_crawled = ?, listings_found = ?,
+                                new_listings = ?, updated_listings = ?, error_message = NULL
+                            WHERE id = ?
+                        """, (pages, new + updated + unchanged, new, updated, area["id"]))
+                        conn.commit()
+                        flush_alert_notifications("area")
+
+                        if iteration % 25 == 0:
+                            logger.info("  [%d areas] %d new, %d updated so far", iteration, phase_a_new, phase_a_updated)
+
+                    except CrawlBlocked:
+                        conn.execute(
+                            """
+                            UPDATE crawl_state
+                            SET crawl_status = 'error', crawl_claimed_at = NULL, error_message = ?
+                            WHERE id = ?
+                            """,
+                            ("blocked by bot challenge", area["id"])
+                        )
+                        conn.commit()
+                        raise
+                    except Exception as e:
+                        consecutive_errors += 1
+                        logger.exception("Error crawling %s/%s", city, area_name)
+                        conn.execute(
+                            """
+                            UPDATE crawl_state
+                            SET crawl_status = 'error', crawl_claimed_at = NULL, error_message = ?
+                            WHERE id = ?
+                            """,
+                            (str(e)[:500], area["id"])
+                        )
+                        conn.commit()
+
+                        if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                            logger.error("Too many consecutive errors (%d) — pausing 5 minutes", consecutive_errors)
+                            await asyncio.sleep(300)
+                            consecutive_errors = 0
+
+                    if _shutdown:
+                        break
+
+                    if time.monotonic() - latest_refreshed_at >= LATEST_REFRESH_MINUTES * 60:
+                        await refresh_latest_city_feeds(client, session_headers)
+                        latest_refreshed_at = time.monotonic()
+
+                    # Human-like delay between areas
+                    await asyncio.sleep(random.uniform(*inter_area_delay))
+
+                total_new += phase_a_new
+                total_updated += phase_a_updated
+                logger.info("[Phase A complete] %d areas, %d new, %d updated", iteration, phase_a_new, phase_a_updated)
+
                 if _shutdown:
                     break
 
-                if time.monotonic() - latest_refreshed_at >= LATEST_REFRESH_MINUTES * 60:
-                    await refresh_latest_city_feeds(client, session_headers)
-                    latest_refreshed_at = time.monotonic()
+                if cards_only:
+                    logger.info("[Cards-only mode] Skipping detail, phone, and cleanup phases")
+                else:
+                    # ── Phase B: Detail backfill ──
+                    logger.info("[Phase B] Detail backfill...")
+                    detail_total = 0
+                    detail_errors = 0
+                    for _ in range(20):  # Up to 20 batches per cycle
+                        if _shutdown:
+                            break
+                        try:
+                            count = await crawl_detail_batch(
+                                limit=DETAIL_BATCH_SIZE,
+                                client=client,
+                                session_ua=session_ua,
+                                concurrency=concurrency,
+                            )
+                            detail_errors = 0
+                        except Exception:
+                            detail_errors += 1
+                            logger.exception("[Phase B] Detail batch failed")
+                            detail_errors = await _backoff_enrichment_error(
+                                "Phase B", detail_errors
+                            )
+                            continue
+                        if count == 0:
+                            break
+                        detail_total += count
+                        await asyncio.sleep(random.uniform(1, 3))
 
-                # Human-like delay between areas
-                await asyncio.sleep(random.uniform(*inter_area_delay))
+                    logger.info("[Phase B complete] %d listings enriched with details", detail_total)
 
-            total_new += phase_a_new
-            total_updated += phase_a_updated
-            logger.info("[Phase A complete] %d areas, %d new, %d updated", iteration, phase_a_new, phase_a_updated)
+                    if _shutdown:
+                        break
 
-            if _shutdown:
+                    # ── Phase C: Phone refresh via API ──
+                    # Off by default: search pages already carry each listing's
+                    # numbers (scraper.enrich_from_search_state), so calling
+                    # showNumbers per listing is redundant load on Zameen.
+                    phone_total = 0
+                    phone_errors = 0
+                    if phone_refresh:
+                        logger.info("[Phase C] Phone number refresh...")
+                    for _ in range(10 if phone_refresh else 0):  # Up to 10 batches per cycle
+                        if _shutdown:
+                            break
+                        try:
+                            count = await refresh_phones_batch(
+                                limit=PHONE_BATCH_SIZE,
+                                client=client,
+                                session_ua=session_ua,
+                                concurrency=concurrency,
+                            )
+                            phone_errors = 0
+                        except Exception:
+                            phone_errors += 1
+                            logger.exception("[Phase C] Phone batch failed")
+                            phone_errors = await _backoff_enrichment_error(
+                                "Phase C", phone_errors
+                            )
+                            continue
+                        if count == 0:
+                            break
+                        phone_total += count
+                        await asyncio.sleep(random.uniform(2, 5))
+
+                    if phone_refresh:
+                        logger.info("[Phase C complete] %d phone numbers refreshed", phone_total)
+
+                    if _shutdown:
+                        break
+
+                    # ── Phase D: Staleness cleanup ──
+                    mark_stale_listings(days=7)
+        except CrawlBlocked as exc:
+            blocked = exc
+
+        if blocked:
+            # Nothing was crawled, so skip alerts and the stale cleanup: marking
+            # listings inactive now would empty the site while Zameen blocks us.
+            logger.error(
+                "Zameen is serving a bot challenge (%s). Skipping the rest of cycle %d; "
+                "retrying in %d minutes.", blocked, cycle_count, BLOCKED_BACKOFF_MINUTES,
+            )
+            if single_cycle:
                 break
-
-            if cards_only:
-                logger.info("[Cards-only mode] Skipping detail, phone, and cleanup phases")
-            else:
-                # ── Phase B: Detail backfill ──
-                logger.info("[Phase B] Detail backfill...")
-                detail_total = 0
-                detail_errors = 0
-                for _ in range(20):  # Up to 20 batches per cycle
-                    if _shutdown:
-                        break
-                    try:
-                        count = await crawl_detail_batch(
-                            limit=DETAIL_BATCH_SIZE,
-                            client=client,
-                            session_ua=session_ua,
-                            concurrency=concurrency,
-                        )
-                        detail_errors = 0
-                    except Exception:
-                        detail_errors += 1
-                        logger.exception("[Phase B] Detail batch failed")
-                        detail_errors = await _backoff_enrichment_error(
-                            "Phase B", detail_errors
-                        )
-                        continue
-                    if count == 0:
-                        break
-                    detail_total += count
-                    await asyncio.sleep(random.uniform(1, 3))
-
-                logger.info("[Phase B complete] %d listings enriched with details", detail_total)
-
+            for _ in range(BLOCKED_BACKOFF_MINUTES * 12):
                 if _shutdown:
                     break
-
-                # ── Phase C: Phone refresh via API ──
-                # Off by default: search pages already carry each listing's
-                # numbers (scraper.enrich_from_search_state), so calling
-                # showNumbers per listing is redundant load on Zameen.
-                phone_total = 0
-                phone_errors = 0
-                if phone_refresh:
-                    logger.info("[Phase C] Phone number refresh...")
-                for _ in range(10 if phone_refresh else 0):  # Up to 10 batches per cycle
-                    if _shutdown:
-                        break
-                    try:
-                        count = await refresh_phones_batch(
-                            limit=PHONE_BATCH_SIZE,
-                            client=client,
-                            session_ua=session_ua,
-                            concurrency=concurrency,
-                        )
-                        phone_errors = 0
-                    except Exception:
-                        phone_errors += 1
-                        logger.exception("[Phase C] Phone batch failed")
-                        phone_errors = await _backoff_enrichment_error(
-                            "Phase C", phone_errors
-                        )
-                        continue
-                    if count == 0:
-                        break
-                    phone_total += count
-                    await asyncio.sleep(random.uniform(2, 5))
-
-                if phone_refresh:
-                    logger.info("[Phase C complete] %d phone numbers refreshed", phone_total)
-
-                if _shutdown:
-                    break
-
-                # ── Phase D: Staleness cleanup ──
-                mark_stale_listings(days=7)
+                await asyncio.sleep(5)
+            continue
 
         # ── Alert dispatch: notify clients of new matches ──
         flush_alert_notifications("cycle")

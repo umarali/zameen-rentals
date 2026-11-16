@@ -97,6 +97,22 @@ def _api_headers(ua, referer_url):
 
 # ── Fetch with retry + adaptive backoff ──
 
+class CrawlBlocked(Exception):
+    """Zameen served its bot challenge page instead of the requested page."""
+
+
+def _is_block_response(resp):
+    """True for a Cloudflare bot-challenge response (403/503 'Security check')."""
+    if resp.status_code not in (403, 503):
+        return False
+    if resp.headers.get("cf-mitigated", "").lower() == "challenge":
+        return True
+    if "cloudflare" not in resp.headers.get("server", "").lower():
+        return False
+    head = resp.text[:20000].lower()
+    return "security check" in head or "challenge" in head
+
+
 async def _fetch(url, client, headers, timeout=20):
     """Fetch a URL with retry, adaptive rate limiting, and proper backoff."""
     for attempt in range(3):
@@ -104,6 +120,9 @@ async def _fetch(url, client, headers, timeout=20):
             await crawler_rate_limiter.acquire()
             resp = await client.get(url, headers=headers, timeout=timeout, follow_redirects=True)
 
+            if _is_block_response(resp):
+                # Retrying a challenge only adds load. Stop and let the cycle back off.
+                raise CrawlBlocked(f"HTTP {resp.status_code} bot challenge on {url}")
             if resp.status_code == 200:
                 crawler_rate_limiter.record_success()
                 return resp.text
@@ -126,6 +145,8 @@ async def _fetch(url, client, headers, timeout=20):
             else:
                 logger.warning("HTTP %d for %s", resp.status_code, url)
                 await asyncio.sleep(1 + random.uniform(0, 2))
+        except CrawlBlocked:
+            raise
         except httpx.TimeoutException:
             logger.warning("Timeout on %s (attempt %d)", url, attempt + 1)
             await asyncio.sleep(2 ** attempt)

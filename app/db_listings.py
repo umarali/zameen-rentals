@@ -1188,8 +1188,19 @@ def get_listings_needing_detail(limit=10):
 
 
 def mark_stale_listings(days=7):
-    """Mark listings not seen in N days as inactive."""
+    """Mark listings not seen in N days as inactive.
+
+    Skipped when no listing has been seen in the last day: that means the
+    crawler isn't getting through (blocked or broken), not that every rental
+    was taken, and deactivating would empty the site.
+    """
     conn = _get_conn()
+    recently_seen = conn.execute(
+        "SELECT 1 FROM listings WHERE datetime(last_seen_at) >= datetime('now', '-1 day') LIMIT 1"
+    ).fetchone()
+    if not recently_seen:
+        logger.warning("Skipping stale cleanup: no listing seen in the last day")
+        return 0
     result = conn.execute(
         "UPDATE listings SET is_active = 0 WHERE is_active = 1 AND last_seen_at < datetime('now', ?)",
         (f'-{days} days',)

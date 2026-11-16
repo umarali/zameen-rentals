@@ -1141,10 +1141,28 @@ class TestMarkStaleListings:
         conn = _get_conn()
         conn.execute("UPDATE listings SET last_seen_at = datetime('now', '-10 days') WHERE zameen_id = '600001'")
         conn.commit()
+        # A listing seen today shows the crawler is working.
+        upsert_listing(zameen_id="600002", url="https://zameen.com/Property/t-600002-1-1.html",
+                       city="karachi", card_data={"title": "Fresh", "price": 60000,
+                                                  "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"})
         count = mark_stale_listings(days=7)
         assert count >= 1
         row = conn.execute("SELECT is_active FROM listings WHERE zameen_id = '600001'").fetchone()
         assert row["is_active"] == 0
+        row = conn.execute("SELECT is_active FROM listings WHERE zameen_id = '600002'").fetchone()
+        assert row["is_active"] == 1
+
+    def test_skips_cleanup_when_nothing_seen_recently(self):
+        """A blocked crawler sees nothing; that must not deactivate every listing."""
+        upsert_listing(zameen_id="600003", url="https://zameen.com/Property/t-600003-1-1.html",
+                       city="karachi", card_data={"title": "Old", "price": 50000,
+                                                  "bedrooms": 2, "bathrooms": 1, "area_size": "5 Marla"})
+        conn = _get_conn()
+        conn.execute("UPDATE listings SET last_seen_at = datetime('now', '-10 days')")
+        conn.commit()
+        assert mark_stale_listings(days=7) == 0
+        row = conn.execute("SELECT is_active FROM listings WHERE zameen_id = '600003'").fetchone()
+        assert row["is_active"] == 1
 
 
 class TestGetCrawlStats:

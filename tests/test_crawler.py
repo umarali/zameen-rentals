@@ -596,3 +596,76 @@ class TestCrawlerOptions:
     def test_non_positive_refresh_rejected(self, monkeypatch):
         with pytest.raises(SystemExit):
             self._capture(monkeypatch, ["--area-refresh-hours", "0"])
+
+
+class TestBotChallenge:
+    """Zameen's Cloudflare 'Security check' page must stop the crawl, not count as a crawl."""
+
+    CHALLENGE = "<html><head><title>Security check | Zameen</title></head><body>challenge</body></html>"
+
+    @staticmethod
+    def _client(status, body, headers):
+        import httpx
+
+        def handler(request):
+            return httpx.Response(status, text=body, headers=headers)
+
+        return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+    @pytest.mark.asyncio
+    async def test_challenge_raises_without_retrying(self, monkeypatch):
+        from app.crawler_worker import CrawlBlocked, _fetch
+        calls = []
+
+        def handler(request):
+            calls.append(request.url)
+            import httpx
+            return httpx.Response(503, text=self.CHALLENGE, headers={"server": "cloudflare"})
+
+        import httpx
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            with pytest.raises(CrawlBlocked):
+                await _fetch("https://www.zameen.com/Rentals/Lahore-1-1.html", client, {})
+        assert len(calls) == 1
+
+    @pytest.mark.asyncio
+    async def test_plain_503_is_not_a_block(self, monkeypatch):
+        import app.crawler_worker as worker
+        from app.crawler_worker import _fetch
+
+        async def no_sleep(_):
+            return None
+
+        monkeypatch.setattr(worker.asyncio, "sleep", no_sleep)
+        async with self._client(503, "upstream down", {"server": "nginx"}) as client:
+            assert await _fetch("https://www.zameen.com/x.html", client, {}) is None
+
+    @pytest.mark.asyncio
+    async def test_blocked_area_is_not_marked_crawled(self, monkeypatch):
+        from app.crawler_worker import CrawlBlocked
+        init_crawl_state()
+
+        async def blocked(*args, **kwargs):
+            raise CrawlBlocked("challenge")
+
+        async def no_robots_block(client, ua):
+            return True
+
+        async def no_sleep(_):
+            return None
+
+        monkeypatch.setattr(crawler_mod, "refresh_latest_city_feeds", blocked)
+        monkeypatch.setattr(crawler_mod, "crawl_area_cards", blocked)
+        monkeypatch.setattr(crawler_mod, "check_robots_txt", no_robots_block)
+        monkeypatch.setattr(crawler_mod.asyncio, "sleep", no_sleep)
+        stale_calls = []
+        monkeypatch.setattr(crawler_mod, "mark_stale_listings", lambda days: stale_calls.append(days))
+
+        await crawler_mod.run_crawler(single_cycle=True)
+
+        conn = _get_conn()
+        crawled = conn.execute(
+            "SELECT COUNT(*) FROM crawl_state WHERE last_crawl_at IS NOT NULL"
+        ).fetchone()[0]
+        assert crawled == 0
+        assert stale_calls == []
